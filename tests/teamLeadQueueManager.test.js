@@ -9,6 +9,8 @@ const page = readFileSync(join(root, 'src/pages/TeamLeadQueuePage.jsx'), 'utf8')
 const ops = readFileSync(join(root, 'src/pages/OperationsPages.jsx'), 'utf8')
 const layout = readFileSync(join(root, 'src/layouts/OperationsLayout.jsx'), 'utf8')
 const css = readFileSync(join(root, 'src/styles.css'), 'utf8')
+const daylightCss = readFileSync(join(root, 'src/styles/ops-daylight.css'), 'utf8')
+const presentation = readFileSync(join(root, 'src/queue/daylightPresentation.js'), 'utf8')
 
 describe('Team Lead Queue Manager mobile port', () => {
   it('wires the dedicated page for team_lead on /operations/queue', () => {
@@ -21,12 +23,12 @@ describe('Team Lead Queue Manager mobile port', () => {
     assert.doesNotMatch(page, /Motorcycle/)
   })
 
-  it('uses Hakum branding and mobile status tiles', () => {
+  it('uses Hakum branding and a four-cell queue summary', () => {
     assert.match(layout, /Hakum Auto Care/)
     assert.match(layout, /hakum-mark-ow\.png/)
-    assert.match(css, /\.qmgr-status-grid/)
-    assert.match(css, /\.qmgr-add-btn/)
-    assert.match(page, /Final Check/)
+    assert.match(daylightCss, /\.daylight-queue-summary[\s\S]*repeat\(4/)
+    assert.match(page, /queueSummary\(boardTickets, boardStatuses\)/)
+    assert.match(presentation, /Final check/)
     assert.match(page, /completedTotalMinor/)
   })
 
@@ -37,10 +39,12 @@ describe('Team Lead Queue Manager mobile port', () => {
     assert.doesNotMatch(page, /qmgr-cars-pill/)
   })
 
-  it('fits queue board in one viewport (list scrolls, chrome fixed)', () => {
-    assert.match(css, /\.floor-main:has\(\.qmgr\)/)
-    assert.match(css, /\.qmgr-list[\s\S]*overflow-y:\s*auto/)
-    assert.match(css, /\.qmgr-status-grid[\s\S]*grid-template-columns:\s*repeat\(3/)
+  it('keeps one grouped scroll, with optional filters and search-triggered history', () => {
+    assert.match(daylightCss, /\.floor-main:has\(\.qmgr\)[\s\S]*overflow-y:\s*auto/)
+    assert.match(page, /groupDaylightQueue\(listTickets, canPushToPayment\)/)
+    assert.match(page, /filtersOpen \?/)
+    assert.match(page, /search\.trim\(\) \|\| historyOpen/)
+    assert.doesNotMatch(page, /Filter by status/)
     assert.match(page, /qmgr-toolbar/)
     assert.match(page, /qmgr-history/)
     assert.doesNotMatch(page, /Showing cars/)

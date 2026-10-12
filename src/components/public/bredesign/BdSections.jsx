@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
-import { ArrowRight, ArrowUpRight, Play } from 'lucide-react'
+import { ArrowRight, Play } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 import { SERVICE_DETAIL_CONTENT } from '../../../data/serviceDetailContent'
@@ -275,35 +275,6 @@ export function BdPhotos() {
         <LoopBar rail={rail} />
       </div>
       <BdVideoModal clip={activeClip} onClose={closeClip} />
-    </section>
-  )
-}
-
-export function BdBook() {
-  return (
-    <section className="bd-book" id="book">
-      <div className="bd-shell bd-book-in">
-        <div className="bd-reveal">
-          <p className="bd-eyebrow bd-eyebrow-light">Pamper &amp; protect</p>
-          <h2 className="bd-skew">
-            Book your
-            <br />
-            car in.
-          </h2>
-          <p>
-            Tell us the vehicle and how you drive it. We will tell you honestly which of the four it
-            actually needs.
-          </p>
-        </div>
-        <div className="bd-cta-row bd-reveal">
-          <Link className="bd-btn bd-btn-light" to="/book">
-            Book a service <ArrowUpRight size={15} aria-hidden="true" />
-          </Link>
-          <Link className="bd-btn bd-btn-quiet" to="/services">
-            Compare services
-          </Link>
-        </div>
-      </div>
     </section>
   )
 }

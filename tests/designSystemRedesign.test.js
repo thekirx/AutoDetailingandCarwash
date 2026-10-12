@@ -14,11 +14,11 @@ test('CommandShell mounts CommandMenu and breadcrumbs', () => {
   assert.match(layout, /⌘K|Open command menu/)
 })
 
-test('CommandShell sidebar uses approved blue lockup + OW mark', () => {
+test('CommandShell sidebar uses the approved white (OW) lockup + OW mark on the Daylight navy rail', () => {
   const layout = read('src/layouts/OperationsLayout.jsx')
   const css = read('src/styles.css')
   assert.match(layout, /CommandRailBrand/)
-  assert.match(layout, /hakum-lw-blue\.png/)
+  assert.match(layout, /hakum-lw-ow\.png/)
   assert.match(layout, /hakum-mark-ow\.png/)
   assert.match(layout, /aria-label="Hakum Auto Care home"/)
   assert.match(css, /\.command-rail-logo/)

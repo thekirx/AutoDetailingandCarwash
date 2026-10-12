@@ -1,0 +1,297 @@
+/* Approved Daylight design: navy chrome, light work area. Scoped to the ops shells. */
+.floor-daylight,
+.command-daylight {
+  --navy: #020A31;
+  --rule: #16255C;
+  --accent: #9DB4FF;
+  --blue: #052699;
+  --blue-hover: #0a32c2;
+  --paper: #F1F1ED;
+  --card: #FFFFFF;
+  --ink: #0B1233;
+  --ink-2: #41486B;
+  --ink-3: #5D6488;
+  --ok: #1F9D63;
+  --warn: #B7791F;
+  --bad: #C9353B;
+  --stage-waiting: #7E8AB8;
+  --stage-washing: #5B8CFF;
+  --stage-check: #E0A93A;
+  --stage-payment: #8B6CF0;
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card-foreground: var(--ink);
+  --muted: #ECECE6;
+  --muted-foreground: var(--ink-3);
+  --border: #E1E1DA;
+  --primary: var(--blue);
+  --primary-foreground: #fff;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-ops), 'Gilmer', sans-serif;
+  font-weight: 500;
+}
+.floor-daylight .floor-app-frame { background: var(--paper); }
+.floor-daylight .floor-main { background: var(--paper); }
+.floor-daylight .floor-topbar {
+  min-height: 80px;
+  padding: calc(12px + env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) 12px max(16px, env(safe-area-inset-left));
+  background: var(--navy);
+  color: #fff;
+  border: 0;
+  gap: 12px;
+  backdrop-filter: none;
+}
+.floor-daylight .floor-topbar > div:first-child { border-radius: 0; background: transparent; overflow: visible; }
+/* The mark artwork carries wide padding, so it needs a larger box to read at size. */
+.floor-daylight .floor-topbar > div:first-child img { width: 56px !important; height: 56px !important; max-width: none; }
+.daylight-identity p { display: flex; flex-wrap: wrap; gap: 0 4px; margin: 0; font-size: 14px; line-height: 1.4; font-weight: 700; }
+.daylight-identity-branch { display: block; margin-top: 4px; font-size: 10px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; color: var(--accent); overflow-wrap: anywhere; }
+.floor-daylight .floor-icon-btn { width: 44px; height: 44px; min-width: 44px; min-height: 44px; border: 0; border-radius: 8px; background: transparent; color: #fff; }
+.floor-daylight .floor-topbar > div:last-child { gap: 8px; }
+.floor-daylight .floor-topbar button { color: #fff; }
+.floor-daylight .floor-rail-aside { width: 232px; background: var(--navy); border: 0; }
+.floor-daylight .floor-rail-nav { width: 100%; padding: 20px 12px; }
+.floor-daylight .floor-rail-list { gap: 8px; }
+.floor-daylight .floor-rail-item { width: 100%; border: 0; min-height: 46px; background: transparent; color: #CDD5F5; border-radius: 999px; font-size: 14px; font-weight: 700; text-align: left; }
+.floor-daylight .floor-rail-item.is-active,
+.floor-daylight .floor-rail-item-primary { background: #fff; color: var(--blue); }
+.floor-daylight .floor-main:has(.qmgr) { max-width: none; padding: 0; overflow-y: auto; background: var(--paper); }
+.floor-daylight .qmgr { display: block; height: auto; min-height: 100%; max-width: none; padding: 0 0 24px; gap: 0; color: var(--ink); }
+.daylight-queue-hero { padding: 4px 16px 18px; background: var(--navy); color: #fff; }
+.floor-daylight .qmgr-toolbar { margin: 0 0 12px; gap: 12px; align-items: center; }
+.floor-daylight .qmgr-title { margin: 0; color: #fff; font-family: var(--font-display), 'Benzin', sans-serif; font-size: 30px; line-height: 1.25; font-weight: 800; text-transform: uppercase; transform: skewX(-6deg); transform-origin: left; }
+.floor-daylight .qmgr-toolbar-actions { gap: 8px; }
+.daylight-filter-toggle { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; border: 1px solid var(--rule); border-radius: 999px; background: transparent; padding: 0 12px; color: #fff; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.floor-daylight .qmgr-search { background: #fff; color: var(--ink-3); border: 1px solid #E1E1DA; min-height: 46px; border-radius: 8px; gap: 10px; }
+.floor-daylight .qmgr-search input { color: var(--ink); font-size: 16px; font-weight: 500; }
+.floor-daylight .qmgr-search input::placeholder { color: var(--ink-3); opacity: 1; }
+.floor-daylight .qmgr-filter-row { margin-top: 16px; gap: 12px; }
+.floor-daylight .qmgr-filter { color: var(--accent); }
+.floor-daylight .qmgr-filter select { color: var(--ink); background: #fff; border: 1px solid #E1E1DA; border-radius: 8px; }
+.daylight-queue-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-bottom: 1px solid #E1E1DA; background: #fff; }
+.daylight-queue-summary > div { display: grid; justify-items: center; gap: 4px; padding: 14px 4px; border-right: 1px solid #E1E1DA; }
+.daylight-queue-summary > div:last-child { border-right: 0; }
+.daylight-queue-summary strong { display: grid; place-items: center; min-height: 28px; font-family: var(--font-display), 'Benzin', sans-serif; font-size: 24px; font-weight: 800; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.daylight-queue-summary span { font-size: 11px; font-weight: 700; color: var(--ink-2); }
+.daylight-longest-wait { display: flex; justify-content: flex-end; gap: 8px; margin: 0; padding: 12px 16px 0; font-size: 11px; color: var(--ink-3); }
+.daylight-longest-wait strong { font-weight: 700; font-variant-numeric: tabular-nums; }
+.floor-daylight .qmgr-list { display: grid; align-content: start; grid-auto-rows: max-content; gap: 22px; height: auto; padding: 18px 16px; flex: none; overflow: visible; }
+.daylight-queue-group h2 { display: flex; align-items: center; gap: 8px; margin: 0 0 10px; font-size: 11px; line-height: 1.4; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); }
+.daylight-queue-group h2 > i { width: 9px; height: 9px; flex: none; border-radius: 2px; }
+.daylight-queue-group h2 > span { color: var(--ink-3); letter-spacing: 0; }
+.daylight-group-cards { display: grid; gap: 10px; }
+.daylight-car { min-width: 0; padding: 14px; background: #fff; border: 1px solid #E1E1DA; border-radius: 10px; }
+.daylight-car-your-move { border-color: var(--blue); box-shadow: 0 0 0 3px rgb(5 38 153 / .08); }
+.daylight-car-open { display: block; width: 100%; min-height: 44px; padding: 0; background: transparent; border: 0; color: var(--ink); text-align: left; cursor: pointer; }
+.daylight-car-top { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 10px; }
+.daylight-plate { background: var(--navy); color: #fff; padding: 5px 7px; border-radius: 5px; font-family: var(--font-display), 'Benzin', sans-serif; font-weight: 800; font-size: 10px; line-height: 1.4; white-space: nowrap; }
+.daylight-car-top strong { align-self: center; font-size: 16px; line-height: 1.3; font-weight: 700; overflow-wrap: anywhere; }
+.daylight-time { align-self: center; font-size: 12px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--ink-3); }
+.daylight-time-late { color: var(--bad); }
+.daylight-car-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 9px; color: var(--ink-3); font-size: 12.5px; line-height: 1.5; text-transform: none; }
+.daylight-next { display: inline-flex; padding: 2px 6px; border-radius: 4px; background: #E9EDFC; color: var(--blue); font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+.daylight-crew { display: flex; align-items: center; gap: 10px; margin-top: 10px; color: var(--ink-3); font-size: 12px; line-height: 1.5; }
+.daylight-avatars { display: flex; flex: none; padding-left: 4px; }
+.daylight-avatars > span { display: grid; place-items: center; width: 28px; height: 28px; margin-left: -4px; border: 2px solid #fff; border-radius: 50%; background: #E9EDFC; color: var(--blue); font-size: 9px; font-weight: 800; }
+.daylight-car-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.daylight-button { display: inline-flex; flex: 1; align-items: center; justify-content: center; gap: 8px; min-height: 46px; padding: 0 14px; border: 1px solid transparent; border-radius: 999px; background: var(--blue); color: #fff; font-family: var(--font-ops), 'Gilmer', sans-serif; font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; cursor: pointer; }
+.daylight-button:hover { background: var(--blue-hover); }
+/* White on the supplied green is below 4.5:1; use the darker accessible action tone. */
+.daylight-button-ok { background: #167044; }
+.daylight-button-ok:hover { background: #115D38; }
+.daylight-button-outline { background: #fff; border-color: #D3D3CB; color: var(--ink-2); }
+.daylight-button-outline:hover { background: var(--paper); }
+.daylight-button:disabled { opacity: .6; cursor: wait; }
+.daylight-queue-group-collapsed > summary { display: flex; align-items: center; justify-content: space-between; min-height: 44px; gap: 12px; cursor: pointer; }
+.daylight-queue-group-collapsed > summary h2 { margin: 0; }
+.daylight-show-done { color: var(--blue); font-size: 12px; font-weight: 700; }
+.daylight-queue-group-collapsed[open] .daylight-group-cards { margin-top: 10px; }
+.daylight-completed-total { font-size: 12px; color: var(--ink-3); }
+.floor-daylight .qmgr-history { margin: 16px 16px 0; background: #fff; border-color: #E1E1DA; color: var(--ink); }
+.floor-daylight .qmgr-history-summary { min-height: 44px; color: var(--blue); }
+.floor-daylight .qmgr-history-btn { min-height: 46px; border-radius: 999px; background: var(--blue); color: #fff; }
+.floor-daylight .qmgr-history-row { min-height: 44px; gap: 8px; color: var(--ink); }
+.floor-daylight .qmgr-error { margin: 12px 16px 0; color: var(--bad); background: #FBE4E4; }
+.floor-daylight .qmgr-empty { color: var(--ink-2); background: #fff; border-color: #E1E1DA; }
+.floor-daylight .floor-dock { background: var(--navy); border: 0; color: #fff; backdrop-filter: none; padding-bottom: env(safe-area-inset-bottom); }
+.floor-daylight .floor-dock > ul { gap: 8px; padding: 10px 8px; }
+.floor-daylight .floor-dock-item { display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 5px; min-width: 44px; min-height: 52px; width: 100%; padding: 5px 2px; border: 0; border-radius: 12px; background: transparent; color: #CDD5F5; }
+.floor-daylight .floor-dock-item > span { display: block; font-size: 9px; font-weight: 700; line-height: 1.4; }
+.floor-daylight .floor-dock-item-active { background: rgb(157 180 255 / .14); color: #fff; }
+.floor-daylight .floor-dock-fab { display: flex; flex-direction: column; gap: 5px; min-width: 44px; min-height: 52px; width: 100%; padding: 5px 2px; border: 0; border-radius: 999px; background: #fff; color: var(--navy); box-shadow: none; transform: none; }
+.floor-daylight .floor-dock-fab > span { display: block; font-size: 9px; line-height: 1.4; font-weight: 800; }
+.floor-daylight :is(button, a, input, select, summary):focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+.floor-daylight :is(.floor-topbar, .daylight-queue-hero, .floor-dock, .floor-rail-aside) :is(button, a, input, select):focus-visible { outline-color: var(--accent); }
+.daylight-number-skeleton { display: block; width: 28px; height: 24px; border-radius: 4px; background: #E9E9E2; }
+.daylight-card-skeleton { min-height: 122px; border-radius: 10px; background: #E9E9E2; }
+@media (min-width: 768px) {
+  .floor-daylight .floor-main:has(.qmgr) { padding: 0; }
+  .daylight-queue-hero { padding: 8px 28px 24px; }
+  .floor-daylight .floor-topbar { padding-left: 28px; padding-right: 28px; }
+  .floor-daylight .qmgr-list { max-width: 920px; margin-inline: auto; padding: 24px 28px; gap: 26px; }
+  .daylight-longest-wait { max-width: 920px; margin-inline: auto; padding-right: 28px; }
+  .daylight-car { padding: 18px; }
+  .daylight-car-actions { max-width: 400px; }
+  .daylight-car-top strong { font-size: 16px; }
+  .daylight-plate { font-size: 12px; }
+  .daylight-queue-summary strong { font-size: 28px; }
+}
+@media (max-width: 389px) {
+  .daylight-car-top { gap: 8px; }
+  .daylight-plate { font-size: 9px; }
+  .daylight-button { padding-inline: 12px; font-size: 10px; letter-spacing: .12em; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .floor-daylight *, .floor-daylight *::before, .floor-daylight *::after { animation: none !important; transition: none !important; transform: none !important; }
+}
+/* Portalled More sheet must carry its own light colours. */
+.daylight-more-sheet { background: #fff; color: #0B1233; border-color: #E1E1DA; font-family: var(--font-ops), 'Gilmer', sans-serif; }
+.daylight-more-sheet .floor-chip { display: flex; align-items: center; justify-content: flex-start; width: 100%; min-height: 46px; padding: 10px 14px; border: 1px solid #E1E1DA; border-radius: 8px; background: #fff; color: #41486B; gap: 12px; font-size: 14px; text-align: left; }
+.daylight-more-sheet .floor-chip-active { border-color: #052699; color: #052699; background: #E9EDFC; }
+.daylight-more-sheet :is(button, a):focus-visible { outline: 2px solid #052699; outline-offset: 3px; }
+
+/* ---- Phone sizes ------------------------------------------------------------ */
+/* Small phones (≤359px, e.g. 320/340): keep the name; let the identity wrap instead of hiding it. */
+@media (max-width: 359px) {
+  .daylight-identity p { font-size: 13px; }
+  .floor-daylight .floor-topbar { gap: 8px; padding-inline: 12px; }
+  .floor-daylight .floor-topbar > div:first-child img { width: 44px !important; height: 44px !important; }
+  .floor-daylight .floor-dock > ul { gap: 2px; padding-inline: 4px; }
+  .floor-daylight :is(.floor-dock-item, .floor-dock-fab) > span { font-size: 8.5px; letter-spacing: .02em; }
+  .daylight-queue-summary span { font-size: 10px; }
+  .floor-daylight .qmgr-title { font-size: 26px; }
+  .daylight-filter-toggle { padding: 0 10px; }
+  /* Two action buttons side by side would wrap their words; stack them full width. */
+  .daylight-car-actions { flex-direction: column; }
+  .daylight-car-actions .daylight-button { width: 100%; }
+}
+/* Dock labels never break mid-word: two-word labels wrap as whole words, centred. */
+.floor-daylight :is(.floor-dock-item, .floor-dock-fab) > span { text-align: center; overflow-wrap: normal; word-break: keep-all; hyphens: none; }
+
+/* Phones held sideways (short and wide): the fixed bars get slim so the work area has room. */
+@media (max-height: 500px) and (orientation: landscape) {
+  .floor-daylight .floor-topbar { min-height: 52px; padding-top: calc(6px + env(safe-area-inset-top)); padding-bottom: 6px; }
+  .floor-daylight .floor-topbar > div:first-child img { width: 40px !important; height: 40px !important; }
+  .daylight-identity p { font-size: 13px; }
+  .daylight-identity-branch { margin-top: 1px; }
+  .floor-daylight .floor-dock > ul { padding-block: 4px; }
+  .floor-daylight :is(.floor-dock-item, .floor-dock-fab) { flex-direction: row; gap: 8px; min-height: 44px; padding-block: 2px; }
+  .floor-daylight :is(.floor-dock-item, .floor-dock-fab) > span { font-size: 10px; }
+  /* The raised primary button sits flush in the slim bar instead of poking above it. */
+  .floor-daylight .floor-dock-fab { height: 44px; min-height: 44px; margin: 0; transform: none; top: 0; box-shadow: none; }
+  .daylight-queue-hero { padding-top: 2px; padding-bottom: 12px; }
+  .floor-daylight .qmgr-toolbar { margin-bottom: 8px; }
+  .floor-daylight .qmgr-title { font-size: 24px; }
+  .floor-daylight .qmgr-search { min-height: 44px; }
+  .daylight-queue-summary > div { padding-block: 8px; }
+  .daylight-queue-summary strong { font-size: 20px; min-height: 22px; }
+}
+
+/* Admin console on a phone: the top bar shows just the page; inline links get full tap areas. */
+@media (max-width: 640px) {
+  .command-daylight .ops-inset-topbar nav[aria-label="Breadcrumb"] > span:not(:last-child),
+  .command-daylight .ops-inset-topbar nav[aria-label="Breadcrumb"] > span[aria-hidden],
+  .command-daylight .ops-inset-topbar nav[aria-label="Breadcrumb"] + p { display: none; }
+  .command-daylight .ops-inset-topbar nav[aria-label="Breadcrumb"] > span:last-child { font-size: 15px; font-weight: 700; white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.2; }
+}
+.command-daylight .sa-floor :is(a.text-sm, button.text-sm, .ds-link) { display: inline-flex; align-items: center; min-height: 44px; }
+
+/* ---- Time clock ---------------------------------------------------------- */
+.daylight-clock { display: grid; gap: 16px; padding: 18px; background: #fff; border: 1px solid #E1E1DA; border-radius: 12px; color: var(--ink, #0B1233); }
+.daylight-clock-status { display: flex; align-items: center; gap: 14px; }
+.daylight-clock-ring { display: grid; place-items: center; flex: none; width: 58px; height: 58px; border-radius: 50%; background: #FBEFD9; color: #8A5A12; }
+.daylight-clock-ring.is-in { background: #E3F4EA; color: #167044; }
+.daylight-clock-ring.is-done { background: #E9EDFC; color: var(--blue, #052699); }
+.daylight-clock-ring.is-absent { background: #FBE4E4; color: #A3262C; }
+.daylight-clock-status h2 { margin: 0; font-family: var(--font-ops), 'Gilmer', sans-serif; font-size: 18px; line-height: 1.3; font-weight: 700; color: var(--ink, #0B1233); }
+.daylight-clock-status p { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 2px 0 0; font-size: 14px; line-height: 1.5; color: var(--ink-2, #41486B); }
+.daylight-clock-tag { display: inline-flex; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; background: #E3F4EA; color: #167044; }
+.daylight-clock-tag.is-late { background: #FBEFD9; color: #8A5A12; }
+.daylight-clock-tag.is-absent { background: #FBE4E4; color: #A3262C; }
+.daylight-clock-rules { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; border-top: 1px solid #EEEEE8; }
+.daylight-clock-rules li { position: relative; padding: 11px 0 11px 26px; border-bottom: 1px solid #EEEEE8; font-size: 14px; line-height: 1.45; color: var(--ink-2, #41486B); }
+.daylight-clock-rules li::before { content: ''; position: absolute; left: 4px; top: 17px; width: 8px; height: 8px; border-radius: 50%; background: var(--blue, #052699); }
+.daylight-clock-pay { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 14px; color: var(--ink-2, #41486B); }
+.daylight-clock-pay svg { color: var(--blue, #052699); }
+.daylight-clock-error { margin: 0; padding: 10px 12px; border-radius: 8px; background: #FBE4E4; color: #A3262C; font-size: 14px; line-height: 1.5; }
+.daylight-clock-actions { display: grid; gap: 10px; }
+.daylight-clock .daylight-button { flex: none; width: 100%; }
+.daylight-clock-main.daylight-button-outline { box-shadow: none; }
+.daylight-clock-main { min-height: 60px; font-size: 13px; box-shadow: 0 8px 20px rgb(5 38 153 / .22); }
+.daylight-week { padding-top: 4px; }
+.daylight-week-title { margin: 0 0 10px; font-size: 11px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3, #5D6488); }
+.daylight-week ol { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; margin: 0; padding: 0; list-style: none; }
+.daylight-week li { display: grid; justify-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: var(--ink-3, #5D6488); }
+.daylight-week li i { display: block; width: 100%; height: 34px; border-radius: 6px; background: #EEEEE8; }
+.daylight-week li.is-present i { background: var(--blue, #052699); }
+.daylight-week li.is-late i { background: #D98A1F; }
+.daylight-week li.is-absent i { background: #C9353B; }
+.daylight-week-key { margin: 10px 0 0; font-size: 12px; color: var(--ink-3, #5D6488); }
+@media (min-width: 768px) {
+  .daylight-clock { max-width: 640px; padding: 22px; }
+}
+
+/* ---- Shared page header (OpsPageShell) in both Daylight shells ----------- */
+:is(.floor-daylight, .command-daylight) .ops-page-header { border-color: #E1E1DA; }
+:is(.floor-daylight, .command-daylight) .ops-page-eyebrow { color: var(--blue); letter-spacing: .16em; font-weight: 800; }
+:is(.floor-daylight, .command-daylight) .ops-page-title { font-family: var(--font-display), 'Benzin', sans-serif; font-weight: 800; text-transform: uppercase; letter-spacing: -.01em; line-height: 1.05; color: var(--ink); transform: skewX(-6deg); transform-origin: left bottom; }
+:is(.floor-daylight, .command-daylight) .ops-page-desc { color: var(--ink-2); font-size: 15px; }
+:is(.floor-daylight, .command-daylight) .ops-page-meta { background: #fff; border-color: #E1E1DA; color: var(--ink-2); border-radius: 999px; }
+/* Phones: the dock already says where you are, so the breadcrumb is noise. */
+.floor-daylight .ops-page-crumbs { display: none; }
+.floor-daylight .floor-main { padding-inline: 16px; }
+.floor-daylight .floor-main:has(.qmgr) { padding-inline: 0; }
+
+/* ---- Command shell (desktop admin) ---------------------------------------- */
+.command-daylight {
+  --sidebar: var(--navy);
+  --sidebar-foreground: #CDD5F5;
+  --sidebar-primary: #fff;
+  --sidebar-primary-foreground: var(--blue);
+  --sidebar-accent: rgb(157 180 255 / .12);
+  --sidebar-accent-foreground: #fff;
+  --sidebar-border: var(--rule);
+  --sidebar-ring: var(--accent);
+}
+.command-daylight [data-slot="sidebar-inset"],
+.command-daylight .ops-page-chrome { background: var(--paper); }
+.command-daylight [data-slot="sidebar"],
+.command-daylight [data-slot="sidebar-inner"],
+.command-daylight [data-slot="sidebar-container"] { background: var(--navy); color: #CDD5F5; border-color: var(--rule); }
+.command-daylight .command-rail-logo { overflow: hidden; }
+.command-daylight .command-rail-kicker { color: var(--accent); }
+.command-daylight .command-rail-rule { background: var(--rule); }
+.command-daylight .command-nav-group [data-slot="sidebar-group-label"] { color: #8D98C9; }
+.command-daylight .command-nav-btn { color: #CDD5F5; border-radius: 999px; font-weight: 600; font-size: 14px; }
+.command-daylight .command-nav-btn:hover { background: rgb(157 180 255 / .12); color: #fff; }
+.command-daylight .command-nav-btn[data-active],
+.command-daylight .command-nav-btn[aria-current="page"] { background: #fff; color: var(--blue); box-shadow: none; font-weight: 700; }
+.command-daylight .command-nav-btn:focus-visible { outline-color: var(--accent); }
+.command-daylight .command-rail-who { background: rgb(157 180 255 / .08); box-shadow: none; border: 1px solid var(--rule); }
+.command-daylight .command-rail-who-name { color: #fff; }
+.command-daylight .command-rail-who-meta { color: #AAB4DC; }
+.command-daylight .command-rail-footer { border-color: var(--rule); }
+.command-daylight .command-rail-mark { background: transparent; }
+.command-daylight .ops-inset-topbar { background: rgb(241 241 237 / .92); border-color: #E1E1DA; }
+.command-daylight .ops-inset-topbar :is(button, [data-slot="dropdown-menu-trigger"]) { border-radius: 999px; }
+.command-daylight :is(button, a, input, select, summary):focus-visible { outline: 2px solid var(--blue); outline-offset: 3px; }
+.command-daylight [data-slot="sidebar"] :is(button, a):focus-visible { outline-color: var(--accent); }
+.command-daylight .ops-page-title { font-size: clamp(28px, 3vw, 38px); }
+
+/* ---- Admin Floor Board (keeps the client's stage names) ------------------- */
+.command-daylight .sa-floor-title { font-family: var(--font-display), 'Benzin', sans-serif; font-weight: 800; text-transform: uppercase; letter-spacing: -.01em; color: var(--ink); transform: skewX(-6deg); transform-origin: left bottom; }
+.command-daylight .sa-floor :is(.rounded-2xl, .rounded-xl) { border-radius: 10px; }
+.command-daylight .sa-floor .bg-card { background: #fff; }
+.command-daylight .sa-floor .border-border { border-color: #E1E1DA; }
+.command-daylight .sa-tile { background: #fff; border: 1px solid #E1E1DA; border-top: 3px solid var(--stage-waiting); box-shadow: none; }
+.command-daylight .sa-tile.is-green { border-top-color: var(--stage-washing); }
+.command-daylight .sa-tile.is-amber { border-top-color: var(--stage-check); }
+.command-daylight .sa-tile.is-rose { border-top-color: var(--bad); }
+.command-daylight .sa-tile:hover { border-color: #C9CCD8; border-top-color: inherit; box-shadow: 0 6px 18px rgb(2 10 49 / .06); }
+.command-daylight .sa-tile > p:first-child { color: var(--ink-2); letter-spacing: .12em; font-weight: 800; }
+.command-daylight .sa-tile-value { font-family: var(--font-display), 'Benzin', sans-serif; font-weight: 800; color: var(--ink); }
+.command-daylight .sa-tile > p:last-child:not(.sa-tile-value) { color: var(--ink-3); }
+.sa-tile-skel { display: inline-block; width: 2.2rem; height: 1.6rem; border-radius: 6px; background: #E9E9E2; vertical-align: middle; }
+.command-daylight .sa-floor select,
+.command-daylight .sa-floor button.rounded-xl { border-radius: 999px; background: #fff; border-color: #D3D3CB; }

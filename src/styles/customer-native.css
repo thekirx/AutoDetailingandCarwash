@@ -1733,46 +1733,6 @@ html.capp-sheet-open {
     background: #e7c976;
   }
 
-  /* From Hakum: blog and events, side by side. */
-  .capp-feed {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.6rem;
-  }
-
-  .capp-feed-card {
-    display: grid;
-    gap: 0.2rem;
-    padding: 0.9rem;
-    border: 1px solid var(--capp-line);
-    border-radius: var(--capp-radius);
-    background: var(--capp-surface);
-    color: var(--capp-ink);
-    text-decoration: none;
-  }
-
-  .capp-feed-card strong {
-    margin-top: 0.5rem;
-    font-size: 0.95rem;
-    line-height: 1.2;
-  }
-
-  .capp-feed-card em {
-    font-style: normal;
-    font-size: 0.8rem;
-    color: var(--capp-steel);
-  }
-
-  .capp-feed-icon {
-    display: grid;
-    place-items: center;
-    width: 2.4rem;
-    height: 2.4rem;
-    border-radius: 50%;
-    background: var(--capp-accent-soft);
-    color: var(--capp-accent);
-  }
-
   /* Queue: your car on the floor is a navy panel you can open. */
   .capp[data-app-theme] .capp-queue-car {
     display: grid;

@@ -84,6 +84,7 @@ import {
   SidebarTrigger,
   useSidebar,
 } from '@/components/ui/sidebar'
+import '../styles/ops-daylight.css'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import {
@@ -129,6 +130,12 @@ const iconMap = {
   Banknote,
   Map,
 }
+
+/** Daylight display words for the floor app. Permissions still decide which items exist; this only renames them on screen.
+    The admin board keeps the client's own names (Floor Board, Final Checking, Failed QA). */
+const DAYLIGHT_LABELS = { Attendance: 'Time clock', New: 'New car' }
+const DAYLIGHT_GROUPS = { floor: 'Today', books: 'Money' }
+const daylightLabel = (label) => DAYLIGHT_LABELS[label] || label
 
 function formatRole(role) {
   if (role === 'team_lead') return 'Team Lead'
@@ -185,7 +192,7 @@ function CommandRailBrand({ homeTo, caption }) {
       <NavLink to={homeTo} className="command-rail-brand-link" aria-label="Hakum Auto Care home">
         <span className="command-rail-logo group-data-[collapsible=icon]:hidden" aria-hidden>
           <img
-            src="/branding/hakum-lw-blue.png"
+            src="/branding/hakum-lw-ow.png"
             alt=""
             width={120}
             height={68}
@@ -226,6 +233,9 @@ function FloorAppShell({
   const [moreOpen, setMoreOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const branch = formatScope(profile, useBranchNames())
+  // Approved Daylight design (12 Oct 2026) — every floor role, not just team leads.
+  const daylight = true
+  const dockLabel = (label) => (daylight ? daylightLabel(label) : label)
 
   const railNav = (
     <nav className="floor-rail-nav" aria-label="Primary navigation">
@@ -249,17 +259,18 @@ function FloorAppShell({
                 }}
               >
                 <Icon size={22} aria-hidden />
-                <span>{label}</span>
+                <span>{dockLabel(label)}</span>
               </NavLink>
             </li>
           )
         })}
+        {daylight && more?.length ? <li><button type="button" className="floor-rail-item" aria-label="Open more menu" aria-expanded={moreOpen} onClick={() => setMoreOpen(true)}><Menu size={22} aria-hidden /><span>More</span></button></li> : null}
       </ul>
     </nav>
   )
 
   return (
-    <div className={`floor-app-stage ${shellClass}`.trim()}>
+    <div className={`floor-app-stage ${daylight ? 'floor-daylight' : ''} ${shellClass}`.trim()}>
       <div className="floor-shell floor-app-frame flex h-svh max-h-svh w-full flex-col overflow-hidden bg-background text-foreground md:flex-row">
         <div className="floor-rail-aside hidden md:flex">{railNav}</div>
         <div className="flex min-h-0 min-w-0 flex-1 flex-col">
@@ -271,6 +282,12 @@ function FloorAppShell({
               {brand.icon}
             </div>
             <div className="min-w-0 flex-1">
+              {daylight ? (
+                <div className="daylight-identity">
+                  <p><span className="daylight-identity-name">{profile?.full_name || brand.fallbackName} · </span><span>{formatRole(profile?.role)}</span></p>
+                  <span className="daylight-identity-branch">{branch}</span>
+                </div>
+              ) : <>
               <p className="truncate text-sm font-black tracking-[0.06em] sm:tracking-[0.14em]">{brand.title}</p>
               {/* The name gives way first so the branch is always readable. */}
               <p className="flex min-w-0 text-xs text-muted-foreground">
@@ -280,13 +297,15 @@ function FloorAppShell({
                   <span className="font-semibold tracking-wide text-primary uppercase">{branch}</span>
                 </span>
               </p>
+              </>}
+
             </div>
             <div className="flex shrink-0 items-center gap-1">
               <NotificationBell variant="floor" homeUrl={homeUrl} homeLabel={homeLabel} />
               <button type="button" className="floor-icon-btn" aria-label="Settings" onClick={() => setSettingsOpen(true)}>
                 <Settings size={18} />
               </button>
-              {more?.length ? (
+              {more?.length && !daylight ? (
                 <button
                   type="button"
                   className="floor-icon-btn"
@@ -297,9 +316,9 @@ function FloorAppShell({
                   <Menu size={20} />
                 </button>
               ) : null}
-              <button type="button" className="floor-icon-btn" onClick={signOut} aria-label="Sign out">
+              {!daylight ? <button type="button" className="floor-icon-btn" onClick={signOut} aria-label="Sign out">
                 <LogOut size={18} />
-              </button>
+              </button> : null}
             </div>
           </header>
 
@@ -313,7 +332,7 @@ function FloorAppShell({
           >
             <ul
               className="mx-auto grid max-w-3xl gap-1 px-1 py-1.5 sm:gap-2 sm:px-2"
-              style={{ gridTemplateColumns: `repeat(${Math.max(dock.length, 1)}, minmax(0, 1fr))` }}
+              style={{ gridTemplateColumns: `repeat(${Math.max(dock.length + (daylight && more?.length ? 1 : 0), 1)}, minmax(0, 1fr))` }}
             >
               {dock.map(({ label, to, icon, primary, end }) => {
                 const Icon = iconMap[icon] || ClipboardList
@@ -335,16 +354,17 @@ function FloorAppShell({
                       }}
                     >
                       <Icon size={primary ? 22 : 20} aria-hidden />
-                      <span>{label}</span>
+                      <span>{dockLabel(label)}</span>
                     </NavLink>
                   </li>
                 )
               })}
+              {daylight && more?.length ? <li className="flex justify-center"><button type="button" className="floor-dock-item" aria-label="Open more menu" aria-expanded={moreOpen} onClick={() => setMoreOpen(true)}><Menu size={20} aria-hidden /><span>More</span></button></li> : null}
             </ul>
           </nav>
         </div>
 
-        <ResponsiveSheet open={moreOpen} onOpenChange={setMoreOpen} title="More tools" description={`Scope · ${branch}`}>
+        <ResponsiveSheet open={moreOpen} onOpenChange={setMoreOpen} className={daylight ? 'daylight-more-sheet' : undefined} title="More tools" description={`Scope · ${branch}`}>
           <div className="grid gap-2" role="navigation" aria-label="More tools">
             {more.map(({ label, to, icon }) => {
               const Icon = iconMap[icon] || ClipboardList
@@ -358,10 +378,11 @@ function FloorAppShell({
                   }
                 >
                   <Icon size={16} aria-hidden />
-                  {label}
+                  {dockLabel(label)}
                 </NavLink>
               )
             })}
+            {daylight ? <button type="button" className="floor-chip min-h-11" onClick={signOut}><LogOut size={16} aria-hidden />Sign out</button> : null}
           </div>
         </ResponsiveSheet>
 
@@ -482,7 +503,7 @@ function CommandNavList({ items }) {
 
   return groups.map((group) => (
     <SidebarGroup key={group.id} className="command-nav-group">
-      <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+      <SidebarGroupLabel>{DAYLIGHT_GROUPS[group.id] || group.label}</SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
           {group.items.map(({ label: itemLabel, to, icon }) => {
@@ -537,7 +558,7 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
 
   return (
     <SidebarProvider
-      className="command-shell min-w-0 overflow-x-hidden bg-background text-foreground"
+      className="command-shell command-daylight min-w-0 overflow-x-hidden bg-background text-foreground"
       style={{ '--sidebar-width': '15rem' }}
     >
       <Sidebar collapsible="icon" variant="inset" className="command-rail">

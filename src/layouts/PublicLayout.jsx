@@ -1,14 +1,13 @@
 import { useEffect, useState } from 'react'
-import { ArrowRight, ArrowUpRight, Facebook, Instagram, Mail, MapPin, Menu, Phone, X } from 'lucide-react'
+import { Menu, X } from 'lucide-react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import PublicPageMeta from '@/components/PublicPageMeta'
 import NotificationBell from '@/components/NotificationBell'
 import UserSettingsModal from '@/components/UserSettingsModal'
-import { CookiePreferencesButton } from '@/components/CookieConsent'
 import { useAuth } from '@/auth/AuthProvider'
-import { branchCityName, usePublicBranches } from '@/lib/branches'
+import { usePublicBranches } from '@/lib/branches'
 import { CustomerInstallPopup } from '@/components/InstallGuide'
-import TikTokIcon from '@/components/public/TikTokIcon'
+import SiteFooter from '@/components/public/SiteFooter'
 import { PUBLIC_NAV_ITEMS } from '@/data/publicNavigation'
 import { buildHomeBranchCards } from '@/lib/homeBranches'
 import { Button } from '@/components/ui/button'
@@ -191,8 +190,6 @@ export default function PublicLayout() {
 
   useEffect(() => setOpen(false), [pathname])
 
-  const footerCities = visibleBranches.map(branchCityName).join(' · ') || 'Philippines'
-
   if (accountRoute) {
     return (
       <div className="public-site app-shell account-route">
@@ -212,11 +209,6 @@ export default function PublicLayout() {
   }
 
   const homeRoute = pathname === '/home' || pathname === '/'
-  /* A service page closes on its own booking section, so the footer pitch
-     keeps the line but drops its "Book a service" button there. */
-  const serviceDetailRoute = /^\/services\/[^/]+/.test(pathname)
-  /* The branch page drops it too (client request). */
-  const hideFooterBook = serviceDetailRoute || pathname === '/branches' || pathname.startsWith('/branches/')
 
   return (
     <div
@@ -231,107 +223,7 @@ export default function PublicLayout() {
         <Outlet />
       </main>
 
-      <footer className="public-footer">
-        <div className="public-shell footer-pitch">
-          <div>
-            <p className="footer-kicker">Your car deserves the Hakum treatment</p>
-            <h2>
-              Pamper it.
-              <br />
-              <i>Protect it.</i>
-            </h2>
-          </div>
-          {hideFooterBook ? null : (
-            <Link to="/book">
-              Book a service <ArrowRight />
-            </Link>
-          )}
-        </div>
-
-        <div className="public-shell footer-details">
-          <div className="footer-brand">
-            <Link className="wordmark footer-logo" to="/" aria-label="Hakum Auto Care home">
-              <img
-                className="wordmark-image"
-                src="/branding/hakum-lw-ow.png"
-                alt=""
-                width="170"
-                height="96"
-              />
-            </Link>
-            <p>Precision car care, premium protection, and genuine pride in every detail.</p>
-            <div className="footer-social">
-              <a href="https://www.facebook.com/share/1GHerg8pxV/" aria-label="Hakum on Facebook">
-                <Facebook />
-              </a>
-              <a href="https://www.instagram.com/_hakumautocare" aria-label="Hakum on Instagram">
-                <Instagram />
-              </a>
-              <a href="https://www.tiktok.com/@hakum_autocare" aria-label="Hakum on TikTok" target="_blank" rel="noreferrer noopener">
-                <TikTokIcon />
-              </a>
-            </div>
-          </div>
-
-          <div className="footer-branches">
-            <h3>Our branches</h3>
-            {visibleBranches.length ? visibleBranches.map((b, i) => (
-              <Link key={b.slug} to={b.coming_soon ? '/branches' : `/queue/${b.slug}`}>
-                <span>{String(i + 1).padStart(2, '0')}</span>
-                <strong>{branchCityName(b)}</strong>
-                <small>{b.coming_soon ? 'Coming soon' : (b.address || 'Open daily')}</small>
-                <ArrowUpRight />
-              </Link>
-            )) : (
-              <Link to="/branches">
-                <span>01</span>
-                <strong>Find a branch</strong>
-                <small>Locations across the Philippines</small>
-                <ArrowUpRight />
-              </Link>
-            )}
-          </div>
-
-          <div className="footer-contact">
-            <h3>Talk to Hakum</h3>
-            <a href="tel:+639156296096">
-              <Phone />
-              0915 629 6096
-            </a>
-            <a href="mailto:sales@hakumautocare.com">
-              <Mail />
-              sales@hakumautocare.com
-            </a>
-            <a href="mailto:admin@hakumautocare.com">
-              <Mail />
-              admin@hakumautocare.com
-            </a>
-            <Link to="/contact">
-              <Mail />
-              Contact form
-            </Link>
-            <Link to="/partnerships">Brand collabs</Link>
-            <Link to="/complaints">Submit a complaint</Link>
-            <span>
-              <MapPin />
-              {footerCities}
-            </span>
-          </div>
-        </div>
-
-        <div className="public-shell footer-navigation">
-          <nav aria-label="Legal and privacy">
-            <Link to="/terms">Terms</Link>
-            <Link to="/privacy">Privacy</Link>
-            <Link to="/cookies">Cookies</Link>
-            <CookiePreferencesButton />
-          </nav>
-          <div>
-            <span>© {new Date().getFullYear()} Hakum Auto Care</span>
-          </div>
-        </div>
-
-      </footer>
+      <SiteFooter branches={visibleBranches} />
       <CustomerInstallPopup enabled={isCustomer} />
     </div>
   )

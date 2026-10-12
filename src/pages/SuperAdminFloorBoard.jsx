@@ -100,10 +100,13 @@ function StatTile({ label, value, hint, tone = 'default', onNavigate, breakdown 
         onBlur={hideTip}
         aria-haspopup="dialog"
         aria-label={`${label}: ${value}. Open breakdown.`}
-        className={`relative min-h-[7.5rem] rounded-2xl border p-4 text-left shadow-sm transition hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${toneClass}`}
+        className={`sa-tile is-${tone} relative min-h-[7.5rem] rounded-2xl border p-4 text-left shadow-sm transition hover:border-primary/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${toneClass}`}
       >
         <p className="text-[10px] font-bold tracking-[0.16em] text-muted-foreground uppercase">{label}</p>
-        <p className="mt-2 text-2xl font-semibold tabular-nums text-foreground sm:text-3xl">{value}</p>
+        <p className="sa-tile-value mt-2 text-2xl font-semibold tabular-nums text-foreground sm:text-3xl">
+          {/* While loading, hold the number's space with a soft block rather than dots. */}
+          {value === '…' ? <span className="sa-tile-skel" aria-label="Loading" /> : value}
+        </p>
         {hint ? <p className="mt-1 text-[11px] text-muted-foreground">{hint}</p> : null}
       </button>
       {tip
@@ -365,7 +368,7 @@ export default function SuperAdminFloorBoard() {
               </span>
             ) : null}
           </div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Floor Board</h1>
+          <h1 className="sa-floor-title text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Floor Board</h1>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">
             Services & Packages and Detailing Services stay separate across {branchLabel.toLowerCase()}. Money and tempo follow the timeline below.
           </p>

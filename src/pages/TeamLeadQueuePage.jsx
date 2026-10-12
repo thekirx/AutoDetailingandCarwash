@@ -6,34 +6,31 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
-  ChevronDown,
-  ChevronUp,
+  SlidersHorizontal,
   History,
   LoaderCircle,
-  Plus,
   RefreshCw,
   Search,
-  Users,
 } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
 import { getAccessTokenFresh } from '../lib/authToken'
-import { serviceKindFromPayCategory } from '../lib/serviceKinds'
+import { canPushFinalCheckToPayment, canViewRedoLane, canMarkFailedQa } from '../auth/permissions'
+import DaylightQueueCard from '../components/ops/DaylightQueueCard'
+import { formatDaylightDuration, groupDaylightQueue, queueSummary, longestWaitingMinutes } from '../queue/daylightPresentation'
 import {
   filterTicketsByFamily,
   QUEUE_FAMILY_WASH,
 } from '../lib/queueFamilies'
 import { createCoalescedReload } from '../lib/coalesceReload'
 import { getLocalCalendarDate } from '../lib/localCalendarDate'
-import { isOverSla } from '../lib/ownerRevisionsPhase7'
 import { supabase } from '../lib/supabase'
 import {
   DURATION_FILTERS,
   QUEUE_DATE_PRESETS,
-  averageDwellByStatus,
   fifoNextTicketId,
-  formatQueueNumber,
   getBranchScope,
   getOpsBoardStatuses,
+  getQueueTicketActionFlags,
   groupVisitTickets,
   matchesDurationFilter,
   matchesTicketSearch,
@@ -41,196 +38,10 @@ import {
   requiresTeamLeadBranchSetup,
   sortTicketsFifo,
   STATUS_LABELS,
-  statusShortLabel,
   ticketElapsedMinutes,
 } from '../queue/queueLogic'
-import { fetchTeamLeadDayBoard, formatMoney } from '../queue/queueApi'
+import { fetchTeamLeadDayBoard, formatMoney, sendTicketToPayment, markTicketRedo } from '../queue/queueApi'
 import QueueTicketEditModal from '../components/QueueTicketEditModal'
-
-const BASE_STATUS_FILTERS = [
-  { key: 'waiting', label: 'Waiting' },
-  { key: 'in_progress', label: 'In Progress' },
-  { key: 'final_checking', label: 'Final Check' },
-  { key: 'completed', label: 'Completed' },
-  { key: 'cancelled', label: 'Cancelled' },
-  { key: 'all', label: 'All' },
-]
-
-function minutesBetween(startIso, endIso) {
-  if (!startIso) return null
-  const start = new Date(startIso).getTime()
-  const end = endIso ? new Date(endIso).getTime() : Date.now()
-  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return null
-  return Math.max(0, Math.round((end - start) / 60_000))
-}
-
-function formatDuration(mins) {
-  if (mins == null) return '0m'
-  if (mins < 60) return `${mins}m`
-  const h = Math.floor(mins / 60)
-  const m = mins % 60
-  return m ? `${h}h ${m}m` : `${h}h`
-}
-
-function QueueManagerCard({ ticket, expanded, onToggle, onOpen, canManage, isFifoNext }) {
-  const status = ticket.status
-  const kind = serviceKindFromPayCategory(ticket.service_pay_category)
-  const services = (ticket.service_names?.length
-    ? ticket.service_names
-    : [ticket.service_name].filter(Boolean))
-  const price = Number(ticket.final_price_minor ?? ticket.base_price_minor ?? 0)
-  const waitMins = minutesBetween(ticket.waiting_at || ticket.created_at, ticket.in_progress_at || ticket.actual_start)
-  const processMins = minutesBetween(
-    ticket.in_progress_at || ticket.actual_start,
-    ticket.actual_end || ticket.final_checking_at,
-  )
-  const totalMins = minutesBetween(
-    ticket.created_at,
-    ticket.actual_end || (['waiting', 'in_progress', 'final_checking'].includes(status) ? null : ticket.actual_end),
-  )
-  const sla = ticket.service_sla_minutes
-  const processOver = isOverSla(processMins, sla)
-  const totalOver = isOverSla(totalMins, sla)
-  const sizeLabel = ticket.vehicle_type
-    ? String(ticket.vehicle_type).replace(/_/g, ' ')
-    : ''
-  const vehicleLabel = [ticket.vehicle_make, ticket.vehicle_model].filter(Boolean).join(' ')
-    || ticket.vehicle_model
-    || 'Vehicle'
-  const canStartHere = canManage && status === 'waiting'
-
-  return (
-    <article className="qmgr-card">
-      <button type="button" className="qmgr-card-head" onClick={onToggle} aria-expanded={expanded}>
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="qmgr-plate">{ticket.vehicle_plate || 'NO PLATE'}</span>
-            {isFifoNext ? (
-              <span className="rounded-full bg-emerald-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white">
-                Next
-              </span>
-            ) : null}
-            <span className={`qmgr-status qmgr-status-${status}`}>
-              {STATUS_LABELS[status] || status}
-            </span>
-          </div>
-          <p className="mt-2 truncate text-base font-semibold text-foreground capitalize">
-            {vehicleLabel}
-            {sizeLabel ? (
-              <span className="ml-1.5 font-normal text-muted-foreground normal-case">
-                ({sizeLabel})
-              </span>
-            ) : null}
-          </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
-            {formatQueueNumber(ticket.queue_number, ticket.service_pay_category)}
-            {kind === 'detailing' ? ' · Detailing' : kind === 'package' ? ' · Package' : ' · Service'}
-          </p>
-        </div>
-        <span className="qmgr-chevron" aria-hidden>
-          {expanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-        </span>
-      </button>
-
-      {expanded ? (
-        <div className="qmgr-card-body">
-          <div className="qmgr-meta-block">
-            <p className="qmgr-meta-label">Service</p>
-            <div className="flex flex-wrap gap-1.5">
-              {services.length ? services.map((name) => (
-                <span key={name} className="qmgr-service-pill">{name}</span>
-              )) : <span className="text-sm text-muted-foreground">No service</span>}
-            </div>
-          </div>
-
-          <div className="qmgr-meta-grid">
-            <div>
-              <p className="qmgr-meta-label">Phone</p>
-              <p className="qmgr-meta-value">{ticket.customer_phone || 'N/A'}</p>
-            </div>
-            <div>
-              <p className="qmgr-meta-label">Total Cost</p>
-              <p className="qmgr-meta-value qmgr-meta-money">{formatMoney(price)}</p>
-            </div>
-            <div>
-              <p className="qmgr-meta-label">Waiting</p>
-              <p className="qmgr-meta-value">{formatDuration(waitMins)}</p>
-            </div>
-            <div>
-              <p className="qmgr-meta-label">Process</p>
-              <p className={`qmgr-meta-value ${processOver ? 'text-red-600 dark:text-red-400' : ''}`}>
-                {formatDuration(processMins)}
-              </p>
-            </div>
-            <div>
-              <p className="qmgr-meta-label">Duration</p>
-              <p className={`qmgr-meta-value ${totalOver ? 'text-red-600 dark:text-red-400' : ''}`}>
-                {formatDuration(totalMins)}
-              </p>
-            </div>
-          </div>
-
-          <div className="qmgr-meta-block">
-            <p className="qmgr-meta-label">Service notes</p>
-            <div className="grid gap-3">
-              {(ticket.service_notes || [ticket]).map((line) => (
-                <div key={line.booking_id}>
-                  <p className="mb-1 text-sm font-semibold text-foreground">{line.service_name || 'Service'}</p>
-                  <p className={`qmgr-notes ${line.notes?.trim() ? '' : 'text-muted-foreground'}`}>
-                    {line.notes?.trim() ? line.notes : 'No notes'}
-                  </p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="qmgr-meta-block">
-            <p className="qmgr-meta-label">Crew</p>
-            <div className="flex flex-wrap gap-1.5">
-              {ticket.assigned_staff_name ? (
-                String(ticket.assigned_staff_name)
-                  .split(',')
-                  .map((name) => name.trim())
-                  .filter(Boolean)
-                  .map((name) => (
-                    <span key={name} className="qmgr-crew-pill">
-                      <Users size={12} aria-hidden />
-                      {name}
-                    </span>
-                  ))
-              ) : (
-                <span className="text-sm text-muted-foreground">
-                  {canStartHere ? 'Unassigned — open ticket to assign, then Start' : 'Unassigned'}
-                </span>
-              )}
-            </div>
-          </div>
-
-          <div className="grid gap-2">
-            {canStartHere && onOpen ? (
-              <button
-                type="button"
-                className="qmgr-open-btn qmgr-open-btn-primary"
-                onClick={() => onOpen(ticket.booking_id)}
-              >
-                Assign crew &amp; start
-              </button>
-            ) : null}
-            {onOpen && ['waiting', 'in_progress', 'final_checking'].includes(status) ? (
-              <button type="button" className="qmgr-open-btn" onClick={() => onOpen(ticket.booking_id)}>
-                {canStartHere ? 'Open ticket' : status === 'in_progress' ? 'Final check / manage' : 'Open ticket'}
-              </button>
-            ) : (
-              <Link to={`/operations/queue/${ticket.booking_id}`} className="qmgr-open-btn">
-                View ticket
-              </Link>
-            )}
-          </div>
-        </div>
-      ) : null}
-    </article>
-  )
-}
 
 export default function TeamLeadQueuePage() {
   const { profile, canManageQueue, canViewQueueOperations } = useAuth()
@@ -245,16 +56,17 @@ export default function TeamLeadQueuePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('waiting')
   const [datePreset, setDatePreset] = useState('today')
   const [durationFilter, setDurationFilter] = useState('all')
   const [historyPlate, setHistoryPlate] = useState('')
   const [historyRows, setHistoryRows] = useState(null)
   const [historyLoading, setHistoryLoading] = useState(false)
   const [historyError, setHistoryError] = useState('')
-  const [expandedId, setExpandedId] = useState(null)
   const [editBookingId, setEditBookingId] = useState(null)
   const [historyOpen, setHistoryOpen] = useState(false)
+  const [filtersOpen, setFiltersOpen] = useState(false)
+  const [savingCard, setSavingCard] = useState(null)
+  const [cardError, setCardError] = useState('')
   const today = getLocalCalendarDate()
 
   useEffect(() => {
@@ -268,8 +80,6 @@ export default function TeamLeadQueuePage() {
     const openId = searchParams.get('open')
     if (!openId || !canManageQueue) return
     setEditBookingId(openId)
-    setExpandedId(openId)
-    setStatusFilter('waiting')
     const next = new URLSearchParams(searchParams)
     next.delete('open')
     setSearchParams(next, { replace: true })
@@ -315,41 +125,9 @@ export default function TeamLeadQueuePage() {
   const boardTickets = useMemo(() => groupVisitTickets(activeQueue), [activeQueue])
   const dayGrouped = useMemo(() => groupVisitTickets(dayTickets), [dayTickets])
 
-  const statusFilters = BASE_STATUS_FILTERS
-
-  const counts = useMemo(() => {
-    const out = {
-      confirmed: 0,
-      waiting: 0,
-      in_progress: 0,
-      final_checking: 0,
-      completed: 0,
-      cancelled: 0,
-      all: 0,
-    }
-    for (const t of boardTickets) {
-      if (out[t.status] != null) out[t.status] += 1
-    }
-    for (const t of dayGrouped) {
-      if (t.status === 'completed') out.completed += 1
-      if (t.status === 'cancelled') out.cancelled += 1
-    }
-    out.all =
-      out.confirmed + out.waiting + out.in_progress + out.final_checking + out.completed + out.cancelled
-    return out
-  }, [boardTickets, dayGrouped])
-
+  const summary = useMemo(() => queueSummary(boardTickets, boardStatuses), [boardTickets, boardStatuses])
   const listTickets = useMemo(() => {
-    let rows = []
-    if (statusFilter === 'all') {
-      rows = [...boardTickets, ...dayGrouped]
-    } else if (statusFilter === 'completed' || statusFilter === 'cancelled') {
-      rows = dayGrouped.filter((t) => t.status === statusFilter)
-    } else if (boardStatuses.includes(statusFilter)) {
-      rows = boardTickets.filter((t) => t.status === statusFilter)
-    } else {
-      rows = boardTickets
-    }
+    let rows = [...boardTickets, ...dayGrouped]
     const todayKey = today
     if (datePreset === 'today') {
       rows = rows.filter((t) => {
@@ -381,16 +159,32 @@ export default function TeamLeadQueuePage() {
         matchesDurationFilter(ticketElapsedMinutes(t), durationFilter),
     )
     return sortTicketsFifo(rows)
-  }, [boardTickets, dayGrouped, statusFilter, search, boardStatuses, datePreset, durationFilter, today])
+  }, [boardTickets, dayGrouped, search, datePreset, durationFilter, today])
 
   const nextFifoId = useMemo(() => fifoNextTicketId(boardTickets), [boardTickets])
 
-  const dwellAverages = useMemo(
-    () => averageDwellByStatus(
-      boardTickets.filter((t) => boardStatuses.includes(t.status) || t.status === 'for_payment'),
-    ),
-    [boardTickets, boardStatuses],
-  )
+  const canPushToPayment = canPushFinalCheckToPayment(profile)
+  const groups = useMemo(() => groupDaylightQueue(listTickets, canPushToPayment), [listTickets, canPushToPayment])
+  const longestWait = longestWaitingMinutes(boardTickets)
+
+  // Same mutations and reason prompt as the existing ticket editor; no new API or data query.
+  const runCardAction = async (ticket, action, callback) => {
+    setCardError('')
+    setSavingCard({ id: ticket.booking_id, action })
+    try {
+      await callback()
+      await load()
+    } catch (err) {
+      setCardError(err.message || 'Unable to update ticket')
+    } finally {
+      setSavingCard(null)
+    }
+  }
+  const runRedo = (ticket) => {
+    const reason = window.prompt('Redo reason (visible to owner in audit)', ticket.redo_reason || '')
+    if (reason === null) return Promise.resolve()
+    return markTicketRedo(ticket, reason)
+  }
 
   const runHistory = async () => {
     const q = String(historyPlate || '').trim()
@@ -471,65 +265,41 @@ export default function TeamLeadQueuePage() {
 
   return (
     <section className="qmgr">
-      <header className="qmgr-toolbar">
-        <div className="qmgr-toolbar-text">
-          <h1 className="qmgr-title">Car Wash Queue</h1>
-          <p className="qmgr-sub">
-            {QUEUE_DATE_PRESETS.find((p) => p.key === datePreset)?.label || 'Today'}
-            {' · services & packages · detailing on Bookings'}
-          </p>
-        </div>
-        <div className="qmgr-toolbar-actions">
-          <button
-            type="button"
-            className="floor-icon-btn"
-            onClick={() => {
-              setLoading(true)
-              load()
-            }}
-            aria-label="Refresh queue"
-          >
-            {loading ? <LoaderCircle className="animate-spin" size={18} /> : <RefreshCw size={18} />}
-          </button>
-          {canManageQueue ? (
-            <Link to="/operations/queue/new" className="qmgr-add-btn qmgr-add-btn-inline">
-              <Plus size={18} aria-hidden />
-              Add
-            </Link>
-          ) : null}
-        </div>
-      </header>
-
-      <label className="qmgr-search">
-        <Search size={16} aria-hidden />
-        <input
-          type="search"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Plate, phone, service…"
-          enterKeyHint="search"
-        />
-      </label>
-
-      <div className="qmgr-filter-row">
-        <label className="qmgr-filter">
-          <span>Date</span>
-          <select value={datePreset} onChange={(e) => setDatePreset(e.target.value)}>
-            {QUEUE_DATE_PRESETS.filter((p) => p.key !== 'custom').map((p) => (
-              <option key={p.key} value={p.key}>{p.label}</option>
-            ))}
-          </select>
+      <div className="daylight-queue-hero">
+        <header className="qmgr-toolbar">
+          <h1 className="qmgr-title">Queue</h1>
+          <div className="qmgr-toolbar-actions">
+            <button type="button" className="floor-icon-btn" onClick={() => { setLoading(true); load() }} aria-label="Refresh queue">
+              {loading ? <LoaderCircle className="animate-spin" size={18} /> : <RefreshCw size={18} />}
+            </button>
+            <button type="button" className="daylight-filter-toggle" aria-expanded={filtersOpen} aria-controls="queue-filters" onClick={() => setFiltersOpen(open => !open)}>
+              <SlidersHorizontal size={16} aria-hidden />Filter
+            </button>
+          </div>
+        </header>
+        <label className="qmgr-search">
+          <Search size={18} aria-hidden />
+          <input type="search" aria-label="Find plate, phone or name" value={search} onChange={(e) => { setSearch(e.target.value); setHistoryPlate(e.target.value) }} placeholder="Find plate, phone or name" enterKeyHint="search" />
         </label>
-        <label className="qmgr-filter">
-          <span>Duration</span>
-          <select value={durationFilter} onChange={(e) => setDurationFilter(e.target.value)}>
-            {DURATION_FILTERS.map((p) => (
-              <option key={p.key} value={p.key}>{p.label}</option>
-            ))}
-          </select>
-        </label>
+        {filtersOpen ? (
+          <div className="qmgr-filter-row" id="queue-filters">
+            <label className="qmgr-filter"><span>Date</span>
+              <select value={datePreset} onChange={(e) => setDatePreset(e.target.value)}>
+                {QUEUE_DATE_PRESETS.filter((p) => p.key !== 'custom').map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+              </select>
+            </label>
+            <label className="qmgr-filter"><span>Duration</span>
+              <select value={durationFilter} onChange={(e) => setDurationFilter(e.target.value)}>
+                {DURATION_FILTERS.map((p) => <option key={p.key} value={p.key}>{p.label}</option>)}
+              </select>
+            </label>
+          </div>
+        ) : null}
       </div>
-
+      <div className="daylight-queue-summary" aria-label="Queue summary">
+        {summary.map(item => <div key={item.key}><strong>{loading && !boardTickets.length ? <span className="daylight-number-skeleton" aria-label="Loading" /> : item.value ?? '—'}</strong><span>{item.label}</span>{item.value == null ? <span className="sr-only">Count unavailable for this role</span> : null}</div>)}
+      </div>
+      {search.trim() || historyOpen ? (
       <details
         className="qmgr-history"
         open={historyOpen}
@@ -575,7 +345,7 @@ export default function TeamLeadQueuePage() {
                   onClick={() => setEditBookingId(row.booking_id)}
                 >
                   <span className="font-semibold">{row.vehicle_plate}</span>
-                  <span className="text-muted-foreground">{STATUS_LABELS[row.status] || row.status}</span>
+                  <span className="text-muted-foreground">{({ in_progress: 'Washing', final_checking: 'Final check', for_payment: 'To pay', completed: 'Done' })[row.status] || STATUS_LABELS[row.status] || row.status}</span>
                   <span className="tabular-nums text-emerald-600 dark:text-emerald-400">
                     {formatMoney(row.final_price_minor ?? row.base_price_minor ?? 0)}
                   </span>
@@ -588,72 +358,39 @@ export default function TeamLeadQueuePage() {
         </div>
       </details>
 
-      {Object.keys(dwellAverages).length ? (
-        <div className="mb-3 flex flex-wrap gap-2 text-[11px] text-muted-foreground" aria-label="Average dwell by status">
-          {['waiting', 'in_progress', 'final_checking', 'for_payment'].map((key) => {
-            const avg = dwellAverages[key]
-            if (avg == null) return null
-            return (
-              <span key={key} className="rounded-full border border-border/60 bg-muted/30 px-2 py-0.5">
-                {statusShortLabel(key)} avg {formatDuration(Math.round(avg))}
-              </span>
-            )
-          })}
-        </div>
       ) : null}
-
-      <div className="qmgr-status-grid" role="toolbar" aria-label="Filter by status">
-        {statusFilters.map((item) => {
-          const active = statusFilter === item.key
-          const n = counts[item.key] ?? 0
-          const showTotal = item.key === 'completed' && completedTotalMinor > 0
-          return (
-            <button
-              key={item.key}
-              type="button"
-              className={`qmgr-status-card ${active ? 'qmgr-status-card-active' : ''}`}
-              aria-pressed={active}
-              onClick={() => setStatusFilter(item.key)}
-            >
-              <span className="qmgr-status-card-label">{item.label}</span>
-              <span className="qmgr-status-card-value">{n}</span>
-              {showTotal ? (
-                <span className="qmgr-status-card-total">{formatMoney(completedTotalMinor)}</span>
-              ) : null}
-            </button>
-          )
-        })}
-      </div>
-
-      {error ? (
-        <p className="qmgr-error" role="alert">{error}</p>
-      ) : null}
-
+      <p className="daylight-longest-wait">Longest wait <strong>{formatDaylightDuration(longestWait)}</strong></p>
+      {error || cardError ? <p className="qmgr-error" role="alert">{error || cardError}</p> : null}
       <div className="qmgr-list" aria-live="polite">
         {loading && !listTickets.length ? (
-          Array.from({ length: 2 }, (_, i) => (
-            <div key={i} className="h-16 animate-pulse rounded-xl bg-muted/40" />
-          ))
-        ) : listTickets.length ? (
-          listTickets.map((ticket) => (
-            <QueueManagerCard
-              key={ticket.booking_id}
-              ticket={ticket}
-              expanded={expandedId === ticket.booking_id}
-              onToggle={() => setExpandedId((id) => (id === ticket.booking_id ? null : ticket.booking_id))}
-              onOpen={canManageQueue ? setEditBookingId : undefined}
-              canManage={canManageQueue}
-              isFifoNext={ticket.booking_id === nextFifoId}
-            />
-          ))
-        ) : (
-          <div className="qmgr-empty">
-            <p>No cars in this filter.</p>
-            {canManageQueue ? (
-              <Link to="/operations/queue/new" className="qmgr-empty-link">Add a car</Link>
-            ) : null}
-          </div>
-        )}
+          Array.from({ length: 2 }, (_, i) => <div key={i} className="daylight-card-skeleton" aria-label="Loading cars" />)
+        ) : groups.length ? groups.map(group => {
+          const heading = <><i style={{ background: group.color }} aria-hidden />{group.label}<span>· {group.tickets.length}</span></>
+          const cards = group.tickets.map(ticket => {
+            const actions = getQueueTicketActionFlags(ticket.status, {
+              canManageQueue,
+              canPushToPayment,
+              canViewRedoLane: canViewRedoLane(profile),
+              canFailQa: canMarkFailedQa(profile),
+            })
+            const finalCheck = ticket.status === 'final_checking'
+            return <DaylightQueueCard key={ticket.booking_id} ticket={ticket} yourMove={group.key === 'your_move'} next={ticket.booking_id === nextFifoId}
+              canStart={actions.canStart && ticket.status === 'waiting'}
+              canSendToPay={finalCheck && actions.canSendToPayment && canPushToPayment}
+              canRedo={finalCheck && actions.canMarkRedo}
+              saving={savingCard?.id === ticket.booking_id ? savingCard.action : null}
+              onOpen={() => setEditBookingId(ticket.booking_id)}
+              onSendToPay={() => runCardAction(ticket, 'payment', () => sendTicketToPayment(ticket.booking_id))}
+              onRedo={() => runCardAction(ticket, 'redo', () => runRedo(ticket))} />
+          })
+          return group.collapsed ? (
+            <details className="daylight-queue-group daylight-queue-group-collapsed" key={group.key}>
+              <summary><h2>{heading}</h2><span className="daylight-show-done">Show {group.tickets.length} {group.label.toLowerCase()}</span></summary>
+              {group.key === 'completed' && completedTotalMinor > 0 ? <p className="daylight-completed-total">Total {formatMoney(completedTotalMinor)}</p> : null}
+              <div className="daylight-group-cards">{cards}</div>
+            </details>
+          ) : <section className="daylight-queue-group" key={group.key}><h2>{heading}</h2><div className="daylight-group-cards">{cards}</div></section>
+        }) : <div className="qmgr-empty"><p>No cars match your search or filters.</p>{canManageQueue ? <Link to="/operations/queue/new" className="qmgr-empty-link">Add a car</Link> : null}</div>}
       </div>
 
       {canManageQueue ? (
