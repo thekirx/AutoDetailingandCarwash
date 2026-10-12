@@ -1,11 +1,24 @@
 ﻿/**
- * Known demo / seed accounts for one-click testing (local dev) and the QA scripts.
+ * Known demo / seed accounts for one-click testing and the QA scripts.
  * Passwords are never in source: the repo is public. Each account names a
- * VITE_DEMO_PASSWORD_* var read from .env at the moment `password` is used, so
- * Node scripts that load .env after importing this still see it.
+ * VITE_DEMO_PASSWORD_* var that the SERVER reads from process.env at the moment
+ * it signs in.
+ *
+ * WHY THIS FUNCTION MUST NEVER TOUCH `import.meta.env`:
+ *
+ * It used to read `import.meta.env ?? process.env` and index it dynamically
+ * (`env[name]`). Vite cannot see through a computed key, so it replaces the whole
+ * `import.meta.env` object with every VITE_-prefixed variable inlined as a
+ * literal — which put all 15 staff passwords into dist/assets/demoAccounts-*.js
+ * the moment the demo chunk was included. BUG-088's scrub cleaned the repo and
+ * left the bundle intact; the two are separate problems and only one was closed.
+ *
+ * So: no `import.meta.env` anywhere in this module. Node scripts and the API
+ * handler read process.env. The browser never needs the value at all — the demo
+ * chips post an account id to /api/demo-login and the server does the sign-in.
  */
 export function demoPassword(name) {
-  const env = import.meta.env ?? globalThis.process?.env ?? {}
+  const env = globalThis.process?.env ?? {}
   return env[name] || ''
 }
 

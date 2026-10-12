@@ -143,6 +143,10 @@ function attachHakumApis(server) {
     const { handleDataCenterRequest } = await import('./server/dataCenter.mjs')
     return handleDataCenterRequest(req, res)
   })
+  mount('/api/demo-login', async (req, res) => {
+    const { handleDemoLoginRequest } = await import('./server/demoLoginApi.mjs')
+    return handleDemoLoginRequest(req, res)
+  })
 }
 
 function provisionApiPlugin() {

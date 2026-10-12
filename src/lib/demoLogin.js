@@ -20,10 +20,14 @@
  * why the pages re-check a *literal* `import.meta.env.DEV || ...` inline rather
  * than calling this function behind the dynamic import.
  *
+ * Turning the flag on must NOT publish the passwords. It no longer does:
+ * `demoPassword()` reads only `process.env`, and the chips call `/api/demo-login`,
+ * which signs in server-side and returns a session. Setting this flag exposes
+ * buttons, not credentials.
+ *
  * The owner has accepted re-enabling the chips on the deployed site for testing
  * (2026-10-12). That is recorded as an accepted risk on BUG-088, not silently
- * reintroduced. The password scrub is unchanged and still holds: no credential
- * is ever in source, so enabling this exposes buttons, not secrets.
+ * reintroduced.
  */
 export function isDemoLoginEnabled({
   dev = import.meta.env?.DEV,

@@ -9,6 +9,7 @@ import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell, { TEAM_AUTH_BULLETS } from '../components/HakumAuthShell'
 import DemoAccountChips from '../components/DemoAccountChips'
 import { describeAuthError } from '../lib/authErrorMessage'
+import { demoSignIn } from '../lib/demoSignIn'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -269,11 +270,21 @@ export default function LoginPage() {
         accounts={demoAccounts}
         disabled={submitting}
         onPick={async (a) => {
-          setEmail(a.email)
-          setPassword(a.password)
           setError('')
           setInfo('')
-          await signInWithCredentials(a.email, a.password)
+          // The server holds the password; this sends an id and adopts the
+          // session it hands back. Nothing secret crosses the wire in either
+          // direction.
+          try {
+            const { access_token, refresh_token } = await demoSignIn(a.id)
+            const { error: adoptError } = await supabase.auth.setSession({ access_token, refresh_token })
+            if (adoptError) throw adoptError
+            // Full reload so AuthProvider re-hydrates and the router places this
+            // role at its own home — the same handoff the typed sign-in performs.
+            window.location.assign('/operations/dashboard')
+          } catch (err) {
+            setError(err?.message || 'Demo sign-in failed')
+          }
         }}
       />
     </HakumAuthShell>

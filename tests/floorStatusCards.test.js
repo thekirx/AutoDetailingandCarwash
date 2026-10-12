@@ -76,14 +76,19 @@ describe('Vercel demo login visibility', () => {
     assert.match(src, /disabled=\{disabled\}/)
   })
 
-  it('demo chips can auto sign-in on both login pages', () => {
-    assert.match(opsLoginPage, /const signInWithCredentials = async/)
-    assert.match(opsLoginPage, /await signInWithCredentials\(a\.email, a\.password\)/)
+  it('demo chips sign in on both login pages, through the server', () => {
+    // CHANGED 2026-10-12: the chips no longer fill the form with `a.password`.
+    // They post an account id to /api/demo-login and adopt the returned session,
+    // because a client-held password is a credential in the deployed bundle.
+    for (const page of [opsLoginPage, customerLoginPage]) {
+      assert.match(page, /demoSignIn\(a\.id\)/, 'a chip must sign in through the server endpoint')
+      assert.match(page, /supabase\.auth\.setSession\(\{ access_token, refresh_token \}\)/, 'the returned session must be adopted')
+      assert.doesNotMatch(page, /setPassword\(a\.password\)/, 'a chip must never put a password into the form')
+    }
+    assert.match(opsLoginPage, /const signInWithCredentials = async/, 'typed sign-in still works')
     assert.match(opsLoginPage, /disabled=\{submitting\}/)
-
     assert.match(customerLoginPage, /const signInWithCredentials = async/)
     assert.match(customerLoginPage, /skipIntentCheck = false/)
-    assert.match(customerLoginPage, /await signInWithCredentials\(a\.email, a\.password, \{ skipIntentCheck: true \}\)/)
     assert.match(customerLoginPage, /disabled=\{submitting\}/)
   })
 })

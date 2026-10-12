@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../lib/supabase'
+import { demoSignIn } from '../lib/demoSignIn'
 import { useAuth } from '../auth/AuthProvider'
 import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell, { CUSTOMER_AUTH_BULLETS } from '../components/HakumAuthShell'
@@ -445,11 +446,18 @@ export default function CustomerSignInPage() {
         onPick={async (a) => {
           setIdMode('other')
           setIdentifier(a.email)
-          setPassword(a.password)
           setError('')
           setInfo('')
           setSetupStatus(null)
-          await signInWithCredentials(a.email, a.password, { skipIntentCheck: true })
+          // Server-side sign-in: the browser sends an id, never a password.
+          try {
+            const { access_token, refresh_token } = await demoSignIn(a.id)
+            const { error: adoptError } = await supabase.auth.setSession({ access_token, refresh_token })
+            if (adoptError) throw adoptError
+            window.location.assign('/account')
+          } catch (err) {
+            setError(err?.message || 'Demo sign-in failed')
+          }
         }}
       />
     </HakumAuthShell>
