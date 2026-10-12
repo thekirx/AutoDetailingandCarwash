@@ -91,4 +91,14 @@ describe('Vercel demo login visibility', () => {
     assert.match(customerLoginPage, /skipIntentCheck = false/)
     assert.match(customerLoginPage, /disabled=\{submitting\}/)
   })
+
+  it('a chip lands every role on its OWN home, not one hard-coded page', () => {
+    // Regression, found by clicking a second role rather than the one that
+    // happened to work. Sending everyone to /operations/dashboard passes for
+    // Admin (they can open it) and dead-ends a Team Lead on access-denied.
+    // /operations resolves per role through OpsIndexRedirect.
+    assert.match(opsLoginPage, /window\.location\.assign\('\/operations'\)/)
+    assert.doesNotMatch(opsLoginPage, /window\.location\.assign\('\/operations\/dashboard'\)/)
+    assert.match(readFileSync(join(root, 'src/App.jsx'), 'utf8'), /<Route index element=\{<OpsIndexRedirect \/>\}/)
+  })
 })

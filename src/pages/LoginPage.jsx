@@ -279,9 +279,10 @@ export default function LoginPage() {
             const { access_token, refresh_token } = await demoSignIn(a.id)
             const { error: adoptError } = await supabase.auth.setSession({ access_token, refresh_token })
             if (adoptError) throw adoptError
-            // Full reload so AuthProvider re-hydrates and the router places this
-            // role at its own home — the same handoff the typed sign-in performs.
-            window.location.assign('/operations/dashboard')
+            // /operations, NOT /operations/dashboard: the index route resolves each
+            // role's own home (OpsIndexRedirect). Hard-coding the dashboard sent
+            // Team Leads to access-denied, because they cannot open it.
+            window.location.assign('/operations')
           } catch (err) {
             setError(err?.message || 'Demo sign-in failed')
           }
