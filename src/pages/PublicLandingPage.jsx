@@ -6,7 +6,6 @@ import BdProducts from '../components/public/bredesign/BdProducts'
 import BdReviews from '../components/public/bredesign/BdReviews'
 import { BdBranches, BdEvents } from '../components/public/bredesign/BdEventsBranches'
 import {
-  BdBook,
   BdOrigin,
   BdPhotos,
   BdServices,
@@ -56,10 +55,11 @@ export default function PublicLandingPage() {
           confirming it, so they follow immediately rather than sitting below
           the fold under Branches. */}
       <BdReviews />
+      {/* The page closes: events, the products we use, then the live queue —
+          and the footer photo picks up from there. */}
       <BdEvents state={content.event} />
-      <BdBranches branches={visibleBranches} />
       <BdProducts />
-      <BdBook />
+      <BdBranches branches={visibleBranches} />
     </>
   )
 }

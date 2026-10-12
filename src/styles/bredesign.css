@@ -2111,39 +2111,6 @@
   }
 }
 
-/* ==== Book ============================================================== */
-
-.bredesign .bd-book {
-  background:
-    radial-gradient(120% 140% at 12% 0%, var(--bd-blue-mid) 0%, transparent 58%),
-    var(--bd-blue);
-}
-.bredesign .bd-book-in {
-  display: grid;
-  gap: 28px;
-  align-items: end;
-}
-@media (min-width: 900px) {
-  .bredesign .bd-book-in {
-    grid-template-columns: 1fr auto;
-  }
-}
-.bredesign .bd-book h2 {
-  margin-top: 18px;
-  font-size: clamp(2.1rem, 5vw, 3.8rem);
-  color: #fff;
-}
-.bredesign .bd-book p {
-  margin-top: 18px;
-  color: rgba(255, 255, 255, 0.86);
-  max-width: 44ch;
-  font-size: 14.5px;
-  line-height: 1.65;
-}
-.bredesign .bd-eyebrow-light {
-  color: rgba(255, 255, 255, 0.82);
-}
-
 /* ==== Events ============================================================= */
 
 .bredesign .bd-event {
@@ -2235,8 +2202,9 @@
 
 /* ==== Branches =========================================================== */
 
+/* Follows the products strip (panel navy) and hands the same colour to the footer. */
 .bredesign .bd-branches {
-  background: linear-gradient(180deg, var(--bd-navy) 0%, var(--bd-navy-2) 18%, var(--bd-navy-2) 100%);
+  background: var(--bd-navy-2);
 }
 .bredesign .bd-branch-grid {
   display: grid;
@@ -2348,23 +2316,10 @@
   padding-inline: 18px;
 }
 
-/* The footer sat on its own near-black while every section above it is navy,
-   which read as the page ending twice. */
-.bredesign .public-footer {
-  background: var(--bd-navy);
-}
-.bredesign .public-footer,
-.bredesign .footer-pitch,
-.bredesign .footer-details,
-.bredesign .footer-navigation {
-  border-color: var(--bd-rule);
-}
-
-/* The homepage now closes on its own "Book your car in" section, so the
-   footer's pitch block was the same call to action twice in a row. It is kept
-   for the other marketing pages, which have no closing section of their own. */
-.bredesign.bd-home .footer-pitch {
-  display: none;
+/* The homepage ends on "Know the queue before you go" (panel navy), so the
+   footer starts in that colour rather than the page navy. */
+.bredesign.bd-home .site-footer {
+  --sf-fade-from: var(--bd-navy-2);
 }
 
 /* Option A: all copy and actions clear the logo frames. */
@@ -2423,28 +2378,6 @@
 .bredesign .bd-why-lede {
   font-size: 15.5px;
   line-height: 1.75;
-}
-
-/* The footer nav ships at 9px on #535966 — 2.74:1, well under AA, and below
-   any sensible minimum size regardless of contrast. Same for the branch
-   numerals at 3.09:1. Lifted to 11px and an ink that clears 4.5:1 on the
-   footer ground. */
-.bredesign .footer-navigation {
-  font-size: 11px;
-  color: #9aa3b8;
-}
-.bredesign .footer-navigation a:hover {
-  color: var(--bd-paper);
-}
-.bredesign .footer-branches > a span {
-  font-size: 11px;
-  color: #a2abc0;   /* #8f98ad measured 4.09:1 here, just under AA */
-}
-.bredesign .footer-branches > a small {
-  color: #9aa3b8;
-}
-.bredesign .footer-kicker {
-  color: #9aa3b8;
 }
 
 /* ==== Interior page hero ================================================= */
@@ -2644,13 +2577,6 @@
 .bredesign .bd-state.is-error {
   border-color: #7a2f3a;
   color: #ffc9d1;
-}
-
-/* The footer blurb ships at 13px; it is prose, so it takes the same minimum as
-   the rest of the body copy on these pages. */
-.bredesign .footer-brand p {
-  font-size: 14px;
-  line-height: 1.65;
 }
 
 /* ==== Branch locations =================================================== */
@@ -3341,8 +3267,9 @@
 /* ==== Product wall ======================================================
    Mock B's "what goes on your car", between the tint section and the close. */
 
+/* Comes straight after Events (page navy), so it eases into the panel navy. */
 .bredesign .bd-products {
-  background: var(--bd-navy-2);
+  background: linear-gradient(180deg, var(--bd-navy) 0%, var(--bd-navy-2) 18%, var(--bd-navy-2) 100%);
 }
 /* The marquee runs the full width of the viewport, not the shell — a strip that
    stops short of the edges reads as a carousel that has run out, rather than as

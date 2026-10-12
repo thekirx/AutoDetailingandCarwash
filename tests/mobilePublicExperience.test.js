@@ -39,9 +39,13 @@ describe('Mobile public experience', () => {
   it('uses safe intrinsic logo dimensions during the initial Safari render', async () => {
     const layout = await readFile(projectFile('src/layouts/PublicLayout.jsx'), 'utf8')
 
+    const footer = await readFile(projectFile('src/components/public/SiteFooter.jsx'), 'utf8')
+
     assert.doesNotMatch(layout, /width="5000"|height="5000"/)
+    assert.doesNotMatch(footer, /width="5000"|height="5000"/)
     assert.match(layout, /width="124"\s+height="70"/)
-    assert.match(layout, /width="170"\s+height="96"/)
+    /* The footer lockup is a trimmed asset with its real proportions. */
+    assert.match(footer, /src=\{hakumLockup\} alt="" width="480" height="282"/)
   })
 
   it('keeps the PPF heading and description inside the mobile shell', async () => {

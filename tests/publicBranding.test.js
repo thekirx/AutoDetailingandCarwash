@@ -53,10 +53,15 @@ describe('Public branding assets and scope', () => {
   it('uses the approved logo in both public wordmarks only', async () => {
     const layout = await readFile(projectFile('src/layouts/PublicLayout.jsx'), 'utf8')
 
-    assert.equal((layout.match(/src="\/branding\/hakum-lw-ow\.png"/g) || []).length, 2)
-    assert.equal((layout.match(/className="wordmark-image"/g) || []).length, 2)
+    const footer = await readFile(projectFile('src/components/public/SiteFooter.jsx'), 'utf8')
+
+    /* Header wordmark in the layout; the footer uses a trimmed copy of the same lockup. */
+    assert.equal((layout.match(/src="\/branding\/hakum-lw-ow\.png"/g) || []).length, 1)
+    assert.equal((layout.match(/className="wordmark-image"/g) || []).length, 1)
     assert.doesNotMatch(layout, /<b>H<\/b>/)
-    assert.equal((layout.match(/aria-label="Hakum Auto Care home"/g) || []).length, 2)
+    assert.equal((layout.match(/aria-label="Hakum Auto Care home"/g) || []).length, 1)
+    assert.match(footer, /import hakumLockup from '@\/assets\/partners\/hakum-lockup\.webp'/)
+    assert.equal((footer.match(/aria-label="Hakum Auto Care home"/g) || []).length, 1)
   })
 
   it('keeps the approved centered hero experience composition', async () => {

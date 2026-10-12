@@ -10,7 +10,7 @@ const read = (file) => readFileSync(join(root, file), 'utf8')
 const book = read('src/pages/PublicUtilityPage.jsx')
 const bookCss = read('src/pages/BookingWizard.css')
 const branches = read('src/pages/PublicPages.jsx')
-const layout = read('src/layouts/PublicLayout.jsx')
+const footer = read('src/components/public/SiteFooter.jsx')
 
 describe('/book wizard', () => {
   it('walks six steps and ends on review', () => {
@@ -52,7 +52,8 @@ describe('/branches page', () => {
   it('has no Book a service link anywhere', () => {
     assert.doesNotMatch(branches, /Book a service at this branch/)
     assert.doesNotMatch(branches, /to=\{`\/book\?branch=/)
-    assert.match(layout, /pathname === '\/branches'/)
+    /* The site footer carries no Book link at all, so /branches has none either. */
+    assert.doesNotMatch(footer, /to="\/book"/)
   })
 
   it('offers Google Maps and Waze directions instead of OpenStreetMap', () => {

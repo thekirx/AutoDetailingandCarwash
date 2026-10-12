@@ -73,8 +73,10 @@ describe('customer legal surface', () => {
     assert.match(read('src/main.jsx'), /AppErrorBoundary/)
     assert.match(read('src/components/CookieConsent.jsx'), /COOKIE_CONSENT_OPEN_EVENT/)
     assert.match(read('src/components/CookieConsent.jsx'), /isShopTvPath/)
-    assert.match(read('src/layouts/PublicLayout.jsx'), /CookiePreferencesButton/)
-    assert.match(read('src/layouts/PublicLayout.jsx'), /to="\/cookies"/)
+    /* The footer (and its legal row) lives in SiteFooter, rendered by PublicLayout. */
+    assert.match(read('src/layouts/PublicLayout.jsx'), /<SiteFooter /)
+    assert.match(read('src/components/public/SiteFooter.jsx'), /CookiePreferencesButton/)
+    assert.match(read('src/components/public/SiteFooter.jsx'), /to="\/cookies"/)
   })
 
   it('customer PII forms require FormLegalNotice', () => {
