@@ -168,7 +168,7 @@ describe('Phase 7 migration + UI seams (source scan)', () => {
     const people = read('src/pages/PeopleManagePage.jsx')
     const auth = read('src/auth/AuthProvider.jsx')
     const notify = read('server/notifyBooking.mjs')
-    const queue = read('src/pages/TeamLeadQueuePage.jsx')
+    const queue = read('src/components/ops/DaylightQueueCard.jsx')
     assert.match(floor, /carSizeBySale|Car size per sale/)
     assert.match(floor, /bestSellers|Best package/)
     assert.doesNotMatch(floor, /title=["']Chemical usage["']/)

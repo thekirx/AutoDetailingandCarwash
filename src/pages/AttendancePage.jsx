@@ -17,7 +17,7 @@ import OpsTabList from '@/components/ops/OpsTabBar'
 import { CrewAttendancePanel, CrewSettingsPanel } from '@/pages/crew/CrewAttendancePanels'
 
 /**
- * Attendance hub — clock, register, settings (geofence, roles, pay weights).
+ * Attendance hub — time clock, register, settings (branch location, roles, pay weights).
  */
 export default function AttendancePage() {
   const { profile } = useAuth()
@@ -53,17 +53,17 @@ export default function AttendancePage() {
     <OpsPageShell
       className="hakum-attendance"
       eyebrow="Operations"
-      title="Attendance"
-      breadcrumbs={[{ label: 'Ops', to: '/operations/attendance' }, { label: 'Attendance' }]}
+      title={showClock ? 'Time clock' : 'Attendance'}
+      breadcrumbs={[{ label: 'Ops', to: '/operations/attendance' }, { label: showClock ? 'Time clock' : 'Attendance' }]}
       description={
         showClock
-          ? 'Time in inside the branch geofence. Present or late crew can be assigned to floor jobs. Late arrivals still earn — at a lower wash-pool share set in Settings.'
-          : 'Review branch attendance, override rows, and configure geofence, roles, and late-pay policy.'
+          ? 'Clock in when you arrive at the branch and out when you leave.'
+          : 'Review branch attendance, fix rows, and set branch location, roles, and late pay.'
       }
       meta={
         <>
           <CalendarDays className="size-4 shrink-0 text-primary" aria-hidden />
-          <span>Manila calendar day · geofence enforced per profile</span>
+          <span>Manila time · you can only clock in at your branch</span>
         </>
       }
     >

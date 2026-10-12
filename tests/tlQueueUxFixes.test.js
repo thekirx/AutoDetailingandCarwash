@@ -7,6 +7,7 @@ import { fileURLToPath } from 'node:url'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const editor = readFileSync(join(root, 'src/components/QueueTicketEditor.jsx'), 'utf8')
 const tlPage = readFileSync(join(root, 'src/pages/TeamLeadQueuePage.jsx'), 'utf8')
+const card = readFileSync(join(root, 'src/components/ops/DaylightQueueCard.jsx'), 'utf8')
 const newTicket = readFileSync(join(root, 'src/pages/OperationsPages.jsx'), 'utf8')
 const api = readFileSync(join(root, 'src/queue/queueApi.js'), 'utf8')
 
@@ -28,8 +29,10 @@ describe('TL queue UX — size, crew-first, start, price', () => {
     assert.match(editor, /Services on this visit/)
   })
 
-  it('queue list offers Assign crew & start for waiting tickets', () => {
-    assert.match(tlPage, /Assign crew &amp; start|Assign crew & start/)
+  it('queue list offers Start · pick crew through the existing ticket modal', () => {
+    assert.match(card, /Start · pick crew/)
+    assert.match(card, /onClick=\{onOpen\}/)
+    assert.match(tlPage, /onOpen=\{\(\) => setEditBookingId\(ticket\.booking_id\)\}/)
     assert.match(tlPage, /canManage/)
     assert.match(tlPage, /open=/)
   })

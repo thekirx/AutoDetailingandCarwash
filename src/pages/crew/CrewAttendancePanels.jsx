@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   ChevronLeft,
   ChevronRight,
+  Clock3,
   Download,
   MapPin,
   Search,
@@ -72,6 +73,7 @@ import {
   normalizeCompensationSettings,
   toCompensationSettingsRow,
 } from '@/lib/compensation'
+import { describeClock, myWeek } from '@/lib/daylightClock'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { supabase } from '@/lib/supabase'
 import { attendanceRowsToCsv, downloadTextFile } from '@/lib/attendanceExport'
@@ -265,6 +267,8 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
   }, [branchSlug, scheduleReload])
 
   const matrix = useMemo(() => buildAttendanceHeatmap(staff, attendance, dates), [staff, attendance, dates])
+  const clock = describeClock(myToday)
+  const week = useMemo(() => (showClock ? myWeek(attendance, dates, profile?.id) : []), [showClock, attendance, dates, profile?.id])
   const tableRows = useMemo(() => buildAttendanceTableRows(staff, attendance, dates), [staff, attendance, dates])
   const todaySummary = useMemo(() => summarizeTodayAttendance(staff, attendance, today), [staff, attendance, today])
   const periodSummary = useMemo(() => summarizePeriodAttendance(attendance, dates), [attendance, dates])
@@ -376,50 +380,70 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
   return (
     <div className="flex flex-col gap-5">
       {showClock ? (
-        <Card className="overflow-hidden border-border/80 shadow-sm">
-          <CardHeader className="gap-4 pb-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="max-w-xl">
-              <CardTitle className="text-lg tracking-tight">Geofenced time clock</CardTitle>
-              <CardDescription className="mt-1.5 leading-relaxed">
-                Time in inside the branch radius. Late is flagged against shift start. You must be present or late before
-                a Team Lead can assign you from Queue or Crew.
-              </CardDescription>
-              {myToday ? (
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Today</span>
-                  <AttendanceStatusBadge status={myToday.status} />
-                  {myToday.checked_in_at ? (
-                    <span className="font-mono text-sm tabular-nums text-muted-foreground">
-                      in {fmtTime(myToday.checked_in_at)}
-                      {myToday.checked_out_at ? ` · out ${fmtTime(myToday.checked_out_at)}` : ''}
-                    </span>
-                  ) : null}
-                </div>
-              ) : null}
-              {seesOwnPayEstimate(profile) && myPayMinor != null ? (
-                <p className="mt-3 text-sm text-foreground">
-                  <Wallet className="mr-1 inline size-4 text-primary" aria-hidden />
-                  Wash pool estimate today — {formatMoney(myPayMinor)} unpaid
-                </p>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button type="button" className="min-h-11 min-w-[7.5rem]" disabled={!!busy} onClick={() => runGeo('in')}>
-                {busy === 'in' ? 'Locating…' : 'Time in'}
-              </Button>
-              <Button type="button" variant="outline" className="min-h-11 min-w-[7.5rem]" disabled={!!busy} onClick={() => runGeo('out')}>
-                {busy === 'out' ? 'Saving…' : 'Time out'}
-              </Button>
-            </div>
-          </CardHeader>
-          {clockError ? (
-            <CardContent className="pt-0">
-              <p role="alert" className="rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2.5 text-sm leading-relaxed text-destructive">
-                {clockError}
+        <section className="daylight-clock" aria-labelledby="daylight-clock-title">
+          <div className="daylight-clock-status">
+            <span className={`daylight-clock-ring is-${clock.state}`} aria-hidden>
+              <Clock3 size={24} strokeWidth={1.9} />
+            </span>
+            <div className="min-w-0">
+              <h2 id="daylight-clock-title">{clock.title}</h2>
+              <p>
+                {clock.detail}
+                {clock.status ? <span className={`daylight-clock-tag is-${myToday?.status}`}>{clock.status}</span> : null}
               </p>
-            </CardContent>
+            </div>
+          </div>
+          <ul className="daylight-clock-rules">
+            <li>You can only clock in at Hakum {branchLabel || 'your branch'}.</li>
+            <li>Late is counted from your shift start.</li>
+            <li>Late days still earn, at a smaller share.</li>
+          </ul>
+          {seesOwnPayEstimate(profile) && myPayMinor != null ? (
+            <p className="daylight-clock-pay">
+              <Wallet className="size-4" aria-hidden />
+              Wash pool estimate today — {formatMoney(myPayMinor)} unpaid
+            </p>
           ) : null}
-        </Card>
+          {clockError ? (
+            <p role="alert" className="daylight-clock-error">
+              {clockError}
+            </p>
+          ) : null}
+          <div className="daylight-clock-actions">
+            {/* One button: the next step for where you are today. */}
+            {clock.primary === 'out' ? (
+              <button type="button" className="daylight-button daylight-clock-main" disabled={!!busy} onClick={() => runGeo('out')}>
+                <Clock3 size={18} aria-hidden />
+                {busy === 'out' ? 'Saving…' : 'Clock out'}
+              </button>
+            ) : (
+              <button
+                type="button"
+                className={`daylight-button daylight-clock-main${clock.state === 'done' ? ' daylight-button-outline' : ''}`}
+                disabled={!!busy}
+                onClick={() => runGeo('in')}
+              >
+                <Clock3 size={18} aria-hidden />
+                {busy === 'in' ? 'Locating…' : clock.state === 'done' ? 'Clock in again' : 'Clock in now'}
+              </button>
+            )}
+          </div>
+          {week.length ? (
+            <div className="daylight-week" aria-label="Your attendance this period">
+              <p className="daylight-week-title">This {period === 'monthly' ? 'month' : 'week'}</p>
+              <ol>
+                {week.slice(-7).map((d) => (
+                  <li key={d.date} className={d.status ? `is-${d.status}` : ''} title={`${d.date}: ${d.status || 'no record'}`}>
+                    <i aria-hidden />
+                    <span>{d.day}</span>
+                    <span className="sr-only">{d.status || 'no record'}</span>
+                  </li>
+                ))}
+              </ol>
+              <p className="daylight-week-key">Blue = on time · orange = late · red = absent</p>
+            </div>
+          ) : null}
+        </section>
       ) : null}
 
       {seesLocationAlerts && locationAlerts.length ? (
