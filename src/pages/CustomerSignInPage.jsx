@@ -80,8 +80,8 @@ export default function CustomerSignInPage() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    // Literal import.meta.env.DEV (not isDemoLoginEnabled()) so production builds drop the chunk.
-    if (!import.meta.env.DEV) return undefined
+    // Build-time literals only — see LoginPage.jsx and src/lib/demoLogin.js.
+    if (!import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEMO_LOGIN !== 'true') return undefined
     let cancelled = false
     import('../lib/demoAccounts').then((m) => {
       if (!cancelled) setDemoCustomer(m.CUSTOMER_DEMO_ACCOUNT)

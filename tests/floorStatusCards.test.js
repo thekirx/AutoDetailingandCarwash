@@ -5,6 +5,7 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { operationsQueueHref, parseQueueLaneParam } from '../src/queue/queueLogic.js'
 import { isDemoLoginEnabled } from '../src/lib/demoLogin.js'
+import { OPS_DEMO_ACCOUNTS, CUSTOMER_DEMO_ACCOUNT } from '../src/lib/demoAccounts.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const page = readFileSync(join(root, 'src/pages/OperationsPages.jsx'), 'utf8')
@@ -47,11 +48,25 @@ describe('Floor status cards → queue lanes', () => {
 })
 
 describe('Vercel demo login visibility', () => {
-  // Production runs on *.vercel.app; one-click demo chips there signed anyone in as Super Admin.
-  it('production builds never offer one-click demo sign-in', () => {
-    assert.doesNotMatch(envProd, /VITE_ENABLE_DEMO_LOGIN\s*=\s*true/i)
-    assert.equal(isDemoLoginEnabled({ dev: false }), false)
+  // Production runs on *.vercel.app. The chips are OFF there by default; the
+  // owner turned them back on 2026-10-12 for testing, which is a build-time
+  // env var set in the Vercel project — deliberately, never in the repo. What
+  // still has to hold regardless is that the repo cannot enable it by accident.
+  it('the repo cannot turn demo sign-in on by itself', () => {
+    assert.doesNotMatch(envProd, /VITE_ENABLE_DEMO_LOGIN\s*=\s*true/i, 'a committed .env.production enabling it is the BUG-088 shape')
+    assert.equal(isDemoLoginEnabled({ dev: false }), false, 'no flag and not dev means off')
     assert.equal(isDemoLoginEnabled({ dev: true }), true)
+  })
+
+  it('enabling it exposes buttons, never secrets', () => {
+    // This is the part that makes the accepted risk survivable: the demo accounts
+    // carry `passwordEnv` and read the value at use time, so no credential is in
+    // the bundle even with the chips on.
+    const src = readFileSync(join(root, 'src/lib/demoAccounts.js'), 'utf8')
+    assert.doesNotMatch(src, /password:\s*['"`]/, 'a literal password is back in demoAccounts.js')
+    for (const a of [...OPS_DEMO_ACCOUNTS, CUSTOMER_DEMO_ACCOUNT]) {
+      assert.match(a.passwordEnv || '', /^VITE_DEMO_PASSWORD_[A-Z0-9]+$/, `${a.id} has no password env var`)
+    }
   })
 
   it('demo chip title does not leak password in tooltip', () => {

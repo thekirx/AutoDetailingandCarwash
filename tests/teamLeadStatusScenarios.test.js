@@ -143,16 +143,29 @@ describe('TL queue status transitions (principal scenarios)', () => {
   })
 })
 
-describe('demo login is local development only', () => {
-  it('enables on DEV and nowhere else', () => {
+describe('demo login is dev, or a deployment that explicitly opts in', () => {
+  // CHANGED 2026-10-12 by owner decision: the chips are back on the deployed
+  // site for testing. What did NOT change is the mechanism — the opt-in is a
+  // build value that has to be set deliberately. BUG-088 was a *host* rule that
+  // enabled itself the moment anything was deployed, so there is still no
+  // hostname involved anywhere in this function.
+  it('enables on DEV, and on a build that sets the flag explicitly', () => {
     assert.equal(isDemoLoginEnabled({ dev: true, flag: '', hostname: '' }), true)
-    assert.equal(isDemoLoginEnabled({ dev: false, flag: 'true', hostname: '' }), false)
+    assert.equal(isDemoLoginEnabled({ dev: false, flag: 'true', hostname: '' }), true)
+  })
+
+  it('stays off for every other value, including any host name', () => {
     assert.equal(isDemoLoginEnabled({ dev: false, flag: 'TRUE', hostname: '' }), false)
-    assert.equal(
-      isDemoLoginEnabled({ dev: false, flag: '', hostname: 'hakum-autocare.vercel.app' }),
-      false,
-    )
+    assert.equal(isDemoLoginEnabled({ dev: false, flag: '', hostname: 'hakum-autocare.vercel.app' }), false)
     assert.equal(isDemoLoginEnabled({ dev: false, flag: '', hostname: 'hakumautocare.com' }), false)
     assert.equal(isDemoLoginEnabled({ dev: false, flag: 'false', hostname: '' }), false)
+  })
+
+  it('a hostname can never enable it on its own — that was BUG-088', () => {
+    // The regression this row exists to prevent. A host rule reads as harmless
+    // in review and enables itself on deploy, which is how one-click Super Admin
+    // ended up on the live site with the passwords in a public bundle.
+    assert.equal(isDemoLoginEnabled({ dev: false, flag: '', hostname: 'hakum-autocare.vercel.app' }), false)
+    assert.equal(isDemoLoginEnabled({ dev: false, flag: undefined, hostname: 'anything.vercel.app' }), false)
   })
 })

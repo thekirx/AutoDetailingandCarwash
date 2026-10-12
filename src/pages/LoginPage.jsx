@@ -26,8 +26,11 @@ export default function LoginPage() {
   const missingProfileTries = useRef(0)
 
   useEffect(() => {
-    // Literal import.meta.env.DEV (not isDemoLoginEnabled()) so production builds drop the chunk.
-    if (!import.meta.env.DEV) return undefined
+    // Build-time literals only, so Vite folds this to a constant and drops the
+    // demoAccounts chunk from any build where the flag is off. A runtime check
+    // would leave the chunk in the production bundle — the half of BUG-088 that
+    // a `isDemoLoginEnabled()` call could never fix.
+    if (!import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEMO_LOGIN !== 'true') return undefined
     let cancelled = false
     import('../lib/demoAccounts').then((m) => {
       if (!cancelled) setDemoAccounts(m.OPS_DEMO_ACCOUNTS)
