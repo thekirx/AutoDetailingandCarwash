@@ -78,6 +78,14 @@ describe('pickAnnouncerVoice', () => {
     assert.equal(pickAnnouncerVoice([robotic, usNatural, phEnglish, filNatural]), filNatural)
   })
 
+  it('picks the female Philippine voice even when the male one is listed first', () => {
+    const james = v('Microsoft James Online (Natural) - English (Philippines)', 'en-PH')
+    const angelo = v('Microsoft Angelo Online (Natural) - Filipino (Philippines)', 'fil-PH')
+    assert.equal(pickAnnouncerVoice([james, angelo, phNatural]), phNatural)
+    assert.equal(pickAnnouncerVoice([james, angelo, filNatural]), filNatural)
+    assert.equal(pickAnnouncerVoice([angelo, james]), james)
+  })
+
   it('takes any Philippine voice over a non-PH natural voice', () => {
     assert.equal(pickAnnouncerVoice([robotic, usNatural, phEnglish]), phEnglish)
     assert.equal(pickAnnouncerVoice([robotic, usNatural, filipino]), filipino)

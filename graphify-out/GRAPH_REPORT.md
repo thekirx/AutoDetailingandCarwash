@@ -1,7 +1,7 @@
 # Graph Report - AutoDetailingandCarwash  (2026-10-13)
 
 ## Corpus Check
-- 1411 files · ~1,131,840 words
+- 1411 files · ~1,132,033 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 19 file(s) not represented in the graph (top: .css 11, (none) 4, .mdc 2)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `89a72901`
+- Built from commit: `ed61d99c`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -2346,17 +2346,17 @@ Nodes (5): Admin shop-day friction log, How to add a row, Live shop-day observat
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Detailer QUEUE_VIEWER_ROLES P0` connect `Detailer` to `permissions.js`?**
-  _High betweenness centrality (0.088) - this node is a cross-community bridge._
+  _High betweenness centrality (0.052) - this node is a cross-community bridge._
 - **What connects `gsap`, `shadcn`, `tw-animate-css` to the rest of the system?**
   _683 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `cn` be split into smaller, more focused modules?**
   _Cohesion score 0.04495238095238095 - nodes in this community are weakly interconnected._
-- **Why does `Wave D Specialty QA` connect `Detailer` to `Video Editor`, `Marketing`, `FloorAppShell`?**
-  _High betweenness centrality (0.055) - this node is a cross-community bridge._
+- **Why does `Roles Matrix` connect `Roles Matrix` to `Shop Day Money Path`, `Role Branch Admin`, `Operations Lead`, `Wash-Only Queue`, `Video Editor`, `Roles and Users Inventory`, `Ultimate Readiness Checklist`, `Role Crew Staff`, `Detailing SKUs Stay on Bookings`?**
+  _High betweenness centrality (0.049) - this node is a cross-community bridge._
 - **Should `queueLogic.js` be split into smaller, more focused modules?**
   _Cohesion score 0.04060593309488744 - nodes in this community are weakly interconnected._
-- **Why does `Role QA Progress Log` connect `Detailer` to `Role-by-role System QA 2026-09`, `Branch Admin`, `Assistant Super Admin`?**
-  _High betweenness centrality (0.040) - this node is a cross-community bridge._
+- **Why does `PayrollPage` connect `Hakum Payroll Documentation Index` to `compensation.js`, `payroll.js`?**
+  _High betweenness centrality (0.045) - this node is a cross-community bridge._
 
 ### Low-confidence Hints
 _AMBIGUOUS edges — the extractor was unsure. Verify before acting on these._
