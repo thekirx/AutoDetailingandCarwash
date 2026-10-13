@@ -1,21 +1,10 @@
 {
   "ok": true,
-  "base": "http://localhost:5173",
+  "base": "https://auto-detailingand-carwash.vercel.app",
   "passed": 84,
   "total": 84,
   "failed": [],
-  "backendFindings": [
-    {
-      "persona": "boss",
-      "path": "/operations/attendance",
-      "response": "404 https://lybxhpzzqqyqswvuwpxv.supabase.co/rest/v1/attendance_location_alerts"
-    },
-    {
-      "persona": "asa",
-      "path": "/operations/attendance",
-      "response": "404 https://lybxhpzzqqyqswvuwpxv.supabase.co/rest/v1/attendance_location_alerts"
-    }
-  ],
+  "backendFindings": [],
   "evidence": "e2e-evidence/nav-walk",
-  "at": "2026-10-06T10:21:21.213Z"
+  "at": "2026-10-13T06:15:30.246Z"
 }
