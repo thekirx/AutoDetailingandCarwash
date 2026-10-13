@@ -1,17 +1,17 @@
 # Graph Report - AutoDetailingandCarwash  (2026-10-13)
 
 ## Corpus Check
-- 1411 files · ~1,132,033 words
+- 1411 files · ~1,132,234 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 19 file(s) not represented in the graph (top: .css 11, (none) 4, .mdc 2)
 
 ## Summary
-- 9522 nodes · 24717 edges · 797 communities (416 shown, 381 thin omitted)
+- 9522 nodes · 24718 edges · 798 communities (417 shown, 381 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 696 edges (avg confidence: 0.88)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `ed61d99c`
+- Built from commit: `ea49ba27`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -191,7 +191,7 @@
 - 20260824110000_ops_lab_catalog_audit.sql
 - audit-api-auth.mjs
 - Queue
-- probe-branch-residue.mjs
+- _pos-combined-check.mjs
 - responsive-validation.mjs
 - @supabase/supabase-js
 - demoAccounts.js
@@ -301,7 +301,7 @@
 - visitReviewDelay.js
 - public.run_payroll
 - check-planner-tabs.mjs
-- ref_node_url
+- ref_node_path
 - homeStats.js
 - public.public_queue_floor
 - probe-sept29-activity.mjs
@@ -358,7 +358,7 @@
 - compilerOptions
 - Graphify money RPC payloads (client → DB)
 - ROLES
-- _pos-voice-check.mjs
+- check-session.mjs
 - Owner User Stories HTML Pack
 - public.send_queue_ticket_to_payment
 - 20260723160000_fix_bookings_rls_recursion.sql
@@ -454,7 +454,7 @@
 - public.public_home_stats
 - public.can_read_queue_assignment
 - staff_profiles_reports_to_idx
-- salarySuggestionTrustBoundary.test.js
+- guardedMigrationContract.test.js
 - busybeeReminderSms.test.js
 - publicServiceRoutes.test.js
 - publicInquiry.test.js
@@ -591,6 +591,7 @@
 - expenses.expense_kind CHECK
 - payroll_runs.frequency daily to custom
 - payroll_runs.status confirmed paid void
+- dailySheetIsManualTask.test.js
 - apply-size-diff-from-dump.mjs
 - isCeramicCompensationLine
 - _daily-sheet-sql-check.mjs
@@ -632,7 +633,7 @@
 - ppfScrollStory.js
 - dailySheetServerTotalsBoundary.test.js
 - Vercel Static IPs — Hakum production SMS egress
-- ref_node_path
+- ref_node_url
 - OPS_DEMO_ACCOUNTS
 - Admin daily-ops tracker (no redesign)
 - probe-remount-blast-radius.mjs
@@ -667,7 +668,7 @@
 ## Import Cycles
 - None detected.
 
-## Communities (797 total, 381 thin omitted)
+## Communities (798 total, 381 thin omitted)
 
 ### Community 0 - "cn"
 Cohesion: 0.04
@@ -1307,7 +1308,7 @@ Nodes (15): devDependencies, eslint, @eslint/js, eslint-plugin-react, eslint-plu
 
 ### Community 160 - "ref_node_child_process"
 Cohesion: 0.03
-Nodes (41): Part 1 RBAC Nav Routing, bin, result, db, ensurePreview(), root, shots, sleep() (+33 more)
+Nodes (45): Part 1 RBAC Nav Routing, bin, result, checklistPath, finished, root, started, STEPS (+37 more)
 
 ### Community 161 - "BranchLocationPicker"
 Cohesion: 0.39
@@ -1365,9 +1366,9 @@ Nodes (7): CONTROLS, DELEGATED, offenders, PUBLIC, root, rows, unaudited
 Cohesion: 0.18
 Nodes (11): DetailingMaintenancePanel, Notify Client SMS/Push, Paint Maintenance Schedules, Set Date Marks Visit Done, Live Queue, Reminders, Branch Admin Watch, Queue (+3 more)
 
-### Community 175 - "probe-branch-residue.mjs"
-Cohesion: 0.22
-Nodes (7): db, MONEY, real, residue, residueSlugs, root, stranded
+### Community 175 - "_pos-combined-check.mjs"
+Cohesion: 0.20
+Nodes (8): base, consoleErrors, outDir, results, root, settle(), sleep(), TICKET
 
 ### Community 176 - "responsive-validation.mjs"
 Cohesion: 0.16
@@ -1399,7 +1400,7 @@ Nodes (5): Ceramic Detailing Compensation Splits, POS Deep Audit 2026-09-14, Pro
 
 ### Community 184 - "ref_node_fs"
 Cohesion: 0.02
-Nodes (76): busybeeProviderStatusLabel(), OPS_TIME_ZONE, resolveSupabaseConfig(), root, root, calendar, src, root (+68 more)
+Nodes (77): busybeeProviderStatusLabel(), OPS_TIME_ZONE, resolveSupabaseConfig(), root, root, calendar, src, root (+69 more)
 
 ### Community 185 - "Hakum Auto Care Legacy SPA"
 Cohesion: 0.24
@@ -1773,9 +1774,9 @@ Nodes (11): finishedGroup(), groupVisits(), latestFinishedGroup(), latestFinishe
 Cohesion: 0.25
 Nodes (10): check(), db, ensurePreview(), EXPECTED_TABS, expectedCalendarBookings(), HOME, root, runPersona() (+2 more)
 
-### Community 285 - "ref_node_url"
+### Community 285 - "ref_node_path"
 Cohesion: 0.03
-Nodes (42): auth, root, session, supabase, token, exports, root, root (+34 more)
+Nodes (44): db, MONEY, real, residue, residueSlugs, root, stranded, admin (+36 more)
 
 ### Community 288 - "probe-sept29-activity.mjs"
 Cohesion: 0.25
@@ -1933,9 +1934,9 @@ Nodes (5): `complete_pos_sale` / `complete_pos_sale_impl`, Graphify money RPC pa
 Cohesion: 0.07
 Nodes (19): admin, results, admin, loyalty, results, admin, boss, client (+11 more)
 
-### Community 347 - "_pos-voice-check.mjs"
-Cohesion: 0.17
-Nodes (9): announceCalls, base, consoleErrors, outDir, results, root, settle(), sleep() (+1 more)
+### Community 347 - "check-session.mjs"
+Cohesion: 0.29
+Nodes (5): auth, root, session, supabase, token
 
 ### Community 348 - "Owner User Stories HTML Pack"
 Cohesion: 0.31
@@ -2081,9 +2082,9 @@ Nodes (4): documented, handled, root, source
 Cohesion: 0.60
 Nodes (4): call(), mockReq(), mockRes(), ok
 
-### Community 448 - "salarySuggestionTrustBoundary.test.js"
-Cohesion: 0.11
-Nodes (10): matrix, meta, cols, db, ids, labels, root, root (+2 more)
+### Community 448 - "guardedMigrationContract.test.js"
+Cohesion: 0.18
+Nodes (5): matrix, meta, GUARDED, migrationsDir, root
 
 ### Community 449 - "busybeeReminderSms.test.js"
 Cohesion: 0.39
@@ -2201,6 +2202,10 @@ Nodes (7): base, failed, outRoot, PAGES, report, results, VIEWPORTS
 Cohesion: 0.50
 Nodes (3): pagesDir, root, walkJsx()
 
+### Community 604 - "dailySheetIsManualTask.test.js"
+Cohesion: 0.33
+Nodes (4): posPage, root, sql, vercel
+
 ### Community 605 - "apply-size-diff-from-dump.mjs"
 Cohesion: 0.15
 Nodes (10): changes, live, seed, text, vals, changes, live, seed (+2 more)
@@ -2309,13 +2314,13 @@ Nodes (7): allSql, findExecuteGrants(), functionDefinitions(), migrationDir, mig
 Cohesion: 0.33
 Nodes (6): Assigned Static IPs (fill when provisioned), Enable (on the Hakum Vercel team), Link this repo, Optional relay (if Static IPs not purchased), Status (2026-09-24 this CLI), Vercel Static IPs — Hakum production SMS egress
 
-### Community 830 - "ref_node_path"
+### Community 830 - "ref_node_url"
 Cohesion: 0.02
-Nodes (52): app, mig, page, perms, plannerCalendar, root, admin, root (+44 more)
+Nodes (52): app, mig, page, perms, plannerCalendar, root, exports, root (+44 more)
 
 ### Community 835 - "OPS_DEMO_ACCOUNTS"
 Cohesion: 0.02
-Nodes (77): puppeteer, db, ensurePreview(), lastMonthEnd, lastMonthStart, root, shots, sleep() (+69 more)
+Nodes (74): puppeteer, db, ensurePreview(), lastMonthEnd, lastMonthStart, root, shots, sleep() (+66 more)
 
 ### Community 838 - "Admin daily-ops tracker (no redesign)"
 Cohesion: 0.18

@@ -33,17 +33,15 @@ export function buildPaymentAnnouncement({ make, model, plate } = {}) {
 
 /**
  * Philippine voices first; "Natural"/"Online" voices (Edge, Android) sound far less robotic.
- * Hakum wants a female voice: Edge's Rosa (English) and Blessica (Filipino); voices expose no gender field.
+ * Hakum wants a female voice: Rosa (en-PH) and Blessica (fil-PH) are Edge's free female PH voices.
  */
 export function pickAnnouncerVoice(voices) {
-  const usable = (voices || []).filter((v) => /^(en|fil)/i.test(v.lang))
+  const female = (v) => /\b(rosa|blessica|female)\b/i.test(v.name)
+  const usable = (voices || []).filter((v) => /^(en|fil)/i.test(v.lang)).sort((a, b) => female(b) - female(a))
   const natural = (v) => /natural|online/i.test(v.name)
-  const female = (v) => /\b(rosa|blessica)\b/i.test(v.name)
   const ph = (lang) => (v) => new RegExp(`^${lang}-PH`, 'i').test(v.lang)
   const en = (v) => /^en/i.test(v.lang)
   return (
-    usable.find((v) => ph('en')(v) && female(v)) ||
-    usable.find((v) => ph('fil')(v) && female(v)) ||
     usable.find((v) => ph('en')(v) && natural(v)) ||
     usable.find((v) => ph('fil')(v) && natural(v)) ||
     usable.find(ph('en')) ||

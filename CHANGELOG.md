@@ -2,7 +2,7 @@
 
 - The counter announcer now says "Toyota Vios, plate N B C, 4 8 2 1, ready na po for payment." and "Naka-on na po ang payment announcements." when switched on. The AI voice and the browser voice use the same words.
 - The browser voice picks a Philippine voice first (natural English-Philippines, then natural Filipino), so Edge and Android tablets sound less robotic. Demo logins and SMS are unchanged.
-- In Microsoft Edge it always uses the female voice Rosa (English, Philippines), then Blessica (Filipino), even when a male Philippine voice is listed first. Free, built into Edge.
+- Female by default: in Microsoft Edge the counter uses Rosa (English, Philippines), free and built in. `EDGE=1 node --env-file=.env scripts/_pos-voice-check.mjs` checks it in real Edge and speaks one line.
 
 ## 2026-10-13 - A wash needs present crew before it starts (BUG-092)
 

@@ -1,12 +1,15 @@
-/* global document, window, location */
+/* global document, window, location, speechSynthesis, SpeechSynthesisUtterance */
 /**
  * POS "ready for payment" voice check — non-destructive.
  * The waiting ticket is injected by intercepting the pos_handoffs read and the realtime
  * INSERT is a synthetic socket message, so no production rows are created.
  * speechSynthesis is stubbed to record what would be said.
  *   BASE_URL=http://127.0.0.1:5174 node scripts/_pos-voice-check.mjs
+ * EDGE=1 runs in Microsoft Edge (what the counter tablet should use), checks the female
+ * en-PH voice is picked, then really speaks one line with it.
  */
 import { mkdirSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import puppeteer from 'puppeteer'
@@ -50,7 +53,15 @@ const TICKET = {
 let serveTicket = false
 const announceCalls = []
 
-const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] })
+const EDGE = process.env.EDGE === '1'
+const browser = EDGE
+  ? // Puppeteer's default flags hide Edge's online (Natural) voices, so launch it plainly.
+    await puppeteer.launch({
+      executablePath: 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+      ignoreDefaultArgs: true,
+      args: ['--headless=new', '--remote-debugging-port=0', '--no-first-run', '--autoplay-policy=no-user-gesture-required', `--user-data-dir=${join(tmpdir(), 'hakum-edge-voice-profile')}`],
+    })
+  : await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] })
 const page = await browser.newPage()
 const consoleErrors = []
 page.on('pageerror', (e) => consoleErrors.push(e.message))
@@ -58,8 +69,11 @@ page.on('console', (m) => { if (m.type() === 'error') consoleErrors.push(m.text(
 
 await page.evaluateOnNewDocument(() => {
   window.__spoken = []
+  window.__voiceNames = []
+  window.__realSpeak = window.speechSynthesis.speak.bind(window.speechSynthesis)
   window.speechSynthesis.speak = (u) => {
     window.__spoken.push(u.text)
+    window.__voiceNames.push(u.voice?.name || `(none, lang ${u.lang})`)
     setTimeout(() => u.onend?.(), 10)
   }
   window.speechSynthesis.cancel = () => {}
@@ -150,6 +164,27 @@ try {
   check('new ticket is announced with make, model and spelled plate', afterInsert.includes(SENTENCE), JSON.stringify(afterInsert))
   check('AI voice asked first, browser voice used as fallback', announceCalls.includes('POST'), announceCalls.join(','))
   check('announced once', afterInsert.filter((t) => t === SENTENCE).length === 1)
+  if (EDGE) {
+    const voiceNames = await page.evaluate(() => window.__voiceNames.slice())
+    check('Edge uses the female Philippine English voice (Rosa)', voiceNames.at(-1)?.includes('Rosa') && voiceNames.at(-1)?.includes('Philippines'), JSON.stringify(voiceNames))
+    const real = await page.evaluate(
+      (text) =>
+        new Promise((resolve) => {
+          const voice = speechSynthesis.getVoices().find((v) => /Rosa/.test(v.name) && v.lang === 'en-PH')
+          const u = new SpeechSynthesisUtterance(text)
+          u.voice = voice
+          u.lang = voice?.lang
+          let started = 0
+          u.onstart = () => { started = performance.now() }
+          u.onend = () => resolve({ voice: voice?.name, seconds: started ? Math.round((performance.now() - started) / 100) / 10 : 0 })
+          u.onerror = (e) => resolve({ voice: voice?.name, error: e.error })
+          window.__realSpeak(u)
+          setTimeout(() => resolve({ voice: voice?.name, error: 'timeout' }), 20000)
+        }),
+      SENTENCE,
+    )
+    check('Rosa really speaks the sentence (not stubbed)', !real.error && real.seconds > 1, JSON.stringify(real))
+  }
 
   const replay = await page.$('button[aria-label="Announce NBC 4821 again"]')
   check('ticket has a replay button', Boolean(replay))
