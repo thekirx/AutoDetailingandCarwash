@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { buildPaymentAnnouncement, pickAnnouncerVoice, spellPlate } from '../src/lib/paymentAnnouncement.js'
+import { buildPaymentAnnouncement, pickAnnouncerVoice, spellPlate, waitForVoices } from '../src/lib/paymentAnnouncement.js'
 import { handlePosAnnounceRequest, pcmToWav, staffCanAnnounce, synthesizeGemini } from '../server/posAnnounceApi.mjs'
 
 function response() {
@@ -39,28 +39,67 @@ describe('buildPaymentAnnouncement', () => {
   it('says make, model and plate', () => {
     assert.equal(
       buildPaymentAnnouncement({ make: 'Toyota', model: 'Vios', plate: 'NBC 4821' }),
-      'Toyota Vios, plate N B C, 4 8 2 1, ready na po for payment.',
+      'Toyota Vios, plate N B C, 4 8 2 1, is ready for payment.',
     )
   })
 
   it('does not repeat the make when the model already starts with it', () => {
     assert.equal(
       buildPaymentAnnouncement({ make: 'Toyota', model: 'toyota Vios', plate: 'AAA1' }),
-      'toyota Vios, plate A A A, 1, ready na po for payment.',
+      'toyota Vios, plate A A A, 1, is ready for payment.',
     )
   })
 
   it('degrades when details are missing', () => {
-    assert.equal(buildPaymentAnnouncement({ plate: 'XYZ 9' }), 'Plate X Y Z, 9, ready na po for payment.')
-    assert.equal(buildPaymentAnnouncement({ make: 'Honda', model: 'City' }), 'Honda City, ready na po for payment.')
-    assert.equal(buildPaymentAnnouncement({}), 'May sasakyan na pong ready for payment.')
-    assert.equal(buildPaymentAnnouncement(), 'May sasakyan na pong ready for payment.')
+    assert.equal(buildPaymentAnnouncement({ plate: 'XYZ 9' }), 'Plate X Y Z, 9, is ready for payment.')
+    assert.equal(buildPaymentAnnouncement({ make: 'Honda', model: 'City' }), 'Honda City is ready for payment.')
+    assert.equal(buildPaymentAnnouncement({}), 'A car is ready for payment.')
+    assert.equal(buildPaymentAnnouncement(), 'A car is ready for payment.')
   })
 
   it('strips markup and caps length so the voice never reads junk', () => {
     const text = buildPaymentAnnouncement({ make: '<script>alert(1)</script>', model: 'x'.repeat(200), plate: '' })
     assert.doesNotMatch(text, /[<>()]/)
     assert.ok(text.length < 110)
+  })
+})
+
+describe('waitForVoices', () => {
+  function fakeSynth(initial) {
+    let voices = initial
+    const listeners = new Set()
+    return {
+      getVoices: () => voices,
+      addEventListener: (_e, fn) => listeners.add(fn),
+      removeEventListener: (_e, fn) => listeners.delete(fn),
+      load(next) {
+        voices = next
+        for (const fn of [...listeners]) fn()
+      },
+      listeners,
+    }
+  }
+  const rosa = { name: 'Microsoft Rosa Online (Natural) - English (Philippines)', lang: 'en-PH' }
+  const david = { name: 'Microsoft David', lang: 'en-US', default: true }
+
+  it('waits for the list the browser loads after page start instead of speaking with no voice', async () => {
+    const synth = fakeSynth([])
+    const ready = waitForVoices(synth, 2000)
+    setTimeout(() => synth.load([david]), 5)
+    setTimeout(() => synth.load([david, rosa]), 10)
+    assert.deepEqual(await ready, [david, rosa])
+    assert.equal(synth.listeners.size, 0)
+  })
+
+  it('returns at once when a Philippine voice is already there', async () => {
+    assert.deepEqual(await waitForVoices(fakeSynth([david, rosa]), 2000), [david, rosa])
+  })
+
+  it('gives up after the timeout with whatever loaded (Chrome has no PH voice)', async () => {
+    const synth = fakeSynth([])
+    setTimeout(() => synth.load([david]), 5)
+    assert.deepEqual(await waitForVoices(synth, 30), [david])
+    assert.deepEqual(await waitForVoices(null, 30), [])
   })
 })
 
@@ -89,6 +128,17 @@ describe('pickAnnouncerVoice', () => {
   it('takes any Philippine voice over a non-PH natural voice', () => {
     assert.equal(pickAnnouncerVoice([robotic, usNatural, phEnglish]), phEnglish)
     assert.equal(pickAnnouncerVoice([robotic, usNatural, filipino]), filipino)
+  })
+
+  it('Chrome on Windows (no Philippine voice) still gets a woman, never David', () => {
+    const david = v('Microsoft David - English (United States)', 'en-US', { default: true })
+    const mark = v('Microsoft Mark - English (United States)', 'en-US')
+    const zira = v('Microsoft Zira - English (United States)', 'en-US')
+    const googleUs = v('Google US English', 'en-US')
+    const googleUkF = v('Google UK English Female', 'en-GB')
+    const googleUkM = v('Google UK English Male', 'en-GB')
+    assert.equal(pickAnnouncerVoice([david, mark, zira, googleUs, googleUkF, googleUkM]), googleUs)
+    assert.equal(pickAnnouncerVoice([david, mark, zira]), zira)
   })
 
   it('falls back to a natural English voice, then the default, then nothing', () => {

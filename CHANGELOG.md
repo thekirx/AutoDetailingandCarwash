@@ -1,3 +1,9 @@
+## 2026-10-13 - POS voice: English "is ready for payment", always a woman
+
+- The announcer is back to English: "Toyota Vios, plate N B C, 4 8 2 1, is ready for payment." and "Payment announcements are on." (replaces the Taglish wording below).
+- Fixed the man's voice: browsers list no voices right after page load, so the first lines fell back to Microsoft David, and Chrome (no Philippine voice) always did. The POS now waits for voices and picks Rosa (Edge), Google US English (Chrome) or Zira, never David when a female English voice exists.
+- `scripts/_pos-voice-check.mjs` gained `CHROME=1`, and both browser modes check every spoken line. Docs: [docs/POS/10-VOICE-ANNOUNCER.md](docs/POS/10-VOICE-ANNOUNCER.md).
+
 ## 2026-10-13 - Demo login cards always on in `npm run dev`
 
 - Localhost shows the demo cards with no `?qa=` key, including Incognito. The dev server signs them in only for requests from the same computer (dev uses the production database, and `--host` would expose it to the LAN). Production builds and the Vercel route still need the key. After pulling this, restart `npm run dev` once.

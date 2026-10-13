@@ -6,9 +6,10 @@
  * speechSynthesis is stubbed to record what would be said.
  *   BASE_URL=http://127.0.0.1:5174 node scripts/_pos-voice-check.mjs
  * EDGE=1 runs in Microsoft Edge (what the counter tablet should use), checks the female
- * en-PH voice is picked, then really speaks one line with it.
+ * en-PH voice (Rosa) is picked, then really speaks one line with it.
+ * CHROME=1 runs in installed Google Chrome (no PH voice) and checks a female voice is used.
  */
-import { mkdirSync } from 'node:fs'
+import { mkdirSync, mkdtempSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -26,7 +27,7 @@ const check = (name, ok, detail = '') => {
   console.log(ok ? 'PASS' : 'FAIL', name, detail)
 }
 
-const SENTENCE = 'Toyota Vios, plate N B C, 4 8 2 1, ready na po for payment.'
+const SENTENCE = 'Toyota Vios, plate N B C, 4 8 2 1, is ready for payment.'
 const TICKET = {
   id: '00000000-0000-4000-8000-0000000000a8',
   booking_id: '00000000-0000-4000-8000-0000000000b8',
@@ -54,12 +55,18 @@ let serveTicket = false
 const announceCalls = []
 
 const EDGE = process.env.EDGE === '1'
-const browser = EDGE
-  ? // Puppeteer's default flags hide Edge's online (Natural) voices, so launch it plainly.
+const CHROME = process.env.CHROME === '1'
+const REAL = EDGE
+  ? { exe: 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe', voice: /Rosa.*Philippines/, label: 'Edge uses the female Philippine English voice (Rosa)' }
+  : CHROME
+    ? { exe: 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', voice: /^(Google US English|Google UK English Female|Microsoft Zira)/, label: 'Chrome uses a female voice, never David' }
+    : null
+const browser = REAL
+  ? // Puppeteer's default flags hide the browser's online voices, so launch it plainly.
     await puppeteer.launch({
-      executablePath: 'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+      executablePath: REAL.exe,
       ignoreDefaultArgs: true,
-      args: ['--headless=new', '--remote-debugging-port=0', '--no-first-run', '--autoplay-policy=no-user-gesture-required', `--user-data-dir=${join(tmpdir(), 'hakum-edge-voice-profile')}`],
+      args: ['--headless=new', '--remote-debugging-port=0', '--no-first-run', '--autoplay-policy=no-user-gesture-required', `--user-data-dir=${mkdtempSync(join(tmpdir(), 'hakum-voice-'))}`],
     })
   : await puppeteer.launch({ headless: true, args: ['--no-sandbox', '--autoplay-policy=no-user-gesture-required'] })
 const page = await browser.newPage()
@@ -141,7 +148,7 @@ try {
   await toggle.click()
   await sleep(1500)
   check('switch turns on and remembers it', (await page.evaluate(() => localStorage.getItem('hakum.pos.announcer'))) === '1')
-  check('turning on speaks a test line', (await spoken()).includes('Naka-on na po ang payment announcements.'), JSON.stringify(await spoken()))
+  check('turning on speaks a test line', (await spoken()).includes('Payment announcements are on.'), JSON.stringify(await spoken()))
   await page.screenshot({ path: join(outDir, 'admin-1440-voice-on.png') })
 
   // Floor marks the car for payment → realtime INSERT on pos_handoffs.
@@ -164,13 +171,14 @@ try {
   check('new ticket is announced with make, model and spelled plate', afterInsert.includes(SENTENCE), JSON.stringify(afterInsert))
   check('AI voice asked first, browser voice used as fallback', announceCalls.includes('POST'), announceCalls.join(','))
   check('announced once', afterInsert.filter((t) => t === SENTENCE).length === 1)
-  if (EDGE) {
+  if (REAL) {
+    // Every line, including the first one spoken right after page load, before voices finish loading.
     const voiceNames = await page.evaluate(() => window.__voiceNames.slice())
-    check('Edge uses the female Philippine English voice (Rosa)', voiceNames.at(-1)?.includes('Rosa') && voiceNames.at(-1)?.includes('Philippines'), JSON.stringify(voiceNames))
+    check(REAL.label, voiceNames.length >= 2 && voiceNames.every((n) => REAL.voice.test(n)), JSON.stringify(voiceNames))
     const real = await page.evaluate(
-      (text) =>
+      (text, chosen) =>
         new Promise((resolve) => {
-          const voice = speechSynthesis.getVoices().find((v) => /Rosa/.test(v.name) && v.lang === 'en-PH')
+          const voice = speechSynthesis.getVoices().find((v) => v.name === chosen)
           const u = new SpeechSynthesisUtterance(text)
           u.voice = voice
           u.lang = voice?.lang
@@ -182,8 +190,9 @@ try {
           setTimeout(() => resolve({ voice: voice?.name, error: 'timeout' }), 20000)
         }),
       SENTENCE,
+      voiceNames.at(-1),
     )
-    check('Rosa really speaks the sentence (not stubbed)', !real.error && real.seconds > 1, JSON.stringify(real))
+    check('the chosen voice really speaks the sentence (not stubbed)', !real.error && real.seconds > 1, JSON.stringify(real))
   }
 
   const replay = await page.$('button[aria-label="Announce NBC 4821 again"]')

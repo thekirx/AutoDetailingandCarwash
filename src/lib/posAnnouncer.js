@@ -1,10 +1,10 @@
 /**
- * Counter speaker: chime, then "<make> <model>, plate …, ready na po for payment."
+ * Counter speaker: chime, then "<make> <model>, plate …, is ready for payment."
  * AI voice (/api/pos-announce) when it answers fast; otherwise the browser's own voice.
  * Opt-in per device — only the tablet wired to the speaker should turn it on.
  */
 import { useEffect } from 'react'
-import { buildPaymentAnnouncement, pickAnnouncerVoice } from '@/lib/paymentAnnouncement'
+import { buildPaymentAnnouncement, pickAnnouncerVoice, waitForVoices } from '@/lib/paymentAnnouncement'
 import { getAccessTokenFresh } from '@/lib/authToken'
 
 const STORAGE_KEY = 'hakum.pos.announcer'
@@ -59,9 +59,14 @@ function chime() {
   return new Promise((resolve) => setTimeout(resolve, 750))
 }
 
-function speakWithBrowser(text) {
+let voicesReady = null
+const loadVoices = () => (voicesReady ||= waitForVoices(window.speechSynthesis))
+if (typeof window !== 'undefined') loadVoices()
+
+async function speakWithBrowser(text) {
   const synth = window.speechSynthesis
-  if (!synth || typeof window.SpeechSynthesisUtterance === 'undefined') return Promise.resolve()
+  if (!synth || typeof window.SpeechSynthesisUtterance === 'undefined') return
+  await loadVoices()
   return new Promise((resolve) => {
     const utter = new window.SpeechSynthesisUtterance(text)
     const voice = pickAnnouncerVoice(synth.getVoices())
@@ -136,7 +141,7 @@ export function announcePayment(row) {
 export function announceTest() {
   return enqueue(async () => {
     await chime()
-    await speakWithBrowser('Naka-on na po ang payment announcements.')
+    await speakWithBrowser('Payment announcements are on.')
   })
 }
 

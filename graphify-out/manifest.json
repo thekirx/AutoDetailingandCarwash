@@ -4944,9 +4944,9 @@
     "semantic_hash": "b2fd8c1a303fa745eeb26b3fac07046c"
   },
   "CHANGELOG.md": {
-    "mtime": 1791903998.1689162,
-    "seen": 1791904112.633179,
-    "ast_hash": "8fd0e9879cb4d1627e4cd4313fc78690",
+    "mtime": 1791905528.2175033,
+    "seen": 1791905932.5235128,
+    "ast_hash": "56d6287dbc9168354d1b2647be289bb2",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
@@ -5646,9 +5646,9 @@
     "semantic_hash": "bafdcec7eda12ac0dd5adabf093873c3"
   },
   "docs/POS/README.md": {
-    "mtime": 1790931097.4210196,
-    "seen": 1790931295.985845,
-    "ast_hash": "908b7cc4931f4441d916abb6d1cfdf87",
+    "mtime": 1791905520.6970396,
+    "seen": 1791905932.5237837,
+    "ast_hash": "a4721f7a0354d53dbb4ccd3677b0a6ec",
     "semantic_hash": ""
   },
   "docs/SYSTEM_AUDIT.md": {
@@ -7374,27 +7374,27 @@
     "semantic_hash": ""
   },
   "server/posAnnounceApi.mjs": {
-    "mtime": 1791878175.626075,
-    "seen": 1791878624.6769922,
-    "ast_hash": "e4203066e45be917cc467fe27faa8784",
+    "mtime": 1791905495.8559709,
+    "seen": 1791905932.5216649,
+    "ast_hash": "98bc566d6a5ff90dfc34a43fab1daa8c",
     "semantic_hash": ""
   },
   "src/lib/paymentAnnouncement.js": {
-    "mtime": 1791901389.6313198,
-    "seen": 1791901873.0853457,
-    "ast_hash": "d293f63ac2452de125e72e908c69037f",
+    "mtime": 1791905493.8505242,
+    "seen": 1791905932.52206,
+    "ast_hash": "11302173c6a279796aa6b2ef5bd14723",
     "semantic_hash": ""
   },
   "src/lib/posAnnouncer.js": {
-    "mtime": 1791878174.0864997,
-    "seen": 1791878624.67777,
-    "ast_hash": "37c98b1640ec9eb18055b3a46576ad48",
+    "mtime": 1791905495.8559709,
+    "seen": 1791905932.522087,
+    "ast_hash": "b6633a61ad072e90af4ce0de8197f204",
     "semantic_hash": ""
   },
   "tests/paymentAnnouncement.test.js": {
-    "mtime": 1791901377.5693214,
-    "seen": 1791901873.0878642,
-    "ast_hash": "072531279380118ff1308c1be2d372f4",
+    "mtime": 1791905476.0456207,
+    "seen": 1791905932.5232446,
+    "ast_hash": "0bb4073d97c6287324303f3df015f4aa",
     "semantic_hash": ""
   },
   "supabase/migrations/20260929120000_operations_lead_manage_branch.sql": {
@@ -8148,9 +8148,9 @@
     "semantic_hash": ""
   },
   "scripts/_pos-voice-check.mjs": {
-    "mtime": 1791901775.3101761,
-    "seen": 1791901873.0837507,
-    "ast_hash": "9bd173b9e6265d4d2e7079ab8dbe9e64",
+    "mtime": 1791905477.2096803,
+    "seen": 1791905932.5210748,
+    "ast_hash": "1bf5efa8100bdc75c34e85156061f352",
     "semantic_hash": ""
   },
   "scripts/check-planner-tabs.mjs": {
@@ -8859,6 +8859,12 @@
     "mtime": 1791902129.8275242,
     "seen": 1791903214.2501154,
     "ast_hash": "a9285c2cf8a453acbf7219dccf746d24",
+    "semantic_hash": ""
+  },
+  "docs/POS/10-VOICE-ANNOUNCER.md": {
+    "mtime": 1791905520.594313,
+    "seen": 1791905932.5237794,
+    "ast_hash": "3632ec0329733228f56642228f856917",
     "semantic_hash": ""
   }
 }

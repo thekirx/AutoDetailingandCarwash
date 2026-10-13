@@ -22,6 +22,7 @@
 | [09-FLOWCHARTS.pdf](./09-FLOWCHARTS.pdf) | **PDF** flowcharts (print/share) |
 | [09-FLOWCHARTS.html](./09-FLOWCHARTS.html) | Visual flowcharts (browser) |
 | [09-FLOWCHARTS.md](./09-FLOWCHARTS.md) | Flowchart source (Mermaid) |
+| [10-VOICE-ANNOUNCER.md](./10-VOICE-ANNOUNCER.md) | "Ready for payment" voice: wording, female voice, setup, cost |
 | [docs/OPS/MONEY-CONTRACT.md](../OPS/MONEY-CONTRACT.md) | Locked POS ↔ Payroll ↔ Finance rules |
 
 ## Product contract (locked)
