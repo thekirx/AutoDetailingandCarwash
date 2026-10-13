@@ -82,7 +82,7 @@ export default function CustomerSignInPage() {
 
   useEffect(() => {
     // Build-time literals only — see LoginPage.jsx and src/lib/demoLogin.js.
-    if (!import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEMO_LOGIN !== 'true') return undefined
+    if (import.meta.env.VITE_ENABLE_DEMO_LOGIN === 'false') return undefined
     let cancelled = false
     import('../lib/demoAccounts').then((m) => {
       if (!cancelled) setDemoCustomer(m.CUSTOMER_DEMO_ACCOUNT)

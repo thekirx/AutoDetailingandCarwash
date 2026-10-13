@@ -27,11 +27,11 @@ export default function LoginPage() {
   const missingProfileTries = useRef(0)
 
   useEffect(() => {
-    // Build-time literals only, so Vite folds this to a constant and drops the
-    // demoAccounts chunk from any build where the flag is off. A runtime check
-    // would leave the chunk in the production bundle — the half of BUG-088 that
-    // a `isDemoLoginEnabled()` call could never fix.
-    if (!import.meta.env.DEV && import.meta.env.VITE_ENABLE_DEMO_LOGIN !== 'true') return undefined
+    // Build-time literal so Vite folds this to a constant. Default is ON — the
+    // chips render in production too — and VITE_ENABLE_DEMO_LOGIN=false is the
+    // single opt-out. Nothing secret is loaded here either way: demoAccounts
+    // carries ids, emails and env var NAMES, never values.
+    if (import.meta.env.VITE_ENABLE_DEMO_LOGIN === 'false') return undefined
     let cancelled = false
     import('../lib/demoAccounts').then((m) => {
       if (!cancelled) setDemoAccounts(m.OPS_DEMO_ACCOUNTS)

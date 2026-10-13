@@ -21,11 +21,20 @@ import { createClient } from '@supabase/supabase-js'
 import { json, readJsonBody, setCors } from './httpUtil.mjs'
 import { OPS_DEMO_ACCOUNTS, CUSTOMER_DEMO_ACCOUNT } from '../src/lib/demoAccounts.js'
 
-/** Same rule as the client, evaluated server-side: dev, or an explicit opt-in. */
+/**
+ * Same rule as the client, evaluated server-side.
+ *
+ * Was fail-closed (opt in with DEMO_LOGIN_ENABLED=true). Flipped to default-on
+ * on 2026-10-13 so the chips work on every deployment without Vercel config —
+ * the owner cannot set env vars from the repo and asked for this twice.
+ * DEMO_LOGIN_ENABLED=false is the off switch, on both sides at once.
+ *
+ * If the 15 VITE_DEMO_PASSWORD_* vars are absent from the deployment, this
+ * route returns 503 naming the missing variable rather than failing silently:
+ * the chips would render and every click would explain itself.
+ */
 function demoLoginEnabled() {
-  if (globalThis.process?.env?.DEMO_LOGIN_ENABLED === 'true') return true
-  // Local `npm run dev` / `vite preview`, where nothing is exposed to anyone.
-  return process.env.NODE_ENV !== 'production' && process.env.DEMO_LOGIN_ENABLED !== 'false'
+  return process.env.DEMO_LOGIN_ENABLED !== 'false'
 }
 
 function accountsById() {

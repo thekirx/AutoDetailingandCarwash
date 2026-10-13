@@ -143,29 +143,39 @@ describe('TL queue status transitions (principal scenarios)', () => {
   })
 })
 
-describe('demo login is dev, or a deployment that explicitly opts in', () => {
-  // CHANGED 2026-10-12 by owner decision: the chips are back on the deployed
-  // site for testing. What did NOT change is the mechanism — the opt-in is a
-  // build value that has to be set deliberately. BUG-088 was a *host* rule that
-  // enabled itself the moment anything was deployed, so there is still no
-  // hostname involved anywhere in this function.
-  it('enables on DEV, and on a build that sets the flag explicitly', () => {
-    assert.equal(isDemoLoginEnabled({ dev: true, flag: '', hostname: '' }), true)
+describe('demo login is on by default, with one opt-out', () => {
+  // CHANGED 2026-10-13 by owner decision, second time. The previous default was
+  // fail-closed (`flag === 'true'`); the owner asked for the chips to be visible
+  // on the deployed site and cannot set Vercel env vars from the repo. So the
+  // default is now ON and the single opt-out is `false`.
+  //
+  // What did NOT change, and is the part these rows actually protect: the
+  // decision is a VALUE someone sets. BUG-088 was a host rule that enabled
+  // itself on deploy, so there is still no hostname anywhere in this function.
+  it('is on with no flag at all, which is the whole point of the change', () => {
+    assert.equal(isDemoLoginEnabled({ dev: false, flag: '', hostname: '' }), true)
+    assert.equal(isDemoLoginEnabled({ dev: false, flag: undefined, hostname: '' }), true)
     assert.equal(isDemoLoginEnabled({ dev: false, flag: 'true', hostname: '' }), true)
   })
 
-  it('stays off for every other value, including any host name', () => {
-    assert.equal(isDemoLoginEnabled({ dev: false, flag: 'TRUE', hostname: '' }), false)
-    assert.equal(isDemoLoginEnabled({ dev: false, flag: '', hostname: 'hakum-autocare.vercel.app' }), false)
-    assert.equal(isDemoLoginEnabled({ dev: false, flag: '', hostname: 'hakumautocare.com' }), false)
+  it('is off only for the exact string "false"', () => {
     assert.equal(isDemoLoginEnabled({ dev: false, flag: 'false', hostname: '' }), false)
   })
 
-  it('a hostname can never enable it on its own — that was BUG-088', () => {
+  it('is never turned on by dev being false, and never off by dev being true', () => {
+    // DEV is additive, not authoritative: a local run keeps the chips whatever
+    // the flag says, because you already have the machine.
+    assert.equal(isDemoLoginEnabled({ dev: true, flag: 'false', hostname: '' }), true)
+  })
+
+  it('a hostname can never enable or disable it — that was BUG-088', () => {
     // The regression this row exists to prevent. A host rule reads as harmless
     // in review and enables itself on deploy, which is how one-click Super Admin
     // ended up on the live site with the passwords in a public bundle.
-    assert.equal(isDemoLoginEnabled({ dev: false, flag: '', hostname: 'hakum-autocare.vercel.app' }), false)
-    assert.equal(isDemoLoginEnabled({ dev: false, flag: undefined, hostname: 'anything.vercel.app' }), false)
+    // Comment-stripped: this file's own prose is about that word.
+    const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'src/lib/demoLogin.js'), 'utf8')
+      .replace(/^\s*\/\/.*$/gm, '')
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+    assert.doesNotMatch(src, /hostname|location\.host/, 'the gate must not consult the host again')
   })
 })

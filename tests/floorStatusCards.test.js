@@ -48,20 +48,47 @@ describe('Floor status cards → queue lanes', () => {
 })
 
 describe('Vercel demo login visibility', () => {
-  // Production runs on *.vercel.app. The chips are OFF there by default; the
-  // owner turned them back on 2026-10-12 for testing, which is a build-time
-  // env var set in the Vercel project — deliberately, never in the repo. What
-  // still has to hold regardless is that the repo cannot enable it by accident.
-  it('the repo cannot turn demo sign-in on by itself', () => {
-    assert.doesNotMatch(envProd, /VITE_ENABLE_DEMO_LOGIN\s*=\s*true/i, 'a committed .env.production enabling it is the BUG-088 shape')
-    assert.equal(isDemoLoginEnabled({ dev: false }), false, 'no flag and not dev means off')
+  // The chips are ON in production by default since 2026-10-13 (owner decision,
+  // taken twice). So the guarantee this file used to assert — "production never
+  // offers them" — is deliberately gone, and the old `.env.production` check
+  // with it: a tracked file no longer decides whether they appear.
+  //
+  // The guarantee that replaces it is the one that was never true before and is
+  // the only one that matters when the chips are on: **no credential is in the
+  // repo, and none reaches the browser.** The other one is that the on/off
+  // decision stays a value rather than a property of the hostname.
+  it('a tracked file cannot smuggle a credential past this suite', () => {
+    assert.doesNotMatch(envProd, /Hakum[A-Z][A-Za-z]*20\d\d!/, 'a literal password in a tracked env file')
+  })
+
+  it('the chips are on by default and off for exactly "false"', () => {
+    assert.equal(isDemoLoginEnabled({ dev: false }), true, 'no flag means on — this is the 2026-10-13 decision')
+    assert.equal(isDemoLoginEnabled({ dev: false, flag: 'false' }), false, '"false" is the single opt-out')
     assert.equal(isDemoLoginEnabled({ dev: true }), true)
   })
 
-  it('enabling it exposes buttons, never secrets', () => {
-    // This is the part that makes the accepted risk survivable: the demo accounts
-    // carry `passwordEnv` and read the value at use time, so no credential is in
-    // the bundle even with the chips on.
+  it('the opt-out is a value, never a hostname', () => {
+    // Matched on comment-stripped source: these files explain at length WHY
+    // there is no hostname, and that prose contains the word.
+    const strip = (s) => s.replace(/^\s*\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '')
+    for (const p of ['src/lib/demoLogin.js', 'server/demoLoginApi.mjs']) {
+      assert.doesNotMatch(
+        strip(readFileSync(join(root, p), 'utf8')),
+        /hostname|location\.host/,
+        `${p} decides from the host again, which is how BUG-088 happened`,
+      )
+    }
+    assert.match(
+      strip(readFileSync(join(root, 'server/demoLoginApi.mjs'), 'utf8')),
+      /DEMO_LOGIN_ENABLED !== 'false'/,
+      'the endpoint must default on too, or the chips render and every click 404s',
+    )
+  })
+
+  it('enabling them exposes buttons, never secrets', () => {
+    // This is what makes the accepted risk survivable: the demo accounts carry
+    // `passwordEnv` NAMES and read the value server-side, so nothing is in the
+    // bundle even with the chips on.
     const src = readFileSync(join(root, 'src/lib/demoAccounts.js'), 'utf8')
     assert.doesNotMatch(src, /password:\s*['"`]/, 'a literal password is back in demoAccounts.js')
     for (const a of [...OPS_DEMO_ACCOUNTS, CUSTOMER_DEMO_ACCOUNT]) {

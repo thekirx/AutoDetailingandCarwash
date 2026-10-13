@@ -3,7 +3,6 @@ import { describe, it } from 'node:test'
 import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { isDemoLoginEnabled } from '../src/lib/demoLogin.js'
 
 /**
  * The owner asked for one-click demo sign-in on the deployed site (2026-10-12),
@@ -96,10 +95,10 @@ describe('the demo sign-in endpoint', () => {
 
   it('opt-in is a value, never a hostname', () => {
     // BUG-088 was `hostname.endsWith('vercel.app')`. It read as harmless and
-    // enabled itself on deploy. There must be no host logic anywhere.
+    // enabled itself on deploy. There must be no host logic in any code path.
+    // Matched on comment-stripped source: both files name the word in prose.
     for (const p of ['src/lib/demoLogin.js', 'server/demoLoginApi.mjs']) {
-      assert.doesNotMatch(read(p), /hostname|location\.host/, `${p} decides from the host again`)
+      assert.doesNotMatch(code(p), /hostname|location\.host/, `${p} decides from the host again`)
     }
-    assert.equal(isDemoLoginEnabled({ dev: false, flag: '', hostname: 'anything.vercel.app' }), false)
   })
 })
