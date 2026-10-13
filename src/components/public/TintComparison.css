@@ -432,3 +432,52 @@
   .bredesign .bd-tint-price dt { font-size: 13px; }
   .bredesign .bd-tint-price dd { font-size: 20px; }
 }
+
+/* ---- Three tints, three distinct reads (Oct 2026) ------------------------
+   Nano Ceramic · 7-year, Nano Ceramic Pro · 10-year (most popular),
+   Nano Ceramic Pro Black Series · lifetime. Each tint carries its own accent
+   on the left edge and on its warranty badge. */
+.bredesign .bd-tint-package { --tint-accent: #9db4ff; position: relative; padding-left: 18px; border-left: 3px solid var(--tint-accent); }
+.bredesign .bd-tint-package[data-tint-package='pro'] { --tint-accent: #ffffff; }
+.bredesign .bd-tint-package[data-tint-package='black'] { --tint-accent: #e7c976; }
+.bredesign .bd-tint-package-head { align-items: center; }
+.bredesign .bd-tint-package-name { display: grid; gap: 8px; }
+.bredesign .bd-tint-popular {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--bd-blue);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.bredesign .bd-tint-package-head p.bd-tint-warranty {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border: 1.5px solid var(--tint-accent);
+  border-radius: 999px;
+  color: var(--tint-accent);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  animation: bd-tint-warranty-pulse 2.4s ease-in-out infinite;
+}
+/* A slow glow, not a hard flash: opacity stays well above 0.2 and it cycles
+   under 3 times a second, so it is safe for photosensitive visitors. */
+@keyframes bd-tint-warranty-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--tint-accent) 0%, transparent); opacity: 1; }
+  50% { box-shadow: 0 0 0 6px color-mix(in oklab, var(--tint-accent) 22%, transparent); opacity: 0.72; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bredesign .bd-tint-package-head p.bd-tint-warranty { animation: none; }
+}
+@media (max-width: 760px) {
+  .bredesign .bd-tint-package { padding-left: 14px; }
+}

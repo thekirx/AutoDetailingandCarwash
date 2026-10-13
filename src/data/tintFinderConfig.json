@@ -12,11 +12,20 @@
     },
     "pro": {
       "name": "Nano Ceramic Pro",
-      "warranty": "Lifetime",
+      "warranty": "10 years",
       "prices": {
         "sedan": 10000,
         "suv": 12000,
         "van": 14000
+      }
+    },
+    "black": {
+      "name": "Nano Ceramic Pro Black Series",
+      "warranty": "Lifetime",
+      "prices": {
+        "sedan": 13000,
+        "suv": 15000,
+        "van": 17000
       }
     }
   },
@@ -84,6 +93,38 @@
       "tser": 71,
       "irr": 94,
       "uvr": ">99"
+    },
+    "Black35": {
+      "name": "Black35",
+      "package": "black",
+      "vlt": 35,
+      "tser": 63,
+      "irr": 95,
+      "uvr": ">99"
+    },
+    "Black25": {
+      "name": "Black25",
+      "package": "black",
+      "vlt": 25,
+      "tser": 65,
+      "irr": 95,
+      "uvr": ">99"
+    },
+    "Black15": {
+      "name": "Black15",
+      "package": "black",
+      "vlt": 15,
+      "tser": 68,
+      "irr": 95,
+      "uvr": ">99"
+    },
+    "Black05": {
+      "name": "Black05",
+      "package": "black",
+      "vlt": 5,
+      "tser": 71,
+      "irr": 96,
+      "uvr": ">99"
     }
   },
   "options": {
@@ -116,6 +157,21 @@
       "package": "ceramic",
       "front": "C20",
       "rear": "C08"
+    },
+    "OPT-G": {
+      "package": "black",
+      "front": "Black35",
+      "rear": "Black25"
+    },
+    "OPT-H": {
+      "package": "black",
+      "front": "Black25",
+      "rear": "Black15"
+    },
+    "OPT-I": {
+      "package": "black",
+      "front": "Black15",
+      "rear": "Black05"
     }
   },
   "rules": [
@@ -198,7 +254,7 @@
     {
       "id": "4",
       "title": "UV Ray Protection",
-      "description": "Blocks over 99% of UVA and UVB rays, protecting your health and helping your car\u2019s interior last longer."
+      "description": "Blocks over 99% of UVA and UVB rays, protecting your health and helping your car’s interior last longer."
     },
     {
       "id": "5",
@@ -218,7 +274,7 @@
     {
       "id": "8",
       "title": "Clear Signal",
-      "description": "Non-metallic materials don\u2019t interfere with mobile signals, GPS, Wi-Fi, or Bluetooth, so your connections stay stable."
+      "description": "Non-metallic materials don’t interfere with mobile signals, GPS, Wi-Fi, or Bluetooth, so your connections stay stable."
     },
     {
       "id": "9",

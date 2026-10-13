@@ -138,3 +138,8 @@
   .bredesign .tf-card-free {padding-left:14px}
   .bredesign .tf-card-free li {font-size:12.5px;gap:6px}
 }
+/* Oct 2026: Pro is the most popular tint, and the warranty pulses gently (no hard flash). */
+.bredesign .tf-popular {display:inline-flex;align-items:center;margin-left:10px;padding:4px 10px;border-radius:999px;background:#fff;color:var(--bd-blue);font-family:var(--bd-body);font-size:10px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;vertical-align:middle;white-space:nowrap}
+.bredesign .tf-warranty {animation:tf-warranty-pulse 2.4s ease-in-out infinite}
+@keyframes tf-warranty-pulse {0%,100%{box-shadow:0 0 0 0 rgba(255,210,63,0)}50%{box-shadow:0 0 0 7px rgba(255,210,63,.28)}}
+@media (prefers-reduced-motion:reduce){.bredesign .tf-warranty{animation:none}}

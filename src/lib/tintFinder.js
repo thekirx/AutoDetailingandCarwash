@@ -10,20 +10,25 @@ export const TINT_QUESTIONS = [
   { key: 'vehicle', title: 'What type of vehicle do you drive?', hint: 'We’ll show the full-window package price for your vehicle.', choices: TINT_VEHICLES },
 ]
 /* Customer-facing names. The catalog keeps its own short names for staff. */
-export const TINT_PACKAGE_NAMES = { ceramic: 'Nano Ceramic Tint', pro: 'Nano Ceramic Pro Tint' }
+/* Three tints, named so they read as a ladder: Nano Ceramic (7-year), Pro (10-year),
+   Pro Black Series (lifetime). */
+export const TINT_PACKAGE_NAMES = { ceramic: 'Nano Ceramic', pro: 'Nano Ceramic Pro', black: 'Nano Ceramic Pro Black Series' }
+/* The tint the shop recommends first. */
+export const TINT_MOST_POPULAR = 'pro'
 export const tintPackageName = (config, id) => TINT_PACKAGE_NAMES[id] || config.packages[id]?.name || id
 /* Shade names by film key, shared by the Finder and the comparison tables. */
-export const TINT_FILM_SHADES = { 'Clear Bluish': 'Clear Bluish', C30: 'Light Black', C20: 'Medium Black', C08: 'Super Black', HC35: 'Fair Black', HC25: 'Light Black', HC15: 'Medium Black', HC05: 'Super Black' }
+export const TINT_FILM_SHADES = { 'Clear Bluish': 'Clear Bluish', C30: 'Light Black', C20: 'Medium Black', C08: 'Super Black', HC35: 'Fair Black', HC25: 'Light Black', HC15: 'Medium Black', HC05: 'Super Black', Black35: 'Fair Black', Black25: 'Light Black', Black15: 'Medium Black', Black05: 'Super Black' }
 export const tintShade = key => TINT_FILM_SHADES[key] || key
 /* The approved suggestion (client sign-off, 9 Oct 2026): one front/rear shade
-   pair, offered in both tints (Pro first). The first matching tier wins:
+   pair, offered in all three tints (Pro first, then Nano Ceramic, then the
+   Black Series added 13 Oct 2026 at the client's request). The first matching tier wins:
    poor eyesight → lightest; night driver, prescription or visibility → light
    front over a medium rear; everyone else → medium front over a super black rear.
    The pairs are catalog options, so their films and prices stay editable. */
 export const TINT_SUGGESTION_TIERS = {
-  lightest: { options: ['OPT-B', 'OPT-A'], title: 'Lightest shades', summary: 'The clearest view we offer, day and night.' },
-  light: { options: ['OPT-C', 'OPT-D'], summary: 'A clearer front for the road, a darker rear for heat and privacy.' },
-  dark: { options: ['OPT-E', 'OPT-F'], summary: 'Strong heat rejection, with real privacy in the back.' },
+  lightest: { options: ['OPT-B', 'OPT-A', 'OPT-G'], title: 'Lightest shades', summary: 'The clearest view we offer, day and night.' },
+  light: { options: ['OPT-C', 'OPT-D', 'OPT-H'], summary: 'A clearer front for the road, a darker rear for heat and privacy.' },
+  dark: { options: ['OPT-E', 'OPT-F', 'OPT-I'], summary: 'Strong heat rejection, with real privacy in the back.' },
 }
 export function tintSuggestionTier(answers) {
   if (answers.eyesight === 'poor') return 'lightest'

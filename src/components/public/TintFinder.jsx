@@ -4,7 +4,7 @@ import { ArrowLeft, ArrowRight, Check, CheckCircle2, Info, RotateCcw, ShieldChec
 import { Link } from 'react-router-dom'
 import { isApprovalPreview } from '../../lib/approvalPreview'
 import { useTintFinderConfig } from '../../lib/tintFinderData'
-import { TINT_QUESTIONS, TINT_VEHICLES, orderedBenefits, suggestTint, tintPackageName, tintPeso, tintShade, tintWarranty } from '../../lib/tintFinder'
+import { TINT_MOST_POPULAR, TINT_QUESTIONS, TINT_VEHICLES, orderedBenefits, suggestTint, tintPackageName, tintPeso, tintShade, tintWarranty } from '../../lib/tintFinder'
 import { usePublicBranches } from '../../lib/branches'
 import { submitPublicInquiry } from '../../lib/publicInquiryApi'
 import tintPhoto from '../../assets/services/tint-toyota86.webp'
@@ -106,7 +106,7 @@ export default function TintFinder() {
   return <><section className="tf-section" id="tint-finder" aria-labelledby="tint-finder-title">
     {isApprovalPreview && <aside className="tf-approval-review" aria-label="Client design choices"><span>Client review · A / Original</span><nav><a href="/tint-designs/index.html">All designs</a>{['B','C','D','E'].map(id=><a key={id} href={`/tint-designs/option-${id.toLowerCase()}.html`}>{id}</a>)}</nav></aside>}
     <div className="bd-shell">
-      <div className="tf-section-head"><p className="bd-eyebrow" id="tint-finder-title">Tint Finder</p><p>Four quick questions. We’ll suggest a front and rear shade, in both of our tints.</p></div>
+      <div className="tf-section-head"><p className="bd-eyebrow" id="tint-finder-title">Tint Finder</p><p>Four quick questions. We’ll suggest a front and rear shade, in all three tints.</p></div>
       {step<4 ? <div className="tf-quiz">
         <div className="tf-question">
           <div className="tf-progress-label"><span>Step {step+1} of 4</span><span>Tint Finder</span></div>
@@ -124,7 +124,7 @@ export default function TintFinder() {
           const vehicle=TINT_VEHICLES.find(v=>v.id===answers.vehicle)?.label
           return <article key={o.id} className={`tf-option${o.package==='pro'?' is-pro':''}`} data-tint-option={o.id}>
             <div className="tf-card-head">
-              <h3>{tintPackageName(config,o.package)}</h3>
+              <h3>{tintPackageName(config,o.package)}{o.package===TINT_MOST_POPULAR && <span className="tf-popular">Most popular</span>}</h3>
               <div className="tf-warranty"><ShieldCheck size={22} aria-hidden="true"/><span><small>Covered by</small>{tintWarranty(config.packages[o.package].warranty)}</span></div>
               <div className="tf-seal-badge" title="Skin Cancer Foundation Seal of Recommendation"><img src={seal} alt="The Skin Cancer Foundation Seal of Recommendation" loading="lazy"/></div>
             </div>

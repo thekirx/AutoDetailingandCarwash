@@ -5,21 +5,21 @@ import { recommendTint, suggestTint, tintPackageName, tintWarranty, orderedBenef
 const config = JSON.parse(readFileSync(new URL('../src/data/tintFinderConfig.json', import.meta.url)))
 /* Approved 9 Oct 2026: poor eyesight → lightest; night, prescription or
    visibility → light front / medium rear; everyone else → medium / super black.
-   Pro first, then Nano Ceramic. */
-const tierFor = ({ night, eyesight, priority }) => eyesight === 'poor' ? 'BA' : (night === 'yes' || eyesight === 'prescription' || priority === 'visibility') ? 'CD' : 'EF'
-for (const night of ['yes','no']) for (const eyesight of ['excellent','prescription','poor']) for (const priority of ['privacy','visibility','balance']) for (const [vehicle,delta] of [['sedan',0],['suv',2000],['van',4000]]) test(`${night}/${eyesight}/${priority}/${vehicle}: approved pair in both tints, priced`, () => {
+   Pro first, then Nano Ceramic, then Black Series (added 13 Oct 2026). */
+const tierFor = ({ night, eyesight, priority }) => eyesight === 'poor' ? 'BAG' : (night === 'yes' || eyesight === 'prescription' || priority === 'visibility') ? 'CDH' : 'EFI'
+for (const night of ['yes','no']) for (const eyesight of ['excellent','prescription','poor']) for (const priority of ['privacy','visibility','balance']) for (const [vehicle,delta] of [['sedan',0],['suv',2000],['van',4000]]) test(`${night}/${eyesight}/${priority}/${vehicle}: approved pair in all three tints, priced`, () => {
  const answers = {night,eyesight,priority,vehicle}
  const result = recommendTint(config, answers)
  assert.deepEqual(result.map(o=>o.id), [...tierFor(answers)].map(id=>'OPT-'+id))
- assert.deepEqual(result.map(o=>o.package), ['pro','ceramic'])
- for (const o of result) assert.equal(o.price,(o.package==='pro'?10000:6000)+delta)
+ assert.deepEqual(result.map(o=>o.package), ['pro','ceramic','black'])
+ for (const o of result) assert.equal(o.price,{pro:10000,ceramic:6000,black:13000}[o.package]+delta)
  assert.equal(result.filter(o=>o.front==='Clear Bluish').every(o=>o.rear==='Clear Bluish'),true)
 })
 test('night driving now changes the suggestion', () => {
  const day = recommendTint(config,{night:'no',eyesight:'excellent',priority:'privacy',vehicle:'sedan'}).map(o=>o.id)
  const night = recommendTint(config,{night:'yes',eyesight:'excellent',priority:'privacy',vehicle:'sedan'}).map(o=>o.id)
- assert.deepEqual(day,['OPT-E','OPT-F'])
- assert.deepEqual(night,['OPT-C','OPT-D'])
+ assert.deepEqual(day,['OPT-E','OPT-F','OPT-I'])
+ assert.deepEqual(night,['OPT-C','OPT-D','OPT-H'])
 })
 test('incomplete answers give no suggestion', () => {
  assert.deepEqual(recommendTint(config,{night:'no',eyesight:'excellent',priority:'balance'}),[])
@@ -33,8 +33,14 @@ test('the suggestion names its shades and explains itself from the answers', () 
  assert.equal(suggestTint(config,{night:'yes',eyesight:'excellent',priority:'privacy',vehicle:'van'}).title,'Light Black front · Medium Black rear')
 })
 test('customer-facing names and warranty labels', () => {
- assert.equal(tintPackageName(config,'ceramic'),'Nano Ceramic Tint')
- assert.equal(tintPackageName(config,'pro'),'Nano Ceramic Pro Tint')
+ assert.equal(tintPackageName(config,'ceramic'),'Nano Ceramic')
+ assert.equal(tintPackageName(config,'pro'),'Nano Ceramic Pro')
+ assert.equal(tintPackageName(config,'black'),'Nano Ceramic Pro Black Series')
+ // Three tints, three warranties (handover v1.3 + client note, Oct 2026).
+ assert.equal(config.packages.ceramic.warranty,'7 years')
+ assert.equal(config.packages.pro.warranty,'10 years')
+ assert.equal(config.packages.black.warranty,'Lifetime')
+ assert.equal(tintWarranty('10 years'),'10-year warranty')
  assert.equal(tintWarranty('7 years'),'7-year warranty')
  assert.equal(tintWarranty('Lifetime'),'Lifetime warranty')
 })

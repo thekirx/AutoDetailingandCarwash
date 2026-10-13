@@ -7,7 +7,8 @@ const origin = process.env.PUBLIC_TEST_URL || 'http://127.0.0.1:5173'
 const defaults = JSON.parse(readFileSync(new URL('../src/data/tintFinderConfig.json', import.meta.url)))
 const expected = [
   { id: 'ceramic', codes: ['C70', 'C30', 'C20', 'C08'], shades: ['Clear Bluish', 'Light Black', 'Medium Black', 'Super Black'], specs: [['68%', '31%', '20%', '8%'], ['44%', '57%', '65%', '69%'], ['87%', '82%', '93%', '92%']], warranty: '7 years', prices: ['₱6,000', '₱8,000', '₱10,000'] },
-  { id: 'pro', codes: ['HC35 Nano', 'HC25 Nano', 'HC15 Nano', 'HC05 Nano'], shades: ['Fair Black', 'Light Black', 'Medium Black', 'Super Black'], specs: [['35%', '25%', '15%', '5%'], ['58%', '63%', '66%', '71%'], ['92%', '92%', '92%', '94%']], warranty: 'Lifetime', prices: ['₱10,000', '₱12,000', '₱14,000'] },
+  { id: 'pro', codes: ['HC35 Nano', 'HC25 Nano', 'HC15 Nano', 'HC05 Nano'], shades: ['Fair Black', 'Light Black', 'Medium Black', 'Super Black'], specs: [['35%', '25%', '15%', '5%'], ['58%', '63%', '66%', '71%'], ['92%', '92%', '92%', '94%']], warranty: '10 years', prices: ['₱10,000', '₱12,000', '₱14,000'] },
+  { id: 'black', codes: ['Black35', 'Black25', 'Black15', 'Black05'], shades: ['Fair Black', 'Light Black', 'Medium Black', 'Super Black'], specs: [['35%', '25%', '15%', '5%'], ['63%', '65%', '68%', '71%'], ['95%', '95%', '95%', '96%']], warranty: 'Lifetime', prices: ['₱13,000', '₱15,000', '₱17,000'] },
 ]
 
 for (const width of [1440, 393, 320]) {
@@ -32,12 +33,14 @@ for (const width of [1440, 393, 320]) {
       if (cookie) await cookie.click()
       // Must be available before answering any quiz questions.
       assert.ok(await page.$('#tint-comparison'), 'Tint page must offer the full comparison before completing the quiz')
-      assert.equal(await page.$$eval('#tint-comparison table', els => els.length), 2)
+      assert.equal(await page.$$eval('#tint-comparison table', els => els.length), 3)
       assert.ok(await page.$('#tint-comparison #tint-certification'), 'Certification belongs with the comparison tables')
       // Every film carries the seal, so no per-film list; one link to the Foundation's listing.
       assert.equal(await page.$('#tint-certification .cert-films'), null)
       assert.deepEqual(await page.$$eval('#tint-certification a', els => els.map(e => e.href)), ['https://www.skincancer.org/recommended-products/'])
-      assert.deepEqual(await page.$$eval('#tint-comparison [data-tint-package] h3', els => els.map(e => e.textContent)), ['Nano Ceramic Tint', 'Nano Ceramic Pro Tint'])
+      assert.deepEqual(await page.$$eval('#tint-comparison [data-tint-package] h3', els => els.map(e => e.textContent)), ['Nano Ceramic', 'Nano Ceramic Pro', 'Nano Ceramic Pro Black Series'])
+      assert.deepEqual(await page.$$eval('#tint-comparison .bd-tint-popular', els => els.map(e => e.closest('[data-tint-package]').dataset.tintPackage)), ['pro'])
+      assert.deepEqual(await page.$$eval('#tint-comparison [data-tint-warranty]', els => els.map(e => e.textContent)), ['7-year warranty', '10-year warranty', 'Lifetime warranty'])
       assert.equal(await page.$eval('#tint-comparison .bd-cmp-toggle', e => e.getAttribute('aria-expanded')), 'true')
       assert.equal(await page.$eval('#tint-comparison .bd-cmp-toggle s', e => getComputedStyle(e).textDecorationLine), 'none')
       await page.$eval('#tint-certification', el => el.scrollIntoView({ block: 'center' }))

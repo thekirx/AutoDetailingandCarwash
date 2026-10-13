@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import TintCertification from './TintCertification'
-import { TINT_VEHICLES, tintPackageName, tintPeso, tintWarranty } from '../../lib/tintFinder'
+import { TINT_MOST_POPULAR, TINT_VEHICLES, tintPackageName, tintPeso, tintWarranty } from '../../lib/tintFinder'
 import './home/PpfPackagesSection.css'
 import './TintComparison.css'
 
@@ -17,6 +17,12 @@ const PACKAGES = [
     { key: 'HC25', code: 'HC25 Nano', shade: 'Light Black' },
     { key: 'HC15', code: 'HC15 Nano', shade: 'Medium Black' },
     { key: 'HC05', code: 'HC05 Nano', shade: 'Super Black' },
+  ] },
+  { id: 'black', films: [
+    { key: 'Black35', code: 'Black35', shade: 'Fair Black' },
+    { key: 'Black25', code: 'Black25', shade: 'Light Black' },
+    { key: 'Black15', code: 'Black15', shade: 'Medium Black' },
+    { key: 'Black05', code: 'Black05', shade: 'Super Black' },
   ] },
 ]
 const METRICS = [
@@ -47,7 +53,7 @@ export default function TintComparison({ config }) {
           <div className="bd-tint-comparison-head">
             <p className="bd-eyebrow">Nano ceramic tint packages</p>
             <h2 id="tint-comparison-title">Compare every <em>tint shade.</em></h2>
-            <p className="bd-tint-intro">Eight films in two tints, side by side: light, heat, UV, warranty and price.</p>
+            <p className="bd-tint-intro">Twelve films in three tints, side by side: light, heat, UV, warranty and price.</p>
             <div className="bd-cmp-block">
               <button
                 type="button"
@@ -57,7 +63,7 @@ export default function TintComparison({ config }) {
                 onClick={() => setOpen((value) => !value)}
               >
                 <span>
-                  <b>Compare all eight shades</b>
+                  <b>Compare all twelve shades</b>
                   <s>Light, heat, UV, warranty and price, side by side</s>
                 </span>
                 <ChevronDown size={20} aria-hidden="true" />
@@ -68,14 +74,19 @@ export default function TintComparison({ config }) {
         </div>
 
         <div id="tint-compare-tables" hidden={!open}>
-        {PACKAGES.map(({ id, films }) => {
+        {PACKAGES.filter(({ id }) => config.packages[id]).map(({ id, films }) => {
           const pkg = config.packages[id]
+          const popular = id === TINT_MOST_POPULAR
           const titleId = `tint-compare-${id}`
           return (
-            <div className="bd-tint-package" data-tint-package={id} key={id}>
+            <div className={`bd-tint-package${popular ? ' is-popular' : ''}`} data-tint-package={id} key={id}>
               <div className="bd-tint-package-head">
-                <h3 id={titleId}>{tintPackageName(config, id)}</h3>
-                <p>{tintWarranty(pkg.warranty)}</p>
+                <div className="bd-tint-package-name">
+                  {popular ? <span className="bd-tint-popular">Most popular</span> : null}
+                  <h3 id={titleId}>{tintPackageName(config, id)}</h3>
+                </div>
+                {/* The warranty is the clearest difference between the three tints, so it pulses gently. */}
+                <p className="bd-tint-warranty" data-tint-warranty={id}>{tintWarranty(pkg.warranty)}</p>
               </div>
               <p className="bd-tint-scroll-hint">Swipe or scroll sideways to compare all four shades.</p>
               <div className="bd-cmp" role="region" aria-labelledby={titleId} tabIndex={0}>
