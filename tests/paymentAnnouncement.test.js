@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { buildPaymentAnnouncement, spellPlate } from '../src/lib/paymentAnnouncement.js'
+import { buildPaymentAnnouncement, pickAnnouncerVoice, spellPlate } from '../src/lib/paymentAnnouncement.js'
 import { handlePosAnnounceRequest, pcmToWav, staffCanAnnounce, synthesizeGemini } from '../server/posAnnounceApi.mjs'
 
 function response() {
@@ -39,28 +39,55 @@ describe('buildPaymentAnnouncement', () => {
   it('says make, model and plate', () => {
     assert.equal(
       buildPaymentAnnouncement({ make: 'Toyota', model: 'Vios', plate: 'NBC 4821' }),
-      'Toyota Vios, plate N B C, 4 8 2 1, is ready for payment.',
+      'Toyota Vios, plate N B C, 4 8 2 1, ready na po for payment.',
     )
   })
 
   it('does not repeat the make when the model already starts with it', () => {
     assert.equal(
       buildPaymentAnnouncement({ make: 'Toyota', model: 'toyota Vios', plate: 'AAA1' }),
-      'toyota Vios, plate A A A, 1, is ready for payment.',
+      'toyota Vios, plate A A A, 1, ready na po for payment.',
     )
   })
 
   it('degrades when details are missing', () => {
-    assert.equal(buildPaymentAnnouncement({ plate: 'XYZ 9' }), 'Plate X Y Z, 9 is ready for payment.')
-    assert.equal(buildPaymentAnnouncement({ make: 'Honda', model: 'City' }), 'Honda City is ready for payment.')
-    assert.equal(buildPaymentAnnouncement({}), 'A car is ready for payment.')
-    assert.equal(buildPaymentAnnouncement(), 'A car is ready for payment.')
+    assert.equal(buildPaymentAnnouncement({ plate: 'XYZ 9' }), 'Plate X Y Z, 9, ready na po for payment.')
+    assert.equal(buildPaymentAnnouncement({ make: 'Honda', model: 'City' }), 'Honda City, ready na po for payment.')
+    assert.equal(buildPaymentAnnouncement({}), 'May sasakyan na pong ready for payment.')
+    assert.equal(buildPaymentAnnouncement(), 'May sasakyan na pong ready for payment.')
   })
 
   it('strips markup and caps length so the voice never reads junk', () => {
     const text = buildPaymentAnnouncement({ make: '<script>alert(1)</script>', model: 'x'.repeat(200), plate: '' })
     assert.doesNotMatch(text, /[<>()]/)
     assert.ok(text.length < 110)
+  })
+})
+
+describe('pickAnnouncerVoice', () => {
+  const v = (name, lang, extra = {}) => ({ name, lang, ...extra })
+  const robotic = v('Microsoft David', 'en-US', { default: true })
+  const usNatural = v('Microsoft Aria Online (Natural)', 'en-US')
+  const phEnglish = v('Google English (Philippines)', 'en-PH')
+  const filipino = v('Filipino', 'fil-PH')
+  const filNatural = v('Microsoft Blessica Online (Natural) - Filipino (Philippines)', 'fil-PH')
+  const phNatural = v('Microsoft Rosa Online (Natural) - English (Philippines)', 'en-PH')
+
+  it('prefers a natural Philippine English voice, then a natural Filipino voice', () => {
+    assert.equal(pickAnnouncerVoice([robotic, usNatural, filNatural, phNatural]), phNatural)
+    assert.equal(pickAnnouncerVoice([robotic, usNatural, phEnglish, filNatural]), filNatural)
+  })
+
+  it('takes any Philippine voice over a non-PH natural voice', () => {
+    assert.equal(pickAnnouncerVoice([robotic, usNatural, phEnglish]), phEnglish)
+    assert.equal(pickAnnouncerVoice([robotic, usNatural, filipino]), filipino)
+  })
+
+  it('falls back to a natural English voice, then the default, then nothing', () => {
+    assert.equal(pickAnnouncerVoice([robotic, usNatural]), usNatural)
+    assert.equal(pickAnnouncerVoice([v('Kyoko', 'ja-JP'), robotic]), robotic)
+    assert.equal(pickAnnouncerVoice([v('Kyoko', 'ja-JP')]), null)
+    assert.equal(pickAnnouncerVoice([]), null)
   })
 })
 

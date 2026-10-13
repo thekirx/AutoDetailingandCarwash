@@ -1,10 +1,10 @@
 /**
- * Counter speaker: chime, then "<make> <model>, plate …, is ready for payment."
+ * Counter speaker: chime, then "<make> <model>, plate …, ready na po for payment."
  * AI voice (/api/pos-announce) when it answers fast; otherwise the browser's own voice.
  * Opt-in per device — only the tablet wired to the speaker should turn it on.
  */
 import { useEffect } from 'react'
-import { buildPaymentAnnouncement } from '@/lib/paymentAnnouncement'
+import { buildPaymentAnnouncement, pickAnnouncerVoice } from '@/lib/paymentAnnouncement'
 import { getAccessTokenFresh } from '@/lib/authToken'
 
 const STORAGE_KEY = 'hakum.pos.announcer'
@@ -59,26 +59,13 @@ function chime() {
   return new Promise((resolve) => setTimeout(resolve, 750))
 }
 
-function pickVoice() {
-  const en = (window.speechSynthesis?.getVoices() || []).filter((v) => /^en/i.test(v.lang))
-  const natural = (v) => /natural|online/i.test(v.name)
-  return (
-    en.find((v) => /en-PH/i.test(v.lang) && natural(v)) ||
-    en.find(natural) ||
-    en.find((v) => /en-PH/i.test(v.lang)) ||
-    en.find((v) => v.default) ||
-    en[0] ||
-    null
-  )
-}
-
 function speakWithBrowser(text) {
   const synth = window.speechSynthesis
   if (!synth || typeof window.SpeechSynthesisUtterance === 'undefined') return Promise.resolve()
   return new Promise((resolve) => {
     const utter = new window.SpeechSynthesisUtterance(text)
-    const voice = pickVoice()
-    utter.lang = voice?.lang || 'en-US'
+    const voice = pickAnnouncerVoice(synth.getVoices())
+    utter.lang = voice?.lang || 'en-PH'
     if (voice) utter.voice = voice
     utter.rate = 0.95
     utter.onend = resolve
@@ -149,7 +136,7 @@ export function announcePayment(row) {
 export function announceTest() {
   return enqueue(async () => {
     await chime()
-    await speakWithBrowser('Payment announcements are on.')
+    await speakWithBrowser('Naka-on na po ang payment announcements.')
   })
 }
 

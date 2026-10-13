@@ -1,5 +1,5 @@
 /**
- * POST /api/pos-announce — AI voice clip for "<make> <model>, plate …, is ready for payment."
+ * POST /api/pos-announce — AI voice clip for "<make> <model>, plate …, ready na po for payment."
  * Body: { handoff_id }. Words come from the booking row, never from the client. Returns audio/wav.
  * 501 when GEMINI_API_KEY is unset — the POS then uses the browser voice.
  */

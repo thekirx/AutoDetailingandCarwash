@@ -23,7 +23,7 @@ const check = (name, ok, detail = '') => {
   console.log(ok ? 'PASS' : 'FAIL', name, detail)
 }
 
-const SENTENCE = 'Toyota Vios, plate N B C, 4 8 2 1, is ready for payment.'
+const SENTENCE = 'Toyota Vios, plate N B C, 4 8 2 1, ready na po for payment.'
 const TICKET = {
   id: '00000000-0000-4000-8000-0000000000a8',
   booking_id: '00000000-0000-4000-8000-0000000000b8',
@@ -127,7 +127,7 @@ try {
   await toggle.click()
   await sleep(1500)
   check('switch turns on and remembers it', (await page.evaluate(() => localStorage.getItem('hakum.pos.announcer'))) === '1')
-  check('turning on speaks a test line', (await spoken()).includes('Payment announcements are on.'), JSON.stringify(await spoken()))
+  check('turning on speaks a test line', (await spoken()).includes('Naka-on na po ang payment announcements.'), JSON.stringify(await spoken()))
   await page.screenshot({ path: join(outDir, 'admin-1440-voice-on.png') })
 
   // Floor marks the car for payment → realtime INSERT on pos_handoffs.

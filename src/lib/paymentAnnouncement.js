@@ -1,5 +1,5 @@
 /**
- * "Toyota Vios, plate N B C, 4 8 2 1, is ready for payment." — shared by the POS
+ * "Toyota Vios, plate N B C, 4 8 2 1, ready na po for payment." — shared by the POS
  * browser voice and the server AI-voice route so both say the exact same words.
  */
 
@@ -25,8 +25,26 @@ export function buildPaymentAnnouncement({ make, model, plate } = {}) {
   const mdl = clean(model)
   const car = m && mdl.toLowerCase().startsWith(m.toLowerCase()) ? mdl : [m, mdl].filter(Boolean).join(' ')
   const spelled = spellPlate(plate)
-  if (car && spelled) return `${car}, plate ${spelled}, is ready for payment.`
-  if (spelled) return `Plate ${spelled} is ready for payment.`
-  if (car) return `${car} is ready for payment.`
-  return 'A car is ready for payment.'
+  if (car && spelled) return `${car}, plate ${spelled}, ready na po for payment.`
+  if (spelled) return `Plate ${spelled}, ready na po for payment.`
+  if (car) return `${car}, ready na po for payment.`
+  return 'May sasakyan na pong ready for payment.'
+}
+
+/** Philippine voices first; "Natural"/"Online" voices (Edge, Android) sound far less robotic. */
+export function pickAnnouncerVoice(voices) {
+  const usable = (voices || []).filter((v) => /^(en|fil)/i.test(v.lang))
+  const natural = (v) => /natural|online/i.test(v.name)
+  const ph = (lang) => (v) => new RegExp(`^${lang}-PH`, 'i').test(v.lang)
+  const en = (v) => /^en/i.test(v.lang)
+  return (
+    usable.find((v) => ph('en')(v) && natural(v)) ||
+    usable.find((v) => ph('fil')(v) && natural(v)) ||
+    usable.find(ph('en')) ||
+    usable.find(ph('fil')) ||
+    usable.find((v) => en(v) && natural(v)) ||
+    usable.find((v) => en(v) && v.default) ||
+    usable.find(en) ||
+    null
+  )
 }

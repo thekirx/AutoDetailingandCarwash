@@ -1,3 +1,8 @@
+## 2026-10-13 - POS payment voice speaks Taglish
+
+- The counter announcer now says "Toyota Vios, plate N B C, 4 8 2 1, ready na po for payment." and "Naka-on na po ang payment announcements." when switched on. The AI voice and the browser voice use the same words.
+- The browser voice picks a Philippine voice first (natural English-Philippines, then natural Filipino), so Edge and Android tablets sound less robotic. Demo logins and SMS are unchanged.
+
 ## 2026-10-13 - A wash needs present crew before it starts (BUG-092)
 
 - Starting a ticket now requires crew who timed in today, enforced by the database and not only the Queue screen. Packages still start without crew, and Branch Admin overrides are unchanged.
