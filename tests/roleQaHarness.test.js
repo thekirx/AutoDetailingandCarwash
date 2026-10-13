@@ -139,6 +139,15 @@ test('every retired route the harness checks is still a redirect in the router',
   }
 })
 
+test('the route-chunk fallback is marked as loading, so waitSettled waits it out', () => {
+  // On production a lazy page chunk can still be downloading after sign-in;
+  // a check that runs then sees only "Loading…" and fails a working page.
+  assert.match(HARNESS_CODE, /\[data-loading="true"\]/, 'waitSettled must wait on [data-loading="true"]')
+  const app = read('src/App.jsx')
+  const fallback = app.slice(app.indexOf('function RouteFallback'), app.indexOf('export default function App'))
+  assert.match(fallback, /data-loading="true"/, 'RouteFallback must carry data-loading="true"')
+})
+
 // ── Evidence and honesty ─────────────────────────────────────────────────
 
 test('the harness writes evidence where it claims to', () => {

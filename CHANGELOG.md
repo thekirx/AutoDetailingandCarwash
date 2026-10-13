@@ -1,3 +1,9 @@
+## 2026-10-13 - A wash needs present crew before it starts (BUG-092)
+
+- Starting a ticket now requires crew who timed in today, enforced by the database and not only the Queue screen. Packages still start without crew, and Branch Admin overrides are unchanged.
+- New `scripts/probe-shop-day-lifecycle.sql` walks one wash from waiting to paid as the real roles and rolls everything back, so it is safe to run on a live day.
+- Fixed a false failure in the role walk: the page-loading screen is now marked as loading, so checks wait for the page instead of reading the spinner.
+
 ## 2026-10-13 - Demo login cards back on the deployed site, behind a QA key
 
 - Open `/operations/login?qa=<key>` (or `/signin?qa=<key>`) once on a device and the one-click demo cards appear there. Everyone else sees the normal sign-in form, and the demo endpoint answers 404 without the key.

@@ -523,10 +523,10 @@ async function main() {
           ok('tl.queue.issue_car', `${data.id} q=${data.queue_number ?? 'n/a'}`)
           const { error: upErr } = await client
             .from('bookings')
-            .update({ status: 'in_progress', updated_at: new Date().toISOString() })
+            .update({ status: 'cancelled', cancelled_at: new Date().toISOString(), cancellation_reason: 'RBAC audit' })
             .eq('id', data.id)
           if (upErr) fail('tl.queue.edit_status', upErr)
-          else ok('tl.queue.edit_status', 'in_progress')
+          else ok('tl.queue.edit_status', 'cancelled')
           await admin.from('bookings').delete().eq('id', data.id)
         }
       }

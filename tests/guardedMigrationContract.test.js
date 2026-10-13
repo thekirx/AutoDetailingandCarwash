@@ -40,6 +40,7 @@ const GUARDED = [
   '20261010160000_daily_sheet_separation_of_duties.sql',
   '20261010170000_daily_sheet_cash_blank_is_cash.sql',
   '20261011090000_reconcile_live_admin_policies.sql',
+  '20261013090000_queue_start_requires_present_crew.sql',
 ]
 
 const read = (name) => readFileSync(join(migrationsDir, name), 'utf8')

@@ -45,7 +45,7 @@ async function asUser(email, password) {
 }
 
 const stamp = Date.now().toString(36)
-const cleanup = { bookingIds: [], expenseIds: [], saleIds: [], reviewIds: [], assigneeIds: [], cardIds: [], formIds: [] }
+const cleanup = { bookingIds: [], expenseIds: [], saleIds: [], reviewIds: [], assigneeIds: [], cardIds: [], formIds: [], attendanceIds: [] }
 
 async function main() {
   const { data: smsPrev } = await admin.from('app_settings').select('value').eq('key', 'sms_notifications').maybeSingle()
@@ -92,6 +92,38 @@ async function main() {
 
   const { sb: tl } = await asUser('teamlead@hakumautocare.com', demoPassword('VITE_DEMO_PASSWORD_TL'))
   const now = () => new Date().toISOString()
+  // A wash starts only with crew who timed in today (trg_require_present_crew_on_start).
+  const { data: crew } = await admin
+    .from('staff_profiles')
+    .select('id')
+    .eq('role', 'staff')
+    .eq('branch_slug', 'bacoor')
+    .eq('is_active', true)
+    .order('created_at')
+    .limit(1)
+    .single()
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date())
+  const { data: attRow } = await admin
+    .from('staff_attendance')
+    .select('id, status')
+    .eq('staff_id', crew.id)
+    .eq('attendance_date', today)
+    .maybeSingle()
+  if (!attRow) {
+    const { data: att, error: attErr } = await admin
+      .from('staff_attendance')
+      .insert({ staff_id: crew.id, branch_slug: 'bacoor', attendance_date: today, status: 'present', checked_in_at: now(), source: 'admin', notes: `QA ${stamp}` })
+      .select('id')
+      .single()
+    if (attErr) throw attErr
+    cleanup.attendanceIds.push(att.id)
+  } else if (!['present', 'late'].includes(attRow.status)) {
+    throw new Error(`Crew is marked ${attRow.status} today; pick a day they are on the floor`)
+  }
+  const { error: asgErr } = await tl.rpc('sync_queue_assignments', { input_booking_id: booking.id, input_staff_ids: [crew.id] })
+  if (asgErr) fail('C3-assign_crew', asgErr.message)
+  else pass('C3-assign_crew')
+
   const { error: ipErr } = await tl
     .from('bookings')
     .update({ status: 'in_progress', in_progress_at: now() })
@@ -360,6 +392,7 @@ async function main() {
   if (cleanup.cardIds.length) await admin.from('plan_cards').delete().in('id', cleanup.cardIds)
   if (cleanup.expenseIds.length) await admin.from('expenses').delete().in('id', cleanup.expenseIds)
   if (cleanup.formIds.length) await admin.from('ops_form_submissions').delete().in('id', cleanup.formIds)
+  if (cleanup.attendanceIds.length) await admin.from('staff_attendance').delete().in('id', cleanup.attendanceIds)
   const saleIds = cleanup.saleIds.filter(Boolean)
   if (saleIds.length) {
     await admin.from('sale_line_items').delete().in('sale_id', saleIds)

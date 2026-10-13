@@ -68,7 +68,8 @@ assert(hasGrant(asaDefault, 'reports') === true)
 assert(allowRoute(tl, 'kpi') && allowRoute(tl, 'bookings') && !allowRoute(tl, 'finance'))
 assert(allowRoute(staff, 'my-tasks') && !allowRoute(staff, 'pos'))
 assert(canAccessCrm(mkt) && !canAccessPos(mkt) && !canAccessFinance(mkt))
-assert(getOperationsNav(mkt).every((i) => i.to === '/operations/crm'))
+const mktNav = ['/operations/crm', '/operations/bookings', '/operations/planning', '/operations/notifications', '/operations/history']
+assert(getOperationsNav(mkt).every((i) => mktNav.includes(i.to)), `marketing nav: ${getOperationsNav(mkt).map((i) => i.to)}`)
 assert(!getOperationsNav(boss).some((i) => i.to === '/operations/services' || i.to === '/operations/sms'))
 assert(getOperationsNav(boss).some((i) => i.to === '/operations/cars'))
 
@@ -77,8 +78,10 @@ for (const demo of OPS_DEMO_ACCOUNTS) {
   assert(!/cashier/i.test(demo.id + demo.label + demo.email), `demo still cashier: ${demo.email}`)
 }
 const salesProfile = { role: ROLES.SALES, branch_slug: 'bacoor' }
-assert(allowRoute(salesProfile, 'bookings') && !allowRoute(salesProfile, 'pos') && !allowRoute(salesProfile, 'queue'))
-assert(getOperationsNav(salesProfile).every((i) => i.to === '/operations/bookings'))
+// Sales views the queue (wash read-only, detailing editable: tests/salesRole.test.js) but never POS or Finance.
+assert(allowRoute(salesProfile, 'bookings') && allowRoute(salesProfile, 'queue') && !allowRoute(salesProfile, 'pos') && !allowRoute(salesProfile, 'finance'), 'sales route matrix')
+const salesNav = ['/operations/bookings', '/operations/queue', '/operations/crm', '/operations/history']
+assert(getOperationsNav(salesProfile).every((i) => salesNav.includes(i.to)), `sales nav: ${getOperationsNav(salesProfile).map((i) => i.to)}`)
 results.push('matrix.static: ok')
 
 // --- Live DB ---
@@ -116,7 +119,7 @@ results.push(`db.events.slug: ok (${events?.length ? 'sample' : 'empty'})`)
 // Role logins + route homes
 const logins = [
   { email: 'bossmich@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_BOSS'), role: ROLES.SUPER_ADMIN, mustAllow: ['reports', 'cars', 'finance', 'pos'] },
-  { email: 'admin@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_ADMIN'), role: ROLES.ADMIN, mustAllow: ['pos', 'finance', 'crm'], mustDeny: ['reports', 'cars'] },
+  { email: 'admin@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_ADMIN'), role: ROLES.ADMIN, mustAllow: ['pos', 'bookings', 'attendance'], mustDeny: ['finance', 'crm', 'reports', 'cars'] }, // BRANCH_ADMIN_ROUTE_KEYS; books are SA/ASA only (BUG-054)
   { email: 'teamlead@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_TL'), role: ROLES.TEAM_LEAD, mustAllow: ['kpi', 'bookings', 'queue'], mustDeny: ['finance', 'reports'] },
   { email: 'staff1@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_STAFF'), role: ROLES.STAFF, mustAllow: ['my-tasks'], mustDeny: ['pos', 'finance'] },
   { email: 'marketing@hakumautocare.com', password: demoPassword('VITE_DEMO_PASSWORD_MARKETING'), role: ROLES.MARKETING, mustAllow: ['crm'], mustDeny: ['pos', 'finance', 'kpi'] },
