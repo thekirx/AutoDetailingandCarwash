@@ -1,3 +1,8 @@
+## 2026-10-13 - Demo login cards back on the deployed site, behind a QA key
+
+- Open `/operations/login?qa=<key>` (or `/signin?qa=<key>`) once on a device and the one-click demo cards appear there. Everyone else sees the normal sign-in form, and the demo endpoint answers 404 without the key.
+- The cards no longer use passwords at all: the server signs in with a one-time link, so changing the demo passwords never breaks them. The key lives in your local `.env` as `DEMO_LOGIN_KEY`; only its hash is in the repo.
+
 ## 2026-10-11 - Demo sign-in removed from production; passwords out of the repo (BUG-088)
 
 - The live staff login no longer shows one-click demo accounts (it offered every role, Super Admin included), and production no longer ships the demo account passwords. Demo chips appear only under `vite dev`.

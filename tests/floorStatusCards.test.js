@@ -48,26 +48,18 @@ describe('Floor status cards → queue lanes', () => {
 })
 
 describe('Vercel demo login visibility', () => {
-  // The chips are ON in production by default since 2026-10-13 (owner decision,
-  // taken twice). So the guarantee this file used to assert — "production never
-  // offers them" — is deliberately gone, and the old `.env.production` check
-  // with it: a tracked file no longer decides whether they appear.
-  //
-  // The guarantee that replaces it is the one that was never true before and is
-  // the only one that matters when the chips are on: **no credential is in the
-  // repo, and none reaches the browser.** The other one is that the on/off
-  // decision stays a value rather than a property of the hostname.
+  // The chips work on production, but only on a device holding the QA key; the
+  // server refuses everyone else (tests/demoLoginQaKey.test.js).
   it('a tracked file cannot smuggle a credential past this suite', () => {
     assert.doesNotMatch(envProd, /Hakum[A-Z][A-Za-z]*20\d\d!/, 'a literal password in a tracked env file')
   })
 
-  it('the chips are on by default and off for exactly "false"', () => {
-    assert.equal(isDemoLoginEnabled({ dev: false }), true, 'no flag means on — this is the 2026-10-13 decision')
-    assert.equal(isDemoLoginEnabled({ dev: false, flag: 'false' }), false, '"false" is the single opt-out')
-    assert.equal(isDemoLoginEnabled({ dev: true }), true)
+  it('the chips are off without a QA key and on with one', () => {
+    assert.equal(isDemoLoginEnabled({ qaKey: '' }), false)
+    assert.equal(isDemoLoginEnabled({ qaKey: 'k' }), true)
   })
 
-  it('the opt-out is a value, never a hostname', () => {
+  it('the gate is a key, never a hostname', () => {
     // Matched on comment-stripped source: these files explain at length WHY
     // there is no hostname, and that prose contains the word.
     const strip = (s) => s.replace(/^\s*\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '')
@@ -80,15 +72,13 @@ describe('Vercel demo login visibility', () => {
     }
     assert.match(
       strip(readFileSync(join(root, 'server/demoLoginApi.mjs'), 'utf8')),
-      /DEMO_LOGIN_ENABLED !== 'false'/,
-      'the endpoint must default on too, or the chips render and every click 404s',
+      /!qaKeyMatches\(body\?\.key\)\) return json\(res, 404/,
+      'the endpoint must refuse a caller without the QA key',
     )
   })
 
   it('enabling them exposes buttons, never secrets', () => {
-    // This is what makes the accepted risk survivable: the demo accounts carry
-    // `passwordEnv` NAMES and read the value server-side, so nothing is in the
-    // bundle even with the chips on.
+    // The demo accounts carry `passwordEnv` NAMES (for the QA scripts), never values.
     const src = readFileSync(join(root, 'src/lib/demoAccounts.js'), 'utf8')
     assert.doesNotMatch(src, /password:\s*['"`]/, 'a literal password is back in demoAccounts.js')
     for (const a of [...OPS_DEMO_ACCOUNTS, CUSTOMER_DEMO_ACCOUNT]) {

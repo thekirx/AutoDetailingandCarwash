@@ -143,29 +143,10 @@ describe('TL queue status transitions (principal scenarios)', () => {
   })
 })
 
-describe('demo login is on by default, with one opt-out', () => {
-  // CHANGED 2026-10-13 by owner decision, second time. The previous default was
-  // fail-closed (`flag === 'true'`); the owner asked for the chips to be visible
-  // on the deployed site and cannot set Vercel env vars from the repo. So the
-  // default is now ON and the single opt-out is `false`.
-  //
-  // What did NOT change, and is the part these rows actually protect: the
-  // decision is a VALUE someone sets. BUG-088 was a host rule that enabled
-  // itself on deploy, so there is still no hostname anywhere in this function.
-  it('is on with no flag at all, which is the whole point of the change', () => {
-    assert.equal(isDemoLoginEnabled({ dev: false, flag: '', hostname: '' }), true)
-    assert.equal(isDemoLoginEnabled({ dev: false, flag: undefined, hostname: '' }), true)
-    assert.equal(isDemoLoginEnabled({ dev: false, flag: 'true', hostname: '' }), true)
-  })
-
-  it('is off only for the exact string "false"', () => {
-    assert.equal(isDemoLoginEnabled({ dev: false, flag: 'false', hostname: '' }), false)
-  })
-
-  it('is never turned on by dev being false, and never off by dev being true', () => {
-    // DEV is additive, not authoritative: a local run keeps the chips whatever
-    // the flag says, because you already have the machine.
-    assert.equal(isDemoLoginEnabled({ dev: true, flag: 'false', hostname: '' }), true)
+describe('demo login needs a QA key', () => {
+  it('is off without a key, whatever the host or build flags say', () => {
+    assert.equal(isDemoLoginEnabled({ qaKey: '', dev: true, flag: 'true', hostname: 'x.vercel.app' }), false)
+    assert.equal(isDemoLoginEnabled({ qaKey: undefined }), false)
   })
 
   it('a hostname can never enable or disable it — that was BUG-088', () => {

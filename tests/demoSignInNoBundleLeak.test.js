@@ -56,9 +56,9 @@ describe('demo sign-in does not put a password in the client bundle', () => {
     }
   })
 
-  it('the client helper sends only an account id', () => {
+  it('the client helper sends only an account id and the QA key', () => {
     const src = code('src/lib/demoSignIn.js')
-    assert.match(src, /JSON\.stringify\(\{ id: accountId \}\)/, 'the request must carry the id and nothing else')
+    assert.match(src, /post\(\{ id: accountId, key: storedQaKey\(\) \}\)/, 'the request must carry the id and the key, nothing else')
     assert.doesNotMatch(src, /password/i, 'the client half of demo sign-in has no business naming a password')
   })
 
@@ -70,9 +70,9 @@ describe('demo sign-in does not put a password in the client bundle', () => {
 })
 
 describe('the demo sign-in endpoint', () => {
-  it('reads the password server-side and never sends one back', () => {
+  it('signs in without any password and never sends one back', () => {
     const src = code('server/demoLoginApi.mjs')
-    assert.match(src, /process\.env\[account\.passwordEnv\]/, 'the server must read the password from its own env')
+    assert.doesNotMatch(src, /passwordEnv|signInWithPassword/, 'the server mints a one-time link; it needs no password')
     assert.doesNotMatch(src, /import\.meta\.env/, 'a server module must never touch import.meta.env')
     // The response shape is the whole point: tokens and an email, no secret.
     const body = src.slice(src.indexOf('return json(res, 200'))
@@ -81,10 +81,11 @@ describe('the demo sign-in endpoint', () => {
     assert.match(body, /refresh_token/)
   })
 
-  it('is a 404 when the deployment has not opted in', () => {
-    // 404 rather than 403: switched off, the route should not advertise itself.
+  it('is a 404 when switched off or called without the QA key', () => {
+    // 404 rather than 403: the route should not advertise itself.
     const src = read('server/demoLoginApi.mjs')
     assert.match(src, /!demoLoginEnabled\(\)\) return json\(res, 404/)
+    assert.match(src, /!qaKeyMatches\(body\?\.key\)\) return json\(res, 404/)
   })
 
   it('is routed in both dev and production', () => {

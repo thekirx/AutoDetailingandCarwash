@@ -9,7 +9,7 @@ import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell, { TEAM_AUTH_BULLETS } from '../components/HakumAuthShell'
 import DemoAccountChips from '../components/DemoAccountChips'
 import { describeAuthError } from '../lib/authErrorMessage'
-import { demoSignIn } from '../lib/demoSignIn'
+import { demoSignIn, unlockDemoLoginFromUrl } from '../lib/demoSignIn'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -27,14 +27,12 @@ export default function LoginPage() {
   const missingProfileTries = useRef(0)
 
   useEffect(() => {
-    // Build-time literal so Vite folds this to a constant. Default is ON — the
-    // chips render in production too — and VITE_ENABLE_DEMO_LOGIN=false is the
-    // single opt-out. Nothing secret is loaded here either way: demoAccounts
-    // carries ids, emails and env var NAMES, never values.
-    if (import.meta.env.VITE_ENABLE_DEMO_LOGIN === 'false') return undefined
     let cancelled = false
-    import('../lib/demoAccounts').then((m) => {
-      if (!cancelled) setDemoAccounts(m.OPS_DEMO_ACCOUNTS)
+    unlockDemoLoginFromUrl().then((on) => {
+      if (!on || cancelled) return
+      import('../lib/demoAccounts').then((m) => {
+        if (!cancelled) setDemoAccounts(m.OPS_DEMO_ACCOUNTS)
+      })
     })
     return () => {
       cancelled = true

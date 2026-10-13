@@ -1,6 +1,6 @@
 import { isDemoLoginEnabled } from '../lib/demoLogin'
 
-/** Compact demo account chips for ops / customer login, local dev only. */
+/** Compact demo account chips for ops / customer login, only on a device holding a QA key. */
 export default function DemoAccountChips({ accounts, onPick, title = 'Demo accounts', disabled = false }) {
   if (!isDemoLoginEnabled()) return null
   if (!accounts?.length) return null

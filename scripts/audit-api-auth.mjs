@@ -46,7 +46,7 @@ const PUBLIC = {
   handleNotifyOpsFormRequest:
     'public form notifier. The bearer is optional by design ("staff fill may send a bearer; public forms do not"); rate limited per IP',
   handleDemoLoginRequest:
-    'one-click demo sign-in for testing (owner decision 2026-10-12). Unauthenticated BY DEFINITION — the point is to sign in without a session. Two things bound it: it 404s unless DEMO_LOGIN_ENABLED=true, and it returns a session for a FIXED set of known demo accounts, never an arbitrary identity. It holds the passwords server-side and returns only tokens, so nothing here is a credential leak. Recorded as an accepted risk on BUG-088; if demo sign-in is switched off in production this route disappears entirely.',
+    'one-click demo sign-in for testing (owner decision 2026-10-12). Unauthenticated BY DEFINITION — the point is to sign in without a session. It 404s without the QA key (only its SHA-256 is in the repo), and it returns a session for a FIXED set of known demo accounts, never an arbitrary identity. It mints a one-time link server-side and returns only tokens, so no credential is involved. DEMO_LOGIN_ENABLED=false removes the route entirely. Recorded on BUG-088.',
 }
 
 /**

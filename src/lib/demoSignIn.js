@@ -1,24 +1,35 @@
+import { QA_KEY_STORAGE, isDemoLoginEnabled, storedQaKey } from './demoLogin'
+
 /**
- * One-click demo sign-in, client half.
- *
- * The browser holds an account ID and nothing else. It posts the ID to
- * /api/demo-login, the server reads the password from its own environment and
- * performs the sign-in, and only the session comes back.
- *
- * This function deliberately has no idea what a password is. It used to fill the
- * real sign-in form with `a.password`, which meant the client had to read
- * `VITE_DEMO_PASSWORD_*` — and a computed `env[name]` lookup is invisible to
- * Vite's per-key replacement, so the whole env object (all 15 staff passwords)
- * was inlined into the deployed bundle. That was the half of BUG-088 the source
- * scrub did not close.
+ * One-click demo sign-in, client half. Posts an account id and the stored QA key
+ * to /api/demo-login; the server signs in and returns only the session. No
+ * password exists on this side.
  */
-export async function demoSignIn(accountId) {
-  const res = await fetch('/api/demo-login', {
+async function post(body) {
+  return fetch('/api/demo-login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ id: accountId }),
+    body: JSON.stringify(body),
   })
+}
+
+export async function demoSignIn(accountId) {
+  const res = await post({ id: accountId, key: storedQaKey() })
   const data = await res.json().catch(() => ({}))
-  if (!res.ok) throw new Error(data.error || 'Demo sign-in failed')
+  if (res.status === 404) globalThis.localStorage?.removeItem(QA_KEY_STORAGE)
+  if (!res.ok) throw new Error(res.status === 404 ? 'Demo sign-in is locked on this device' : data.error || 'Demo sign-in failed')
   return data
+}
+
+/** Stores `?qa=<key>` if the server accepts it, strips it from the address bar, and reports whether chips are on. */
+export async function unlockDemoLoginFromUrl() {
+  const url = new URL(window.location.href)
+  const key = url.searchParams.get('qa')
+  if (key) {
+    url.searchParams.delete('qa')
+    window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`)
+    const res = await post({ key, check: true }).catch(() => null)
+    if (res?.ok) localStorage.setItem(QA_KEY_STORAGE, key)
+  }
+  return isDemoLoginEnabled()
 }

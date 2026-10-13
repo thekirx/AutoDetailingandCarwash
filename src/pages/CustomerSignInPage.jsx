@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { demoSignIn } from '../lib/demoSignIn'
+import { demoSignIn, unlockDemoLoginFromUrl } from '../lib/demoSignIn'
 import { useAuth } from '../auth/AuthProvider'
 import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell, { CUSTOMER_AUTH_BULLETS } from '../components/HakumAuthShell'
@@ -81,11 +81,12 @@ export default function CustomerSignInPage() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    // Build-time literals only — see LoginPage.jsx and src/lib/demoLogin.js.
-    if (import.meta.env.VITE_ENABLE_DEMO_LOGIN === 'false') return undefined
     let cancelled = false
-    import('../lib/demoAccounts').then((m) => {
-      if (!cancelled) setDemoCustomer(m.CUSTOMER_DEMO_ACCOUNT)
+    unlockDemoLoginFromUrl().then((on) => {
+      if (!on || cancelled) return
+      import('../lib/demoAccounts').then((m) => {
+        if (!cancelled) setDemoCustomer(m.CUSTOMER_DEMO_ACCOUNT)
+      })
     })
     return () => {
       cancelled = true

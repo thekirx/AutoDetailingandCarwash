@@ -114,9 +114,9 @@ describe('no staff-facing /api/* fetch forgot its Authorization header', () => {
     '/api/notify-ops-form',
     '/api/plate-lookup',
     // One-click demo sign-in for testing. Unauthenticated by definition — the
-    // point is to obtain a session without one. It 404s unless
-    // DEMO_LOGIN_ENABLED=true, only ever signs in a fixed set of known demo
-    // accounts, and returns no credential. Accepted risk, recorded on BUG-088.
+    // point is to obtain a session without one. It 404s without the QA key,
+    // only ever signs in a fixed set of known demo accounts, and returns no
+    // credential. Recorded on BUG-088.
     '/api/demo-login',
   ])
 
