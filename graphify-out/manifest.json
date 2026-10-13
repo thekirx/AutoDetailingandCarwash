@@ -4944,9 +4944,9 @@
     "semantic_hash": "b2fd8c1a303fa745eeb26b3fac07046c"
   },
   "CHANGELOG.md": {
-    "mtime": 1791901806.4200716,
-    "seen": 1791901873.088429,
-    "ast_hash": "3c0217821305de8226fada1acd3a76b4",
+    "mtime": 1791903153.5687695,
+    "seen": 1791903214.253943,
+    "ast_hash": "964deb94db1a51b0953864f7aaf8828f",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
@@ -8274,9 +8274,9 @@
     "semantic_hash": ""
   },
   "src/lib/tintFinder.js": {
-    "mtime": 1791861291.463812,
-    "seen": 1791869654.4995778,
-    "ast_hash": "a80af6b1ac30722480ec12e05b093871",
+    "mtime": 1791901898.4433234,
+    "seen": 1791903214.2516334,
+    "ast_hash": "a4b4ad1e3faaf52da6146b5479946322",
     "semantic_hash": ""
   },
   "src/lib/tintFinderData.js": {
@@ -8328,15 +8328,15 @@
     "semantic_hash": ""
   },
   "tests/tintFinder.browser.test.js": {
-    "mtime": 1791861291.463812,
-    "seen": 1791869654.5017486,
-    "ast_hash": "9c1dfd7e7aeaee675ae4c6e81a52d769",
+    "mtime": 1791901898.4485068,
+    "seen": 1791903214.253875,
+    "ast_hash": "0171286ae154b18a270549258fb726cf",
     "semantic_hash": ""
   },
   "tests/tintFinder.test.js": {
-    "mtime": 1791861291.463812,
-    "seen": 1791869654.5017524,
-    "ast_hash": "313fd55a84404b8bf010cd9b946b46a9",
+    "mtime": 1791901898.4485068,
+    "seen": 1791903214.2538784,
+    "ast_hash": "00ae14b165bd07fd29342e5aaaee1e1f",
     "semantic_hash": ""
   },
   "tests/tintFinderApi.test.js": {
@@ -8778,9 +8778,9 @@
     "semantic_hash": ""
   },
   "src/lib/demoSignIn.js": {
-    "mtime": 1791869311.944085,
-    "seen": 1791869654.4992309,
-    "ast_hash": "179ed3e61f04d7d689f75fb1db54d63c",
+    "mtime": 1791902400.2792647,
+    "seen": 1791903214.251371,
+    "ast_hash": "920b0b7499f2c3fb4e64cf1ac071e1c9",
     "semantic_hash": ""
   },
   "tests/demoSignInNoBundleLeak.test.js": {
@@ -8838,9 +8838,9 @@
     "semantic_hash": ""
   },
   "tests/demoLoginQaKey.test.js": {
-    "mtime": 1791869279.5092192,
-    "seen": 1791869654.500917,
-    "ast_hash": "c4d8a685da63ce0eef1c36e70dad18e8",
+    "mtime": 1791902357.7400632,
+    "seen": 1791903214.2531898,
+    "ast_hash": "fa6684895b15429abda7302d536e223e",
     "semantic_hash": ""
   },
   "scripts/probe-shop-day-lifecycle.sql": {
@@ -8853,6 +8853,18 @@
     "mtime": 1791873444.5281541,
     "seen": 1791873703.7580411,
     "ast_hash": "cad40206675c6c5c4c332b6c0acdf843",
+    "semantic_hash": ""
+  },
+  "scripts/_easy-login-check.mjs": {
+    "mtime": 1791902129.8275242,
+    "seen": 1791903214.2501154,
+    "ast_hash": "a9285c2cf8a453acbf7219dccf746d24",
+    "semantic_hash": ""
+  },
+  "scripts/_tmp-local-demo-login.mjs": {
+    "mtime": 1791903153.5394516,
+    "seen": 1791903214.2501676,
+    "ast_hash": "a18361aa0e97660f70dd9ec2691205c5",
     "semantic_hash": ""
   }
 }

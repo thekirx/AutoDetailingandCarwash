@@ -1,4 +1,4 @@
-import { QA_KEY_STORAGE, isDemoLoginEnabled, storedQaKey } from './demoLogin'
+import { QA_KEY_STORAGE, isDemoLoginEnabled, storedQaKey } from './demoLogin.js'
 
 /**
  * One-click demo sign-in, client half. Posts an account id and the stored QA key
@@ -21,6 +21,9 @@ export async function demoSignIn(accountId) {
   return data
 }
 
+// Shared so a second call (React StrictMode re-runs effects in dev) waits for the first key check.
+let unlocking = Promise.resolve()
+
 /** Stores `?qa=<key>` if the server accepts it, strips it from the address bar, and reports whether chips are on. */
 export async function unlockDemoLoginFromUrl() {
   const url = new URL(window.location.href)
@@ -28,8 +31,12 @@ export async function unlockDemoLoginFromUrl() {
   if (key) {
     url.searchParams.delete('qa')
     window.history.replaceState(window.history.state, '', `${url.pathname}${url.search}${url.hash}`)
-    const res = await post({ key, check: true }).catch(() => null)
-    if (res?.ok) localStorage.setItem(QA_KEY_STORAGE, key)
+    unlocking = post({ key, check: true })
+      .then((res) => {
+        if (res?.ok) localStorage.setItem(QA_KEY_STORAGE, key)
+      })
+      .catch(() => {})
   }
+  await unlocking
   return isDemoLoginEnabled()
 }

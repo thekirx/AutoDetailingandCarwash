@@ -3,6 +3,7 @@ import { describe, it, beforeEach, afterEach } from 'node:test'
 import { createHash } from 'node:crypto'
 import { handleDemoLoginRequest } from '../server/demoLoginApi.mjs'
 import { isDemoLoginEnabled } from '../src/lib/demoLogin.js'
+import { unlockDemoLoginFromUrl } from '../src/lib/demoSignIn.js'
 
 const KEY = 'test-qa-key-not-the-real-one'
 
@@ -59,5 +60,23 @@ describe('demo chips render only on a device holding a QA key', () => {
   })
   it('is on once a key is stored', () => {
     assert.equal(isDemoLoginEnabled({ qaKey: 'anything-the-server-accepted' }), true)
+  })
+
+  it('shows chips on the first ?qa= visit even when React runs the unlock twice (dev StrictMode)', async () => {
+    const store = new Map()
+    const globals = { window: globalThis.window, localStorage: globalThis.localStorage, fetch: globalThis.fetch }
+    globalThis.localStorage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v), removeItem: (k) => store.delete(k) }
+    globalThis.window = {
+      location: { href: 'http://localhost:5173/operations/login?qa=good' },
+      history: { state: null, replaceState: (_s, _t, path) => { globalThis.window.location.href = `http://localhost:5173${path}` } },
+    }
+    globalThis.fetch = () => new Promise((resolve) => setTimeout(() => resolve({ ok: true }), 10))
+    try {
+      const first = unlockDemoLoginFromUrl()
+      const second = unlockDemoLoginFromUrl()
+      assert.deepEqual(await Promise.all([first, second]), [true, true])
+    } finally {
+      Object.assign(globalThis, globals)
+    }
   })
 })

@@ -1,3 +1,7 @@
+## 2026-10-13 - Demo login cards show on localhost on the first `?qa=` visit
+
+- In `npm run dev`, opening `/operations/login?qa=<key>` showed no cards until a reload: React StrictMode runs the unlock twice and the second run read storage before the key check finished. The second run now waits for the first. Production already worked; all 14 staff cards and the customer card verified on localhost.
+
 ## 2026-10-13 - POS payment voice speaks Taglish
 
 - The counter announcer now says "Toyota Vios, plate N B C, 4 8 2 1, ready na po for payment." and "Naka-on na po ang payment announcements." when switched on. The AI voice and the browser voice use the same words.
