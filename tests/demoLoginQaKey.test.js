@@ -7,7 +7,7 @@ import { unlockDemoLoginFromUrl } from '../src/lib/demoSignIn.js'
 
 const KEY = 'test-qa-key-not-the-real-one'
 
-async function call(body) {
+async function call(body, { remoteAddress = '127.0.0.1', options } = {}) {
   const res = {
     statusCode: 0,
     headers: {},
@@ -15,7 +15,7 @@ async function call(body) {
     setHeader(k, v) { this.headers[k] = v },
     end(b = '') { this.body = b },
   }
-  await handleDemoLoginRequest({ method: 'POST', headers: {}, body }, res)
+  await handleDemoLoginRequest({ method: 'POST', headers: {}, body, socket: { remoteAddress } }, res, options)
   return res
 }
 
@@ -52,11 +52,33 @@ describe('demo sign-in is locked behind the QA key', () => {
   it('rejects an unknown account even with the key', async () => {
     assert.equal((await call({ id: 'not-a-demo-account', key: KEY })).statusCode, 400)
   })
+
+  it('local `npm run dev` needs no key, but only from this computer', async () => {
+    const localDev = { localDev: true }
+    assert.equal((await call({ check: true }, { options: localDev })).statusCode, 200)
+    assert.equal((await call({ check: true }, { options: localDev, remoteAddress: '::1' })).statusCode, 200)
+    assert.equal((await call({ check: true }, { options: localDev, remoteAddress: '::ffff:127.0.0.1' })).statusCode, 200)
+    assert.equal((await call({ check: true }, { options: localDev, remoteAddress: '192.168.1.20' })).statusCode, 404)
+    assert.equal((await call({ check: true }, { options: localDev, remoteAddress: null })).statusCode, 404)
+  })
+
+  it('the deployed route (no localDev option) still needs the key, even from loopback', async () => {
+    assert.equal((await call({ check: true })).statusCode, 404)
+  })
+
+  it('DEMO_LOGIN_ENABLED=false turns local dev off too', async () => {
+    process.env.DEMO_LOGIN_ENABLED = 'false'
+    assert.equal((await call({ check: true }, { options: { localDev: true } })).statusCode, 404)
+  })
 })
 
 describe('demo chips render only on a device holding a QA key', () => {
-  it('is off without a key, in production and in dev alike', () => {
+  it('is off without a key in a production build', () => {
+    assert.equal(isDemoLoginEnabled({ qaKey: '', dev: false }), false)
     assert.equal(isDemoLoginEnabled({ qaKey: '' }), false)
+  })
+  it('is on without a key under `npm run dev`', () => {
+    assert.equal(isDemoLoginEnabled({ qaKey: '', dev: true }), true)
   })
   it('is on once a key is stored', () => {
     assert.equal(isDemoLoginEnabled({ qaKey: 'anything-the-server-accepted' }), true)

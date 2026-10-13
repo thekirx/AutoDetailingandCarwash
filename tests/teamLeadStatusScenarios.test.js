@@ -144,8 +144,8 @@ describe('TL queue status transitions (principal scenarios)', () => {
 })
 
 describe('demo login needs a QA key', () => {
-  it('is off without a key, whatever the host or build flags say', () => {
-    assert.equal(isDemoLoginEnabled({ qaKey: '', dev: true, flag: 'true', hostname: 'x.vercel.app' }), false)
+  it('is off without a key in a production build, whatever the host or other flags say', () => {
+    assert.equal(isDemoLoginEnabled({ qaKey: '', dev: false, flag: 'true', hostname: 'x.vercel.app' }), false)
     assert.equal(isDemoLoginEnabled({ qaKey: undefined }), false)
   })
 

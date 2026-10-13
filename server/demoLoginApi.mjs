@@ -35,7 +35,14 @@ function emailsById() {
   return map
 }
 
-export async function handleDemoLoginRequest(req, res) {
+const LOOPBACK = new Set(['127.0.0.1', '::1', '::ffff:127.0.0.1'])
+
+/**
+ * `localDev` is passed only by the `vite` dev server (vite.config.js), never by the
+ * Vercel gateway. Even then the key is skipped only for requests from this machine,
+ * because dev talks to the production Supabase and `--host` would expose it to the LAN.
+ */
+export async function handleDemoLoginRequest(req, res, { localDev = false } = {}) {
   setCors(res, 'POST, OPTIONS')
   if (req.method === 'OPTIONS') {
     res.statusCode = 204
@@ -48,7 +55,8 @@ export async function handleDemoLoginRequest(req, res) {
   if (!demoLoginEnabled()) return json(res, 404, { error: 'Not found' })
 
   const body = await readJsonBody(req).catch(() => ({}))
-  if (!qaKeyMatches(body?.key)) return json(res, 404, { error: 'Not found' })
+  const trustedLocal = localDev && LOOPBACK.has(req.socket?.remoteAddress)
+  if (!trustedLocal && !qaKeyMatches(body?.key)) return json(res, 404, { error: 'Not found' })
   if (body?.check) return json(res, 200, { ok: true })
 
   const email = emailsById().get(String(body?.id || ''))

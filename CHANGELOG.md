@@ -1,3 +1,7 @@
+## 2026-10-13 - Demo login cards always on in `npm run dev`
+
+- Localhost shows the demo cards with no `?qa=` key, including Incognito. The dev server signs them in only for requests from the same computer (dev uses the production database, and `--host` would expose it to the LAN). Production builds and the Vercel route still need the key. After pulling this, restart `npm run dev` once.
+
 ## 2026-10-13 - Demo login cards show on localhost on the first `?qa=` visit
 
 - In `npm run dev`, opening `/operations/login?qa=<key>` showed no cards until a reload: React StrictMode runs the unlock twice and the second run read storage before the key check finished. The second run now waits for the first. Production already worked; all 14 staff cards and the customer card verified on localhost.

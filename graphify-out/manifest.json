@@ -1602,9 +1602,9 @@
     "semantic_hash": ""
   },
   "src/lib/demoLogin.js": {
-    "mtime": 1791869309.495114,
-    "seen": 1791869654.499228,
-    "ast_hash": "cb5614af2d363ffd91c7f289c752c4cf",
+    "mtime": 1791903403.6802948,
+    "seen": 1791904112.6306932,
+    "ast_hash": "8ab551e01bc46442677de66642c0548f",
     "semantic_hash": ""
   },
   "src/lib/detailingBoardStatuses.js": {
@@ -4866,9 +4866,9 @@
     "semantic_hash": ""
   },
   "tests/teamLeadStatusScenarios.test.js": {
-    "mtime": 1791869336.1653123,
-    "seen": 1791869654.501742,
-    "ast_hash": "310f39bcd2f8702ddc93adc7bbb8e7bf",
+    "mtime": 1791903815.1006281,
+    "seen": 1791904112.6331072,
+    "ast_hash": "e1caee621509a519422b6df8501850cc",
     "semantic_hash": ""
   },
   "tests/tlFloorDetailing.test.js": {
@@ -4926,9 +4926,9 @@
     "semantic_hash": ""
   },
   "vite.config.js": {
-    "mtime": 1791868960.4197867,
-    "seen": 1791869654.5018036,
-    "ast_hash": "522078822e0c37cd6c3df319f5de9737",
+    "mtime": 1791903405.4242349,
+    "seen": 1791904112.633169,
+    "ast_hash": "f9c62d57d50fc880202a445056169a13",
     "semantic_hash": ""
   },
   "AUDIT.md": {
@@ -4944,9 +4944,9 @@
     "semantic_hash": "b2fd8c1a303fa745eeb26b3fac07046c"
   },
   "CHANGELOG.md": {
-    "mtime": 1791903153.5687695,
-    "seen": 1791903214.253943,
-    "ast_hash": "964deb94db1a51b0953864f7aaf8828f",
+    "mtime": 1791903998.1689162,
+    "seen": 1791904112.633179,
+    "ast_hash": "8fd0e9879cb4d1627e4cd4313fc78690",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
@@ -8772,9 +8772,9 @@
     "semantic_hash": ""
   },
   "server/demoLoginApi.mjs": {
-    "mtime": 1791869360.3748703,
-    "seen": 1791869654.4987009,
-    "ast_hash": "abbb1fefc30d877e277298a71e2ee659",
+    "mtime": 1791903406.831033,
+    "seen": 1791904112.6300821,
+    "ast_hash": "5f009547acad636b7c7563a2c54f1480",
     "semantic_hash": ""
   },
   "src/lib/demoSignIn.js": {
@@ -8838,9 +8838,9 @@
     "semantic_hash": ""
   },
   "tests/demoLoginQaKey.test.js": {
-    "mtime": 1791902357.7400632,
-    "seen": 1791903214.2531898,
-    "ast_hash": "fa6684895b15429abda7302d536e223e",
+    "mtime": 1791903438.3250353,
+    "seen": 1791904112.632455,
+    "ast_hash": "90bc6da6e56939cc0ca769b049311a91",
     "semantic_hash": ""
   },
   "scripts/probe-shop-day-lifecycle.sql": {
@@ -8859,12 +8859,6 @@
     "mtime": 1791902129.8275242,
     "seen": 1791903214.2501154,
     "ast_hash": "a9285c2cf8a453acbf7219dccf746d24",
-    "semantic_hash": ""
-  },
-  "scripts/_tmp-local-demo-login.mjs": {
-    "mtime": 1791903153.5394516,
-    "seen": 1791903214.2501676,
-    "ast_hash": "a18361aa0e97660f70dd9ec2691205c5",
     "semantic_hash": ""
   }
 }

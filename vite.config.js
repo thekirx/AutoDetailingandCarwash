@@ -145,7 +145,7 @@ function attachHakumApis(server) {
   })
   mount('/api/demo-login', async (req, res) => {
     const { handleDemoLoginRequest } = await import('./server/demoLoginApi.mjs')
-    return handleDemoLoginRequest(req, res)
+    return handleDemoLoginRequest(req, res, { localDev: server.config.mode === 'development' })
   })
 }
 
