@@ -20,8 +20,8 @@ export const tintPackageName = (config, id) => TINT_PACKAGE_NAMES[id] || config.
 export const TINT_FILM_SHADES = { 'Clear Bluish': 'Clear Bluish', C30: 'Light Black', C20: 'Medium Black', C08: 'Super Black', HC35: 'Fair Black', HC25: 'Light Black', HC15: 'Medium Black', HC05: 'Super Black', Black35: 'Fair Black', Black25: 'Light Black', Black15: 'Medium Black', Black05: 'Super Black' }
 export const tintShade = key => TINT_FILM_SHADES[key] || key
 /* The approved suggestion (client sign-off, 9 Oct 2026): one front/rear shade
-   pair, offered in all three tints (Pro first, then Nano Ceramic, then the
-   Black Series added 13 Oct 2026 at the client's request). The first matching tier wins:
+   pair, offered in all three tints (the Black Series added 13 Oct 2026 at the
+   client's request); the cards then show cheapest first. The first matching tier wins:
    poor eyesight → lightest; night driver, prescription or visibility → light
    front over a medium rear; everyone else → medium front over a super black rear.
    The pairs are catalog options, so their films and prices stay editable. */
@@ -43,7 +43,7 @@ export function recommendTint(config, answers) {
   return TINT_SUGGESTION_TIERS[tintSuggestionTier(answers)].options.filter(id => config.options[id]).map(id => {
     const option = config.options[id]
     return { id, ...option, price: config.packages[option.package].prices[answers.vehicle] }
-  })
+  }).sort((a, b) => a.price - b.price) // Cheapest first (client, 13 Oct 2026).
 }
 /* The pick, its headline and the reasons, all from the customer's own answers. */
 export function suggestTint(config, answers) {

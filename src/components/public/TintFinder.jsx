@@ -124,7 +124,8 @@ export default function TintFinder() {
           const vehicle=TINT_VEHICLES.find(v=>v.id===answers.vehicle)?.label
           return <article key={o.id} className={`tf-option${o.package==='pro'?' is-pro':''}`} data-tint-option={o.id}>
             <div className="tf-card-head">
-              <h3>{tintPackageName(config,o.package)}{o.package===TINT_MOST_POPULAR && <span className="tf-popular">Most popular</span>}</h3>
+              {o.package===TINT_MOST_POPULAR && <p className="tf-popular">Most popular</p>}
+              <h3>{tintPackageName(config,o.package)}</h3>
               <div className="tf-warranty"><ShieldCheck size={22} aria-hidden="true"/><span><small>Covered by</small>{tintWarranty(config.packages[o.package].warranty)}</span></div>
               <div className="tf-seal-badge" title="Skin Cancer Foundation Seal of Recommendation"><img src={seal} alt="The Skin Cancer Foundation Seal of Recommendation" loading="lazy"/></div>
             </div>

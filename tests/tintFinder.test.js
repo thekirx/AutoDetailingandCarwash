@@ -5,21 +5,21 @@ import { recommendTint, suggestTint, tintPackageName, tintWarranty, orderedBenef
 const config = JSON.parse(readFileSync(new URL('../src/data/tintFinderConfig.json', import.meta.url)))
 /* Approved 9 Oct 2026: poor eyesight → lightest; night, prescription or
    visibility → light front / medium rear; everyone else → medium / super black.
-   Pro first, then Nano Ceramic, then Black Series (added 13 Oct 2026). */
-const tierFor = ({ night, eyesight, priority }) => eyesight === 'poor' ? 'BAG' : (night === 'yes' || eyesight === 'prescription' || priority === 'visibility') ? 'CDH' : 'EFI'
+   Shown cheapest first: Nano Ceramic, Pro, then Black Series (13 Oct 2026). */
+const tierFor = ({ night, eyesight, priority }) => eyesight === 'poor' ? 'ABG' : (night === 'yes' || eyesight === 'prescription' || priority === 'visibility') ? 'DCH' : 'FEI'
 for (const night of ['yes','no']) for (const eyesight of ['excellent','prescription','poor']) for (const priority of ['privacy','visibility','balance']) for (const [vehicle,delta] of [['sedan',0],['suv',2000],['van',4000]]) test(`${night}/${eyesight}/${priority}/${vehicle}: approved pair in all three tints, priced`, () => {
  const answers = {night,eyesight,priority,vehicle}
  const result = recommendTint(config, answers)
  assert.deepEqual(result.map(o=>o.id), [...tierFor(answers)].map(id=>'OPT-'+id))
- assert.deepEqual(result.map(o=>o.package), ['pro','ceramic','black'])
+ assert.deepEqual(result.map(o=>o.package), ['ceramic','pro','black'])
  for (const o of result) assert.equal(o.price,{pro:10000,ceramic:6000,black:13000}[o.package]+delta)
  assert.equal(result.filter(o=>o.front==='Clear Bluish').every(o=>o.rear==='Clear Bluish'),true)
 })
 test('night driving now changes the suggestion', () => {
  const day = recommendTint(config,{night:'no',eyesight:'excellent',priority:'privacy',vehicle:'sedan'}).map(o=>o.id)
  const night = recommendTint(config,{night:'yes',eyesight:'excellent',priority:'privacy',vehicle:'sedan'}).map(o=>o.id)
- assert.deepEqual(day,['OPT-E','OPT-F','OPT-I'])
- assert.deepEqual(night,['OPT-C','OPT-D','OPT-H'])
+ assert.deepEqual(day,['OPT-F','OPT-E','OPT-I'])
+ assert.deepEqual(night,['OPT-D','OPT-C','OPT-H'])
 })
 test('incomplete answers give no suggestion', () => {
  assert.deepEqual(recommendTint(config,{night:'no',eyesight:'excellent',priority:'balance'}),[])
@@ -54,8 +54,8 @@ test('business price and film-pair edits change results without implementation c
  const c=structuredClone(config); c.packages.ceramic.prices.sedan=6500; c.options['OPT-F'].rear='C20'
  assert.equal(validateTintConfig(c),'')
  const result=recommendTint(c,{night:'no',eyesight:'excellent',priority:'balance',vehicle:'sedan'})
- assert.equal(result[1].price,6500)
- assert.equal(result[1].rear,'C20')
+ assert.equal(result[0].price,6500)
+ assert.equal(result[0].rear,'C20')
 })
 test('invalid cross-package options, missing rules and unsafe values rejected',()=>{
  for (const mutate of [c=>c.options['OPT-A'].rear='C20',c=>c.options['OPT-B'].front='C30',c=>c.rules.pop(),c=>c.packages.pro.prices.sedan=-1,c=>c.films.C30.vlt=101]) {
