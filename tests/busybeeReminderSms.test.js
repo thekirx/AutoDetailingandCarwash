@@ -54,6 +54,12 @@ describe('BusyBee customer reminder SMS seams', () => {
     assert.deepEqual(ips.map((r) => r.ip), ['180.191.244.237', '203.0.113.10', '203.0.113.11'])
   })
 
+  it('balance check never puts the API key in the request URL', () => {
+    const src = readFileSync(join(root, 'server/busybee.mjs'), 'utf8')
+    assert.doesNotMatch(src, /Balance\?ApiKey=/)
+    assert.doesNotMatch(src, /encodeURIComponent\(apiKey\)/)
+  })
+
   it('ops request email template exists for BrandTxt', () => {
     const md = readFileSync(join(root, 'docs/OPS/BUSYBEE-BRANDTXT-REQUEST.md'), 'utf8')
     assert.match(md, /Subject:/)

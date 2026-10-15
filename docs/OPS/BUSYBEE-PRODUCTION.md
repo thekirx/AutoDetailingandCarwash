@@ -43,27 +43,25 @@ Shop-wide gate: `app_settings.sms_notifications.enabled` must be `true`.
 
 BrandTxt ErrorCode **11** = `Unauthorized IP address`. Until the calling egress IP is whitelisted, **no** customer reminder can send (Balance and SendSMS both fail).
 
-### Verified 2026-09-24 (this machine)
+### Verified 2026-10-14 (this machine, new HAKUM API key)
 
 | Check | Result |
 |-------|--------|
-| Shop SMS gate | **ON** (`sms_notifications.enabled=true`) |
-| Code / normalize `09625294043` → `639625294043` | **OK** |
-| Unit seams (`tests/busybeeReminderSms.test.js`) | **PASS** |
-| Current office/dev egress | **`180.191.244.237`** |
-| BrandTxt Balance / SendSMS | **FAIL ErrorCode 11** — IP not whitelisted |
-| Previously documented office IP | `180.190.249.189` (stale — do not rely on it) |
-| Handset live DELIVRD to `09625294043` | **BLOCKED** until BrandTxt adds `180.191.244.237` |
-| Vercel project Static IPs (this CLI account) | **NOT VISIBLE** — Hakum project is on another Vercel team; enable Static IPs there and whitelist those IPs too |
+| Credentials | New key + client id in local `.env` only (server env, not `VITE_*`, not git) |
+| BrandTxt Balance | **OK** ErrorCode 0, credits about PHP 6,492 |
+| SendSMS | **Accepted** ErrorCode 0 via `/api/v2/SendSMS` (MessageId `f3f85d62-6076-4327-a2d5-e9c19d2abeb4`) to the QA handset. Check the phone for sender HAKUM. |
+| Current office/dev egress | **`27.49.15.199`** (whitelisted on this key) |
+| Previously documented office IPs | `180.191.244.237` and `180.190.249.189` (stale — do not rely on them) |
+| Vercel project on this CLI account (`jcuadys-projects`) | **NOT PRESENT** — set `BUSYBEE_*` on the Hakum team, then whitelist that project's Static IPs |
 
 ### Ops actions (required for permanent live)
 
-1. **BrandTxt portal:** whitelist **`180.191.244.237`** (current office/dev) for API key used by Hakum.  
+1. **This office IP `27.49.15.199` already passes Balance** on the new HAKUM key. If ErrorCode 11 returns later, the office IP drifted: whitelist the new `egressIp` from `check-busybee-egress.mjs`.  
 2. Re-run: `node scripts/check-busybee-egress.mjs` then  
    `SEND_TEST_SMS=1 TEST_SMS_PHONE=09625294043 node scripts/check-busybee-egress.mjs`  
    Expect `ok: true` and a MessageId; poll until DLR `DELIVRD`.  
-3. **Vercel (Hakum team):** enable [Static IPs](https://vercel.com/docs/networking/static-ips) (Pro/Enterprise, ~$100/mo per project + private data transfer). Copy the fixed egress IP pair(s) per region, whitelist **those** on BrandTxt (office IP alone is not enough for production serverless).  
-4. Redeploy after env confirm (`BUSYBEE_*` server-only).  
+3. **Vercel (Hakum team, not `jcuadys-projects`):** set server-only `BUSYBEE_API_KEY`, `BUSYBEE_CLIENT_ID`, `BUSYBEE_SENDER_ID=HAKUM`, `BUSYBEE_API_BASE_URL=https://app.brandtxt.io`. Do not set `ENABLE_OWNER_SMS`. Then enable [Static IPs](https://vercel.com/docs/networking/static-ips) and whitelist those IPs on BrandTxt. Office IP alone does not cover production.  
+4. Redeploy after the env is saved.  
 5. Prove prod: hit a real booking status / reminder from the deployed custom domain.
 
 **No bypass:** BrandTxt IP allowlisting cannot be skipped from the app. See ready-to-send email: [`BUSYBEE-BRANDTXT-REQUEST.md`](./BUSYBEE-BRANDTXT-REQUEST.md). Policy module: `src/lib/busybeeEgressPlan.js`.

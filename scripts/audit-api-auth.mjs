@@ -56,6 +56,7 @@ const PUBLIC = {
 const DELEGATED = {
   handleProvisionStaffRequest: 'provisionStaffAccount -> assertStaffManagerCaller() (+ ASA people grant)',
   handleProvisionRequest: 'provisionCustomerAccount -> assertQueueEditor()',
+  handleVehicleTransferRequest: 'bearer -> requireTransferStaff() -> BossMich, ASA, or Branch Admin',
   handleCustomerPortalRequest: 'requireCustomer() -> scopes every read by user_id = auth.uid()',
   handleFinanceQuoteRequest: 'verifies getUser(accessToken) then loads the staff row before acting',
   handleDataCenterRequest: 'requireSuperAdmin() -> staff.role must be exactly BossMich',

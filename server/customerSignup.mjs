@@ -5,6 +5,14 @@
  */
 import { createClient } from '@supabase/supabase-js'
 import { normalizePlate, phoneLoginEmail, phoneLoginEmailAliases } from '../src/lib/customerAuth.js'
+import {
+  garagePlatePlan,
+  handsetMatchPattern,
+  historySignupFlags,
+  plateInsertRecovery,
+  sameHandset,
+  HISTORY_ATTACH_WARNING,
+} from '../src/lib/vehicleTransfer.js'
 import { resolveClaimPath } from '../src/lib/customerAccountLifecycle.js'
 import {
   normalizeOnboardingPhone,
@@ -30,6 +38,43 @@ function splitName(fullName) {
   return { first: first || null, last: rest.join(' ') || null }
 }
 
+async function applyPlatePlan(admin, { plan, customerId, payload }) {
+  if (plan.action === 'refuse') {
+    throw Object.assign(new Error(plan.message), { status: 409 })
+  }
+  if (plan.action === 'throw') {
+    throw Object.assign(new Error(plan.message || 'Could not save this plate.'), { status: 400 })
+  }
+  if (plan.action === 'refresh' || plan.action === 'claim') {
+    const { error } = await admin
+      .from('vehicles')
+      .update({ ...payload, updated_at: new Date().toISOString() })
+      .eq('id', plan.id)
+    if (error) throw Object.assign(new Error(error.message), { status: 400 })
+    if (plan.archiveIds?.length) {
+      const { error: archiveErr } = await admin
+        .from('vehicles')
+        .update({ is_archived: true, updated_at: new Date().toISOString() })
+        .in('id', plan.archiveIds)
+      if (archiveErr) throw Object.assign(new Error(archiveErr.message), { status: 400 })
+    }
+    return plan.id
+  }
+  const { error } = await admin.from('vehicles').insert(payload)
+  if (!error) return true
+  const { data: again, error: readErr } = await admin
+    .from('vehicles')
+    .select('id, customer_id')
+    .eq('normalized_plate_number', payload.normalized_plate_number)
+    .limit(10)
+  if (readErr) throw Object.assign(new Error(readErr.message), { status: 400 })
+  return applyPlatePlan(admin, {
+    plan: plateInsertRecovery(error, again || [], customerId),
+    customerId,
+    payload,
+  })
+}
+
 async function upsertGaragePlate(admin, { customerId, plate }) {
   const normalized = normalizePlate(plate)
   if (!normalized) return null
@@ -39,29 +84,17 @@ async function upsertGaragePlate(admin, { customerId, plate }) {
     normalized_plate_number: normalized,
     is_archived: false,
   }
-  const { data: own } = await admin
+  const { data: rows, error } = await admin
     .from('vehicles')
-    .update(payload)
+    .select('id, customer_id')
     .eq('normalized_plate_number', normalized)
-    .eq('customer_id', customerId)
-    .select('id')
-    .maybeSingle()
-  if (own) return own.id
-
-  const { data: taken } = await admin
-    .from('vehicles')
-    .select('customer_id')
-    .eq('normalized_plate_number', normalized)
-    .maybeSingle()
-  if (taken?.customer_id && taken.customer_id !== customerId) {
-    throw Object.assign(new Error('That plate is already linked to another Hakum account.'), { status: 409 })
-  }
-
-  const { error } = await admin.from('vehicles').insert(payload)
-  if (error && error.code !== '23505') {
-    throw Object.assign(new Error(error.message), { status: 400 })
-  }
-  return true
+    .limit(10)
+  if (error) throw Object.assign(new Error(error.message), { status: 400 })
+  return applyPlatePlan(admin, {
+    plan: garagePlatePlan({ rows: rows || [], customerId }),
+    customerId,
+    payload,
+  })
 }
 
 async function findCustomerByPhone(admin, phone) {
@@ -91,6 +124,37 @@ async function findCustomerByPhone(admin, phone) {
     if (data) return data
   }
   return null
+}
+
+/** Attach walk-in tickets that used this phone and had no account yet. */
+export async function claimWalkInHistory(admin, { customerId, phone }) {
+  const pattern = handsetMatchPattern(phone)
+  if (!customerId || !pattern) return 0
+  const { data, error } = await admin
+    .from('bookings')
+    .select('id, customer_phone')
+    .is('customer_id', null)
+    .eq('is_archived', false)
+    .filter('customer_phone', 'match', pattern)
+  if (error) throw Object.assign(new Error(HISTORY_ATTACH_WARNING), { status: 500 })
+  const ids = (data || []).filter((row) => sameHandset(row.customer_phone, phone)).map((row) => row.id)
+  if (!ids.length) return 0
+  const { data: updated, error: updateErr } = await admin
+    .from('bookings')
+    .update({ customer_id: customerId, updated_at: new Date().toISOString() })
+    .in('id', ids)
+    .select('id')
+  if (updateErr) throw Object.assign(new Error(HISTORY_ATTACH_WARNING), { status: 500 })
+  return updated?.length || 0
+}
+
+async function historyFlagsFor(admin, { customerId, phone }) {
+  try {
+    const count = await claimWalkInHistory(admin, { customerId, phone })
+    return historySignupFlags({ count })
+  } catch (error) {
+    return historySignupFlags({ error })
+  }
 }
 
 async function attachAuthToCrmRow(admin, { existing, fullName, phone, password, plate }) {
@@ -184,11 +248,13 @@ async function claimTeamLeadAccount(admin, { existing, fullName, phone, emailRaw
     /* never block on SMS */
   }
 
+  const history = await historyFlagsFor(admin, { customerId: user.id, phone })
   return {
     user_id: user.id,
     email: user.email || phoneLoginEmail(phone),
     login_hint: phone,
     claimed: true,
+    ...history,
   }
 }
 
@@ -308,7 +374,14 @@ export async function signupCustomer({ body, requestOrigin = '' }) {
     /* never block signup on SMS */
   }
 
-  return { user_id: created.user.id, email: loginEmail, login_hint: phone, claimed: false }
+  const history = await historyFlagsFor(admin, { customerId: created.user.id, phone })
+  return {
+    user_id: created.user.id,
+    email: loginEmail,
+    login_hint: phone,
+    claimed: false,
+    ...history,
+  }
 }
 
 export async function handleCustomerSignupRequest(req, res, { getBody }) {

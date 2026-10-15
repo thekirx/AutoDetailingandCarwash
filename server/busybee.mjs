@@ -92,7 +92,7 @@ export async function busybeeBalance() {
     return { ok: res.ok && Number(json?.ErrorCode) === 0, status: res.status, json, baseUrl }
   }
 
-  // Prefer POST — some BusyBee hosts serve parking/JS challenges on GET
+  // POST body only. Never put ApiKey in the URL: query strings land in proxy and host logs.
   try {
     const res = await fetch(`${baseUrl}/api/v2/Balance`, {
       method: 'POST',
@@ -104,19 +104,15 @@ export async function busybeeBalance() {
       body: JSON.stringify({ ApiKey: apiKey, ClientId: clientId, apiKey, clientId }),
       signal: AbortSignal.timeout(20000),
     })
-    const text = await res.text()
-    const parsed = tryParse(res, text)
-    if (!parsed.json?.raw) return parsed
-  } catch {
-    /* fall through to GET */
+    return tryParse(res, await res.text())
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      json: { ErrorCode: -1, ErrorDescription: String(err.message || err) },
+      baseUrl,
+    }
   }
-
-  const url = `${baseUrl}/api/v2/Balance?ApiKey=${encodeURIComponent(apiKey)}&ClientId=${encodeURIComponent(clientId)}`
-  const res = await fetch(url, {
-    headers: { Accept: 'application/json', 'User-Agent': 'HakumAutoCare/1.0' },
-    signal: AbortSignal.timeout(20000),
-  })
-  return tryParse(res, await res.text())
 }
 
 /** `relay` when BUSYBEE_RELAY_URL is set (fixed egress); otherwise `direct` BrandTxt. */

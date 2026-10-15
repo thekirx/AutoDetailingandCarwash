@@ -1,4 +1,5 @@
 import {
+  ArrowLeftRight,
   BarChart3,
   Building2,
   CarFront,
@@ -97,6 +98,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 
 const iconMap = {
+  ArrowLeftRight,
   Gauge,
   LayoutDashboard,
   ClipboardList,

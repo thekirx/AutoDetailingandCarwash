@@ -38,6 +38,7 @@ const ContentAdminPage = lazy(() => import('./pages/ContentAdminPage'))
 const PeopleManagePage = lazy(() => import('./pages/PeopleManagePage'))
 const BranchesManagePage = lazy(() => import('./pages/BranchesManagePage'))
 const CarsCatalogPage = lazy(() => import('./pages/CarsCatalogPage'))
+const VehicleTransferPage = lazy(() => import('./pages/VehicleTransferPage'))
 const AuditLogPage = lazy(() => import('./pages/AuditLogPage'))
 const DataCenterPage = lazy(() => import('./pages/DataCenterPage'))
 const InquiriesPage = lazy(() => import('./pages/InquiriesPage'))
@@ -184,6 +185,7 @@ export default function App() {
             <Route path="people" element={gate('people', <PeopleManagePage />)} />
             <Route path="branches" element={gate('branches', <BranchesManagePage />)} />
             <Route path="cars" element={gate('cars', <CarsCatalogPage />)} />
+            <Route path="vehicle-transfer" element={gate('vehicle-transfer', <VehicleTransferPage />)} />
             <Route path="audit" element={gate('audit', <AuditLogPage />)} />
             <Route path="data-center" element={gate('data-center', <DataCenterPage />)} />
             <Route path="inquiries" element={gate('inquiries', <InquiriesPage />)} />

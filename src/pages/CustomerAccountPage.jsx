@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useLocation } from 'react-router-dom'
 import { Cake, CalendarDays, CalendarPlus, Car, ChevronRight, Radio, Receipt, ThumbsDown, ThumbsUp, Wrench } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { formatMoney } from '@/queue/queueApi'
@@ -27,6 +27,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
+import { EXISTING_HISTORY_MESSAGE, HISTORY_ATTACH_WARNING } from '@/lib/vehicleTransfer'
 
 const EMPTY_LIST = []
 
@@ -100,6 +101,11 @@ function QuickAction({ icon: Icon, title, to }) {
 }
 
 export default function CustomerAccountPage() {
+  const location = useLocation()
+  const existingHistory = Boolean(location.state?.existingHistory) || sessionStorage.getItem('hakum-existing-history') === '1'
+  const historyWarning = Boolean(location.state?.historyWarning) || sessionStorage.getItem('hakum-history-warning') === '1'
+  if (existingHistory) sessionStorage.removeItem('hakum-existing-history')
+  if (historyWarning) sessionStorage.removeItem('hakum-history-warning')
   const { profile: authProfile, user, session, loading: authLoading } = useAuth()
   const [data, setData] = useState(null)
   const [selectedBranch, setSelectedBranch] = useState('')
@@ -318,6 +324,17 @@ export default function CustomerAccountPage() {
         </header>
       }
     >
+      {historyWarning ? (
+        <p className="capp-span rounded-xl border border-destructive/40 bg-destructive/5 px-4 py-3 text-sm font-medium" role="alert">
+          {HISTORY_ATTACH_WARNING}
+        </p>
+      ) : null}
+      {existingHistory ? (
+        <p className="capp-span rounded-xl border border-primary/30 bg-primary/5 px-4 py-3 text-sm font-medium" role="status">
+          {EXISTING_HISTORY_MESSAGE}
+        </p>
+      ) : null}
+
       {error ? (
         <div className="capp-empty capp-span" role="alert">
           <strong>{error}</strong>

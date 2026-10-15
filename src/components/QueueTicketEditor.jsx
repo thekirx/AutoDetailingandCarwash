@@ -602,6 +602,24 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
             </div>
           )}
           <div className="mt-4 border-t border-border pt-4">
+            {!ticket.customer_id ? (
+              <p className="mb-3 rounded-xl border border-primary/30 bg-primary/5 px-3 py-3 text-sm">
+                No Hakum account on this ticket. Ask them to sign up
+                {ticket.customer_phone ? (
+                  <>
+                    {' '}
+                    at{' '}
+                    <a className="font-semibold underline" href={`/signup?phone=${encodeURIComponent(ticket.customer_phone)}`}>
+                      hakumautocare.com/signup
+                    </a>
+                  </>
+                ) : (
+                  ' at hakumautocare.com/signup'
+                )}
+                {' '}
+                so this visit stays on their history.
+              </p>
+            ) : null}
             <CustomerNotesPanel
               customerId={ticket.customer_id || null}
               plate={ticket.vehicle_plate || ''}

@@ -3,6 +3,7 @@ import { handleCustomerAuthLookupRequest } from '../server/customerAuthLookup.mj
 import { handleCustomerHistoryRequest } from '../server/customerHistoryApi.mjs'
 import { handleCustomerPortalRequest } from '../server/customerPortal.mjs'
 import { handleCustomerSignupRequest } from '../server/customerSignup.mjs'
+import { handleVehicleTransferRequest } from '../server/vehicleTransferApi.mjs'
 import { bearer, readJsonBody, setCors } from '../server/httpUtil.mjs'
 import { handlePublicInquiryRequest } from '../server/publicInquiry.mjs'
 import { handleProvisionRequest } from '../server/provisionCustomer.mjs'
@@ -20,6 +21,7 @@ export const operations = Object.freeze({
     handleCustomerPortalRequest(req, res, {
       getAccessToken: () => bearer(req),
     }),
+  'vehicle-transfer': handleVehicleTransferRequest,
   'customer-signup': (req, res) => {
     setCors(res, 'POST, OPTIONS')
     return handleCustomerSignupRequest(req, res, {

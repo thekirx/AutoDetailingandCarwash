@@ -38,6 +38,7 @@ describe('Branch Admin simplified shell', () => {
         '/operations/planning',
         '/operations/history',
         '/operations/audit',
+        '/operations/vehicle-transfer',
       ],
     )
     assert.ok(getOperationsNav(p).some((i) => i.label === 'Floor'))

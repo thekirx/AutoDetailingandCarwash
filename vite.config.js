@@ -64,6 +64,10 @@ function attachHakumApis(server) {
   mount('/api/provision-staff', handleProvisionStaffRequest)
   mount('/api/update-staff', handleUpdateStaffRequest)
   mount('/api/customer-portal', handleCustomerPortalRequest)
+  mount('/api/vehicle-transfer', async (req, res) => {
+    const { handleVehicleTransferRequest } = await import('./server/vehicleTransferApi.mjs')
+    return handleVehicleTransferRequest(req, res)
+  })
   mount('/api/customer-signup', async (req, res, helpers) => {
     const { handleCustomerSignupRequest } = await import('./server/customerSignup.mjs')
     return handleCustomerSignupRequest(req, res, helpers)

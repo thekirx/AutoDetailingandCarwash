@@ -32,6 +32,23 @@
 | Production messaging | **NOT MET** — BrandTxt IP + Auth SMTP open; **owner SMS N/A** |
 | BusyBee relay code | **PASS** — `resolveBusybeeSendMode` / relay handler / `api/busybee-relay.js` (unit seams green) |
 
+## Walk-in history and car transfer (2026-10-15)
+
+Slice only. Older rows in the summary table above are from 2026-10-05 and are not this run.
+
+| Check | Result |
+|-------|--------|
+| History attach on DB error | Account stays created. Response sets `history_warning`. Account home shows `HISTORY_ATTACH_WARNING`. It does not say "You have existing history with us." |
+| Phone spellings | `sameHandset` treats spaces, dashes, and `+63` as one handset. Claim query uses a digit regex, then checks the canonical number. |
+| Duplicate unowned plate | One row is claimed. Extra unowned rows are archived. A unique-key race is read again and claimed or refused. It is not reported as success. |
+| Maintenance follows the car | Open `vehicle_maintenance_schedules` (`scheduled`, `notified`) get the buyer's id, name, and phone. |
+| Branch Admin scope | SA and ASA: any car. Branch Admin: a visit at their assigned branch, or a car with no visits. |
+| Audit failure | Vehicle owner and those maintenance rows are written back. The request returns 500. |
+| Unit seam | `node --test tests/vehicleTransferAndHistory.test.js` **13/13**, exit 0, this session. |
+| Live signup / live transfer | **NOT VERIFIED**. No new customer was created and no production car was moved. |
+| Production deploy | **NOT DEPLOYED**. This is the working copy. |
+| Vercel SMS / staff push / POS voice | **BLOCKED** / **NOT VERIFIED**. Unchanged from `docs/qa/FULL-APP-READINESS-2026-10.md`. |
+
 ## Customer home, packages, reviews, points (2026-09-28)
 
 Scoped to the customer account, detailing booking, and Super Admin catalog. Not a full re-run of FLOPS or the role matrix.

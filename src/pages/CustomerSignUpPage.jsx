@@ -162,11 +162,21 @@ export default function CustomerSignUpPage() {
         email: loginEmail,
         password: form.password,
       })
+      if (body.existing_history) {
+        sessionStorage.setItem('hakum-existing-history', '1')
+      }
+      if (body.history_warning) {
+        sessionStorage.setItem('hakum-history-warning', '1')
+      }
+      const notice = {
+        existingHistory: Boolean(body.existing_history),
+        historyWarning: Boolean(body.history_warning),
+      }
       if (signInError) {
-        navigate('/signin', { replace: true, state: { justSignedUp: true, phone: form.phone } })
+        navigate('/signin', { replace: true, state: { justSignedUp: true, phone: form.phone, ...notice } })
         return
       }
-      navigate('/account', { replace: true })
+      navigate('/account', { replace: true, state: notice })
     } catch (err) {
       setError(err.message)
     } finally {

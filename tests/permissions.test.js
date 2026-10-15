@@ -51,6 +51,7 @@ describe('RBAC Part 1 matrix', () => {
         '/operations/people',
         '/operations/branches',
         '/operations/cars',
+        '/operations/vehicle-transfer',
         '/operations/content',
         '/operations/audit',
         '/operations/data-center',
@@ -133,6 +134,7 @@ describe('RBAC Part 1 matrix', () => {
         '/operations/planning',
         '/operations/history',
         '/operations/audit',
+        '/operations/vehicle-transfer',
       ],
     )
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/reports'))

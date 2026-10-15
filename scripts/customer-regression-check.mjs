@@ -42,4 +42,10 @@ assert.match(migration, /security_invoker = false/)
 assert.match(migration, /Public can read safe active queue rows/)
 assert.match(migration, /customers_active_phone_uidx/)
 
+// For releasing is retired (no STATUS_COPY). The live status-SMS chain must not
+// walk it: notify returns skipped, the handset never gets a DLR, and the run fails.
+const liveStatusSms = read('scripts/e2e-real-customer-status-sms.mjs')
+assert.doesNotMatch(liveStatusSms, /['"]for_releasing['"]/)
+assert.match(liveStatusSms, /is_archived:\s*true/)
+
 console.log('customer-regression-check: ok')

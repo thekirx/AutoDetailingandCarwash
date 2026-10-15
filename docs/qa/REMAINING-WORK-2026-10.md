@@ -1,5 +1,7 @@
 # Remaining work — principal PM audit (2026-10-05, re-audited 2026-10-07)
 
+> **2026-10-15:** live master is [`FULL-APP-READINESS-2026-10.md`](./FULL-APP-READINESS-2026-10.md). Unit 2205, shop-day probe 19/19, Daily Sheet SoD 4/4, RLS 24/24, BUG-093 closed. The "six migrations NOT applied" block below is **stale** — production applied the 2026-10-11 reconcile set.
+
 > **2026-10-07 update (principal full-system audit).** Fixed this pass: `MONEY-CONTRACT.md` approve grant corrected `finance_write` → `finance_view` (code was already right); phantom "Pay" dock removed from 3 role guides; `super-admin-asa.md` rewritten to the real nav (Console/Crew/Payroll do not exist); live dead breadcrumb `/operations/console` fixed in `AuditLogPage.jsx`; archive banners added to 4 stale money-path docs; `SYSTEM_AUDIT.md` retired-rows + test counts corrected. **Still open and higher priority than most items below: the entire 2026-10-06 work unit is uncommitted** — see "Uncommitted work at risk" in `PROJECT_STATUS.md`.
 
 Honest, strict status after September seed + Daily Sheet cutover + three production fixes (BUG-046/047/048).  
@@ -69,6 +71,8 @@ The POS till probe reports `permission denied for function` for Super Admin, Bra
 I did not change the gate myself — it belongs to the BUG-088 work, and widening a security scan is your call, not a drive-by.
 
 ### ⚠️ Four migrations are drafted, guarded and NOT applied (owner action)
+
+**Stale as of 2026-10-15.** Production already has the 2026-10-11 reconcile (`protect_daily_sheet_posted_expenses`, `reconcile_live_admin_policies`, `daily_sheet_separation_of_duties`, `daily_sheet_cash_blank_is_cash`). RLS role-matrix probe this session: **24/24**. Do not re-apply. See [`FULL-APP-READINESS-2026-10.md`](./FULL-APP-READINESS-2026-10.md).
 
 Production still carries the permissive policies. Apply **in this order**, then run the verifier and confirm every line reads PASS:
 

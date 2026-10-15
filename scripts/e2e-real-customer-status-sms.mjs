@@ -62,7 +62,6 @@ const DETAILING_STATUSES = [
   'waiting',
   'in_progress',
   'final_checking',
-  'for_releasing',
   'for_payment',
   'completed',
 ]
@@ -522,6 +521,13 @@ try {
     updated_at: new Date().toISOString(),
   })
   pass('sms.gate.left_on')
+
+  const { error: archErr } = await admin
+    .from('bookings')
+    .update({ is_archived: true, updated_at: new Date().toISOString() })
+    .in('id', [detailingBooking.id, packageBooking.id])
+  if (archErr) fail('booking.archive_after_sms', archErr.message)
+  else pass('booking.archive_after_sms', `${detailingBooking.id} · ${packageBooking.id}`)
 
   console.log('\n--- summary ---')
   console.log(

@@ -1,6 +1,7 @@
 /** Single source of truth for Hakum RBAC. BossMich = Super Admin; assistant_super_admin = lesser elevated. */
 
 import { isBookingBoardRow } from '../lib/serviceKinds.js'
+import { canTransferVehicle } from '../lib/vehicleTransfer.js'
 
 export const ROLES = {
   SUPER_ADMIN: 'BossMich',
@@ -795,6 +796,7 @@ export function getOperationsNav(profile) {
       nav('Planner', '/operations/planning', 'Columns3', 'work'),
       nav('History', '/operations/history', 'History', 'work'),
       nav('Audit', '/operations/audit', 'ScrollText', 'company'),
+      nav('Transfer car', '/operations/vehicle-transfer', 'ArrowLeftRight', 'company'),
     ]
   }
 
@@ -893,6 +895,9 @@ export function getOperationsNav(profile) {
   }
   if (canManageVehicleCatalog(profile)) {
     items.push(nav('Cars', '/operations/cars', 'CarFront', 'company'))
+  }
+  if (canTransferVehicle(profile)) {
+    items.push(nav('Transfer car', '/operations/vehicle-transfer', 'ArrowLeftRight', 'company'))
   }
   if (canManageSiteContent(profile)) {
     items.push(nav('Content', '/operations/content', 'Newspaper', 'company'))
@@ -1046,6 +1051,7 @@ export function redirectForRole(role) {
 /** Branch Admin Command chrome — gate URLs to the same list. */
 export const BRANCH_ADMIN_ROUTE_KEYS = Object.freeze([
   'dashboard',
+  'vehicle-transfer',
   'bookings',
   'attendance',
   'pos',
@@ -1068,6 +1074,7 @@ export function allowRoute(profile, key) {
     people: canManagePeople,
     branches: canManageBranches,
     cars: canManageVehicleCatalog,
+    'vehicle-transfer': canTransferVehicle,
     audit: canAccessAudit,
     'data-center': canAccessDataCenter,
     inquiries: canAccessInquiries,

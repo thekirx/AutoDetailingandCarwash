@@ -1,3 +1,20 @@
+## 2026-10-15 - History attach, plate claim, and transfer follow the buyer
+
+- A failed walk-in attach no longer looks like "no history". The account home says the account is ready and the shop still needs to link the visits.
+- Signup matches a walk-in phone with spaces, dashes, or a leading plus, and claims one unowned plate instead of treating a duplicate-key error as success.
+- Transfer moves open paint-maintenance rows to the buyer. A Branch Admin can move a car that has a visit at their branch (or no visits yet). If the audit row fails, the car and those maintenance rows go back to the seller.
+
+## 2026-10-15 - Walk-in history on signup, and car transfer for SA / ASA / BA
+
+- A Team Lead ticket with no Hakum account tells the counter to send the customer to `/signup`. Signing up with that phone attaches the walk-in visits (no second customer, no second plate) and the account home says "You have existing history with us."
+- `/operations/vehicle-transfer` (BossMich, Assistant Super Admin, Branch Admin) moves a plate to another customer who already has an account. Past visits stay on the seller. A plate the buyer already owns is refused.
+
+## 2026-10-15 - Leftover checkout RPC can no longer skip the sale (BUG-093)
+
+- `complete_payment` closed a car at the counter with no `sales` row, so the money never reached the Daily Sheet, and any Branch Admin could close any branch's car. EXECUTE is now revoked for the browser. POS is unchanged: `complete_pos_sale` still rings the sale.
+- Retired Ops Lab helpers (`ops_lab_write_audit`, `resolve_ops_lab_notify_user_ids`) are revoked the same way. A customer session can no longer write an audit row or list SA/ASA/BA ids.
+- Prove with `scripts/probe-legacy-rpc-revoked.sql` (always rolled back). Prod 2026-10-15: 8/8 after the revoke.
+
 ## 2026-10-13 - POS voice: English "is ready for payment", always a woman
 
 - The announcer is back to English: "Toyota Vios, plate N B C, 4 8 2 1, is ready for payment." and "Payment announcements are on." (replaces the Taglish wording below).
