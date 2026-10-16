@@ -27,7 +27,12 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import { toast } from 'sonner'
-import { EXISTING_HISTORY_MESSAGE, HISTORY_ATTACH_WARNING } from '@/lib/vehicleTransfer'
+import {
+  EXISTING_HISTORY_MESSAGE,
+  HISTORY_ATTACH_WARNING,
+  clearHistoryAccountNoticeFlags,
+  readHistoryAccountNotices,
+} from '@/lib/vehicleTransfer'
 
 const EMPTY_LIST = []
 
@@ -102,10 +107,16 @@ function QuickAction({ icon: Icon, title, to }) {
 
 export default function CustomerAccountPage() {
   const location = useLocation()
-  const existingHistory = Boolean(location.state?.existingHistory) || sessionStorage.getItem('hakum-existing-history') === '1'
-  const historyWarning = Boolean(location.state?.historyWarning) || sessionStorage.getItem('hakum-history-warning') === '1'
-  if (existingHistory) sessionStorage.removeItem('hakum-existing-history')
-  if (historyWarning) sessionStorage.removeItem('hakum-history-warning')
+  // Capture once per mount. Do not clear sessionStorage during render — Strict Mode
+  // remounts would lose the signup banner before paint.
+  const [historyNotices] = useState(() =>
+    readHistoryAccountNotices({ locationState: location.state, storage: sessionStorage }),
+  )
+  const existingHistory = historyNotices.existingHistory
+  const historyWarning = historyNotices.historyWarning
+  useEffect(() => {
+    clearHistoryAccountNoticeFlags(sessionStorage)
+  }, [])
   const { profile: authProfile, user, session, loading: authLoading } = useAuth()
   const [data, setData] = useState(null)
   const [selectedBranch, setSelectedBranch] = useState('')

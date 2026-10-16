@@ -4,6 +4,15 @@
 
 Docs: [Static IPs](https://vercel.com/docs/networking/static-ips) · [Getting started](https://vercel.com/docs/networking/static-ips/getting-started)
 
+## Status (2026-10-16 this CLI)
+
+| Check | Result |
+|-------|--------|
+| `vercel whoami` | `jcuady` |
+| Teams visible | `jcuadys-projects` (hobby) only |
+| Hakum project on this team | **No** — `vercel project ls` has no Hakum / AutoDetailing app |
+| Static IPs / BrandTxt from this token | **Blocked** — need Hakum team login or token with that scope |
+
 ## Status (2026-09-24 this CLI)
 
 | Check | Result |

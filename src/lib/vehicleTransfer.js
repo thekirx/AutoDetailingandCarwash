@@ -40,6 +40,23 @@ export function historySignupFlags({ count = 0, error = null } = {}) {
   return { existing_history: Number(count) > 0, history_warning: '' }
 }
 
+/** One-shot account banners after signup. Read flags without clearing (clear in useEffect). */
+export function readHistoryAccountNotices({ locationState = null, storage = null } = {}) {
+  const store = storage && typeof storage.getItem === 'function' ? storage : null
+  return {
+    existingHistory:
+      Boolean(locationState?.existingHistory) || (store?.getItem('hakum-existing-history') === '1'),
+    historyWarning:
+      Boolean(locationState?.historyWarning) || (store?.getItem('hakum-history-warning') === '1'),
+  }
+}
+
+export function clearHistoryAccountNoticeFlags(storage) {
+  if (!storage || typeof storage.removeItem !== 'function') return
+  storage.removeItem('hakum-existing-history')
+  storage.removeItem('hakum-history-warning')
+}
+
 /**
  * One plate row per account. Extra unowned rows are archived, not copied.
  * action: refresh | claim | insert | refuse

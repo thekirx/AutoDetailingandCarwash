@@ -1,10 +1,24 @@
 # Project Status
 
-**Last Updated:** 2026-10-08 (Asia/Manila) — deep read-only production DB audit; read-only guarantee proven by tests + revert-prove
-**Current Branch:** `audit/2026-10-08-closeout` (unpushed; commit the doc and the count changes, so read `git rev-list --count origin/main..HEAD` rather than trusting a number here)
-**Overall Status:** **READY_WITH_OPS_BLOCKERS** · money reconciles in production · push **0 of 19 staff enrolled** · 2 POS handoffs (₱5,397.50) stranded
+**Last Updated:** 2026-10-16 ~23:31 (Asia/Manila) — second strict progress check (unchanged outcomes)  
+**Deployed:** `origin/main` @ `f7ebc41` · **BUG-094 NOT deployed**  
+**Overall Status:** **READY_WITH_OPS_BLOCKERS** · shop-day ready · **BUG-094 on prod** · **SMS FAIL** · **push 0/20** · Auth SMTP **OPEN**
 
-## Executive Summary
+## Executive Summary (2026-10-16 evening — strict, pass 2)
+
+Money path: **POS → Daily Sheet → Finance approve** (prior evidence).
+
+**Re-proved ~23:31:** unit transfer/history **14/14**, `check-audit-p2` **ok**, `sms:egress` **FAIL** (`180.190.249.98` / ErrorCode -1), push **0/20**, BUG-094 loop `oldBugRepro:true`/`fixedOk:true`, BUG-061 void guards **5/5 PASS**. Full **2222** / nav / role-wave **not** re-run.
+
+**No new automatable product fix** beyond shipping the already-local BUG-094 patch. Ops blockers unchanged.
+
+Gap map: [`docs/qa/READINESS-GAP-2026-10-16.md`](docs/qa/READINESS-GAP-2026-10-16.md) · Bugs: [`docs/qa/BUGS.md`](docs/qa/BUGS.md).
+
+**Still Continue:** (1) **say “commit”** for BUG-094 · (2) Hakum Static IPs + BrandTxt → SMS · (3) staff Enable alerts · (4) Auth SMTP proof · (5) optional void SQL (guards green).
+
+---
+
+## Executive Summary (historical 2026-10-08)
 
 Since 2026-10-01 the money path is **POS → Daily Sheet (Branch Admin) → Finance approve (Super Admin / ASA) → books**. End of shift, Payroll and My pay are retired. The Daily Sheet has a close-of-day slip (Print / PDF, CSV, Excel); Finance › Daily sheets has search, submitted by, net profit range, quick dates, over/short, and CSV / Excel / Print exports.
 

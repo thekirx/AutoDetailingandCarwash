@@ -110,7 +110,7 @@ export default function VehicleTransferPage() {
         ))}
       </ul>
       <form onSubmit={findOwner} className="grid max-w-lg gap-3">
-        <Label htmlFor="transfer-phone">New owner's phone</Label>
+        <Label htmlFor="transfer-phone">New owner&apos;s phone</Label>
         <div className="flex gap-2">
           <Input id="transfer-phone" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="09…" />
           <Button type="submit" variant="secondary" disabled={busy || !phone.trim()}>Find account</Button>

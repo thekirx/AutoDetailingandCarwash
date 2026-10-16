@@ -9,7 +9,7 @@
  * en-PH voice (Rosa) is picked, then really speaks one line with it.
  * CHROME=1 runs in installed Google Chrome (no PH voice) and checks a female voice is used.
  */
-import { mkdirSync, mkdtempSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -17,6 +17,13 @@ import puppeteer from 'puppeteer'
 import { OPS_DEMO_ACCOUNTS } from '../src/lib/demoAccounts.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+if (existsSync(join(root, '.env'))) {
+  for (const line of readFileSync(join(root, '.env'), 'utf8').split(/\r?\n/)) {
+    if (!line || line.startsWith('#')) continue
+    const i = line.indexOf('=')
+    if (i > 0 && !process.env[line.slice(0, i)]) process.env[line.slice(0, i)] = line.slice(i + 1)
+  }
+}
 const outDir = join(root, 'e2e-evidence', 'pos-voice')
 mkdirSync(outDir, { recursive: true })
 const base = (process.env.BASE_URL || 'http://127.0.0.1:5174').replace(/\/$/, '')

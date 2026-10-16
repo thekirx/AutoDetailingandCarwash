@@ -1,7 +1,8 @@
 # Full-app readiness — checklist, progress, test plan
 
-**Date:** 2026-10-15 (Manila)  
-**Branch:** `audit/2026-10-08-closeout`  
+**Date:** 2026-10-15 (Manila) · **audit stamp 2026-10-16**  
+**Branch / deploy:** `main` @ `f7ebc41` (Vercel Production Ready)  
+**Gap map (untested / undocumented):** [`READINESS-GAP-2026-10-16.md`](./READINESS-GAP-2026-10-16.md)  
 **Owner rule kept:** easy login cards stay visible for testing. Demo chips are not hidden.  
 **SMS policy kept:** BusyBee is outbound customer status/reminders only. No inbound inbox. No owner daily close SMS. Finance accept uses web push.
 
@@ -26,7 +27,7 @@ Shop-day **code + database** hold: sign-in, TL queue, BA POS (the real checkout)
 **Not ready to call production complete** until the owner items at the bottom are done. The two that actually stop customer SMS on Vercel and staff alerts on the floor:
 
 1. Hakum Vercel team: set `BUSYBEE_*` (server only, no `VITE_*`) + Static IPs, whitelist those IPs on BrandTxt.
-2. Every SA / ASA / BA / TL phone: Enable alerts once (push enrollment is **0 of 20** active staff).
+2. Every SA / ASA / BA / TL phone: Enable alerts once (push enrollment is **0 of 20** active staff — reconfirmed `audit-db-deep auth` 2026-10-16).
 
 Easy logins stay on for testing. Do not treat that as a production-ready auth posture (BUG-088, owner choice).
 
@@ -36,7 +37,7 @@ Easy logins stay on for testing. Do not treat that as a production-ready auth po
 
 | Slice | Seam | Prove with | This session |
 |-------|------|------------|--------------|
-| Unit / lint / build | repo | `npm test` · `npm run lint` · `npm run build` | **PASS** 2216/0 after the transfer page. Lint and build were green before that edit (2205). |
+| Unit / lint / build | repo | `npm test` · `npm run lint` · `npm run build` | **PASS** **2222/0** (2026-10-16). Lint + build exit 0 same day (transfer page apostrophe fix). Deployed `f7ebc41`. |
 | Static customer/portal | source | `npm run check` · `npm run audit:api-auth` | **PASS** 5/5 · CLEAN |
 | September books | sales → sheet → P&L → Floor Board | `node scripts/verify-september-2026.mjs` | **PASS** 60/60 sheets, Floor Board net ₱1,618,627.00 |
 | Shop-day money (TL→BA paid) | `bookings` + `complete_pos_sale` | `scripts/probe-shop-day-lifecycle.sql` (rollback) | **PASS 19/19** |
@@ -53,9 +54,16 @@ Easy logins stay on for testing. Do not treat that as a production-ready auth po
 | Sheet screen vs DB | Finance Daily sheets | `npm run check:sheet-ui` | **PASS** |
 | Sheet money sandbox | save → return → approve → reopen | `npm run e2e:daily-sheet-money` | **PASS 38/38** (sandbox day 2000-01-03, wiped) |
 | Customer status SMS | `notifyBookingStatus` → BusyBee | `SKIP_CRM=1 node scripts/e2e-real-customer-status-sms.mjs` to **09625294043** | **API accept 12/12**, DLR still `SUBMITTED` after the poll window (exit 1). Detailing + Express Wash Package bookings archived after the run. |
-| POS voice | chime + Rosa fallback | `node scripts/_pos-voice-check.mjs` | **not proven this run** — the script waited 60s and exited 1. No sale was created (the check intercepts reads). |
+| POS voice | chime + Rosa fallback | `node scripts/_pos-voice-check.mjs` | **PASS 13/13** (2026-10-16; script now loads `.env` for demo passwords). No sale created. |
 | Staff/customer push | real device | `npm run e2e:push-real` | **pending** — enrollment 0/20, not automatable on floor phones |
-| Fake push wiring | API/DB | `node scripts/e2e-push-notifications.mjs` | **pending** |
+| Fake push wiring | API/DB | `node scripts/e2e-push-notifications.mjs` | **PASS** (2026-10-16) — vapid, role subscribe, fan-out, sheet_submitted |
+| Walk-in history + transfer | signup + `/api` transfer | `node scripts/e2e-walkin-history-transfer.mjs` | **PASS 10/10** (2026-10-16) — disposable rows wiped |
+| Responsive | 9 viewports × home/book/queue/pos/account | `BASE_URL=… npm run e2e:responsive` | **PASS** fail=0 (2026-10-16). First-cell Loading flake fixed in script. |
+| BusyBee egress | BrandTxt balance / IP | `npm run sms:egress` | **FAIL** (2026-10-16) — ErrorCode -1, egress `27.49.15.199` |
+| Staff push count | DB | `audit-db-deep.mjs auth` | **0 / 20** active staff enrolled; 3 customer-only subs (2026-10-16) |
+| Stranded handoffs | DB | `probe-stranded-handoffs.mjs` | **2** pending (BUG-061 Low — do not POS) |
+| Audit P2 static | source | `node scripts/check-audit-p2.mjs` | **PASS** (retargeted 2026-10-16) |
+| History banner | browser + unit | `e2e-history-banner` 4/4 · vehicleTransfer tests | **PASS** local; **uncommitted** |
 
 Do **not** run `npm run e2e:lifecycle-flops` as money proof. It still drives retired End of shift / payroll RPCs.
 

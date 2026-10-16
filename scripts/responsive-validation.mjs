@@ -162,6 +162,20 @@ async function measurePage(page, base, route, vp) {
   })
   await page.goto(`${base}${route.path}`, { waitUntil: 'domcontentloaded', timeout: 60000 })
   await dismissCookieBanner(page)
+  // First /home paint can still be the auth "Loading..." shell — wait for header chrome
+  // before hamburger_hidden checks (flake seen only on mobile-375 as the first cell).
+  if (route.path === '/home' || route.path === '/account') {
+    await page
+      .waitForFunction(
+        () => {
+          const text = (document.body?.innerText || '').trim()
+          if (/^Loading\.?\.\.?$/i.test(text) || text === 'Loading...') return false
+          return Boolean(document.querySelector('.public-header, .capp, [data-customer-shell]'))
+        },
+        { timeout: 20000 },
+      )
+      .catch(() => null)
+  }
   await new Promise((r) => setTimeout(r, route.id === 'account' ? 2000 : 700))
   // Settle layout after fonts/images
   await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))))

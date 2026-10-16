@@ -28,3 +28,6 @@ Picking a catalog model on queue, bookings, public/account book, CRM, or garage 
 
 ## Data
 `vehicle_catalog.size_slug` (not null). Seed: `scripts/seed-vehicle-catalog.mjs`. Infer helper: `src/lib/phVehicleSizes.js`.
+
+## Not ownership transfer
+This page is make/model catalog only. Moving a sold car to another Hakum account is [`vehicle-transfer.md`](./vehicle-transfer.md).

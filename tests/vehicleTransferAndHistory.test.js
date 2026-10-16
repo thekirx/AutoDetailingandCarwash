@@ -10,6 +10,8 @@ import {
   sameHandset,
   handsetMatchPattern,
   historySignupFlags,
+  readHistoryAccountNotices,
+  clearHistoryAccountNoticeFlags,
   garagePlatePlan,
   plateInsertRecovery,
   transferBranchRefusal,
@@ -48,6 +50,24 @@ describe('signup tells a walk-in they already have history', () => {
       history_warning: HISTORY_ATTACH_WARNING,
     })
     assert.equal(historySignupFlags({ count: 0 }).existing_history, false)
+  })
+
+  it('reads account banners without clearing storage during the read', () => {
+    const store = new Map()
+    const storage = {
+      getItem: (k) => (store.has(k) ? store.get(k) : null),
+      removeItem: (k) => store.delete(k),
+      setItem: (k, v) => store.set(k, v),
+    }
+    storage.setItem('hakum-existing-history', '1')
+    const first = readHistoryAccountNotices({ storage })
+    assert.equal(first.existingHistory, true)
+    assert.equal(storage.getItem('hakum-existing-history'), '1')
+    const second = readHistoryAccountNotices({ storage })
+    assert.equal(second.existingHistory, true)
+    clearHistoryAccountNoticeFlags(storage)
+    assert.equal(storage.getItem('hakum-existing-history'), null)
+    assert.equal(readHistoryAccountNotices({ locationState: { existingHistory: true } }).existingHistory, true)
   })
 })
 

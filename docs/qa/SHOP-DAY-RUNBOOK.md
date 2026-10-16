@@ -21,15 +21,19 @@
 | Step | Who | Route / action |
 |------|-----|----------------|
 | C1 | Customer / public | `/book` or walk-in → queue |
+| C1a | Guest → customer | After walk-ins, `/signup` may show **You have existing history with us.** (attaches prior tickets) |
 | C1b | Team Lead | `/operations/bookings` → confirm pending detailing |
 | C1c | Team Lead / BA | `/operations/bookings?stage=maintenance` → **Car arrived · Start intake** (paint maintenance → Vehicle intake; sends client a status SMS) |
 | A1 | Crew | `/operations/attendance` time-in |
 | W1 | Team Lead | `/operations/queue` waiting → Start → Final check |
-| W1b | Team Lead / BA | Send to payment → `/operations/pos` pay |
+| W1b | Team Lead / BA | Send to payment → `/operations/pos` pay (optional Voice on counter tablet) |
 | W2 | Team Lead | Cancel waiting ticket (reason ≥ 3 chars) when needed |
+| T1 | SA / ASA / BA | `/operations/vehicle-transfer` when a car is sold (buyer needs a Hakum account; open paint-maintenance follows) |
 | D1 | Branch Admin | POS → **Daily sheet** → fill → Submit |
 | D2 | Super Admin / ASA | Finance → **Daily sheets** → Approve or Return |
 | Books | SA / ASA / Investor | Finance P&L / Floor Board for that day |
+
+Page evidence map: [`DAILY-OPS-USER-PAGES-2026-10-16.md`](./DAILY-OPS-USER-PAGES-2026-10-16.md).
 
 ## Status matrix (wash)
 

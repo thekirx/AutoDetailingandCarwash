@@ -20,6 +20,8 @@ TL and BA get a Queue-style Board instead of the kanban: status cards (Placehold
 
 API: `POST /api/maintenance-schedules { id, action: 'arrive' }`; reminders are branch-scoped for non-all-branch roles.
 
+Open `scheduled` / `notified` rows follow the plate when staff run a car transfer ([`vehicle-transfer.md`](./vehicle-transfer.md)).
+
 Create/edit booking: catalog make/model auto-selects car size; price follows that size. Staff may override.
 
 ## Components

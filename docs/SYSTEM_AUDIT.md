@@ -4,50 +4,52 @@
 
 | Field | Value |
 |-------|-------|
-| Audit date | **2026-10-05** (Asia/Manila) — principal remaining-work / doc-debt audit; shop-day evidence from 2026-10-04 |
-| Remaining work (PM) | [`qa/REMAINING-WORK-2026-10.md`](./qa/REMAINING-WORK-2026-10.md) — continue: doc cutover, ops SMS/SMTP/push, FLOPS rewrite |
-| Nav walk (every role × every sidebar link) | **PASS** — `e2e:nav-walk` **84/84** (2026-10-04). BUG-048 **closed live** 2026-10-05 (`/api/public-inquiry` 405, `/api/data-center` 401) · `e2e-evidence/nav-walk/` |
-| September 2026 test month (production, tagged, wipeable) | **PASS** — `scripts/verify-september-2026.mjs` **23/23** (queue ↔ POS ↔ daily sheets ↔ P&L ↔ Floor Board), `_september-shots.mjs` **22/22** at 375 / 1440 (SA, ASA, both BAs, TL) · [`qa/SEPTEMBER-2026-SEED.md`](./qa/SEPTEMBER-2026-SEED.md) |
-| Statuses / overrides / approvals by role | **PASS** — `supabase/tests/daily_flow_role_probe.sql` **20/20** (rolled back): TL lifecycle incl. failed QA + send to payment, cross-branch + crew denials, BA / ASA / SA overrides, BA cannot approve own sheet, ASA can |
-| Role matrix | **PASS** — `e2e:role-qa` **52/52**. Branch Admin is now denied the Queue (only SA, ASA, TL, Ops Lead); the stale "BA may open Queue" expectation was fixed |
-| Money UI pack | **PASS** — `e2e:ui-money` **5/5** (TL denied POS, BA denied Queue, BA POS + Daily sheet, SA Finance › Daily sheets); End of shift steps removed |
-| P0 UI | **PASS** — `e2e:ui-p0` **9/9** |
-| Daily Sheet money path (live, sandbox day wiped) | **PASS** — `e2e:daily-sheet-money` **38/38** (2026-10-02) |
-| Daily Sheet live UI (read-only, incl. slip Print / CSV / Excel, filters, list exports) | **PASS** — `scripts/_daily-sheet-live-smoke.mjs` **17/17** |
-| Money dashboards 375 / 768 / 1440 (read-only, full page) | **PASS** — `scripts/_ops-pages-shots.mjs` **39/39** (incl. Floor Board on "3 months" with real sales; totals match SQL: ₱28,696.00, 17 paid), every page ready in ~1.6–2.6 s · `e2e-evidence/ops-pages/` |
-| Floor Board / POS Today depth | **Built (2026-10-04)** — Floor Board money follows the Timeline with % vs prior, hourly chart, method / service bars, per-branch table; POS Today adds discounts, refunds, spent so far, top services. `floorCompareWindow` / `floorMoneyBreakdown` / `topServices` in `tests/dailySheet.test.js` |
-| Web push wiring | Unit-proven for `sheet_submitted` / `sheet_reviewed`; real-device audit **NOT RE-RUN** since the Daily Sheet |
-| Supabase advisors | **Hardened** — migration `20260927120000_advisor_hardening_split_write_policies.sql` applied |
+| Audit date | **2026-10-16** (Asia/Manila) — principal full-system audit · deep dive on undocumented / untested · architecture HTML |
+| Gap map (this run) | [`qa/READINESS-GAP-2026-10-16.md`](./qa/READINESS-GAP-2026-10-16.md) — what is proven vs not tested vs still open |
+| Daily ops + user pages | [`qa/DAILY-OPS-USER-PAGES-2026-10-16.md`](./qa/DAILY-OPS-USER-PAGES-2026-10-16.md) — shop-day + customer page evidence |
+| Canonical readiness | [`qa/FULL-APP-READINESS-2026-10.md`](./qa/FULL-APP-READINESS-2026-10.md) |
+| Remaining work (PM) | [`qa/REMAINING-WORK-2026-10.md`](./qa/REMAINING-WORK-2026-10.md) + gap map continue checklist |
+| Architecture review | `%TEMP%\architecture-review-2026-10-16.html` — top pick: deepen **VehicleOwnership** |
+| Nav walk (every role × every sidebar link) | **PASS** — `e2e:nav-walk` **87/87** (2026-10-15; includes `/operations/vehicle-transfer` for Boss/ASA/BA). Prior 84/84 on 2026-10-04. |
+| September 2026 test month | **PASS** — verify-september **60/60** · Floor Board net ₱1,618,627.00 · [`qa/SEPTEMBER-2026-SEED.md`](./qa/SEPTEMBER-2026-SEED.md) |
+| Statuses / overrides / approvals by role | **PASS** — `daily_flow_role_probe.sql` **20/20** (rolled back) |
+| Shop-day DB probe | **PASS** — **19/19** · SoD **4/4** · RLS **24/24** · BUG-093 revoke **8/8** |
+| Role matrix | **PASS** — `e2e:role-qa-wave` **179/179** (supersedes older 52/52 role-qa stamp) |
+| Money UI pack | **PASS** — `e2e:ui-money` **5/5** |
+| P0 UI | **PASS** — `e2e:ui-p0` **9/9** (solo; parallel flake ignored) |
+| Daily Sheet money path | **PASS** — `e2e:daily-sheet-money` **38/38** |
+| Web push wiring | Fake e2e **PASS** (2026-10-16); **0/20** staff devices enrolled (BUG-062) — real push **NOT VERIFIED** |
 | Framework | Vite + React · Supabase Auth/RLS · PostgREST + `/api/*` |
-| Build | **PASS** — `npm run build` exit 0 (fresh 2026-10-05) |
-| Unit suite | **PASS** — **1518/1518** (`npm test`, re-verified 2026-10-07 with the working tree; includes geo time-in, CRUD dialogs, branch list filter, TL bookings board) |
-| Future branch / People hire | **PASS** — Dasma slug `dasmarinas` in prod; coming-soon hire; Detailer/Video branch picker; junk branches archived |
-| Lint | **PASS** — `npx eslint .` exit 0 (fresh 2026-10-05) |
-| FLOPS shop-day | **NOT RE-RUN** since 2026-09-26 (25/25 then). It completes a real paid sale on production that would land on the live Daily Sheet; the money path is covered by `e2e:daily-sheet-money` on a wiped sandbox day |
-| Data integrity | **PASS** — `e2e:integrity` (2026-10-04) |
-| POS handoff smoke | **NOT RE-RUN** since 2026-09-26 (exit 0 then) |
-| Daily-ops package | **NOT RE-RUN** since 2026-09-26 (exit 0 then) |
-| Branch / HEAD | `main` (see `git log`; Daily Sheet commits `ff0477d` → latest) |
-| Soft-launch | **READY_WITH_OPS_BLOCKERS** |
-| Production messaging | **NOT MET** — BrandTxt IP + Auth SMTP open; **owner SMS N/A** |
-| BusyBee relay code | **PASS** — `resolveBusybeeSendMode` / relay handler / `api/busybee-relay.js` (unit seams green) |
+| Build | **PASS** — `npm run build` (2026-10-16; lint apostrophe fix on VehicleTransferPage) |
+| Unit suite | **PASS** — **2222/0** (`npm test`, 2026-10-16) |
+| Lint | **PASS** — `npm run lint` exit 0 (2026-10-16) |
+| Deploy | **PASS** — `main` / `f7ebc41` · Vercel Production Ready · live bundle has `vehicle-transfer` + history sentence |
+| Soft-launch | **READY_WITH_OPS_BLOCKERS** — shop-day ready; **BUG-094 banner still on prod**; Vercel SMS + real push + Auth SMTP open |
+| Responsive | **PASS** — `e2e:responsive` fail=0 (2026-10-16; prior stamp) |
+| BusyBee egress (office) | **FAIL** — 2026-10-16 23:00: balanceOk false, ErrorCode -1, egressIp `180.190.249.98` (drift). Hakum not on this Vercel CLI team. |
+| Staff push enroll | **0 / 20** active staff (`audit-db-deep auth`); 3 customer-only subs |
+| Stranded handoffs | **2** pending (BUG-061 Low) — placeholder customers; do not POS |
+| History banner (BUG-094) | Prod: clear-during-render **still live** on `f7ebc41`. Local fix: unit 14/14 + e2e 4/4 — **uncommitted** |
+| `check-audit-p2` | **PASS** tonight — retargeted seams |
+| Production messaging | **NOT MET** — BusyBee blocked; Auth SMTP open; **owner SMS N/A** |
+| Transfer / walk-in guide | **Added** [`guides/pages/vehicle-transfer.md`](./guides/pages/vehicle-transfer.md) |
 
-## Walk-in history and car transfer (2026-10-15)
-
-Slice only. Older rows in the summary table above are from 2026-10-05 and are not this run.
+## Walk-in history and car transfer (2026-10-15 → deploy 2026-10-16)
 
 | Check | Result |
 |-------|--------|
 | History attach on DB error | Account stays created. Response sets `history_warning`. Account home shows `HISTORY_ATTACH_WARNING`. It does not say "You have existing history with us." |
 | Phone spellings | `sameHandset` treats spaces, dashes, and `+63` as one handset. Claim query uses a digit regex, then checks the canonical number. |
-| Duplicate unowned plate | One row is claimed. Extra unowned rows are archived. A unique-key race is read again and claimed or refused. It is not reported as success. |
+| Duplicate unowned plate | One row is claimed. Extra unowned rows are archived. A unique-key race is read again and claimed or refused. |
 | Maintenance follows the car | Open `vehicle_maintenance_schedules` (`scheduled`, `notified`) get the buyer's id, name, and phone. |
 | Branch Admin scope | SA and ASA: any car. Branch Admin: a visit at their assigned branch, or a car with no visits. |
 | Audit failure | Vehicle owner and those maintenance rows are written back. The request returns 500. |
-| Unit seam | `node --test tests/vehicleTransferAndHistory.test.js` **13/13**, exit 0, this session. |
-| Live signup / live transfer | **NOT VERIFIED**. No new customer was created and no production car was moved. |
-| Production deploy | **NOT DEPLOYED**. This is the working copy. |
-| Vercel SMS / staff push / POS voice | **BLOCKED** / **NOT VERIFIED**. Unchanged from `docs/qa/FULL-APP-READINESS-2026-10.md`. |
+| Unit seam | `tests/vehicleTransferAndHistory.test.js` included in **2222** suite |
+| Live signup / live transfer | **PASS** — `scripts/e2e-walkin-history-transfer.mjs` **10/10** (disposable accounts wiped): `existing_history`, spaced-phone claim, BA transfer + maintenance follow + reverse |
+| Fake push wiring | **PASS** — `e2e-push-notifications.mjs` ok (2026-10-16) |
+| POS voice | **PASS** — `_pos-voice-check.mjs` **13/13** (script now loads `.env` for demo passwords) |
+| Production deploy | **DEPLOYED** — `f7ebc41` on Hakum Vercel Production |
+| Vercel SMS / real staff push | **BLOCKED** / **0/20** enroll — see gap map |
 
 ## Customer home, packages, reviews, points (2026-09-28)
 
@@ -84,10 +86,12 @@ Scoped to `/operations/finance` against the owner's Xero P&L, chart of accounts,
 
 | Severity | Area | Issue | Status |
 |----------|------|-------|--------|
-| P1 ops | SMS | BrandTxt egress IP (**customer** outbound) | **Open** — ErrorCode 11 on `180.191.244.237` (BUG-002) |
+| Medium | Customer | History banner Strict Mode drop | **Open on prod** — BUG-094; fix local only |
+| P1 ops | SMS | BrandTxt egress IP (**customer** outbound) | **Open** — office `sms:egress` ErrorCode **-1** on `180.190.249.98` (BUG-002); production still needs Hakum Static IPs |
 | — | SMS | Owner daily SMS / `OWNER_SMS_PHONE` | **N/A** — disabled (`owner_sms_disabled`); Finance accept → web push only |
 | P1 ops | Auth | Auth SMTP inbox proof | **Open** — Gate 10.1 ([`AUTH-SMTP-PROOF.md`](./OPS/AUTH-SMTP-PROOF.md)) |
-| P1 ops | Deploy | Vercel Static IPs for Hakum | **Open** — project not on this CLI team ([`VERCEL-STATIC-IPS.md`](./OPS/VERCEL-STATIC-IPS.md)) |
+| P1 ops | Deploy | Vercel Static IPs for Hakum | **Open** — Hakum absent from CLI team `jcuadys-projects` ([`VERCEL-STATIC-IPS.md`](./OPS/VERCEL-STATIC-IPS.md)) |
+| Low ops | POS | Stranded `pos_handoffs` (BUG-061) | **Open** — 2 rows 2026-09-29; void/archive only after owner confirm (not revenue) |
 | Medium | DX | Unit suite expected 7 API entrypoints; relay added 8th | **Closed** — routing test + `busybeeSendSmsDirect` / relay mode shipped this campaign |
 
 ## Functional Issues
@@ -165,30 +169,33 @@ No new P0/P1 this campaign. Responsive not re-matrixed this hour (prior CONDITIO
 | [`POS/`](./POS/) / [`PAYROLL/`](./PAYROLL/) flowchart packs | Historical archive |
 | Full gap list | [`qa/REMAINING-WORK-2026-10.md`](./qa/REMAINING-WORK-2026-10.md) |
 
-## Final Verification
+## Final Verification (2026-10-16)
 
-- [x] Production build passes
+- [x] Production build passes (`npm run build`, this audit)
 - [ ] Type check — N/A (JS; no `tsc` script)
-- [x] Lint passes
-- [x] Automated tests pass (**1518/1518**, re-verified 2026-10-07 with the uncommitted working tree)
-- [x] Critical user flows tested (Daily Sheet money path **38/38**; nav walk **84/84**; FLOPS not re-run — see Summary)
-- [x] Permissions verified (role matrix **52/52**)
-- [x] Known blockers documented (SMS/SMTP/Static IPs + **P1 doc debt**)
-- [x] `PROJECT_STATUS.md` + [`qa/REMAINING-WORK-2026-10.md`](./qa/REMAINING-WORK-2026-10.md) updated
+- [x] Lint passes (`npm run lint`, this audit; VehicleTransfer apostrophe fixed)
+- [x] Automated tests pass (**2222/0**)
+- [x] Critical money flows proven (Daily Sheet **38/38**; shop-day probe **19/19**; September **60/60**)
+- [x] Nav + role wave (**87/87**, **179/179**)
+- [x] Live walk-in signup history + transfer write — **PASS 10/10** (`e2e-walkin-history-transfer.mjs`)
+- [x] Fake push wiring — **PASS**
+- [x] POS voice — **PASS 13/13**
+- [x] Responsive — **PASS** fail=0
+- [x] Maintenance Arrive — **PASS 7/7** (`e2e-maintenance-arrive.mjs`)
+- [ ] History banner UI — local **PASS 4/4**; production still BUG-094 until commit+deploy
+- [ ] Staff push real devices + Vercel BusyBee DELIVRD + Auth SMTP — **NOT MET**
+- [x] Gap map + daily-ops page map + transfer / customer guides
+- [x] Architecture deepening report opened (temp HTML)
 
 ## Verdict
 
-**Soft-launch shop-day code gate: MET** on the Daily Sheet money path.  
-**Every role × every sidebar page: PASS** (nav load / allow-deny — not full story acceptance).  
-**Documentation cutover: NOT MET** — staff/owner stories still teach End of shift / Payroll.  
-**100% production ops gate: NOT MET** (BrandTxt IP + Auth SMTP + Vercel Static IPs + 0 staff push devices).  
-**Overall: READY_WITH_OPS_BLOCKERS — continue.**
+**Shop-day + customer account history/transfer/Arrive: READY for floor use.**  
+**Full product “optimized and functional already”: NO** — Vercel SMS, staff push enroll, Auth SMTP remain.  
+**Overall: READY_WITH_OPS_BLOCKERS — Continue.**
 
-## Recommended Next Action
+## Recommended Next Action (say Continue)
 
-1. **Doc cutover (P1):** rewrite shop-day user stories, runbook, MONEY-CONTRACT body, owner PDFs → Daily Sheet ([`REMAINING-WORK-2026-10.md`](./qa/REMAINING-WORK-2026-10.md) track A).  
-2. Malcolm: BrandTxt IP / Static IPs → prove `sms:egress` DELIVRD.  
-3. Close Auth SMTP Gate 10.1 with real-inbox proof.  
-4. BossMich / approving ASA enable push → `PUSH_AUDIT=1 node scripts/push-audit-events.mjs`.  
-5. Rewrite or retire `e2e:lifecycle-flops` for Daily Sheet.  
-6. Owner: wipe or keep September seed; set branch Google review URLs.
+1. Hakum Vercel Static IPs + `BUSYBEE_*` → BrandTxt → production status SMS `DELIVRD`.  
+2. Enable alerts on SA/ASA/BA/TL phones.  
+3. Auth SMTP Gate 10.1 inbox proof.  
+4. Optional: deepen VehicleOwnership.
