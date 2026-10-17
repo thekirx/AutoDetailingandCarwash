@@ -101,17 +101,24 @@ describe('command category IA', () => {
     assert.match(page, /kinds=\{\['service', 'package'\]\}/)
   })
 
-  it('Command sidebar groups SA nav by shop day, not one dump', () => {
+  it('Command sidebar puts the six main tools before the remaining groups', () => {
     const sa = getOperationsNav({ role: 'BossMich' })
     const groups = groupOperationsNav(sa)
     const ids = groups.map((g) => g.id)
-    assert.deepEqual(ids, ['floor', 'counter', 'customers', 'books', 'work', 'company'])
-    assert.equal(groups.find((g) => g.id === 'floor').items[0].label, 'Floor Board')
+    assert.deepEqual(ids, ['primary', 'floor', 'counter', 'customers', 'work', 'company'])
+    assert.deepEqual(groups[0].items.map((item) => item.to), [
+      '/operations/dashboard',
+      '/operations/queue',
+      '/operations/bookings',
+      '/operations/pos',
+      '/operations/finance',
+      '/operations/planning',
+    ])
+    assert.equal(groups[0].items[0].label, 'Floor Board')
     assert.ok(!sa.some((i) => i.label === 'Console'))
-    assert.ok(groups.find((g) => g.id === 'floor').items.some((i) => i.label === 'Carwash board'))
-    assert.ok(groups.find((g) => g.id === 'floor').items.some((i) => i.label === 'Detailing board'))
-    assert.ok(groups.find((g) => g.id === 'counter').items.some((i) => i.to === '/operations/pos'))
-    assert.ok(groups.find((g) => g.id === 'books').items.some((i) => i.to === '/operations/finance'))
+    assert.ok(groups[0].items.some((i) => i.label === 'Carwash board'))
+    assert.ok(groups[0].items.some((i) => i.label === 'Detailing board'))
+    assert.deepEqual(groups.slice(1).flatMap((group) => group.items), sa.filter((item) => !groups[0].items.includes(item)))
     assert.ok(!sa.some((i) => i.to === '/operations/payroll'))
     assert.ok(groups.find((g) => g.id === 'company').items.some((i) => i.to === '/operations/settings'))
     const labels = sa.map((i) => i.label)

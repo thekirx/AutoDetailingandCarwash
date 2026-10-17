@@ -721,10 +721,23 @@ function nav(label, to, icon, group) {
   return { label, to, icon, group }
 }
 
-/** Cluster nav items into labeled Command groups without reshuffling within a group. */
+const PRIMARY_NAV_PATHS = [
+  '/operations/dashboard',
+  '/operations/queue',
+  '/operations/bookings',
+  '/operations/pos',
+  '/operations/finance',
+  '/operations/planning',
+]
+
+/** Put daily commands first, then retain the remaining tools in their existing order. */
 export function groupOperationsNav(items = []) {
   const groups = []
-  for (const item of items) {
+  const primary = PRIMARY_NAV_PATHS.flatMap((path) =>
+    items.filter((item) => item.to.split('?')[0] === path),
+  )
+  if (primary.length) groups.push({ id: 'primary', label: 'Main', items: primary })
+  for (const item of items.filter((item) => !primary.includes(item))) {
     const id = COMMAND_NAV_GROUP_ORDER.includes(item.group) ? item.group : 'more'
     const last = groups[groups.length - 1]
     if (last && last.id === id) {
