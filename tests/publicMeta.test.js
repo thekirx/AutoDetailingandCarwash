@@ -287,3 +287,16 @@ test('no customer-visible placeholder address on the branches page', () => {
   const src = read('src/pages/PublicPages.jsx').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
   assert.doesNotMatch(src, /Address coming soon/, 'a placeholder address on the local-ranking page reads as broken')
 })
+test('a page title is never overwritten by the public layout defaults', () => {
+  // 17 Oct 2026: /services/tint often showed "Hakum Auto Care" because the
+  // layout's defaults and the page's usePageMeta were both passive effects —
+  // the parent ran last — and the site graph was rebuilt every render, so any
+  // layout re-render re-applied the default title.
+  const layout = read('src/components/PublicPageMeta.jsx')
+  const lib = read('src/lib/pageMeta.js')
+  assert.match(layout, /useLayoutPageMeta\(\{/, 'layout defaults must run in the layout-effect phase, before page effects')
+  assert.doesNotMatch(layout, /\busePageMeta\(/, 'the layout must not use the page-level hook')
+  assert.match(layout, /useMemo\(\(\) => buildSiteJsonLd\(\), \[\]\)/, 'the site graph must be stable across renders')
+  assert.match(lib, /export function useLayoutPageMeta[\s\S]*?useLayoutEffect\(/, 'useLayoutPageMeta must use useLayoutEffect')
+  assert.match(lib, /export function usePageMeta[\s\S]*?useEffect\(/, 'page meta stays a passive effect so it applies after the layout')
+})

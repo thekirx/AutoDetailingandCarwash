@@ -1,6 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useLocation } from 'react-router-dom'
-import { buildSiteJsonLd, usePageMeta } from '@/lib/pageMeta'
+import { buildSiteJsonLd, useLayoutPageMeta } from '@/lib/pageMeta'
 
 const PAGE_META = {
   '/': {
@@ -34,10 +34,13 @@ export default function PublicPageMeta() {
   }
 
   // The organisation + site graph rides on every public page; branch-level
-  // nodes are added by BranchesPage under its own @id.
-  const siteJsonLd = buildSiteJsonLd()
+  // nodes are added by BranchesPage under its own @id. Built once: a new
+  // object every render re-ran these defaults and overwrote a page's own title.
+  const siteJsonLd = useMemo(() => buildSiteJsonLd(), [])
 
-  usePageMeta({
+  // These are only defaults. Pages that call usePageMeta (service pages, blog
+  // posts, event shares...) apply theirs afterwards and keep their own title.
+  useLayoutPageMeta({
     title: meta.title,
     description: meta.description,
     path: pathname,

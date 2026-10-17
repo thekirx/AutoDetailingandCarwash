@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useLayoutEffect } from 'react'
 
 const SITE = 'Hakum Auto Care'
 const DEFAULT_DESCRIPTION =
@@ -243,6 +243,14 @@ export function buildHeadPatch({
   }
 }
 
+function applyHeadPatch(options) {
+  const patch = buildHeadPatch(options)
+  document.title = patch.title
+  for (const entry of patch.meta) upsertMeta(entry.attr, entry.key, entry.content)
+  for (const link of patch.links) upsertLink(link.rel, link.href)
+  if (patch.jsonLd) upsertJsonLd(patch.jsonLd, options.jsonLdId)
+}
+
 /** Client-side document title + Open Graph + canonical + JSON-LD (SPA). */
 export function usePageMeta({
   title,
@@ -254,11 +262,28 @@ export function usePageMeta({
   jsonLdId = 'hakum-jsonld',
 } = {}) {
   useEffect(() => {
-    const patch = buildHeadPatch({ title, description, path, image, noindex, jsonLd, jsonLdId })
-    document.title = patch.title
-    for (const entry of patch.meta) upsertMeta(entry.attr, entry.key, entry.content)
-    for (const link of patch.links) upsertLink(link.rel, link.href)
-    if (patch.jsonLd) upsertJsonLd(patch.jsonLd, jsonLdId)
+    applyHeadPatch({ title, description, path, image, noindex, jsonLd, jsonLdId })
+  }, [title, description, path, image, noindex, jsonLd, jsonLdId])
+}
+
+/**
+ * The public layout's site-wide defaults. Layout effects run before every
+ * passive effect in the same commit, so a page's own usePageMeta always lands
+ * after these and its title wins. Before this, both ran as passive effects and
+ * the parent layout ran last, so /services/tint showed "Hakum Auto Care"
+ * whenever the layout re-rendered after the page.
+ */
+export function useLayoutPageMeta({
+  title,
+  description,
+  path,
+  image,
+  noindex,
+  jsonLd = null,
+  jsonLdId = 'hakum-jsonld',
+} = {}) {
+  useLayoutEffect(() => {
+    applyHeadPatch({ title, description, path, image, noindex, jsonLd, jsonLdId })
   }, [title, description, path, image, noindex, jsonLd, jsonLdId])
 }
 
