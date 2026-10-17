@@ -24,10 +24,19 @@ for (const width of [1440,390,320]) test(`Tint Finder preserves answers, recomme
    }
    return req.continue()
   })
-  await page.goto(`${origin}/services/tint`,{waitUntil:'networkidle0'})
+  await page.goto(`${origin}/tint-finder`,{waitUntil:'networkidle0'})
   await page.waitForSelector('.tf-quiz')
+  assert.equal(await page.title(),'Tint Finder · Hakum Auto Care')
+  assert.equal(await page.$eval('main h1',e=>e.textContent),'Tint Finder')
+  assert.ok(await page.$('.public-site.bredesign'))
+  assert.equal(await page.evaluate(()=>document.querySelector('main h1').getBoundingClientRect().top >= document.querySelector('.public-header').getBoundingClientRect().bottom),true)
+  assert.equal(await page.$('main .bd-page-hero'),null)
+  assert.equal(await page.$('main .bd-tint-comparison'),null)
   const cookie=await page.$('.cookie-consent-secondary')
   if(cookie) await cookie.click()
+  await mkdir('/tmp/hakum-tint-qa',{recursive:true})
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
+  await page.screenshot({path:`/tmp/hakum-tint-qa/finder-page-${width}.png`})
   assert.equal(await page.$eval('.tf-actions .bd-btn',e=>e.disabled),true)
   async function choose(index) {const previous=await page.$eval('.tf-progress',e=>e.getAttribute('aria-valuenow'));await page.click(`.tf-choices button:nth-child(${index+1})`);await page.waitForFunction(()=>!document.querySelector('.tf-actions .bd-btn').disabled);await page.click('.tf-actions .bd-btn');await page.waitForFunction(p=>document.querySelector('.tf-results') || document.querySelector('.tf-progress')?.getAttribute('aria-valuenow')!==p,{},previous)}
   await choose(0);await choose(1)
@@ -87,6 +96,18 @@ for (const width of [1440,390,320]) test(`Tint Finder preserves answers, recomme
   assert.equal(submissions[1].acknowledged,true)
   assert.equal(submissions[1].vehicleModel,'Toyota Vios')
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
+  if(width===1440) {
+   await page.goto(`${origin}/services/tint`,{waitUntil:'networkidle0'})
+   await page.waitForSelector('.bd-tint-detail-actions a[href="/tint-finder"]')
+   await page.click('.bd-tint-detail-actions a[href="/tint-finder"]')
+   await page.waitForSelector('main h1#tint-finder-title')
+   assert.equal(new URL(page.url()).pathname,'/tint-finder')
+   assert.equal(await page.$$eval('.tf-quiz',els=>els.length),1)
+  }
   assert.deepEqual(pageErrors,[])
+ } catch(error) {
+  const pages=await browser.pages()
+  await pages.at(-1)?.screenshot({path:`/tmp/hakum-tint-qa/failure-${width}.png`})
+  throw error
  } finally {await browser.close()}
 })

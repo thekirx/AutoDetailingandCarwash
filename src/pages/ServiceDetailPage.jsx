@@ -57,7 +57,7 @@ const TITLES = {
 const SECONDARY_CTA = {
   ppf: { label: 'See packages', href: '#ppf-packages' },
   ceramic: { label: 'See packages', href: '#ceramic' },
-  tint: { label: 'Find my tint', href: '#tint-finder' },
+  tint: { label: 'Find my tint', to: '/tint-finder' },
   'wash-detailing': { label: 'All services', to: '/services' },
 }
 

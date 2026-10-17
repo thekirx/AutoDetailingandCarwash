@@ -1,6 +1,6 @@
 # Tint Finder
 
-The finder lives at `/services/tint`, using the existing Hakum marketing layout and brand tokens. It implements the supplied Tint Finder Developer Handover version 1.3 (October 4, 2026).
+The dedicated finder lives at `/tint-finder`, using the existing Hakum marketing layout and brand tokens. This shareable page opens directly to the four questions, recommendations and booking request flow, without the service hero or full film comparison. The full `/services/tint` page still includes the finder and film comparison; its “Find my tint” link opens the dedicated page. Both use the same catalog and recommendation component. It implements the supplied Tint Finder Developer Handover version 1.3 (October 4, 2026).
 
 ## Launch
 

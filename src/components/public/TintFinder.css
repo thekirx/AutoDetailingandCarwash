@@ -1,6 +1,13 @@
 .bredesign .tf-section { scroll-margin-top:100px; border-block:1px solid var(--bd-rule); }
+.bredesign .tf-section.tf-standalone {padding-top:calc(124px + env(safe-area-inset-top, 0px))}
+/* Keep Messenger clear of the quiz controls on narrow screens. */
+@media(max-width:760px){
+  .bredesign .tf-page .bd-talk-fab {width:52px;justify-content:center;padding:0}
+  .bredesign .tf-page .bd-talk-fab span {display:none}
+}
 .bredesign .tf-section-head {margin-bottom:28px}
 .bredesign .tf-section-head .bd-eyebrow {margin-bottom:10px}
+.bredesign .tf-section-head h1.bd-eyebrow {font-style:normal;line-height:1.5;letter-spacing:.14em;text-wrap:initial}
 .bredesign .tf-section-head>p:last-child {max-width:52ch;margin:0;line-height:1.7;font-size:clamp(15px,1.2vw,17px)}
 .bredesign .tf-quiz {display:grid;grid-template-columns:1.2fr 1fr;border:1px solid var(--bd-rule);background:var(--bd-navy-2);border-radius:16px;overflow:hidden}
 .bredesign .tf-question {padding:clamp(24px,4vw,48px)}

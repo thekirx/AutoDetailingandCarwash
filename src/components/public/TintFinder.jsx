@@ -88,7 +88,7 @@ function TintBooking({option,config,answers,onCancel}) {
     </form>}
   </div>
 }
-export default function TintFinder() {
+export default function TintFinder({ standalone = false }) {
   const {config,loading}=useTintFinderConfig()
   const [step,setStep]=useState(0)
   const [answers,setAnswers]=useState({})
@@ -105,10 +105,11 @@ export default function TintFinder() {
   const results=suggestion?.options || []
   const move=n=>{setSelected(n<4?answers[TINT_QUESTIONS[n].key] || null:null);setBooking(null);setStep(n)}
   const next=()=>{setAnswers(a=>({...a,[q.key]:selected}));setSelected(answers[TINT_QUESTIONS[step+1]?.key] || null);setStep(s=>s+1)}
-  return <><section className="tf-section" id="tint-finder" aria-labelledby="tint-finder-title">
+  const Heading = standalone ? 'h1' : 'p'
+  return <><section className={`tf-section${standalone ? ' tf-standalone' : ''}`} id="tint-finder" aria-labelledby="tint-finder-title">
     {isApprovalPreview && <aside className="tf-approval-review" aria-label="Client design choices"><span>Client review · A / Original</span><nav><a href="/tint-designs/index.html">All designs</a>{['B','C','D','E'].map(id=><a key={id} href={`/tint-designs/option-${id.toLowerCase()}.html`}>{id}</a>)}</nav></aside>}
     <div className="bd-shell">
-      <div className="tf-section-head"><p className="bd-eyebrow" id="tint-finder-title">Tint Finder</p><p>Four quick questions. We’ll suggest a front and rear shade, in all three tints.</p></div>
+      <div className="tf-section-head"><Heading className="bd-eyebrow" id="tint-finder-title">Tint Finder</Heading><p>Four quick questions. We’ll suggest a front and rear shade, in all three tints.</p></div>
       {step<4 ? <div className="tf-quiz">
         <div className="tf-question">
           <div className="tf-progress-label"><span>Step {step+1} of 4</span><span>Tint Finder</span></div>
@@ -144,6 +145,6 @@ export default function TintFinder() {
       </div>}
     </div>
   </section>
-  <TintComparison config={config} />
+  {!standalone && <TintComparison config={config} />}
   </>
 }

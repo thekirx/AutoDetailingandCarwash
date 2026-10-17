@@ -8,6 +8,7 @@ const PAGE_META = {
     description: 'Premium car wash, detailing, ceramic coating, and PPF in Bacoor and Batangas. Book online and track the live queue.',
   },
   '/services': { title: 'Services', description: 'Car wash, interior detailing, paint correction, ceramic coating, and PPF at Hakum Auto Care.' },
+  '/tint-finder': { title: 'Tint Finder', description: 'Answer four quick questions to find your recommended front and rear tint shades, compare three nano ceramic tint options, and request a booking with Hakum Auto Care.' },
   '/book': { title: 'Book a service', description: 'Book a Hakum Auto Care visit at Bacoor or Batangas.' },
   '/queue': { title: 'Live queue', description: 'Customer count board or shop TV floor board at Hakum Auto Care branches.' },
   '/branches': { title: 'Branches', description: 'Find Hakum Auto Care branches in Bacoor and Batangas.' },
