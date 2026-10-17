@@ -12,7 +12,7 @@ const expected = [
 ]
 
 for (const width of [1440, 393, 320]) {
-  test(`tint comparison shows all reference data and scrolls at ${width}px`, async () => {
+  test(`tint comparison shows all reference data and film photos at ${width}px`, async () => {
     const browser = await launchPuppeteer()
     try {
       const page = await browser.newPage()
@@ -33,7 +33,9 @@ for (const width of [1440, 393, 320]) {
       if (cookie) await cookie.click()
       // Must be available before answering any quiz questions.
       assert.ok(await page.$('#tint-comparison'), 'Tint page must offer the full comparison before completing the quiz')
-      assert.equal(await page.$$eval('#tint-comparison table', els => els.length), 3)
+      // One set of photo-led shade cards per tint; the old spec table is gone.
+      assert.equal(await page.$$eval('#tint-comparison .bd-tint-shades', els => els.length), 3)
+      assert.equal(await page.$('#tint-comparison table'), null)
       assert.ok(await page.$('#tint-comparison #tint-certification'), 'Certification belongs with the comparison tables')
       // Every film carries the seal, so no per-film list; one link to the Foundation's listing.
       assert.equal(await page.$('#tint-certification .cert-films'), null)
@@ -56,32 +58,38 @@ for (const width of [1440, 393, 320]) {
 
       for (const pkg of expected) {
         const selector = `[data-tint-package="${pkg.id}"]`
-        assert.deepEqual(await page.$$eval(`${selector} thead th:not(:first-child) b`, els => els.map(e => e.textContent)), pkg.codes)
-        assert.deepEqual(await page.$$eval(`${selector} thead th:not(:first-child) span`, els => els.map(e => e.textContent)), pkg.shades)
+        assert.deepEqual(await page.$$eval(`${selector} .bd-tint-shade-head span`, els => els.map(e => e.textContent)), pkg.codes)
+        assert.deepEqual(await page.$$eval(`${selector} .bd-tint-shade-head strong`, els => els.map(e => e.textContent)), pkg.shades)
         for (const [i, metric] of ['vlt', 'tser', 'irr'].entries()) {
-          assert.deepEqual(await page.$$eval(`${selector} [data-tint-metric="${metric}"] td`, els => els.map(e => e.textContent)), pkg.specs[i])
+          assert.deepEqual(await page.$$eval(`${selector} .bd-tint-shade [data-tint-metric="${metric}"] dd`, els => els.map(e => e.textContent)), pkg.specs[i])
         }
-        assert.deepEqual(await page.$$eval(`${selector} [data-tint-metric="uvr"] td`, els => els.map(e => e.textContent)), ['>99%', '>99%', '>99%', '>99%'])
-        assert.deepEqual(await page.$$eval(`${selector} [data-tint-metric="warranty"] td`, els => els.map(e => e.textContent)), Array(4).fill(pkg.warranty))
+        assert.deepEqual(await page.$$eval(`${selector} .bd-tint-shade [data-tint-metric="uvr"] dd`, els => els.map(e => e.textContent)), ['>99%', '>99%', '>99%', '>99%'])
+        // Each card leads with the supplier sample photo of that exact film.
+        // (Which file each film uses is checked in tintFilmPhotos.test.js; small
+        // photos are inlined by the build, so the src is not always a file name.)
+        assert.deepEqual(await page.$$eval(`${selector} .bd-tint-shade-photo`, els => els.map(e => e.alt)), pkg.codes.map((code, i) => `${code} ${pkg.shades[i]} film sample`))
+        assert.equal(new Set(await page.$$eval(`${selector} .bd-tint-shade-photo`, els => els.map(e => e.src))).size, 4)
         // One price per vehicle size, shown once under the table (not repeated per shade).
         for (const [i, vehicle] of ['sedan', 'suv', 'van'].entries()) {
           assert.equal(await page.$eval(`${selector} [data-tint-price="${vehicle}"] dd`, e => e.textContent), pkg.prices[i])
         }
-        assert.equal(await page.$$eval(`${selector} table [data-tint-price]`, els => els.length), 0)
-        // The same figures feed the phone shade list.
-        assert.deepEqual(await page.$$eval(`${selector} .bd-tint-shade-head strong`, els => els.map(e => e.textContent)), pkg.shades)
-        assert.deepEqual(await page.$$eval(`${selector} .bd-tint-shade dl > div:first-child dd`, els => els.map(e => e.textContent)), pkg.specs[0])
+        assert.equal(await page.$$eval(`${selector} .bd-tint-shades [data-tint-price]`, els => els.length), 0)
       }
       assert.equal(new URL(page.url()).pathname, '/services/tint')
       assert.match(await page.title(), /Tint/)
       assert.equal(await page.$('vite-error-overlay'), null)
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true)
-      // Phones get one row per shade instead of a sideways-scrolling table.
-      const shown = await page.evaluate(() => ({
-        table: getComputedStyle(document.querySelector('[data-tint-package="ceramic"] .bd-cmp')).display !== 'none',
-        list: getComputedStyle(document.querySelector('[data-tint-package="ceramic"] .bd-tint-shades')).display !== 'none',
-      }))
-      assert.deepEqual(shown, width <= 760 ? { table: false, list: true } : { table: true, list: false })
+      // Desktop: four cards in one row. Phones: the cards swipe sideways inside
+      // their row (the page itself never scrolls sideways, checked above).
+      const layout = await page.evaluate(() => {
+        const list = document.querySelector('[data-tint-package="ceramic"] .bd-tint-shades')
+        const tops = [...list.children].map(card => Math.round(card.getBoundingClientRect().top))
+        return { oneRow: new Set(tops).size === 1, swipes: list.scrollWidth > list.clientWidth + 1 }
+      })
+      assert.deepEqual(layout, width <= 760 ? { oneRow: true, swipes: true } : { oneRow: true, swipes: false })
+      // The photos really load (not just a src).
+      await page.$$eval('#tint-comparison .bd-tint-shade-photo', imgs => imgs.forEach(img => { img.loading = 'eager' }))
+      await page.waitForFunction(() => [...document.querySelectorAll('#tint-comparison .bd-tint-shade-photo')].every(img => img.complete && img.naturalWidth > 0))
       await page.$eval('#tint-comparison', el => el.scrollIntoView({ block: 'start' }))
       await page.screenshot({ path: `/tmp/hakum-tint-comparison-${width}.png` })
       if (width === 1440) {
@@ -103,8 +111,8 @@ for (const width of [1440, 393, 320]) {
         config.films.C30.tser = 59
         await page.reload({ waitUntil: 'networkidle2' })
         await page.waitForFunction(() => document.querySelector('[data-tint-package="ceramic"] [data-tint-price="sedan"] dd')?.textContent === '₱6,500')
-        assert.deepEqual(await page.$$eval('[data-tint-package="ceramic"] [data-tint-metric="warranty"] td', els => els.map(e => e.textContent)), ['8 years', '8 years', '8 years', '8 years'])
-        assert.equal(await page.$eval('[data-tint-package="ceramic"] [data-tint-metric="tser"] td:nth-of-type(2)', el => el.textContent), '59%')
+        assert.equal(await page.$eval('[data-tint-warranty="ceramic"]', el => el.textContent), '8-year warranty')
+        assert.equal(await page.$eval('[data-tint-package="ceramic"] .bd-tint-shade:nth-child(2) [data-tint-metric="tser"] dd', el => el.textContent), '59%')
       }
       assert.deepEqual(errors, [])
     } finally {

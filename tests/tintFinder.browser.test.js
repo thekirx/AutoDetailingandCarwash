@@ -44,6 +44,10 @@ for (const width of [1440,390,320]) test(`Tint Finder preserves answers, recomme
   assert.deepEqual(await page.$$eval('[data-tint-option] .tf-popular',els=>els.map(e=>e.closest('[data-tint-option]').dataset.tintOption)),['OPT-C'])
   assert.deepEqual(await page.$$eval('.tf-price strong',els=>els.map(e=>e.textContent)),['₱8,000','₱12,000','₱15,000'])
   assert.deepEqual(await page.$$eval('[data-tint-option="OPT-C"] .tf-metrics dd',els=>els.map(e=>e.textContent)),['25%','63%','92%','>99%','15%','66%','92%','>99%'])
+  // Each window zone opens with the supplier photo of its film (client-approved 17 Oct 2026).
+  // Six different photos for the six films (front + rear in three tints); the
+  // film-to-photo mapping itself is checked in tintFilmPhotos.test.js.
+  assert.equal(new Set(await page.$$eval('[data-tint-option] .tf-zone-banner',els=>els.map(e=>e.src))).size,6)
   assert.equal(await page.$$eval('[data-tint-option] .tf-card-head .tf-seal-badge img',els=>els.length),3)
   assert.equal(await page.$$eval('[data-tint-option] .tf-guide',els=>els.length),3)
   assert.deepEqual(await page.$$eval('[data-tint-option="OPT-C"] .tf-price .tf-card-free li',els=>els.map(e=>e.textContent)),['Premium Carwash','Bactozero','Old tint removal'])

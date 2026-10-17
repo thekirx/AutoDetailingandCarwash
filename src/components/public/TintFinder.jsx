@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom'
 import { isApprovalPreview } from '../../lib/approvalPreview'
 import { useTintFinderConfig } from '../../lib/tintFinderData'
 import { TINT_MOST_POPULAR, TINT_QUESTIONS, TINT_VEHICLES, orderedBenefits, suggestTint, tintPackageName, tintPeso, tintShade, tintWarranty } from '../../lib/tintFinder'
+import { tintFilmPhoto } from '../../lib/tintFilmPhotos'
 import { usePublicBranches } from '../../lib/branches'
 import { submitPublicInquiry } from '../../lib/publicInquiryApi'
 import tintPhoto from '../../assets/services/tint-toyota86.webp'
@@ -19,7 +20,8 @@ const FREEBIES = ['Premium Carwash','Bactozero','Old tint removal']
    says what the numbers mean. */
 function ZoneFilm({config,filmKey,zone}) {
   const film=config.films[filmKey]
-  return <div className="tf-zone"><span className="tf-zone-label">{zone}</span><strong>{tintShade(filmKey)} <em>{film.name.replace(/ Nano$/,'')}</em></strong>
+  const photo=tintFilmPhoto(filmKey)
+  return <div className="tf-zone">{photo && <img className="tf-zone-banner" src={photo} alt="" width="640" height="360" loading="lazy" decoding="async"/>}<span className="tf-zone-label">{zone}</span><strong>{tintShade(filmKey)} <em>{film.name.replace(/ Nano$/,'')}</em></strong>
     <dl className="tf-metrics">{specLabels.map(([key,label])=><div key={key}><dt>{label}</dt><dd>{film[key]}%</dd></div>)}</dl></div>
 }
 /* Hover or keyboard focus opens it on desktop; a tap toggles it on touch. */
