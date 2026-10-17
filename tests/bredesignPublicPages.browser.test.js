@@ -21,11 +21,16 @@ describe('BreDESIGN public page fallbacks', () => {
     await page.goto(`${PREVIEW_ORIGIN}/services`, { waitUntil: 'networkidle0' })
     const result = await page.evaluate(() => ({
       error: document.querySelector('[role="alert"]')?.textContent.trim() || '',
-      cards: [...document.querySelectorAll('#catalog .bd-card h2')].map((item) => item.textContent.trim()),
+      // Since the 28 Sep carousel (d823a35) the rail repeats every column so it
+      // can loop; the copies are aria-hidden, so count only the real cards.
+      cards: [...document.querySelectorAll('#catalog .bd-card h2')]
+        .filter((item) => !item.closest('[aria-hidden="true"]'))
+        .map((item) => item.textContent.trim()),
     }))
 
     assert.equal(result.error, '')
-    assert.equal(result.cards.length, 8)
+    assert.equal(result.cards.length, 14)
+    assert.equal(new Set(result.cards).size, result.cards.length, 'a service is listed twice')
     assert.ok(result.cards.some((title) => title.startsWith('Paint Protection Film')))
     assert.ok(!result.cards.includes('Paint Maintenance'))
     assert.ok(!result.cards.some((title) => /package/i.test(title)))
@@ -111,12 +116,26 @@ describe('BreDESIGN public page fallbacks', () => {
       await page.setViewport(viewport)
       await page.goto(`${PREVIEW_ORIGIN}/home#origin`, { waitUntil: 'networkidle0' })
       /* The photo is lazy and sits below the services grid, so wait for the
-         responsive source to resolve before reading which one was chosen. */
+         responsive source to resolve before reading which one was chosen. The
+         page is reused across viewports and the browser swaps <picture>
+         sources after a resize on its own schedule, so also wait (up to 5s)
+         for this viewport's photo; on timeout the assertions below explain. */
       await page.evaluate(async () => {
         const img = document.querySelector('.bd-origin-photo')
         img.scrollIntoView()
         if (!img.complete || !img.currentSrc) await new Promise((resolve) => img.addEventListener('load', resolve, { once: true }))
       })
+      const expectedPhoto = viewport.layout === 'plate' ? 'hakum-story-storefront-crop' : 'hakum-story-clean-cars'
+      await page
+        .waitForFunction(
+          (name) => {
+            const img = document.querySelector('.bd-origin-photo')
+            return img.complete && img.currentSrc.includes(name)
+          },
+          { timeout: 5000 },
+          expectedPhoto,
+        )
+        .catch(() => {})
       const layout = await page.evaluate(() => {
         const photo = document.querySelector('.bd-origin-photo')?.getBoundingClientRect()
         const copy = document.querySelector('.bd-origin-copy')?.getBoundingClientRect()
@@ -175,7 +194,9 @@ describe('BreDESIGN public page fallbacks', () => {
     const result = await page.evaluate(() => ({
       heading: document.querySelector('h1')?.textContent.replace(/\s+/g, ' ').trim(),
       rail: document.querySelector('[data-wash-service-rail]')?.getAttribute('data-looping'),
+      // The looping rail repeats the cards; the copies are aria-hidden.
       services: [...document.querySelectorAll('[data-wash-service-card] h2, [data-wash-service-card] h3')]
+        .filter((item) => !item.closest('[aria-hidden="true"]'))
         .map((item) => item.textContent.trim()),
       reviews: [...document.querySelectorAll('[data-service-review]')].map((item) => item.textContent),
       reviewRail: document.querySelector('[data-wash-review-rail]')?.getAttribute('data-looping'),
@@ -198,12 +219,14 @@ describe('BreDESIGN public page fallbacks', () => {
 
     assert.match(result.heading, /Premium Wash & Detailing/i)
     assert.equal(result.rail, 'true')
-    assert.deepEqual(result.services.slice(0, 10), [
+    // Full Exterior Detailing joined the approved list on 28 Sep (d823a35).
+    assert.deepEqual(result.services, [
       'Premium Car Wash',
       'Glass Coating',
       'Glass Detailing',
       'Interior Detailing',
       'Interior Deep Cleaning',
+      'Full Exterior Detailing',
       'Bactozero',
       'Black Trims Restoration',
       'Headlight Restoration',

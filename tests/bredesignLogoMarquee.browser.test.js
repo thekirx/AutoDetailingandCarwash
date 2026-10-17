@@ -53,12 +53,23 @@ describe('BreDESIGN brand logo marquee', () => {
         filter: logo.filter,
         marqueeBackground: marquee.backgroundColor,
         sectionBackground: section.backgroundColor,
+        sectionBackgroundImage: section.backgroundImage,
       }
     })
 
     assert.equal(resting.borderTopWidth, '0px')
     assert.equal(resting.backgroundColor, 'rgba(0, 0, 0, 0)')
-    assert.equal(resting.marqueeBackground, resting.sectionBackground)
+    // Since the 12 Oct footer round (7b8ce48) the section eases from page navy
+    // into panel navy with a gradient; the strip must be that panel navy so
+    // it reads as part of the section, not a box on it.
+    if (resting.sectionBackgroundImage === 'none') {
+      assert.equal(resting.marqueeBackground, resting.sectionBackground)
+    } else {
+      assert.ok(
+        resting.sectionBackgroundImage.includes(`${resting.marqueeBackground} 100%`),
+        `strip ${resting.marqueeBackground} must match the section's navy ${resting.sectionBackgroundImage}`,
+      )
+    }
     assert.equal(await page.$('.bd-brand-note'), null)
     assert.match(resting.filter, /grayscale\(1\)/)
 
