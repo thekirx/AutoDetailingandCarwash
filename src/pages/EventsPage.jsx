@@ -68,10 +68,31 @@ export default function EventsPage() {
   }
 
   useReveal()
+  /* Old /blog links land on #blog. The live events above it load after the
+     first paint and push the section down, so keep it pinned while the page
+     settles (up to 3s), and let go as soon as the visitor scrolls themselves. */
   useEffect(() => {
     if (hash !== '#blog') return undefined
-    const frame = requestAnimationFrame(() => document.getElementById('blog')?.scrollIntoView())
-    return () => cancelAnimationFrame(frame)
+    let pinned = true
+    const pin = () => {
+      if (pinned) document.getElementById('blog')?.scrollIntoView()
+    }
+    const release = () => {
+      pinned = false
+    }
+    const frame = requestAnimationFrame(pin)
+    const observer = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(pin)
+    observer?.observe(document.body)
+    const userEvents = ['wheel', 'touchstart', 'keydown', 'pointerdown']
+    for (const type of userEvents) window.addEventListener(type, release, { passive: true })
+    const timer = setTimeout(release, 3000)
+    return () => {
+      release()
+      cancelAnimationFrame(frame)
+      observer?.disconnect()
+      clearTimeout(timer)
+      for (const type of userEvents) window.removeEventListener(type, release)
+    }
   }, [hash])
 
   return (
