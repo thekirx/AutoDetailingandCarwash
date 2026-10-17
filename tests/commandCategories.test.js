@@ -74,16 +74,16 @@ describe('command category IA', () => {
     const queueLinks = sa.filter((i) => String(i.to).startsWith('/operations/queue') && !String(i.to).includes('/new'))
     assert.ok(labels.includes('Floor Board'))
     assert.equal(queueLinks.length, 1)
-    assert.equal(queueLinks[0].label, 'Carwash board')
+    assert.equal(queueLinks[0].label, 'Carwash Board')
     assert.equal(queueLinks[0].to, '/operations/queue')
     assert.ok(!String(queueLinks[0].to).includes('family=detailing'))
     assert.equal(labels.includes('Car Wash Queue'), false)
     assert.equal(labels.includes('Detailing Queue'), false)
-    assert.ok(labels.includes('Planner'))
+    assert.ok(labels.includes('Planner Board'))
     assert.ok(labels.includes('Settings'))
     assert.equal(canAccessSettings({ role: 'BossMich' }), true)
     const dock = getTeamLeadDock({ role: 'team_lead', branch_slug: 'bacoor' })
-    assert.ok(dock.some((i) => i.label === 'Carwash board' && i.to === '/operations/queue'))
+    assert.ok(dock.some((i) => i.label === 'Carwash Board' && i.to === '/operations/queue'))
     assert.equal(dock.some((i) => i.label === 'Wash'), false)
     assert.equal(dock.some((i) => i.label === 'Detail'), false)
   })
@@ -110,20 +110,20 @@ describe('command category IA', () => {
       '/operations/dashboard',
       '/operations/queue',
       '/operations/bookings',
+      '/operations/planning',
       '/operations/pos',
       '/operations/finance',
-      '/operations/planning',
     ])
     assert.equal(groups[0].items[0].label, 'Floor Board')
     assert.ok(!sa.some((i) => i.label === 'Console'))
-    assert.ok(groups[0].items.some((i) => i.label === 'Carwash board'))
-    assert.ok(groups[0].items.some((i) => i.label === 'Detailing board'))
+    assert.ok(groups[0].items.some((i) => i.label === 'Carwash Board'))
+    assert.ok(groups[0].items.some((i) => i.label === 'Detailing Board'))
     assert.deepEqual(groups.slice(1).flatMap((group) => group.items), sa.filter((item) => !groups[0].items.includes(item)))
     assert.ok(!sa.some((i) => i.to === '/operations/payroll'))
     assert.ok(groups.find((g) => g.id === 'company').items.some((i) => i.to === '/operations/settings'))
     const labels = sa.map((i) => i.label)
-    assert.ok(labels.indexOf('Carwash board') < labels.indexOf('Point Of Sales'))
-    assert.ok(labels.indexOf('Detailing board') < labels.indexOf('Settings'))
+    assert.ok(labels.indexOf('Carwash Board') < labels.indexOf('Point Of Sales'))
+    assert.ok(labels.indexOf('Detailing Board') < labels.indexOf('Settings'))
     const layout = readFileSync(join(root, 'src/layouts/OperationsLayout.jsx'), 'utf8')
     const css = readFileSync(join(root, 'src/styles.css'), 'utf8')
     assert.match(layout, /groupOperationsNav/)

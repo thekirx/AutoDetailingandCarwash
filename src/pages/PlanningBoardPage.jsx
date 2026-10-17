@@ -353,7 +353,7 @@ export default function PlanningBoardPage() {
     <OpsPageShell
       className="hakum-planning"
       eyebrow="Shop floor"
-      title="Planner"
+      title="Planner Board"
       description={
         tab === 'configure'
           ? 'Lists, categories, checklists, and boards.'
@@ -378,7 +378,7 @@ export default function PlanningBoardPage() {
 
       <div className="planner-v2">
       <Tabs value={tab} onValueChange={setTab}>
-        <OpsTabList tabs={planningTabs} aria-label="Planner" />
+        <OpsTabList tabs={planningTabs} aria-label="Planner Board" />
       </Tabs>
 
       {tab === 'board' && (

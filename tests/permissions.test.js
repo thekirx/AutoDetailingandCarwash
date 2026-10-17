@@ -142,7 +142,7 @@ describe('RBAC Part 1 matrix', () => {
 
   it('Planner nav: Branch Admin, staff Tasks, video editor calendar only', () => {
     const ba = { role: ROLES.ADMIN, branch_slug: 'bacoor', branch_slugs: ['bacoor'] }
-    assert.ok(getOperationsNav(ba).some((i) => i.to === '/operations/planning' && i.label === 'Planner'))
+    assert.ok(getOperationsNav(ba).some((i) => i.to === '/operations/planning' && i.label === 'Planner Board'))
     const staff = { role: ROLES.STAFF, branch_slug: 'bacoor' }
     assert.ok(getOperationsNav(staff).some((i) => i.to === '/operations/planning'))
     assert.ok(!getOperationsNav(staff).some((i) => String(i.to).includes('tab=forms')))

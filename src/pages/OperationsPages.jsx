@@ -927,7 +927,7 @@ function OperationsQueueBoardPage() {
     <OpsPageShell
       className="hakum-queue queue-board queue-board--fill"
       eyebrow="Floor"
-      title="Carwash board"
+      title="Carwash Board"
       description={
         salesView
           ? 'All branches, wash and detailing. Wash tickets are view only. Tap a detailing ticket to work it in Bookings.'

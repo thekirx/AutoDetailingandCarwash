@@ -1037,7 +1037,7 @@ export default function BookingBoardPage() {
     <OpsPageShell
       className="hakum-bookings bk-page"
       eyebrow="Hakum Auto Care"
-      title="Detailing board"
+      title="Detailing Board"
       description={
         isBranchAdmin(profile)
           ? 'Detailing pipeline (view only) · check in paint-maintenance arrivals'

@@ -725,9 +725,9 @@ const PRIMARY_NAV_PATHS = [
   '/operations/dashboard',
   '/operations/queue',
   '/operations/bookings',
+  '/operations/planning',
   '/operations/pos',
   '/operations/finance',
-  '/operations/planning',
 ]
 
 /** Put daily commands first, then retain the remaining tools in their existing order. */
@@ -772,7 +772,7 @@ export function getOperationsNav(profile) {
 
   if (profile?.role === ROLES.DETAILER) {
     return [
-      nav('Detailing board', '/operations/bookings', 'Kanban', 'floor'),
+      nav('Detailing Board', '/operations/bookings', 'Kanban', 'floor'),
       nav('Attendance', '/operations/attendance', 'Clock', 'floor'),
       nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'work'),
     ]
@@ -781,8 +781,8 @@ export function getOperationsNav(profile) {
   if (profile?.role === ROLES.MARKETING) {
     return [
       nav('CRM', '/operations/crm', 'Contact', 'customers'),
-      nav('Detailing board', '/operations/bookings', 'Kanban', 'floor'),
-      nav('Planner', '/operations/planning', 'Columns3', 'work'),
+      nav('Detailing Board', '/operations/bookings', 'Kanban', 'floor'),
+      nav('Planner Board', '/operations/planning', 'Columns3', 'work'),
       nav('Notifications', '/operations/notifications', 'Bell', 'work'),
       nav('History', '/operations/history', 'History', 'work'),
     ]
@@ -790,8 +790,8 @@ export function getOperationsNav(profile) {
 
   if (profile?.role === ROLES.SALES) {
     return [
-      nav('Detailing board', '/operations/bookings', 'Kanban', 'floor'),
-      nav('Carwash board', '/operations/queue', 'ClipboardList', 'floor'),
+      nav('Detailing Board', '/operations/bookings', 'Kanban', 'floor'),
+      nav('Carwash Board', '/operations/queue', 'ClipboardList', 'floor'),
       nav('CRM', '/operations/crm', 'Contact', 'customers'),
       nav('History', '/operations/history', 'History', 'work'),
     ]
@@ -801,12 +801,12 @@ export function getOperationsNav(profile) {
   if (isBranchAdmin(profile)) {
     return [
       nav('Floor', '/operations/dashboard', 'Gauge', 'floor'),
-      nav('Detailing board', '/operations/bookings', 'Kanban', 'floor'),
+      nav('Detailing Board', '/operations/bookings', 'Kanban', 'floor'),
       nav('Attendance', '/operations/attendance', 'Clock', 'floor'),
       nav('Point Of Sales', '/operations/pos', 'ShoppingCart', 'counter'),
       nav('Inventory', '/operations/inventory', 'Package', 'counter'),
       nav('Reviews', '/operations/reviews', 'Star', 'customers'),
-      nav('Planner', '/operations/planning', 'Columns3', 'work'),
+      nav('Planner Board', '/operations/planning', 'Columns3', 'work'),
       nav('History', '/operations/history', 'History', 'work'),
       nav('Audit', '/operations/audit', 'ScrollText', 'company'),
       nav('Transfer car', '/operations/vehicle-transfer', 'ArrowLeftRight', 'company'),
@@ -816,12 +816,12 @@ export function getOperationsNav(profile) {
   // Operations Lead: network-wide BA∪TL ops, no personal clock.
   if (isOperationsLead(profile)) {
     return [
-      nav('Carwash board', '/operations/queue', 'ClipboardList', 'floor'),
+      nav('Carwash Board', '/operations/queue', 'ClipboardList', 'floor'),
       nav('KPI', '/operations/kpi', 'BarChart3', 'floor'),
       nav('Point Of Sales', '/operations/pos', 'ShoppingCart', 'counter'),
       nav('CRM', '/operations/crm', 'Contact', 'customers'),
       nav('Reviews', '/operations/reviews', 'Star', 'customers'),
-      nav('Planner', '/operations/planning', 'Columns3', 'work'),
+      nav('Planner Board', '/operations/planning', 'Columns3', 'work'),
       nav('History', '/operations/history', 'History', 'work'),
       nav('Finance', '/operations/finance', 'Wallet', 'books'),
       nav('Audit', '/operations/audit', 'ScrollText', 'company'),
@@ -835,7 +835,7 @@ export function getOperationsNav(profile) {
       nav('Floor', '/operations/dashboard', 'Gauge', 'floor'),
       nav('KPI', '/operations/kpi', 'BarChart3', 'floor'),
       nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'work'),
-      nav('Planner', '/operations/planning', 'Columns3', 'work'),
+      nav('Planner Board', '/operations/planning', 'Columns3', 'work'),
     ]
   }
 
@@ -851,10 +851,10 @@ export function getOperationsNav(profile) {
     items.push(nav(floorBoardLabel, '/operations/dashboard', 'Gauge', 'floor'))
   }
   if (canAccessQueuePage(profile)) {
-    items.push(nav('Carwash board', '/operations/queue', 'ClipboardList', 'floor'))
+    items.push(nav('Carwash Board', '/operations/queue', 'ClipboardList', 'floor'))
   }
   if (canAccessBookingBoard(profile)) {
-    items.push(nav('Detailing board', '/operations/bookings', 'Kanban', 'floor'))
+    items.push(nav('Detailing Board', '/operations/bookings', 'Kanban', 'floor'))
   }
   if (canViewQueueOperations(profile)) {
     items.push(
@@ -888,7 +888,7 @@ export function getOperationsNav(profile) {
     items.push(nav('Finance', '/operations/finance?tab=reports', 'Wallet', 'books'))
   }
   if (canViewPlanning(profile)) {
-    items.push(nav('Planner', '/operations/planning', 'Columns3', 'work'))
+    items.push(nav('Planner Board', '/operations/planning', 'Columns3', 'work'))
   }
   if (canViewAssignedTasks(profile) && profile?.role !== ROLES.STAFF && !isSuperAdmin(profile)) {
     items.push(nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'work'))
@@ -935,11 +935,11 @@ export function getTeamLeadDock(profile) {
   const canQueue = canViewQueueOperations(profile)
   const canEdit = canEditQueueOperations(profile)
   const dock = []
-  if (canAccessQueuePage(profile)) dock.push({ label: 'Carwash board', to: '/operations/queue', icon: 'ClipboardList', end: true })
+  if (canAccessQueuePage(profile)) dock.push({ label: 'Carwash Board', to: '/operations/queue', icon: 'ClipboardList', end: true })
   if (canEdit) dock.push({ label: 'New', to: '/operations/queue/new', icon: 'Plus', primary: true })
   if (canAccessFloorBoard(profile)) dock.push({ label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' })
   if (canQueue) dock.push({ label: 'Attendance', to: '/operations/attendance', icon: 'Clock' })
-  if (canAccessBookingBoard(profile)) dock.push({ label: 'Detailing board', to: '/operations/bookings', icon: 'Kanban' })
+  if (canAccessBookingBoard(profile)) dock.push({ label: 'Detailing Board', to: '/operations/bookings', icon: 'Kanban' })
   return dock.slice(0, 5)
 }
 
@@ -948,7 +948,7 @@ export function getTeamLeadMore(profile) {
   if (canAccessHistory(profile)) more.push({ label: 'History', to: '/operations/history', icon: 'History' })
   if (canViewQueueOperations(profile)) more.push({ label: 'KPI', to: '/operations/kpi', icon: 'BarChart3' })
   if (canViewAssignedTasks(profile)) more.push({ label: 'My Tasks', to: '/operations/my-tasks', icon: 'ListChecks' })
-  if (canViewPlanning(profile)) more.push({ label: 'Planner', to: '/operations/planning', icon: 'Columns3' })
+  if (canViewPlanning(profile)) more.push({ label: 'Planner Board', to: '/operations/planning', icon: 'Columns3' })
   return more
 }
 
@@ -960,7 +960,7 @@ export function getBranchAdminMore(profile) {
     more.push({ label: 'History', to: '/operations/history', icon: 'History' })
   }
   if (canViewPlanning(profile)) {
-    more.push({ label: 'Planner', to: '/operations/planning', icon: 'Columns3' })
+    more.push({ label: 'Planner Board', to: '/operations/planning', icon: 'Columns3' })
   }
   return more
 }
@@ -969,8 +969,8 @@ export function getBranchAdminMore(profile) {
 export function getSalesDock(profile) {
   if (!isSalesRole(profile)) return []
   return [
-    { label: 'Detailing board', to: '/operations/bookings', icon: 'Kanban', primary: true, end: true },
-    { label: 'Carwash board', to: '/operations/queue', icon: 'ClipboardList', end: true },
+    { label: 'Detailing Board', to: '/operations/bookings', icon: 'Kanban', primary: true, end: true },
+    { label: 'Carwash Board', to: '/operations/queue', icon: 'ClipboardList', end: true },
     { label: 'CRM', to: '/operations/crm', icon: 'Contact' },
     { label: 'History', to: '/operations/history', icon: 'History' },
   ]
@@ -1003,8 +1003,8 @@ export function getMarketingDock(profile) {
   if (profile?.role !== ROLES.MARKETING) return []
   return [
     { label: 'CRM', to: '/operations/crm', icon: 'Contact', primary: true, end: true },
-    { label: 'Detailing board', to: '/operations/bookings', icon: 'Kanban' },
-    { label: 'Planner', to: '/operations/planning', icon: 'Columns3' },
+    { label: 'Detailing Board', to: '/operations/bookings', icon: 'Kanban' },
+    { label: 'Planner Board', to: '/operations/planning', icon: 'Columns3' },
     { label: 'Alerts', to: '/operations/notifications', icon: 'Bell' },
   ]
 }
@@ -1033,7 +1033,7 @@ export function getVideoEditorMore() {
 export function getDetailerDock(profile) {
   if (profile?.role !== ROLES.DETAILER) return []
   return [
-    { label: 'Detailing board', to: '/operations/bookings', icon: 'Kanban', primary: true },
+    { label: 'Detailing Board', to: '/operations/bookings', icon: 'Kanban', primary: true },
     { label: 'Attendance', to: '/operations/attendance', icon: 'Clock' },
     { label: 'Tasks', to: '/operations/my-tasks', icon: 'ListChecks' },
   ]
