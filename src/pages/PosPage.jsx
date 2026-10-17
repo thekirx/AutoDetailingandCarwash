@@ -1766,8 +1766,8 @@ function PosCounterPage() {
   return (
     <OpsPageShell
       className="hakum-pos"
-      eyebrow={branchAdmin ? 'Counter' : 'Point of sale'}
-      title="POS"
+      eyebrow={'Counter'}
+      title="Point Of Sales"
       description={
         branchAdmin
           ? `Merch, coffee and cars waiting to pay — one counter · ${branchLabel}`

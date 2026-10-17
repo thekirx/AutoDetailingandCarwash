@@ -40,7 +40,7 @@ describe('open bookings + queue one-screen board', () => {
     const page = readFileSync(join(root, 'src/pages/OperationsPages.jsx'), 'utf8')
     const css = readFileSync(join(root, 'src/styles.css'), 'utf8')
     assert.match(page, /queue-board/)
-    assert.match(page, /title="Queue"/)
+    assert.match(page, /title="Carwash board"/)
     assert.match(page, /queue-lane-board-fit/)
     assert.match(page, /statusShortLabel/)
     assert.match(page, /QUEUE_LANE_PAGE_SIZE/)

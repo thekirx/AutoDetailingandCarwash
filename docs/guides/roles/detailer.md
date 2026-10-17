@@ -6,7 +6,7 @@
 
 ## Dock
 
-Bookings · Attendance · Tasks
+Detailing board · Attendance · Tasks
 
 ## Daily flow
 

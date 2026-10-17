@@ -7,12 +7,12 @@
 
 ## Dock
 
-Bookings · Queue · CRM · History · (More: none)
+Detailing board · Carwash board · CRM · History · (More: none)
 
 ## Daily flow
 
-1. Bookings board: create detailing bookings and move stages  
-2. Queue: watch every branch (filter by branch). Wash tickets are view only. Tap a detailing ticket to open it in the Bookings editor (status, service, price); closing returns to Queue  
+1. Detailing board: create detailing bookings and move stages  
+2. Carwash board: watch every branch (filter by branch). Wash tickets are view only. Tap a detailing ticket to open it in the Detailing board editor (status, service, price); closing returns to Carwash board  
 3. CRM: view only. Look up customers, vehicles, visits, smart groups, and insights. No edit, add vehicle, message, or SMS  
 4. History lookup by plate/phone  
 5. Maintenance tab when relevant

@@ -58,7 +58,7 @@ export default function PosReadOnlyView({ profile }) {
     <OpsPageShell
       className="hakum-pos"
       eyebrow="Investor · view only"
-      title="POS"
+      title="Point Of Sales"
       description={`Sales, cars waiting to pay, and Daily Sheets · ${branchLabel}`}
       meta={
         <>
