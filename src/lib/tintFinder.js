@@ -22,16 +22,19 @@ export const tintShade = key => TINT_FILM_SHADES[key] || key
 /* The approved suggestion (client sign-off, 9 Oct 2026): one front/rear shade
    pair, offered in all three tints (the Black Series added 13 Oct 2026 at the
    client's request); the cards then show cheapest first. The first matching tier wins:
-   poor eyesight → lightest; night driver, prescription or visibility → light
+   poor eyesight → lightest, unless privacy or a balance was chosen: then the
+   lightest tinted front over a darker rear, never Clear Bluish (no privacy at
+   all; client, 17 Oct 2026); night driver, prescription or visibility → light
    front over a medium rear; everyone else → medium front over a super black rear.
    The pairs are catalog options, so their films and prices stay editable. */
 export const TINT_SUGGESTION_TIERS = {
   lightest: { options: ['OPT-B', 'OPT-A', 'OPT-G'], title: 'Lightest shades', summary: 'The clearest view we offer, day and night.' },
+  lightPrivate: { options: ['OPT-D', 'OPT-B', 'OPT-G'], title: 'Light shades with privacy', summary: 'The lightest tinted front we offer, with a darker rear for privacy.' },
   light: { options: ['OPT-C', 'OPT-D', 'OPT-H'], summary: 'A clearer front for the road, a darker rear for heat and privacy.' },
   dark: { options: ['OPT-E', 'OPT-F', 'OPT-I'], summary: 'Strong heat rejection, with real privacy in the back.' },
 }
 export function tintSuggestionTier(answers) {
-  if (answers.eyesight === 'poor') return 'lightest'
+  if (answers.eyesight === 'poor') return answers.priority === 'visibility' ? 'lightest' : 'lightPrivate'
   if (answers.night === 'yes' || answers.eyesight === 'prescription' || answers.priority === 'visibility') return 'light'
   return 'dark'
 }
@@ -49,13 +52,15 @@ export function recommendTint(config, answers) {
 export function suggestTint(config, answers) {
   const options = recommendTint(config, answers)
   if (!options.length) return null
-  const tier = TINT_SUGGESTION_TIERS[tintSuggestionTier(answers)]
+  const tierId = tintSuggestionTier(answers)
+  const tier = TINT_SUGGESTION_TIERS[tierId]
   const lead = options[0]
   const title = tier.title || (lead.front === lead.rear ? `${tintShade(lead.front)} on every window` : `${tintShade(lead.front)} front · ${tintShade(lead.rear)} rear`)
+  /* Every line agrees with the tier it explains, whichever answer decided it. */
   const reasons = [
-    answers.night === 'yes' ? ['You often drive at night', 'so the front windows stay lighter for a clearer view of the road.'] : ['You drive mostly during the day', 'so a darker front is still comfortable.'],
-    answers.eyesight === 'poor' ? ['Your eyesight is weaker at night', 'so we chose the lightest shades on every window.'] : answers.eyesight === 'prescription' ? ['You wear prescription glasses', 'so we kept the front lighter to avoid strain.'] : ['Your eyesight is excellent', 'so darker shades won’t make the road hard to see.'],
-    answers.priority === 'privacy' ? ['You chose privacy', 'so the rear windows get the darker shade.'] : answers.priority === 'visibility' ? ['You chose visibility', 'so we leaned towards lighter shades.'] : ['You wanted a balance', 'so the front is lighter than the rear.'],
+    answers.night === 'yes' ? ['You often drive at night', 'so the front windows stay lighter for a clearer view of the road.'] : tierId === 'dark' ? ['You drive mostly during the day', 'so a darker front is still comfortable.'] : ['You drive mostly during the day', 'so night glare didn’t limit the shade.'],
+    answers.eyesight === 'poor' ? ['Your eyesight is weaker at night', tierId === 'lightest' ? 'so we chose the lightest shades on every window.' : 'so the front gets the lightest tinted shade we offer.'] : answers.eyesight === 'prescription' ? ['You wear prescription glasses', 'so we kept the front lighter to avoid strain.'] : tierId === 'dark' ? ['Your eyesight is excellent', 'so darker shades won’t make the road hard to see.'] : ['Your eyesight is excellent', 'so your other answers set the shade.'],
+    answers.priority === 'privacy' ? ['You chose privacy', tierId === 'dark' ? 'so the rear windows get our darkest shade.' : 'so the rear windows are darker than the front.'] : answers.priority === 'visibility' ? ['You chose visibility', 'so we leaned towards lighter shades.'] : ['You wanted a balance', 'so the front is lighter than the rear.'],
   ]
   return { options, title, summary: tier.summary, reasons }
 }

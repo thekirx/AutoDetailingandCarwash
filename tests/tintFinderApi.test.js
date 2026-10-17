@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs'
 import {test} from 'node:test'
 import {handlePublicInquiryRequest} from '../server/publicInquiry.mjs'
 const config=JSON.parse(readFileSync(new URL('../src/data/tintFinderConfig.json',import.meta.url)))
-const valid={kind:'tint_finder',elapsedMs:5000,name:'QA Customer',phone:'09171234567',branch:'bacoor',preferredDate:'2099-10-06',vehicleModel:'Toyota Vios',answers:{night:'yes',eyesight:'poor',priority:'privacy',vehicle:'sedan'},optionId:'OPT-A',acknowledged:true}
+const valid={kind:'tint_finder',elapsedMs:5000,name:'QA Customer',phone:'09171234567',branch:'bacoor',preferredDate:'2099-10-06',vehicleModel:'Toyota Vios',answers:{night:'yes',eyesight:'poor',priority:'visibility',vehicle:'sedan'},optionId:'OPT-A',acknowledged:true}
 let counter=0
 async function call(body,{branchAvailable=true,catalog=config,insertFails=false}={}) {
  const beforeFetch=globalThis.fetch
