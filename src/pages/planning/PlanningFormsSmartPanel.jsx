@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
 import {
   Copy,
   ExternalLink,
@@ -34,13 +34,17 @@ import {
   FIELD_TYPES,
   FIXED_FORM_TEMPLATES,
   FORM_KINDS,
+  FORM_TEMPLATES,
+  draftFromTemplate,
+  isCustomFormKind,
+  isCreatableFormKind,
+  formKindSingular,
   FORM_STATUSES,
   SUBMISSION_STATUSES,
   extractCalendarAt,
   extractComplaintBranch,
   formKindLabel,
   formatFormPayloadDescription,
-  isDetailingFormKind,
   isFormSlugLocked,
   normalizeFields,
   normalizeFormSettings,
@@ -54,8 +58,12 @@ import {
 import { toast } from 'sonner'
 import { enrichCashAdvancePayload } from '@/lib/payroll'
 
-function FieldBuilder({ fields, onChange, disabled }) {
+function FieldBuilder({ fields, onChange, disabled, steps = null }) {
   const rows = normalizeFields(fields)
+  const [optionText, setOptionText] = useState({})
+
+  const groupFor = field => steps?.findIndex(step => step.id === field.step) >= 0 ? steps.findIndex(step => step.id === field.step) : 0
+  const displayed = rows.map((field, index) => ({ field, index })).sort((a, b) => steps ? groupFor(a.field) - groupFor(b.field) : a.index - b.index)
 
   function update(index, patch) {
     const next = rows.map((f, i) => (i === index ? { ...f, ...patch } : f))
@@ -69,13 +77,14 @@ function FieldBuilder({ fields, onChange, disabled }) {
   function add() {
     onChange(normalizeFields([
       ...rows,
-      { label: `Field ${rows.length + 1}`, type: 'text', required: false },
+      { label: `Field ${rows.length + 1}`, type: 'text', required: false, ...(steps?.length ? { step: steps.at(-1).id } : {}) },
     ]))
   }
 
   function move(index, dir) {
-    const j = index + dir
-    if (j < 0 || j >= rows.length) return
+    const group = rows.map((field, i) => ({ field, i })).filter(item => !steps || groupFor(item.field) === groupFor(rows[index]))
+    const j = group[group.findIndex(item => item.i === index) + dir]?.i
+    if (j == null) return
     const next = [...rows]
     ;[next[index], next[j]] = [next[j], next[index]]
     onChange(next)
@@ -83,8 +92,12 @@ function FieldBuilder({ fields, onChange, disabled }) {
 
   return (
     <div className="flex flex-col gap-3">
-      {rows.map((field, index) => (
-        <div key={`${field.key}-${index}`} className="rounded-xl border border-border bg-muted/30 p-3">
+      {displayed.map(({ field, index }, displayIndex) => (
+        <Fragment key={field.key}>
+        {steps && (displayIndex === 0 || groupFor(displayed[displayIndex - 1].field) !== groupFor(field)) && (
+          <h4 className="mt-2 text-xs font-bold uppercase tracking-wide text-primary">Step {groupFor(field) + 1} · {steps[groupFor(field)]?.title}</h4>
+        )}
+        <div className="rounded-xl border border-border bg-muted/30 p-3">
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
             <div className="flex flex-col gap-1.5 sm:col-span-2">
               <Label>Label</Label>
@@ -103,6 +116,12 @@ function FieldBuilder({ fields, onChange, disabled }) {
                 </SelectContent>
               </Select>
             </div>
+            {steps && <div className="flex flex-col gap-1.5">
+              <Label htmlFor={`field-step-${field.key}`}>Step</Label>
+              <select id={`field-step-${field.key}`} className="min-h-11 rounded-lg border border-primary bg-background px-2 text-sm text-primary" disabled={disabled} value={steps[groupFor(field)]?.id || ''} onChange={e => update(index, { step: e.target.value })}>
+                {steps.map((step, i) => <option key={step.id} value={step.id}>Step {i + 1} · {step.title}</option>)}
+              </select>
+            </div>}
             <label className="flex min-h-11 items-end gap-2 pb-2 text-sm text-foreground">
               <input
                 type="checkbox"
@@ -117,21 +136,22 @@ function FieldBuilder({ fields, onChange, disabled }) {
                 <Label>Options (pipe-separated)</Label>
                 <Input
                   disabled={disabled}
-                  value={(field.options || []).join('|')}
-                  onChange={(e) => update(index, { optionsCsv: e.target.value })}
+                  value={optionText[field.key] ?? (field.options || []).join('|')}
+                  onChange={(e) => { setOptionText(previous => ({ ...previous, [field.key]: e.target.value })); update(index, { options: e.target.value.split('|') }) }}
                   placeholder="Option A|Option B"
                 />
               </div>
             )}
           </div>
           <div className="mt-2 flex flex-wrap gap-1">
-            <Button type="button" size="sm" variant="ghost" disabled={disabled || index === 0} onClick={() => move(index, -1)}>Up</Button>
-            <Button type="button" size="sm" variant="ghost" disabled={disabled || index === rows.length - 1} onClick={() => move(index, 1)}>Down</Button>
+            <Button type="button" size="sm" variant="ghost" disabled={disabled || !rows.slice(0, index).some(f => !steps || groupFor(f) === groupFor(field))} onClick={() => move(index, -1)}>Up</Button>
+            <Button type="button" size="sm" variant="ghost" disabled={disabled || !rows.slice(index + 1).some(f => !steps || groupFor(f) === groupFor(field))} onClick={() => move(index, 1)}>Down</Button>
             <Button type="button" size="sm" variant="ghost" disabled={disabled} className="text-destructive" onClick={() => remove(index)}>
               <Trash2 className="size-3.5" /> Remove
             </Button>
           </div>
         </div>
+        </Fragment>
       ))}
       {!disabled && (
         <Button type="button" variant="outline" className="w-fit cursor-pointer" onClick={add}>
@@ -239,7 +259,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
   const [branchSlugs, setBranchSlugs] = useState([])
   const [submissions, setSubmissions] = useState([])
   const [kindFilter, setKindFilter] = useState('detailing')
-  const [selectedDetailingId, setSelectedDetailingId] = useState('')
+  const [selectedFormId, setSelectedFormId] = useState('')
   const [editorOpen, setEditorOpen] = useState(false)
   const [editor, setEditor] = useState(() => emptyEditorFromForm(null))
   const [resultsFormId, setResultsFormId] = useState('')
@@ -307,21 +327,21 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
     return map
   }, [forms])
 
-  const detailingForms = useMemo(
-    () => forms.filter((f) => f.kind === 'detailing').sort((a, b) => String(a.name).localeCompare(String(b.name))),
-    [forms],
+  const creatableForms = useMemo(
+    () => forms.filter((f) => f.kind === kindFilter && isCreatableFormKind(kindFilter)).sort((a, b) => String(a.name).localeCompare(String(b.name))),
+    [forms, kindFilter],
   )
 
-  const selectedTemplate = isDetailingFormKind(kindFilter)
-    ? detailingForms.find((f) => f.id === selectedDetailingId) || detailingForms[0] || null
+  const selectedTemplate = isCreatableFormKind(kindFilter)
+    ? creatableForms.find((f) => f.id === selectedFormId) || creatableForms[0] || null
     : templatesByKind.get(kindFilter) || null
 
   useEffect(() => {
-    if (!isDetailingFormKind(kindFilter)) return
-    if (selectedTemplate && selectedDetailingId !== selectedTemplate.id) {
-      setSelectedDetailingId(selectedTemplate.id)
+    if (!isCreatableFormKind(kindFilter)) return
+    if (selectedTemplate && selectedFormId !== selectedTemplate.id) {
+      setSelectedFormId(selectedTemplate.id)
     }
-  }, [kindFilter, selectedTemplate, selectedDetailingId])
+  }, [kindFilter, selectedTemplate, selectedFormId])
   const fillableForms = useMemo(
     () => forms.filter((f) => f.is_active && f.status !== 'archived' && canSubmitOpsFormKind(profile, f.kind)),
     [forms, profile],
@@ -374,15 +394,41 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
     setEditorOpen(true)
   }
 
+  function openTemplate(template) {
+    setKindFilter('custom')
+    setEditor(draftFromTemplate(template, { branchSlugs }))
+    setEditorOpen(true)
+  }
+
+  function updateSteps(steps, fields = editor.fields) {
+    setEditor({ ...editor, fields, settings: { ...editor.settings, steps } })
+  }
+
+  function removeStep(index) {
+    const steps = editor.settings.steps
+    const removed = steps[index]
+    const hasFields = editor.fields.some(f => f.step === removed.id || (index === 0 && !steps.some(step => step.id === f.step)))
+    if (hasFields && !window.confirm('Remove this step? Its fields will move to the adjacent step.')) return
+    const remaining = steps.filter((_, i) => i !== index)
+    const target = remaining[Math.max(0, index - 1)]?.id
+    updateSteps(remaining, editor.fields.map(f => f.step === removed.id || (index === 0 && !steps.some(step => step.id === f.step)) ? { ...f, step: target } : f))
+  }
+
   async function saveForm(e) {
     e.preventDefault()
     if (!manageTemplates) return
     const name = editor.name.trim()
     if (!name) return toast.error('Name is required')
-    const fields = normalizeFields(editor.fields)
+    let fields = normalizeFields(editor.fields)
     if (!fields.length) return toast.error('Add at least one field')
-    setSaving(true)
     const settings = normalizeFormSettings(editor.settings, editor.kind)
+    if (settings.layout === 'wizard') {
+      if (!settings.steps.length) return toast.error('Add at least one step or switch Show as steps off')
+      const ids = settings.steps.map(step => step.id)
+      fields = fields.map(field => ids.includes(field.step) ? field : { ...field, step: ids[0] })
+        .sort((a, b) => ids.indexOf(a.step) - ids.indexOf(b.step))
+    }
+    setSaving(true)
     const existing = editor.id ? forms.find((f) => f.id === editor.id) : null
     const slugLocked = existing ? isFormSlugLocked(existing) : false
     let slug = String(editor.slug || existing?.slug || '').trim().toLowerCase()
@@ -411,25 +457,29 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
     if (editor.id) {
       ;({ error } = await supabase.from('ops_forms').update(row).eq('id', editor.id))
     } else {
-      if (!isDetailingFormKind(editor.kind)) {
+      if (!isCreatableFormKind(editor.kind)) {
         setSaving(false)
-        return toast.error('Only detailing forms can be created here')
+        return toast.error('Only detailing and custom forms can be created here')
       }
       const inserted = await supabase.from('ops_forms').insert(row).select('id').single()
       error = inserted.error
-      if (!error && inserted.data?.id) setSelectedDetailingId(inserted.data.id)
+      if (!error && inserted.data?.id) {
+        setForms(current => [...current, { ...row, id: inserted.data.id }])
+        setSelectedFormId(inserted.data.id)
+        setKindFilter(editor.kind)
+      }
     }
     setSaving(false)
     if (error) toast.error(error.message)
     else {
-      toast.success(editor.id ? 'Form saved' : 'Detailing form created')
+      toast.success(editor.id ? 'Form saved' : 'Form created')
       setEditorOpen(false)
       load()
     }
   }
 
   async function archiveDetailingForm(form) {
-    if (!manageTemplates || !form?.id || !isDetailingFormKind(form.kind)) return
+    if (!manageTemplates || !form?.id || !isCreatableFormKind(form.kind)) return
     if (!window.confirm(`Archive “${form.name}”? The public QR link will stop accepting answers.`)) return
     const { error } = await supabase
       .from('ops_forms')
@@ -443,7 +493,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
     if (error) toast.error(error.message)
     else {
       toast.success('Form archived')
-      if (selectedDetailingId === form.id) setSelectedDetailingId('')
+      if (selectedFormId === form.id) setSelectedFormId('')
       load()
     }
   }
@@ -492,7 +542,9 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
                   ? [{ name: 'Cash advance', color: '#22c55e' }]
                   : activeForm.kind === 'detailing'
                     ? [{ name: 'Detailing', color: '#8b5cf6' }]
-                    : [],
+                    : activeForm.kind === 'custom'
+                      ? [{ name: 'Custom', color: getComputedStyle(document.documentElement).getPropertyValue('--color-form-custom').trim() }]
+                      : [],
         })
         .select('id')
         .single()
@@ -543,7 +595,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
       <div>
         <h2 className="text-lg font-semibold text-foreground">Forms</h2>
         <p className="mt-1 max-w-[65ch] text-sm text-muted-foreground">
-          Company templates plus detailing service forms. Detailing forms get a permanent{' '}
+          Company templates, detailing services and custom forms. Each public form gets a permanent{' '}
           <code className="text-xs">/f/…</code> link and downloadable QR.
         </p>
       </div>
@@ -558,19 +610,47 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
         />
       </div>
 
-      {isDetailingFormKind(kindFilter) && manageTemplates ? (
+      {manageTemplates && (
+        <section aria-label="Form templates" className="space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold">Start from a template</h3>
+            <p className="text-xs text-muted-foreground">Copies into a new draft you can rename and edit</p>
+          </div>
+          {FORM_TEMPLATES.map(template => (
+            <Card key={template.id} className="border-l-4 border-l-primary bg-white">
+              <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
+                <div aria-hidden="true" className="grid size-12 shrink-0 place-items-center rounded-xl bg-primary/10 text-sm font-bold text-primary">1·2·3</div>
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2"><h4 className="font-semibold">{template.title}</h4><Badge variant="secondary">Wizard</Badge></div>
+                  <p className="text-sm text-muted-foreground">{template.blurb}</p>
+                  <div className="flex flex-wrap items-center gap-1 text-xs">
+                    {template.settings.steps.map((step, i) => <Fragment key={step.id}><span className="rounded-full bg-primary/5 px-2 py-1 font-medium text-primary">{i + 1} {step.title}</span><span aria-hidden="true">→</span></Fragment>)}
+                    {template.settings.review && <span className="rounded-full bg-primary/5 px-2 py-1 font-medium text-primary">✓ Check and send</span>}
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2 sm:shrink-0">
+                  <Button type="button" className="min-h-11" onClick={() => openTemplate(template)}>Use this template</Button>
+                  <Button type="button" className="min-h-11" variant="outline" onClick={() => setPreviewForm(draftFromTemplate(template, { branchSlugs }))}><Eye className="size-4" />Preview</Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </section>
+      )}
+
+      {isCreatableFormKind(kindFilter) && manageTemplates ? (
         <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" className="cursor-pointer" onClick={openCreateDetailing}>
-            <Plus className="size-4" /> New detailing form
+          <Button type="button" className="cursor-pointer" onClick={() => isCustomFormKind(kindFilter) ? openTemplate({ kind: 'custom', name: 'Untitled form', fields: [], settings: { layout: 'page', steps: [{ id: 'step_1', title: 'Step 1', hint: '' }] } }) : openCreateDetailing()}>
+            <Plus className="size-4" /> {isCustomFormKind(kindFilter) ? 'New custom form' : 'New detailing form'}
           </Button>
-          {detailingForms.length > 1 ? (
+          {creatableForms.length > 1 ? (
             <div className="flex min-w-[14rem] flex-1 flex-col gap-1.5 sm:max-w-xs">
               <Label htmlFor="detailing-form-pick">Select form</Label>
               <NamedSelect
                 id="detailing-form-pick"
                 value={selectedTemplate?.id || ''}
-                onChange={setSelectedDetailingId}
-                options={detailingForms.map((f) => ({ value: f.id, label: f.name }))}
+                onChange={setSelectedFormId}
+                options={creatableForms.map((f) => ({ value: f.id, label: f.name }))}
               />
             </div>
           ) : null}
@@ -586,8 +666,8 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
                 ? `${formKindLabel(selectedTemplate.kind)} · ${selectedTemplate.status}${
                     selectedTemplate.public_enabled ? ' · public link on' : ''
                   }${selectedTemplate.slug ? ` · /f/${selectedTemplate.slug}` : ''}`
-                : isDetailingFormKind(kindFilter)
-                  ? 'No detailing form yet — create one to get a permanent QR'
+                : isCreatableFormKind(kindFilter)
+                  ? isCustomFormKind(kindFilter) ? 'No custom form yet — start from a template or create one' : 'No detailing form yet — create one to get a permanent QR'
                   : 'Template missing - apply the latest Supabase migration'}
             </CardDescription>
           </div>
@@ -614,7 +694,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
                     <Pencil className="size-3.5" /> Edit
                   </Button>
                 )}
-                {manageTemplates && isDetailingFormKind(selectedTemplate.kind) && (
+                {manageTemplates && isCreatableFormKind(selectedTemplate.kind) && (
                   <Button
                     size="sm"
                     variant="outline"
@@ -652,7 +732,9 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
               </div>
             ) : null}
             <p className="text-xs text-muted-foreground">
-              {isDetailingFormKind(kindFilter)
+              {isCustomFormKind(kindFilter)
+                ? 'Custom forms: start from a template or from scratch. Published public slugs stay locked so printed QR codes keep working.'
+                : isCreatableFormKind(kindFilter)
                 ? 'Detailing forms: create, edit fields, archive. Published public slugs stay locked so printed QR codes keep working.'
                 : 'Access: Complaint + Events RSVP are shareable when published. Equipment repairs are crew-only. Cash advance approvals happen on Payroll.'}
             </p>
@@ -713,7 +795,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
         <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>
-              {editor.id ? 'Edit' : 'Create'} · {formKindLabel(editor.kind)}
+              {editor.id ? 'Edit' : 'Create'} · {formKindSingular(editor.kind)}
             </DialogTitle>
           </DialogHeader>
           <form onSubmit={saveForm} className="grid gap-4">
@@ -724,7 +806,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Kind</Label>
-                <Input value={formKindLabel(editor.kind)} disabled readOnly />
+                <Input value={formKindSingular(editor.kind)} disabled readOnly />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Status</Label>
@@ -755,7 +837,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
                   <p className="text-xs text-muted-foreground">Link will be /f/{editor.slug || 'your-slug'}</p>
                 )}
               </div>
-              {!isDetailingFormKind(editor.kind) ? (
+              {!isCreatableFormKind(editor.kind) ? (
                 <div className="flex flex-col gap-2 sm:col-span-2">
                   <Label htmlFor="sf-event">Attach to event (optional)</Label>
                   <NamedSelect
@@ -771,6 +853,30 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
             <div className="flex flex-col gap-2">
               <Label htmlFor="sf-desc">Description</Label>
               <Textarea id="sf-desc" value={editor.description} onChange={(e) => setEditor({ ...editor, description: e.target.value })} />
+            </div>
+            <div className="space-y-4 rounded-xl border border-border p-3">
+              <label className="flex min-h-11 items-center gap-3 text-sm">
+                <input type="checkbox" role="switch" aria-checked={editor.settings.layout === 'wizard'} checked={editor.settings.layout === 'wizard'} className="peer sr-only" onChange={e => setEditor({ ...editor, settings: { ...editor.settings, layout: e.target.checked ? 'wizard' : 'page', review: e.target.checked && !editor.settings.steps.length ? true : editor.settings.review, steps: editor.settings.steps.length ? editor.settings.steps : [{ id: 'step_1', title: 'Step 1', hint: '' }] } })} />
+                <span aria-hidden="true" className="relative h-6 w-10 shrink-0 rounded-full border border-border bg-muted transition-colors after:absolute after:left-0.5 after:top-0.5 after:size-4 after:rounded-full after:bg-white after:shadow-sm after:transition-transform peer-checked:bg-primary peer-checked:after:translate-x-4 peer-focus-visible:ring-2 peer-focus-visible:ring-ring motion-reduce:transition-none motion-reduce:after:transition-none" />
+                <span><b>Show as steps</b><span className="mt-1 block text-xs text-muted-foreground">One group of questions per screen, with progress, Back / Continue and a check-and-send screen.</span></span>
+              </label>
+              {editor.settings.layout === 'wizard' && <div className="space-y-3 rounded-lg border border-border p-3">
+                <h3 className="text-sm font-semibold">Steps</h3>
+                {editor.settings.steps.map((step, index) => <div key={step.id} className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-2 sm:flex sm:flex-wrap">
+                  <span className="grid size-7 shrink-0 place-items-center rounded-full bg-primary text-xs font-bold text-white">{index + 1}</span>
+                  <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2">
+                    <Input className="min-h-11" aria-label={`Step ${index + 1} title`} value={step.title} onChange={e => updateSteps(editor.settings.steps.map((s, i) => i === index ? { ...s, title: e.target.value } : s))} />
+                    <Input className="min-h-11" aria-label={`Step ${index + 1} hint`} placeholder="Short hint (optional)" value={step.hint} onChange={e => updateSteps(editor.settings.steps.map((s, i) => i === index ? { ...s, hint: e.target.value } : s))} />
+                  </div>
+                  <div className="col-span-2 flex justify-end gap-1 sm:col-span-1">
+                    {[-1, 1].map(dir => <Button key={dir} type="button" size="icon" className="size-11" variant="outline" aria-label={dir === -1 ? 'Move step up' : 'Move step down'} disabled={index + dir < 0 || index + dir >= editor.settings.steps.length} onClick={() => { const next = [...editor.settings.steps]; [next[index], next[index + dir]] = [next[index + dir], next[index]]; updateSteps(next) }}>{dir === -1 ? '↑' : '↓'}</Button>)}
+                    <Button type="button" size="icon" className="size-11" variant="outline" aria-label="Remove step" onClick={() => removeStep(index)}>×</Button>
+                  </div>
+                </div>)}
+                <Button type="button" variant="outline" onClick={() => { let n = editor.settings.steps.length + 1; while (editor.settings.steps.some(step => step.id === `step_${n}`)) n++; updateSteps([...editor.settings.steps, { id: `step_${n}`, title: `Step ${n}`, hint: '' }]) }}><Plus className="size-4" />Add step</Button>
+                <label className="flex min-h-11 items-center gap-2 text-sm"><input type="checkbox" checked={editor.settings.review !== false} onChange={e => setEditor({ ...editor, settings: { ...editor.settings, review: e.target.checked } })} />End with a &quot;Check and send&quot; screen</label>
+              </div>}
+              <div className="space-y-2"><Label htmlFor="sf-thank-you">Thank-you message</Label><Input id="sf-thank-you" placeholder="Your response was submitted. Our team will follow up if needed." value={editor.settings.thank_you?.body || ''} onChange={e => setEditor({ ...editor, settings: { ...editor.settings, thank_you: { ...editor.settings.thank_you, body: e.target.value } } })} /></div>
             </div>
             <div className="grid gap-3 rounded-xl border border-border p-3 sm:grid-cols-2">
               <div className="flex flex-col gap-2 sm:col-span-2">
@@ -841,6 +947,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
               <p className="mb-2 text-sm font-medium text-foreground">Fields</p>
               <FieldBuilder
                 fields={editor.fields}
+                steps={editor.settings.layout === 'wizard' ? editor.settings.steps : null}
                 onChange={(fields) => setEditor({ ...editor, fields })}
                 disabled={!manageTemplates}
               />

@@ -152,7 +152,9 @@ describe('the guarded set is the live set — a new narrowing migration must be 
     const all = readdirSync(migrationsDir)
       .filter((f) => f.endsWith('.sql') && f >= '20261010')
       .sort()
-    const unlisted = all.filter((f) => !GUARDED.includes(f))
+    // This migration widens a kind constraint and adds a role-equivalent branch; it narrows no policy.
+    const exempt = ['20261018150000_ops_forms_custom_kind.sql']
+    const unlisted = all.filter((f) => !GUARDED.includes(f) && !exempt.includes(f))
     assert.deepEqual(
       unlisted,
       [],

@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wizard form template — mock</title>
+<style>
+@font-face { font-family: Benzin; src: url(assets/benzin-extrabold.woff2) format('woff2'); font-weight: 800; }
+@font-face { font-family: Gilmer; src: url(assets/gilmer-regular.woff2) format('woff2'); font-weight: 400; }
+@font-face { font-family: Gilmer; src: url(assets/gilmer-medium.woff2) format('woff2'); font-weight: 500 600; }
+@font-face { font-family: Gilmer; src: url(assets/gilmer-bold.woff2) format('woff2'); font-weight: 700 800; }
+:root {
+  --navy: #020A31; --rule: #16255C; --accent: #9DB4FF; --blue: #052699;
+  --paper: #F1F1ED; --card: #fff; --ink: #0B1233; --ink-2: #3B4266; --ink-3: #6B7194;
+  --muted: #ECECE6; --border: #E1E1DA; --ok: #1F9D63; --bad: #C9353B; --new: #E8562A;
+}
+* { box-sizing: border-box; }
+body { margin: 0; font-family: Gilmer, system-ui, sans-serif; color: var(--ink); background: #DCDCD5; }
+.doc { max-width: 1320px; margin: 0 auto; padding: 32px 24px 80px; }
+.doc > header h1 { font-family: Benzin; font-size: 30px; text-transform: uppercase; transform: skewX(-6deg); transform-origin: left bottom; margin: 0 0 6px; }
+.doc > header p { margin: 4px 0; color: var(--ink-2); max-width: 80ch; line-height: 1.5; }
+.sec { margin-top: 44px; }
+.sec > h2 { font-size: 13px; letter-spacing: .16em; text-transform: uppercase; color: var(--blue); margin: 0 0 4px; }
+.sec > p.cap { margin: 0 0 14px; color: var(--ink-2); max-width: 90ch; line-height: 1.5; }
+.tag { display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; padding: 3px 8px; border-radius: 6px; margin-right: 8px; vertical-align: 2px; }
+.tag.before { background: #fff; color: var(--ink-3); border: 1px solid var(--border); }
+.tag.after { background: var(--blue); color: #fff; }
+.new { outline: 2px dashed var(--new); outline-offset: 4px; border-radius: 14px; position: relative; }
+.new-note { position: absolute; top: -22px; right: 0; background: var(--new); color: #fff; font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; padding: 3px 8px; border-radius: 6px; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: start; }
+@media (max-width: 1100px) { .pair { grid-template-columns: 1fr; } }
+
+/* ── Ops shell (Command Daylight) ── */
+.ops { display: grid; grid-template-columns: 220px 1fr; min-height: 640px; border-radius: 14px; overflow: hidden; box-shadow: 0 20px 50px rgba(2,10,49,.18); background: var(--paper); }
+.ops aside { background: var(--navy); color: #CDD5F5; padding: 18px 12px; font-size: 13px; }
+.ops aside img { height: 72px; margin: -8px 0 8px; }
+.ops aside h6 { margin: 16px 8px 6px; font-size: 10px; letter-spacing: .16em; text-transform: uppercase; color: #7E8AB8; }
+.ops aside a { display: block; padding: 8px 10px; border-radius: 8px; color: inherit; text-decoration: none; }
+.ops aside a.on { background: #fff; color: var(--blue); font-weight: 700; }
+.ops main { padding: 22px 26px 30px; min-width: 0; }
+.crumb { font-size: 12px; color: var(--ink-3); }
+.ptitle { font-family: Benzin; font-size: 26px; text-transform: uppercase; transform: skewX(-6deg); transform-origin: left bottom; margin: 6px 0 14px; }
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 18px; font-size: 14px; }
+.tabs span { padding: 9px 14px; color: var(--ink-3); }
+.tabs span.on { color: var(--blue); font-weight: 700; border-bottom: 2px solid var(--blue); margin-bottom: -1px; }
+.h2 { font-size: 18px; font-weight: 700; margin: 0; }
+.sub { font-size: 13px; color: var(--ink-3); margin: 4px 0 16px; max-width: 65ch; }
+.sub code { font-size: 12px; }
+label.l { display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; }
+.select { display: flex; justify-content: space-between; align-items: center; height: 40px; border: 1px solid var(--border); border-radius: 10px; background: #fff; padding: 0 12px; font-size: 14px; max-width: 360px; }
+.select::after { content: '▾'; color: var(--ink-3); }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.btn { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 9px; font-size: 13px; font-weight: 600; border: 1px solid var(--border); background: #fff; color: var(--ink); white-space: nowrap; }
+.btn.p { background: var(--blue); border-color: var(--blue); color: #fff; }
+.btn.d { color: var(--bad); }
+.btn.lg { height: 40px; padding: 0 16px; font-size: 14px; }
+.card { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 18px; }
+.card-h { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; }
+.card-t { font-size: 17px; font-weight: 700; margin: 0; }
+.card-d { font-size: 13px; color: var(--ink-3); margin: 4px 0 0; }
+.card-b { display: grid; grid-template-columns: 1fr auto; gap: 16px; margin-top: 16px; font-size: 13px; }
+.share { border: 1px solid var(--border); background: #F7F7F3; border-radius: 12px; padding: 12px; }
+.share small { display: block; font-size: 10px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 4px; }
+.mono { font-family: ui-monospace, Menlo, monospace; font-size: 12px; word-break: break-all; }
+.qr { width: 150px; text-align: center; font-size: 11px; color: var(--ink-3); }
+.qr svg { width: 150px; height: 150px; display: block; border: 1px solid var(--border); border-radius: 10px; background: #fff; padding: 8px; }
+.muted { color: var(--ink-3); }
+.gap { height: 18px; }
+
+/* template strip */
+.tpl-h { display: flex; justify-content: space-between; align-items: baseline; margin: 22px 0 10px; }
+.tpl-h b { font-size: 14px; }
+.tpl-h span { font-size: 12px; color: var(--ink-3); }
+.tpl { display: grid; grid-template-columns: auto 1fr auto; gap: 16px; align-items: center; background: #fff; border: 1px solid var(--border); border-left: 4px solid var(--blue); border-radius: 14px; padding: 16px 18px; }
+.tpl-ico { width: 44px; height: 44px; border-radius: 12px; background: #EEF1FB; display: grid; place-items: center; color: var(--blue); font-weight: 800; }
+.tpl h4 { margin: 0; font-size: 15px; }
+.tpl p { margin: 3px 0 8px; font-size: 13px; color: var(--ink-3); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 3px 9px 3px 3px; border-radius: 999px; background: #F3F3EF; border: 1px solid var(--border); font-weight: 600; color: var(--ink-2); }
+.chip i { font-style: normal; width: 18px; height: 18px; border-radius: 50%; background: var(--blue); color: #fff; display: grid; place-items: center; font-size: 10px; }
+.chips .arr { color: var(--ink-3); }
+.pill { font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; background: #EEF1FB; color: var(--blue); }
+
+/* dialog */
+.dlg-wrap { background: rgba(2,10,49,.45); padding: 28px; border-radius: 14px; }
+.dlg { background: #fff; border-radius: 16px; max-width: 680px; margin: 0 auto; padding: 22px; box-shadow: 0 30px 60px rgba(0,0,0,.25); font-size: 13px; }
+.dlg h3 { margin: 0 0 16px; font-size: 18px; }
+.g2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.inp { height: 38px; border: 1px solid var(--border); border-radius: 9px; padding: 0 11px; display: flex; align-items: center; font-size: 13px; background: #fff; }
+.inp.dis { background: #F3F3EF; color: var(--ink-3); }
+.switch { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; margin: 14px 0; }
+.sw { width: 36px; height: 20px; border-radius: 999px; background: var(--blue); position: relative; flex: none; }
+.sw::after { content: ''; position: absolute; right: 2px; top: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; }
+.steps-ed { border: 1px solid var(--border); border-radius: 12px; padding: 12px; margin-bottom: 14px; }
+.steps-ed b { display: block; margin-bottom: 8px; font-size: 13px; }
+.st-row { display: grid; grid-template-columns: 26px 1fr 1.4fr auto; gap: 8px; align-items: center; margin-bottom: 6px; }
+.st-n { width: 24px; height: 24px; border-radius: 50%; background: var(--blue); color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 700; }
+.st-row .inp { height: 32px; }
+.ico-btns { display: flex; gap: 2px; color: var(--ink-3); font-size: 13px; }
+.ico-btns span { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 6px; }
+.fgroup { margin-bottom: 10px; }
+.fgroup h5 { margin: 10px 0 6px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--blue); }
+.frow { display: grid; grid-template-columns: 1.6fr 1fr 1fr auto; gap: 8px; align-items: center; border: 1px solid var(--border); background: #FAFAF7; border-radius: 10px; padding: 8px; margin-bottom: 6px; }
+.frow .inp { height: 32px; }
+.frow .req { font-size: 12px; display: flex; gap: 5px; align-items: center; }
+.frow .stepsel { border-color: var(--blue); color: var(--blue); font-weight: 600; }
+.dlg-f { display: flex; justify-content: space-between; margin-top: 16px; }
+
+/* ── Public branded form (/f/:slug) ── */
+.fpage { background: linear-gradient(180deg,#eef1f7,#f7f8fb 40%,#f3f5f9); padding: 22px 14px 28px; }
+.fshell { max-width: 36rem; margin: 0 auto; border-radius: 20px; overflow: hidden; border: 1px solid rgba(5,38,153,.12); background: #fff; box-shadow: 0 18px 48px rgba(5,38,153,.1); }
+.fhero { background: linear-gradient(145deg,#052699,#0a3bb8 55%,#1a4fd6); color: #fff; padding: 20px 20px 18px; }
+.fhero img { height: 30px; display: block; margin-bottom: 14px; }
+.fhero h1 { margin: 0; font-size: 22px; letter-spacing: -.02em; }
+.fhero p { margin: 8px 0 0; font-size: 14px; color: rgba(255,255,255,.82); line-height: 1.45; }
+.fbody { padding: 18px 20px 20px; }
+.ff { display: grid; gap: 6px; font-size: 13px; font-weight: 650; color: #334155; margin-bottom: 14px; }
+.fi { height: 44px; border-radius: 12px; border: 1px solid #d5dbe8; background: #fafbfe; padding: 0 13px; display: flex; align-items: center; font-weight: 450; font-size: 15px; color: #0f172a; }
+.fi.ph { color: #94a3b8; }
+.fi.ta { height: 88px; align-items: flex-start; padding-top: 11px; }
+.fi.sel { justify-content: space-between; }
+.fi.sel::after { content: '▾'; color: #94a3b8; }
+.fi.err { border-color: var(--bad); box-shadow: 0 0 0 3px rgba(201,53,59,.12); }
+.ferr { color: var(--bad); font-size: 12px; font-weight: 600; }
+.fsubmit { height: 48px; border-radius: 14px; background: #052699; color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 15px; }
+.legal { display: flex; gap: 8px; font-size: 13px; color: #334155; margin: 4px 0 14px; align-items: flex-start; }
+.box { width: 18px; height: 18px; border: 1.5px solid #94a3b8; border-radius: 5px; flex: none; margin-top: 1px; }
+.box.on { background: var(--blue); border-color: var(--blue); }
+
+/* wizard pieces (new) */
+.wz-prog { display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: var(--ink-3); margin-bottom: 8px; }
+.wz-prog b { color: var(--blue); }
+.wz-bar { display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 5px; margin-bottom: 18px; }
+.wz-bar i { height: 5px; border-radius: 999px; background: #E3E7F2; }
+.wz-bar i.on { background: var(--blue); }
+.wz-num { font-family: Benzin; font-size: 13px; color: var(--accent); letter-spacing: .04em; }
+.wz-h { margin: 2px 0 2px; font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+.wz-hint { margin: 0 0 16px; font-size: 13px; color: var(--ink-3); }
+.wz-act { display: grid; grid-template-columns: auto 1fr; gap: 10px; margin-top: 6px; }
+.wz-back { height: 48px; padding: 0 16px; border-radius: 14px; border: 1px solid #d5dbe8; display: grid; place-items: center; font-weight: 700; color: var(--ink-2); font-size: 14px; }
+.wz-sum { margin: 0 0 14px; border: 1px solid #E3E7F2; border-radius: 14px; overflow: hidden; }
+.wz-sum section { padding: 12px 14px; border-top: 1px solid #E3E7F2; }
+.wz-sum section:first-child { border-top: 0; }
+.wz-sum header { display: flex; justify-content: space-between; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--blue); margin-bottom: 6px; }
+.wz-sum header a { text-transform: none; letter-spacing: 0; font-weight: 700; font-size: 12px; color: var(--blue); }
+.wz-sum dl { margin: 0; display: grid; grid-template-columns: 120px 1fr; gap: 4px 10px; font-size: 13px; }
+.wz-sum dt { color: var(--ink-3); }
+.wz-sum dd { margin: 0; font-weight: 600; }
+.wz-done { text-align: center; padding: 18px 6px 8px; }
+.wz-done .ok { width: 56px; height: 56px; border-radius: 50%; background: #E7F5EE; color: var(--ok); display: grid; place-items: center; margin: 0 auto 12px; font-size: 28px; font-weight: 800; }
+.wz-done h2 { margin: 0 0 6px; font-size: 20px; color: var(--blue); }
+.wz-done p { margin: 0 0 16px; color: var(--ink-2); font-size: 14px; line-height: 1.5; }
+.wz-ref { display: inline-block; font-family: ui-monospace, Menlo, monospace; font-size: 12px; background: #F3F5FA; padding: 6px 10px; border-radius: 8px; color: var(--ink-2); }
+
+/* phones */
+.phones { display: flex; flex-wrap: wrap; gap: 22px; }
+.phone { width: 375px; flex: none; }
+.phone .scr { height: 760px; overflow: hidden; border-radius: 34px; border: 10px solid #111; background: #f3f5f9; box-shadow: 0 18px 40px rgba(0,0,0,.2); }
+.phone .scr .fpage { padding: 14px 12px; min-height: 100%; }
+.phone .scr .fshell { border-radius: 18px; }
+.phone figcaption { text-align: center; font-size: 12px; font-weight: 600; color: var(--ink-2); margin-top: 8px; }
+.desk { border-radius: 14px; overflow: hidden; box-shadow: 0 20px 50px rgba(2,10,49,.18); }
+.desk .bar { background: #E7E7E1; padding: 9px 14px; font-size: 12px; color: var(--ink-3); display: flex; gap: 10px; align-items: center; }
+.desk .bar i { width: 10px; height: 10px; border-radius: 50%; background: #CFCFC8; display: inline-block; }
+.desk .bar span { background: #fff; border-radius: 6px; padding: 3px 10px; flex: 1; font-family: ui-monospace, Menlo, monospace; }
+
+/* decision */
+.choices { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 900px) { .choices { grid-template-columns: 1fr; } }
+.choice { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 18px; font-size: 14px; line-height: 1.5; }
+.choice.rec { border: 2px solid var(--blue); }
+.choice h3 { margin: 0 0 6px; font-size: 16px; }
+.choice ul { margin: 8px 0 0; padding-left: 18px; color: var(--ink-2); }
+.choice pre { background: #0B1233; color: #CDD5F5; padding: 10px 12px; border-radius: 10px; font-size: 12px; overflow-x: auto; }
+@media (max-width: 760px) {
+  .ops { grid-template-columns: 1fr; } .ops aside { display: none; }
+  .card-b, .tpl { grid-template-columns: 1fr; } .g2 { grid-template-columns: 1fr; }
+  .frow, .st-row { grid-template-columns: 1fr 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="doc">
+<header>
+  <h1>Wizard form template</h1>
+  <p><b>Ops console → Planner → Forms.</b> Adds a reusable step-by-step (wizard) form that an admin copies with <b>Use this template</b>, then edits in the editor they already use. The copy is a normal form: its own permanent <code>/f/&lt;slug&gt;</code> link, QR, Preview, Results, Edit, Archive.</p>
+  <p>It reuses the existing forms table and editor. Steps are stored inside the form's own settings, so <b>existing forms do not change</b> unless someone switches "Show as steps" on. Orange dashed outlines mark what is new.</p>
+  <p class="muted">Mock, 17 Oct 2026. Write-up: <code>docs/forms/WIZARD-TEMPLATE.md</code>. One open choice at the bottom (what kind of form the copy is).</p>
+</header>
+
+<!-- ───────────── 1. Forms tab ───────────── -->
+<section class="sec">
+  <h2>1 · Planner → Forms tab (desktop)</h2>
+  <p class="cap">Today: pick a form, then Preview / Results / Edit / Archive and the link + QR. After: a "Start from a template" row sits under the picker. The selected form card below it is unchanged.</p>
+  <div class="pair">
+    <div>
+      <p><span class="tag before">Before</span>as it is now</p>
+      <div class="ops">
+        <aside>
+          <img src="assets/hakum-lw-ow.png" alt="Hakum">
+          <h6>Today</h6><a>Floor Board</a><a>Queue</a><a>Bookings</a>
+          <h6>Money</h6><a>POS</a><a>Finance</a>
+          <h6>Team</h6><a class="on">Planner</a><a>Payroll</a>
+        </aside>
+        <main>
+          <div class="crumb">Operations / Planner</div>
+          <div class="ptitle">Planner</div>
+          <div class="tabs"><span>Tasks</span><span>Calendar</span><span>Events</span><span class="on">Forms</span></div>
+          <p class="h2">Forms</p>
+          <p class="sub">Company templates plus detailing service forms. Detailing forms get a permanent <code>/f/…</code> link and downloadable QR.</p>
+          <label class="l">Which form</label>
+          <div class="select">Detailing services</div>
+          <div class="gap"></div>
+          <div class="row"><span class="btn p lg">＋ New detailing form</span></div>
+          <div class="gap"></div>
+          <div class="card">
+            <div class="card-h">
+              <div><p class="card-t">Detailing inquiry</p><p class="card-d">Detailing services · published · public link on · /f/detailing-inquiry</p></div>
+              <div class="row"><span class="btn">Preview</span><span class="btn">Results (12)</span><span class="btn p">Edit</span><span class="btn d">Archive</span></div>
+            </div>
+            <div class="card-b">
+              <div>
+                <p class="muted" style="margin-top:0">Request ceramic, tint, PPF, or paint maintenance. Our team will confirm your branch and schedule.</p>
+                <div class="share"><small>Permanent share link</small><div class="mono">https://hakumautocare.com/f/detailing-inquiry</div><div class="row" style="margin-top:8px"><span class="btn">Copy link</span><span class="btn">Open</span></div></div>
+              </div>
+              <div class="qr"><svg viewBox="0 0 21 21" class="qrsvg"></svg>Download QR</div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+    <div>
+      <p><span class="tag after">After</span>template row added</p>
+      <div class="ops">
+        <aside>
+          <img src="assets/hakum-lw-ow.png" alt="Hakum">
+          <h6>Today</h6><a>Floor Board</a><a>Queue</a><a>Bookings</a>
+          <h6>Money</h6><a>POS</a><a>Finance</a>
+          <h6>Team</h6><a class="on">Planner</a><a>Payroll</a>
+        </aside>
+        <main>
+          <div class="crumb">Operations / Planner</div>
+          <div class="ptitle">Planner</div>
+          <div class="tabs"><span>Tasks</span><span>Calendar</span><span>Events</span><span class="on">Forms</span></div>
+          <p class="h2">Forms</p>
+          <p class="sub">Company templates plus detailing service forms. Detailing forms get a permanent <code>/f/…</code> link and downloadable QR.</p>
+          <label class="l">Which form</label>
+          <div class="select">Detailing services</div>
+          <div class="new" style="margin-top:6px">
+            <span class="new-note">New</span>
+            <div class="tpl-h"><b>Start from a template</b><span>Copies into a new draft you can rename and edit</span></div>
+            <div class="tpl">
+              <div class="tpl-ico">1·2·3</div>
+              <div>
+                <h4>Step-by-step form <span class="pill">Wizard</span></h4>
+                <p>One question group per screen, Back / Continue, a check-and-send screen, then a thank-you. Use it for sign-ups, quotes, surveys, applications.</p>
+                <div class="chips"><span class="chip"><i>1</i>About you</span><span class="arr">→</span><span class="chip"><i>2</i>Your car</span><span class="arr">→</span><span class="chip"><i>3</i>Your request</span><span class="arr">→</span><span class="chip"><i>✓</i>Check and send</span></div>
+              </div>
+              <div class="row" style="flex-direction:column;align-items:stretch"><span class="btn p lg">Use this template</span><span class="btn">Preview</span></div>
+            </div>
+          </div>
+          <div class="gap"></div>
+          <div class="row"><span class="btn p lg">＋ New detailing form</span></div>
+          <div class="gap"></div>
+          <div class="card">
+            <div class="card-h">
+              <div><p class="card-t">Detailing inquiry</p><p class="card-d">Detailing services · published · public link on · /f/detailing-inquiry</p></div>
+              <div class="row"><span class="btn">Preview</span><span class="btn">Results (12)</span><span class="btn p">Edit</span><span class="btn d">Archive</span></div>
+            </div>
+            <div class="card-b">
+              <div>
+                <p class="muted" style="margin-top:0">Request ceramic, tint, PPF, or paint maintenance. Our team will confirm your branch and schedule.</p>
+                <div class="share"><small>Permanent share link</small><div class="mono">https://hakumautocare.com/f/detailing-inquiry</div><div class="row" style="margin-top:8px"><span class="btn">Copy link</span><span class="btn">Open</span></div></div>
+              </div>
+              <div class="qr"><svg viewBox="0 0 21 21" class="qrsvg"></svg>Download QR</div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────── 2. Editor ───────────── -->
+<section class="sec">
+  <h2>2 · "Use this template" opens the editor you already have</h2>
+  <p class="cap">Same Create dialog as "New detailing form", pre-filled as a <b>Draft</b>. New parts: the <b>Show as steps</b> switch, a <b>Steps</b> list (rename, hint, add, reorder, remove) and a <b>Step</b> dropdown on each field. Fields are grouped under their step. Save creates the form with its own link and QR; Edit works the same way later. Switching steps off turns any form back into one page. (Kind shows "Custom form" = option B in section 5; with option A it reads "Detailing services".)</p>
+  <div class="dlg-wrap">
+    <div class="dlg">
+      <h3>Create · Custom form</h3>
+      <div class="g2">
+        <div><label class="l">Name</label><div class="inp">Step-by-step form</div></div>
+        <div><label class="l">Kind</label><div class="inp dis">Custom form</div></div>
+        <div><label class="l">Status</label><div class="inp" style="justify-content:space-between">Draft <span class="muted">▾</span></div></div>
+        <div><label class="l">Public slug (permanent QR target)</label><div class="inp ph muted">auto on save</div></div>
+      </div>
+      <div style="margin-top:12px"><label class="l">Description</label><div class="inp" style="height:54px;align-items:flex-start;padding-top:9px">Answer a few quick questions. It takes about a minute.</div></div>
+      <div class="new" style="margin-top:18px">
+        <span class="new-note">New</span>
+        <div class="switch"><span class="sw"></span><div><b>Show as steps</b><div class="muted">One group of questions per screen, with progress, Back / Continue and a check-and-send screen.</div></div></div>
+        <div class="steps-ed">
+          <b>Steps</b>
+          <div class="st-row"><span class="st-n">1</span><div class="inp">About you</div><div class="inp muted">So we know who to reply to</div><div class="ico-btns"><span>↑</span><span>↓</span><span>✕</span></div></div>
+          <div class="st-row"><span class="st-n">2</span><div class="inp">Your car</div><div class="inp muted">Plate and branch</div><div class="ico-btns"><span>↑</span><span>↓</span><span>✕</span></div></div>
+          <div class="st-row"><span class="st-n">3</span><div class="inp">Your request</div><div class="inp muted">Tell us what you need</div><div class="ico-btns"><span>↑</span><span>↓</span><span>✕</span></div></div>
+          <div class="row" style="margin-top:8px;justify-content:space-between"><span class="btn">＋ Add step</span><label class="row" style="font-size:13px"><span class="box on"></span>End with a "Check and send" screen</label></div>
+        </div>
+        <div><label class="l">Thank-you message</label><div class="inp">Thanks! We got your answers and will message you within the day.</div></div>
+      </div>
+      <p style="font-weight:600;margin:16px 0 4px">Fields</p>
+      <div class="fgroup"><h5>Step 1 · About you</h5>
+        <div class="frow"><div class="inp">Full name</div><div class="inp">Short text</div><div class="inp stepsel">Step 1 ▾</div><span class="req"><span class="box on"></span>Req.</span></div>
+        <div class="frow"><div class="inp">Mobile number</div><div class="inp">Phone</div><div class="inp stepsel">Step 1 ▾</div><span class="req"><span class="box on"></span>Req.</span></div>
+        <div class="frow"><div class="inp">Email</div><div class="inp">Email</div><div class="inp stepsel">Step 1 ▾</div><span class="req"><span class="box"></span>Req.</span></div>
+      </div>
+      <div class="fgroup"><h5>Step 2 · Your car</h5>
+        <div class="frow"><div class="inp">Plate / conduction</div><div class="inp">Short text</div><div class="inp stepsel">Step 2 ▾</div><span class="req"><span class="box on"></span>Req.</span></div>
+        <div class="frow"><div class="inp">Car make and model</div><div class="inp">Short text</div><div class="inp stepsel">Step 2 ▾</div><span class="req"><span class="box"></span>Req.</span></div>
+        <div class="frow"><div class="inp">Preferred branch</div><div class="inp">Dropdown</div><div class="inp stepsel">Step 2 ▾</div><span class="req"><span class="box on"></span>Req.</span></div>
+      </div>
+      <div class="fgroup"><h5>Step 3 · Your request</h5>
+        <div class="frow"><div class="inp">What do you need?</div><div class="inp">Dropdown</div><div class="inp stepsel">Step 3 ▾</div><span class="req"><span class="box on"></span>Req.</span></div>
+        <div class="frow"><div class="inp">Preferred date</div><div class="inp">Date</div><div class="inp stepsel">Step 3 ▾</div><span class="req"><span class="box"></span>Req.</span></div>
+        <div class="frow"><div class="inp">Anything else?</div><div class="inp">Long text</div><div class="inp stepsel">Step 3 ▾</div><span class="req"><span class="box"></span>Req.</span></div>
+      </div>
+      <span class="btn">＋ Add field</span>
+      <div class="dlg-f"><span class="btn">Preview</span><div class="row"><span class="btn">Cancel</span><span class="btn p">Create form</span></div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────── 3. Public form desktop ───────────── -->
+<section class="sec">
+  <h2>3 · What customers get on /f/&lt;slug&gt; (desktop)</h2>
+  <p class="cap">Same branded shell as today (navy header, logo, white card). Before: every field on one long page. After: progress + one step at a time. Continue checks only this step and points at the missing answer.</p>
+  <div class="pair">
+    <div>
+      <p><span class="tag before">Before</span>one long page</p>
+      <div class="desk"><div class="bar"><i></i><i></i><i></i><span>hakumautocare.com/f/detailing-inquiry</span></div>
+        <div class="fpage"><div class="fshell">
+          <div class="fhero"><img src="assets/hakum-lw-ow.png" alt=""><h1>Detailing inquiry</h1><p>Request ceramic, tint, PPF, or paint maintenance.</p></div>
+          <div class="fbody">
+            <div class="ff">Full name *<div class="fi"></div></div>
+            <div class="ff">Mobile number *<div class="fi"></div></div>
+            <div class="ff">Email<div class="fi"></div></div>
+            <div class="ff">Plate / conduction *<div class="fi"></div></div>
+            <div class="ff">Detailing service *<div class="fi sel ph">Select…</div></div>
+            <div class="ff">Preferred branch *<div class="fi sel ph">Select…</div></div>
+            <div class="ff">Preferred date<div class="fi"></div></div>
+            <div class="ff">Notes<div class="fi ta"></div></div>
+            <div class="legal"><span class="box"></span>I agree to the Terms of Service and Privacy Policy.</div>
+            <div class="fsubmit">Submit</div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+    <div class="new">
+      <span class="new-note">New</span>
+      <p><span class="tag after">After</span>wizard, step 2 of 4</p>
+      <div class="desk"><div class="bar"><i></i><i></i><i></i><span>hakumautocare.com/f/step-by-step-form-3fa1c09e</span></div>
+        <div class="fpage"><div class="fshell">
+          <div class="fhero"><img src="assets/hakum-lw-ow.png" alt=""><h1>Step-by-step form</h1><p>Answer a few quick questions. It takes about a minute.</p></div>
+          <div class="fbody">
+            <div class="wz-prog"><span><b>Step 2</b> of 4</span><span>Your car</span></div>
+            <div class="wz-bar" style="--n:4"><i class="on"></i><i class="on"></i><i></i><i></i></div>
+            <div class="wz-num">02</div>
+            <h2 class="wz-h">Your car</h2>
+            <p class="wz-hint">Plate and branch</p>
+            <div class="ff">Plate / conduction *<div class="fi">NAB 4821</div></div>
+            <div class="ff">Car make and model<div class="fi">Toyota Fortuner</div></div>
+            <div class="ff">Preferred branch *<div class="fi sel ph err">Select…</div><span class="ferr">Choose a branch to continue</span></div>
+            <div class="wz-act"><div class="wz-back">← Back</div><div class="fsubmit">Continue</div></div>
+          </div>
+        </div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ───────────── 4. Phone ───────────── -->
+<section class="sec">
+  <h2>4 · Phone (375px)</h2>
+  <p class="cap">Before: the current single page (you scroll past 8 inputs to reach Submit). After: step 1, step 3, the check-and-send screen (each group has an Edit link back to its step; the Terms tick moves here) and the thank-you.</p>
+  <div class="phones">
+    <figure class="phone" style="margin:0">
+      <div class="scr"><div class="fpage"><div class="fshell">
+        <div class="fhero"><img src="assets/hakum-lw-ow.png" alt=""><h1>Detailing inquiry</h1><p>Request ceramic, tint, PPF, or paint maintenance.</p></div>
+        <div class="fbody">
+          <div class="ff">Full name *<div class="fi"></div></div>
+          <div class="ff">Mobile number *<div class="fi"></div></div>
+          <div class="ff">Email<div class="fi"></div></div>
+          <div class="ff">Plate / conduction *<div class="fi"></div></div>
+          <div class="ff">Detailing service *<div class="fi sel ph">Select…</div></div>
+          <div class="ff">Preferred branch *<div class="fi sel ph">Select…</div></div>
+          <div class="ff">Preferred date<div class="fi"></div></div>
+        </div>
+      </div></div></div>
+      <figcaption><span class="tag before">Before</span>one long page</figcaption>
+    </figure>
+
+    <figure class="phone new" style="margin:0">
+      <span class="new-note">New</span>
+      <div class="scr"><div class="fpage"><div class="fshell">
+        <div class="fhero"><img src="assets/hakum-lw-ow.png" alt=""><h1>Step-by-step form</h1><p>Answer a few quick questions. It takes about a minute.</p></div>
+        <div class="fbody">
+          <div class="wz-prog"><span><b>Step 1</b> of 4</span><span>About you</span></div>
+          <div class="wz-bar" style="--n:4"><i class="on"></i><i></i><i></i><i></i></div>
+          <div class="wz-num">01</div>
+          <h2 class="wz-h">About you</h2>
+          <p class="wz-hint">So we know who to reply to</p>
+          <div class="ff">Full name *<div class="fi">Maria Santos</div></div>
+          <div class="ff">Mobile number *<div class="fi">0917 555 0142</div></div>
+          <div class="ff">Email<div class="fi ph">you@email.com</div></div>
+          <div class="fsubmit">Continue</div>
+        </div>
+      </div></div></div>
+      <figcaption><span class="tag after">After</span>step 1 — no Back on the first step</figcaption>
+    </figure>
+
+    <figure class="phone new" style="margin:0">
+      <span class="new-note">New</span>
+      <div class="scr"><div class="fpage"><div class="fshell">
+        <div class="fhero"><img src="assets/hakum-lw-ow.png" alt=""><h1>Step-by-step form</h1></div>
+        <div class="fbody">
+          <div class="wz-prog"><span><b>Step 3</b> of 4</span><span>Your request</span></div>
+          <div class="wz-bar" style="--n:4"><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div>
+          <div class="wz-num">03</div>
+          <h2 class="wz-h">Your request</h2>
+          <p class="wz-hint">Tell us what you need</p>
+          <div class="ff">What do you need? *<div class="fi sel">Ceramic Coating</div></div>
+          <div class="ff">Preferred date<div class="fi">Sat, 24 Oct 2026</div></div>
+          <div class="ff">Anything else?<div class="fi ta">Small scratch on the rear bumper.</div></div>
+          <div class="wz-act"><div class="wz-back">← Back</div><div class="fsubmit">Continue</div></div>
+        </div>
+      </div></div></div>
+      <figcaption><span class="tag after">After</span>step 3</figcaption>
+    </figure>
+
+    <figure class="phone new" style="margin:0">
+      <span class="new-note">New</span>
+      <div class="scr"><div class="fpage"><div class="fshell">
+        <div class="fhero"><img src="assets/hakum-lw-ow.png" alt=""><h1>Step-by-step form</h1></div>
+        <div class="fbody">
+          <div class="wz-prog"><span><b>Step 4</b> of 4</span><span>Check and send</span></div>
+          <div class="wz-bar" style="--n:4"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
+          <h2 class="wz-h">Check and send</h2>
+          <p class="wz-hint">Tap Edit to change anything.</p>
+          <div class="wz-sum">
+            <section><header>About you <a>Edit</a></header><dl><dt>Full name</dt><dd>Maria Santos</dd><dt>Mobile</dt><dd>0917 555 0142</dd></dl></section>
+            <section><header>Your car <a>Edit</a></header><dl><dt>Plate</dt><dd>NAB 4821</dd><dt>Car</dt><dd>Toyota Fortuner</dd><dt>Branch</dt><dd>Bacoor</dd></dl></section>
+            <section><header>Your request <a>Edit</a></header><dl><dt>Need</dt><dd>Ceramic Coating</dd><dt>Date</dt><dd>Sat, 24 Oct</dd></dl></section>
+          </div>
+          <div class="legal"><span class="box on"></span>I agree to the Terms of Service and Privacy Policy.</div>
+          <div class="wz-act"><div class="wz-back">← Back</div><div class="fsubmit">Send</div></div>
+        </div>
+      </div></div></div>
+      <figcaption><span class="tag after">After</span>check and send</figcaption>
+    </figure>
+
+    <figure class="phone new" style="margin:0">
+      <span class="new-note">New</span>
+      <div class="scr"><div class="fpage"><div class="fshell">
+        <div class="fhero"><img src="assets/hakum-lw-ow.png" alt=""><h1>Step-by-step form</h1></div>
+        <div class="fbody">
+          <div class="wz-bar" style="--n:4"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div>
+          <div class="wz-done">
+            <div class="ok">✓</div>
+            <h2>Thank you</h2>
+            <p>Thanks! We got your answers and will message you within the day.</p>
+            <span class="wz-ref">Reference 3FA1-C09E</span>
+          </div>
+        </div>
+      </div></div></div>
+      <figcaption><span class="tag after">After</span>thank-you (text set in the editor)</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ───────────── 5. Decision ───────────── -->
+<section class="sec">
+  <h2>5 · One choice for you: what kind of form is the copy?</h2>
+  <p class="cap">Today the Forms tab can only <b>create</b> "Detailing services" forms. Everything else above is the same in both options.</p>
+  <div class="choices">
+    <div class="choice rec">
+      <h3>B · Add a "Custom forms" kind <span class="pill">Recommended</span></h3>
+      Copies are filed under a new <b>Custom forms</b> entry in "Which form", with a neutral grey Planner label and the form's own name on Planner cards.
+      <ul><li>Right label for sign-ups, surveys, applications, anything not detailing.</li><li>Needs one small database change. I hand you the SQL; nothing touches the live project until you run it or say so.</li></ul>
+      <pre>alter table public.ops_forms drop constraint ops_forms_kind_check;
+alter table public.ops_forms add constraint ops_forms_kind_check
+  check (kind in ('complaint','event','equipment_repair',
+                  'cash_advance','detailing','custom'));</pre>
+    </div>
+    <div class="choice">
+      <h3>A · No database change</h3>
+      Copies are saved as "Detailing services" forms and appear in that list next to Detailing inquiry.
+      <ul><li>Works on localhost straight away.</li><li>Non-detailing forms get the purple "Detailing" label and a "Detailing: …" title on Planner cards.</li><li>Can move to B later.</li></ul>
+    </div>
+  </div>
+</section>
+</div>
+<script>
+// Decorative QR stand-in (not a real code)
+document.querySelectorAll('.qrsvg').forEach((svg) => {
+  let s = 7, out = ''
+  const r = () => (s = (s * 9301 + 49297) % 233280) / 233280
+  const finder = (x, y) => `<rect x="${x}" y="${y}" width="7" height="7" fill="#0b1f3a"/><rect x="${x+1}" y="${y+1}" width="5" height="5" fill="#fff"/><rect x="${x+2}" y="${y+2}" width="3" height="3" fill="#0b1f3a"/>`
+  for (let y = 0; y < 21; y++) for (let x = 0; x < 21; x++) {
+    const inF = (x < 8 && y < 8) || (x > 12 && y < 8) || (x < 8 && y > 12)
+    if (!inF && r() > 0.55) out += `<rect x="${x}" y="${y}" width="1" height="1" fill="#0b1f3a"/>`
+  }
+  svg.innerHTML = out + finder(0, 0) + finder(14, 0) + finder(0, 14)
+})
+</script>
+</body>
+</html>
