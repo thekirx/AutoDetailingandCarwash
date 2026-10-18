@@ -10,6 +10,7 @@
     { "source": "/api/customer-history", "destination": "/api/customer?operation=customer-history" },
     { "source": "/api/customer-portal", "destination": "/api/customer?operation=customer-portal" },
     { "source": "/api/customer-signup", "destination": "/api/customer?operation=customer-signup" },
+    { "source": "/api/referral", "destination": "/api/customer?operation=referral" },
     { "source": "/api/vehicle-transfer", "destination": "/api/customer?operation=vehicle-transfer" },
     { "source": "/api/data-center", "destination": "/api/data-center?operation=data-center" },
     { "source": "/api/demo-login", "destination": "/api/demo-login?operation=demo-login" },

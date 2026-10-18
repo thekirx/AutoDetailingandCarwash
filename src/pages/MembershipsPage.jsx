@@ -25,6 +25,7 @@ import { formatMoney } from '@/queue/queueApi'
 import { formatSizePriceRange } from '@/lib/servicePricing'
 import OpsGuideCard from '@/components/ops/OpsGuideCard'
 import OpsPageShell from '@/components/ops/OpsPageShell'
+import ReferralSettingsCard from '@/components/ops/ReferralSettingsCard'
 import OpsTabList from '@/components/ops/OpsTabBar'
 import { MEMBERSHIPS_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
 import { opsTabSearchParams, resolveOpsTab } from '@/lib/opsShell'
@@ -446,6 +447,7 @@ export default function MembershipsPage() {
                 </form>
               </CardContent>
             </Card>
+            <ReferralSettingsCard canEdit={superAdmin} />
           </TabsContent>
         ) : null}
 

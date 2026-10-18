@@ -55,7 +55,7 @@ describe('system notification catalog', () => {
     const bday = merged.find((t) => t.key === 'birthday.greeting')
     assert.equal(bday.title, 'Happy bday')
     assert.equal(bday.enabled, false)
-    assert.match(bday.body, /free service/)
+    assert.match(bday.body, /free carwash/)
     assert.equal(bday.sms_body, 'SMS hi {name}')
     assert.equal(merged.length, SYSTEM_TEMPLATES.length)
   })

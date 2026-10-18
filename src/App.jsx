@@ -18,6 +18,8 @@ const PublicQueuePage = lazy(() => import('./pages/PublicQueuePage'))
 const PublicQueueTvPage = lazy(() => import('./pages/PublicQueueTvPage'))
 const ContactPage = lazy(() => import('./pages/ContactPage'))
 const PartnershipsPage = lazy(() => import('./pages/PartnershipsPage'))
+const ReferPage = lazy(() => import('./pages/ReferPage'))
+const ReferralLinkPage = lazy(() => import('./pages/ReferralLinkPage'))
 const ComplaintsPage = lazy(() => import('./pages/ComplaintsPage'))
 const EventsPage = lazy(() => import('./pages/EventsPage'))
 const EventSharePage = lazy(() => import('./pages/EventSharePage'))
@@ -134,6 +136,8 @@ export default function App() {
           <Route path="/queue" element={<QueuePage />} />
           <Route path="/branches" element={<BranchesPage />} />
           <Route path="/partnerships" element={<PartnershipsPage />} />
+          <Route path="/refer" element={<ReferPage />} />
+          <Route path="/r/:code" element={<ReferralLinkPage />} />
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/complaints" element={<ComplaintsPage />} />
           <Route path="/events" element={<EventsPage />} />

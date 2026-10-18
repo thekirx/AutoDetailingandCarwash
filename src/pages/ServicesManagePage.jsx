@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthProvider'
 import { canManageServices } from '@/auth/permissions'
-import { archiveService, createService, listServices, updateService } from '@/lib/adminApi'
+import { archiveService, createService, listServiceReferralEligibility, listServices, setServiceReferralEligible, updateService } from '@/lib/adminApi'
 import {
   availablePricingSizes,
   formatSizePriceRange,
@@ -182,6 +182,8 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
   const [services, setServices] = useState([])
   const [form, setForm] = useState(() => emptyForm(catalogScope))
   const [editing, setEditing] = useState(null)
+  // Refer a friend: null until the database has the column.
+  const [referralEligible, setReferralEligible] = useState(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [saving, setSaving] = useState(false)
 
@@ -193,6 +195,7 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
   const load = useCallback(async () => {
     try {
       setServices(await listServices({ includeArchived: false }))
+      listServiceReferralEligibility().then(setReferralEligible).catch(() => setReferralEligible(null))
     } catch (err) {
       toast.error(err.message)
     }
@@ -268,6 +271,9 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
             ? editing.included_service_ids || []
             : [],
       })
+      if (referralEligible && typeof editing.referral_eligible === 'boolean' && editing.referral_eligible !== Boolean(referralEligible[editing.id])) {
+        await setServiceReferralEligible(editing.id, editing.referral_eligible)
+      }
       toast.success('Updated')
       setEditing(null)
       await load()
@@ -647,6 +653,20 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
                   </SelectContent>
                 </Select>
               </div>
+              {referralEligible ? (
+                <label className="flex min-h-11 items-center gap-3">
+                  <input
+                    type="checkbox"
+                    className="size-5"
+                    checked={typeof editing.referral_eligible === 'boolean' ? editing.referral_eligible : Boolean(referralEligible[editing.id])}
+                    onChange={(e) => setEditing({ ...editing, referral_eligible: e.target.checked })}
+                  />
+                  <span className="text-sm">
+                    <span className="font-medium">Counts for refer a friend</span>
+                    <span className="block text-muted-foreground">Detailing and up only — leave carwash off.</span>
+                  </span>
+                </label>
+              ) : null}
               <div className="flex flex-col gap-2">
                 <Label>Catalog price (₱)</Label>
                 <Input

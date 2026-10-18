@@ -26,7 +26,7 @@ describe('customer signup terms', () => {
     const jsx = readFileSync(join(root, 'src/pages/CustomerSignUpPage.jsx'), 'utf8')
     assert.match(jsx, /ONBOARDING_STEPS/)
     assert.match(jsx, /mergeTeamLeadPrefill/)
-    assert.match(jsx, /free carwash/)
+    assert.match(jsx, /BIRTHDAY_GIFT_LABEL|free carwash/)
     assert.match(jsx, /date_of_birth/)
   })
 

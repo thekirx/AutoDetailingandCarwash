@@ -4,6 +4,7 @@ import { CookiePreferencesButton } from '@/components/CookieConsent'
 import TikTokIcon from '@/components/public/TikTokIcon'
 import { branchCityName } from '@/lib/branches'
 import useMarquee from '@/components/public/bredesign/useMarquee'
+import { useReferralSettings } from '@/lib/useReferralSettings'
 import polishWide from '@/assets/footer/hakum-polish-1600.webp'
 import polishNarrow from '@/assets/footer/hakum-polish-800.webp'
 import certIatf from '@/assets/partners/cert-iatf-16949.webp'
@@ -37,6 +38,7 @@ const MARKS = [
 
 export default function SiteFooter({ branches = [] }) {
   const { viewportRef, trackRef } = useMarquee()
+  const { settings: referral } = useReferralSettings()
 
   return (
     <footer className="site-footer">
@@ -155,6 +157,12 @@ export default function SiteFooter({ branches = [] }) {
             <span aria-hidden="true"> · </span>
             <Link to="/partnerships">Brand collabs</Link>
             <span aria-hidden="true"> · </span>
+            {referral.enabled ? (
+              <>
+                <Link to="/refer">Refer a friend</Link>
+                <span aria-hidden="true"> · </span>
+              </>
+            ) : null}
             <Link to="/complaints">Complaints</Link>
           </p>
         </div>

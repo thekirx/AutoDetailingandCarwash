@@ -3,6 +3,7 @@
  * notification_templates. Senders always fall back to these strings.
  */
 import { renderNotificationMessage } from './notificationCopy.js'
+import { BIRTHDAY_GIFT_LABEL } from './birthdayPerk.js'
 
 export const TEMPLATE_CATEGORIES = [
   { id: 'booking_status', label: 'Service status', hint: 'Customer texts when a visit moves' },
@@ -225,13 +226,13 @@ export const SYSTEM_TEMPLATES = [
     key: 'birthday.greeting',
     category: 'birthday',
     label: 'Birthday greeting',
-    description: 'Push + SMS on the customer birthday. Mentions the free service perk.',
+    description: `Push + SMS on the customer birthday. Mentions the ${BIRTHDAY_GIFT_LABEL} perk.`,
     kind: 'birthday_greeting',
     tokens: NAME_TOKENS,
     title: 'Happy birthday from Hakum',
-    body: 'Happy birthday {name}! Enjoy a free service on us this year. Show this at any Hakum branch.',
+    body: `Happy birthday {name}! Enjoy a ${BIRTHDAY_GIFT_LABEL} on us. Show this at any Hakum branch.`,
     sms_body:
-      'Hakum Auto Care: Happy birthday {name}! Your free birthday service is ready. Visit any branch to claim it.',
+      `Hakum Auto Care: Happy birthday {name}! Your ${BIRTHDAY_GIFT_LABEL} is ready. Visit any branch to claim it.`,
     display_order: 200,
   }),
 

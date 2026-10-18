@@ -416,7 +416,25 @@ export const CUSTOMER_REFERENCING_TABLES = new Set([
   'customer_notes',
   'finance_quotes',
   'vehicle_maintenance_schedules',
+  'customer_referral_rewards',
 ])
+
+/**
+ * Refer a friend (20261018120000_refer_a_friend.sql). customer_referrals points
+ * at customers twice, through referrer_id and friend_id, so it moves column by
+ * column. These tables may not exist yet where that migration is still pending,
+ * and a missing table must not block a remount.
+ */
+const CUSTOMER_REFERENCING_COLUMNS = [
+  ['customer_referrals', 'referrer_id'],
+  ['customer_referrals', 'friend_id'],
+]
+const MIGRATION_PENDING_TABLES = new Set(['customer_referral_rewards', 'customer_referrals'])
+
+function isMissingTable(error) {
+  const code = String(error?.code || '')
+  return code === '42P01' || code === 'PGRST205' || /does not exist|could not find the table/i.test(String(error?.message || ''))
+}
 
 /**
  * Move CRM + FK rows onto the Auth uid when invite/create could not pin the CRM id.
@@ -449,13 +467,19 @@ async function remountCustomerOntoAuthUid(admin, { fromId, toId, first, last, fu
   // Re-point every referencing row before touching the old row. A failure here
   // must abort: deleting anyway is what destroys loyalty and membership history.
   const failed = []
+  const moves = [
+    ...[...CUSTOMER_REFERENCING_TABLES].map((table) => [table, 'customer_id']),
+    ...CUSTOMER_REFERENCING_COLUMNS,
+  ]
   await Promise.all(
-    [...CUSTOMER_REFERENCING_TABLES].map(async (table) => {
+    moves.map(async ([table, column]) => {
       const { error } = await admin
         .from(table)
-        .update({ customer_id: toId })
-        .eq('customer_id', fromId)
-      if (error) failed.push(`${table}: ${error.message}`)
+        .update({ [column]: toId })
+        .eq(column, fromId)
+      if (error && !(MIGRATION_PENDING_TABLES.has(table) && isMissingTable(error))) {
+        failed.push(`${table}.${column}: ${error.message}`)
+      }
     }),
   )
   if (failed.length) {

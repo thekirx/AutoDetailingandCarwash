@@ -375,11 +375,26 @@ export async function signupCustomer({ body, requestOrigin = '' }) {
   }
 
   const history = await historyFlagsFor(admin, { customerId: created.user.id, phone })
+
+  // Refer a friend: only a brand-new customer with no walk-in history counts.
+  // Never blocks sign-up — a bad or ineligible code is ignored.
+  let referral = { linked: false }
+  if (body.referral_code) {
+    const { linkReferralAtSignup } = await import('./referral.mjs')
+    referral = await linkReferralAtSignup(admin, {
+      friendId: created.user.id,
+      friendPhone: phone,
+      code: body.referral_code,
+      isNewAccount: !history.existing_history && !history.history_warning,
+    })
+  }
+
   return {
     user_id: created.user.id,
     email: loginEmail,
     login_hint: phone,
     claimed: false,
+    referral_linked: Boolean(referral.linked),
     ...history,
   }
 }

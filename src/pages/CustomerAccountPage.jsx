@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
-import { Cake, CalendarDays, CalendarPlus, Car, ChevronRight, Radio, Receipt, ThumbsDown, ThumbsUp, Wrench } from 'lucide-react'
+import { CalendarDays, CalendarPlus, Car, ChevronRight, Radio, Receipt, ThumbsDown, ThumbsUp, Wrench } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { formatMoney } from '@/queue/queueApi'
 import { customerQueuePath, queueCountsFromRow } from '@/lib/liveQueuePath'
@@ -18,6 +18,8 @@ import NotificationBell from '@/components/NotificationBell'
 import ActiveVisitCard from '@/components/customer/ActiveVisitCard'
 import BranchWeather from '@/components/customer/BranchWeather'
 import StampTrack from '@/components/customer/StampTrack'
+import { BirthdayGreetingSheet, BirthdayHomeCard } from '@/components/customer/BirthdayGreeting'
+import { ProfileProgressCard } from '@/components/customer/ProfileProgress'
 import { Badge, Pills, QueueStats, Row, SectionHead, Skeleton } from '@/components/customer/CustomerUi'
 import {
   Dialog,
@@ -355,6 +357,19 @@ export default function CustomerAccountPage() {
         </div>
       ) : null}
 
+      {!loading && birthday?.perk ? (
+        <>
+          <BirthdayGreetingSheet
+            customerId={user?.id}
+            firstName={firstName}
+            dateOfBirth={birthday.date_of_birth}
+            perk={birthday.perk}
+            queueHref={queueHref}
+          />
+          <BirthdayHomeCard dateOfBirth={birthday.date_of_birth} perk={birthday.perk} />
+        </>
+      ) : null}
+
       {loading ? (
         <div className="capp-span">
           <Skeleton />
@@ -401,6 +416,8 @@ export default function CustomerAccountPage() {
           </Link>
         </div>
       ) : null}
+
+      {!loading && data?.profile ? <ProfileProgressCard profile={data.profile} vehicles={vehicles} /> : null}
 
       {/* Adding a car lives inside My cars; with none saved, the shortcut opens
           straight on the add form ("Add your first car"). */}
@@ -542,28 +559,6 @@ export default function CustomerAccountPage() {
         )}
       </section>
 
-      {birthday?.perk ? (
-        <div className="capp-note">
-          <strong>
-            <Cake className="mr-1 inline size-4" aria-hidden /> Birthday treat: one free service
-          </strong>
-          <p>
-            Show this at any Hakum branch. Valid until{' '}
-            {birthday.perk.expires_at
-              ? new Date(birthday.perk.expires_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
-              : 'this month'}
-            .
-          </p>
-        </div>
-      ) : !loading && birthday && !birthday.date_of_birth ? (
-        <Row
-          icon={Cake}
-          title="Add your birthday"
-          sub="Free carwash on your day."
-          chevron
-          to={`${CUSTOMER_MORE_PATH}?tab=account`}
-        />
-      ) : null}
 
       {!loading && !ratingDone && reviewVisit ? (
         <section className="capp-card capp-span" aria-label="Rate your last visit">

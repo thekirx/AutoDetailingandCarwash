@@ -118,6 +118,9 @@ describe('no staff-facing /api/* fetch forgot its Authorization header', () => {
     // only ever signs in a fixed set of known demo accounts, and returns no
     // credential. Recorded on BUG-088.
     '/api/demo-login',
+    // Refer a friend: GET returns the program settings, or an inviter's first
+    // name for a valid code (rate limited). The POS POST sends a bearer.
+    '/api/referral',
   ])
 
   it('every fetch to an /api/* route outside the public list carries a bearer token', () => {

@@ -7,6 +7,7 @@ import { handleVehicleTransferRequest } from '../server/vehicleTransferApi.mjs'
 import { bearer, readJsonBody, setCors } from '../server/httpUtil.mjs'
 import { handlePublicInquiryRequest } from '../server/publicInquiry.mjs'
 import { handleProvisionRequest } from '../server/provisionCustomer.mjs'
+import { handleReferralRequest } from '../server/referral.mjs'
 
 export const operations = Object.freeze({
   'customer-auth-lookup': (req, res) => {
@@ -29,6 +30,7 @@ export const operations = Object.freeze({
     })
   },
   'public-inquiry': handlePublicInquiryRequest,
+  referral: handleReferralRequest,
   'provision-customer': (req, res) => {
     setCors(res, 'POST, OPTIONS')
     const proto = req.headers['x-forwarded-proto'] || 'https'

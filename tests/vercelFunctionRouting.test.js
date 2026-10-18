@@ -34,6 +34,7 @@ const expected = {
   '/api/provision-staff': '/api/staff?operation=provision-staff',
   '/api/public-book': '/api/bookings?operation=public-book',
   '/api/push-subscribe': '/api/notifications?operation=push-subscribe',
+  '/api/referral': '/api/customer?operation=referral',
   '/api/send-finance-quote': '/api/finance?operation=send-finance-quote',
   '/api/send-push': '/api/notifications?operation=send-push',
   '/api/update-staff': '/api/staff?operation=update-staff',

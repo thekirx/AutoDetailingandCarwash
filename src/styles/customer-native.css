@@ -1920,3 +1920,331 @@ html.capp-sheet-open {
     transition: none !important;
   }
 }
+
+/* ---------- Birthday gift (approved 2026-10-17, mock board 01) ----------
+   Greeting sheet, Home card/row and the Rewards pass. Unscoped so desktop
+   /account gets them too; colours ride on --capp-* tokens. */
+.capp-bday-confetti {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.capp-bday-confetti i {
+  position: absolute;
+  top: -14px;
+  width: 6px;
+  height: 12px;
+  border-radius: 2px;
+  opacity: 0;
+  animation: capp-bday-fall 3.2s ease-in 3 both;
+}
+.capp-bday-confetti .is-sky { background: #9db4ff; }
+.capp-bday-confetti .is-paper { background: #f1f1ed; }
+.capp-bday-confetti .is-gold { background: #f2b84b; }
+.capp-bday-confetti .is-pink { background: #ffb4c8; }
+@keyframes capp-bday-fall {
+  0% { transform: translateY(0) rotate(0); opacity: 0.95; }
+  100% { transform: translateY(260px) rotate(320deg); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Still: a row of chips along the sheet's top edge; none on the Home card, where they'd sit on the text. */
+  .capp-bday-confetti i { animation: none; top: 6px; opacity: 0.55; }
+  .capp-bday-card .capp-bday-confetti { display: none; }
+}
+
+.capp-bday-sheet { position: relative; overflow: hidden; text-align: center; }
+.capp-bday-hero { position: relative; padding: 1.1rem 0 0.4rem; }
+.capp-bday-mark { height: 30px; width: auto; margin: 0 auto; opacity: 0.92; }
+.capp[data-app-theme='light'] .capp-bday-mark,
+.capp-sheet-layer[data-app-theme='light'] .capp-bday-mark { filter: invert(1) brightness(0.25); }
+.capp-bday-name {
+  margin: 0.85rem 0 0.4rem;
+  font: italic 800 1.9rem/1 var(--capp-display);
+  text-transform: uppercase;
+  color: var(--capp-ink);
+}
+.capp-bday-name em {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 1.05rem;
+  color: var(--capp-accent);
+}
+.capp-bday-ticket {
+  position: relative;
+  margin: 1rem 0 0.9rem;
+  padding: 0.9rem 1rem;
+  border: 1.5px dashed var(--capp-accent);
+  border-radius: 0.5rem;
+  background: var(--capp-accent-soft);
+  text-align: left;
+}
+.capp-bday-ticket-k {
+  margin: 0;
+  font: 800 0.66rem/1 var(--capp-body, inherit);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--capp-accent);
+}
+.capp-bday-ticket-v {
+  margin: 0.35rem 0;
+  font: italic 800 1.2rem/1.1 var(--capp-display);
+  text-transform: uppercase;
+  color: var(--capp-ink);
+}
+.capp-bday-ticket b { color: var(--capp-ink); }
+.capp-bday-actions { display: grid; gap: 0.5rem; }
+
+.capp-bday-card {
+  position: relative;
+  overflow: hidden;
+  padding: 1.1rem 1.15rem 1.15rem;
+  border: 1px solid #3d51a0;
+  border-radius: var(--capp-radius);
+  background: linear-gradient(140deg, #0d1b52 0%, #052699 120%);
+  color: #f1f1ed;
+}
+.capp-bday-card-ey {
+  position: relative;
+  margin: 0 0 0.4rem;
+  font: 800 0.66rem/1 var(--capp-body, inherit);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #cfe0ff;
+}
+.capp-bday-card-t {
+  position: relative;
+  margin: 0 0 0.4rem;
+  font: italic 800 1.35rem/1 var(--capp-display);
+  text-transform: uppercase;
+}
+.capp-bday-card-p {
+  position: relative;
+  margin: 0 0 0.85rem;
+  font-size: 0.85rem;
+  color: #cfe0ff;
+}
+.capp-bday-card .capp-btn { position: relative; }
+
+.capp-bday-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.5rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--capp-line-strong, var(--capp-line));
+  border-radius: var(--capp-radius);
+  background: var(--capp-surface);
+  color: var(--capp-ink);
+  text-decoration: none;
+}
+.capp-bday-row-copy { flex: 1; min-width: 0; display: grid; gap: 0.1rem; }
+.capp-bday-row-copy strong { font-size: 0.9rem; }
+.capp-bday-row-copy small { font-size: 0.78rem; color: var(--capp-steel); }
+.capp-bday-pill {
+  flex: none;
+  padding: 0.3rem 0.55rem;
+  border-radius: 999px;
+  background: var(--capp-accent-soft);
+  color: var(--capp-accent);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.capp-bday-pill.is-urgent {
+  background: color-mix(in srgb, var(--capp-warn) 18%, transparent);
+  color: var(--capp-warn);
+}
+
+.capp-bday-pass {
+  padding: 1rem 1.05rem;
+  border-radius: 0.6rem;
+  background: linear-gradient(150deg, #f1f1ed 60%, #ffd9e4);
+  color: #020a31;
+}
+.capp-bday-pass-head { display: flex; align-items: center; justify-content: space-between; }
+.capp-bday-pass-head img { height: 22px; width: auto; }
+.capp-bday-pass-head span {
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  background: #052699;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.capp-bday-pass-t {
+  margin: 0.85rem 0 0.2rem;
+  font: italic 800 1.3rem/1 var(--capp-display);
+  text-transform: uppercase;
+}
+.capp-bday-pass-who { margin: 0; font-size: 0.85rem; }
+.capp-bday-pass-foot { margin: 0.7rem 0 0; font-size: 0.76rem; color: #4b5563; }
+
+/* ---------- Profile completion (approved 2026-10-17, mock board 02) ---------- */
+.capp-pp-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 0.75rem; }
+.capp-pp-head .capp-title { margin: 0; }
+.capp-pp-pct { font: italic 800 1.4rem/1 var(--capp-display); color: var(--capp-ink); }
+.capp-pp-bar {
+  height: 8px;
+  margin: 0.7rem 0 0.5rem;
+  border-radius: 8px;
+  background: var(--capp-surface-2, var(--capp-fill));
+  overflow: hidden;
+}
+.capp-pp-bar b {
+  display: block;
+  height: 100%;
+  border-radius: 8px;
+  background: linear-gradient(90deg, var(--capp-accent), color-mix(in srgb, var(--capp-accent) 45%, #ffffff));
+  transition: width 0.4s ease;
+}
+.capp-profile-progress .capp-meta { margin: 0 0 0.8rem; }
+
+.capp-pp-ringrow { display: flex; align-items: center; gap: 0.9rem; }
+.capp-pp-ringrow .capp-title { margin: 0 0 0.2rem; }
+.capp-pp-ring { width: 58px; height: 58px; flex: none; }
+.capp-pp-ring circle { fill: none; stroke-width: 4; }
+.capp-pp-ring-track { stroke: var(--capp-surface-2, var(--capp-fill)); }
+.capp-pp-ring-fill { stroke: var(--capp-accent); stroke-linecap: round; }
+.capp-pp-ring text { fill: var(--capp-ink); font-size: 9px; font-weight: 800; }
+.capp-pp-list { list-style: none; margin: 0.8rem 0 0; padding: 0; }
+.capp-pp-list li {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 2.9rem;
+  padding: 0.55rem 0;
+  border-top: 1px solid var(--capp-line);
+  font-size: 0.86rem;
+  color: var(--capp-ink);
+}
+.capp-pp-list li.is-done { color: var(--capp-steel); }
+.capp-pp-dot {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border: 1.6px solid var(--capp-line-strong, var(--capp-line));
+  border-radius: 50%;
+}
+.capp-pp-list li.is-done .capp-pp-dot { border-color: var(--capp-ok); background: var(--capp-ok); color: var(--capp-bg, #020a31); }
+.capp-pp-copy { flex: 1; min-width: 0; }
+.capp-pp-copy small { display: block; font-size: 0.74rem; color: var(--capp-steel); }
+.capp-pp-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.1rem;
+  min-height: 44px;
+  padding: 0 0.25rem;
+  color: var(--capp-accent);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+/* Checklist links land on these forms; clear the compact top bar. */
+.capp form#email,
+.capp form#phone,
+.capp form#birthday { scroll-margin-top: 5.5rem; }
+
+/* ---------- Refer a friend (approved 2026-10-17, mock board 03) ---------- */
+.capp-ref .capp-title { margin: 0.1rem 0 0.35rem; }
+.capp-ref-code {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 52px;
+  margin: 0.8rem 0 0.6rem;
+  padding: 0.7rem 0.9rem;
+  border: 1.5px dashed var(--capp-accent);
+  border-radius: 0.5rem;
+  background: var(--capp-accent-soft);
+  color: var(--capp-ink);
+  cursor: pointer;
+}
+.capp-ref-code b { font-size: 1.1rem; font-weight: 800; letter-spacing: 0.16em; }
+.capp-ref-code span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--capp-accent);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.capp-ref-share { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem; }
+.capp-ref-share a,
+.capp-ref-share button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-height: 64px;
+  border: 1px solid var(--capp-line-strong, var(--capp-line));
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--capp-ink);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+}
+.capp-ref-share svg { color: var(--capp-accent); }
+.capp-ref-count { margin: 0.9rem 0 0.4rem; }
+.capp-ref-ladder { display: flex; gap: 0.4rem; }
+.capp-ref-ladder i {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  height: 30px;
+  border-radius: 0.3rem;
+  background: var(--capp-surface-2, var(--capp-fill));
+  color: var(--capp-steel);
+  font-size: 0.7rem;
+  font-style: normal;
+  font-weight: 800;
+}
+.capp-ref-ladder i.is-on { background: var(--capp-btn); color: var(--capp-btn-ink, #fff); }
+.capp-ref-reward,
+.capp-ref-friends li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--capp-line);
+  border-radius: var(--capp-radius);
+  background: var(--capp-surface);
+  color: var(--capp-ink);
+}
+.capp-ref-reward { border-color: var(--capp-accent); }
+.capp-ref-reward-copy { flex: 1; min-width: 0; display: grid; gap: 0.1rem; }
+.capp-ref-reward-copy strong { font-size: 0.9rem; }
+.capp-ref-reward-copy small { font-size: 0.76rem; color: var(--capp-steel); }
+.capp-ref-friends { display: grid; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
+
+/* Desktop /account: the birthday and profile cards sit in the wide editorial
+   column, so their buttons size to their label instead of spanning it. */
+@media (min-width: 860px) {
+  .capp-bday-card .capp-btn-block,
+  .capp-profile-progress .capp-btn-block {
+    display: inline-flex;
+    width: auto;
+    min-width: 13rem;
+    padding-inline: 1.75rem;
+    align-self: flex-start;
+    justify-self: start;
+  }
+  .capp-bday-card,
+  .capp-profile-progress { padding: 1.6rem 1.75rem; }
+}

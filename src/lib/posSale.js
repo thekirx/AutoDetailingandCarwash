@@ -209,7 +209,7 @@ export function applyAdHocDiscount(cart = [], { percent = 0, amountMinor = 0, re
   let discountedMinor = 0
   if (pct > 0) {
     next = next.map((line) => {
-      if (line.from_handoff || line.is_loyalty_award || line.is_birthday_award || line.is_membership_included) {
+      if (line.from_handoff || line.is_loyalty_award || line.is_birthday_award || line.is_membership_included || line.referral_reward_id) {
         return line
       }
       const list = Math.max(Math.floor(Number(line.list_price_minor ?? line.unit_price_minor) || 0), 0)
@@ -230,7 +230,8 @@ export function applyAdHocDiscount(cart = [], { percent = 0, amountMinor = 0, re
         !line.from_handoff &&
         !line.is_loyalty_award &&
         !line.is_birthday_award &&
-        !line.is_membership_included,
+        !line.is_membership_included &&
+        !line.referral_reward_id,
     )
     const pool = eligible.reduce(
       (sum, line) =>
@@ -248,7 +249,8 @@ export function applyAdHocDiscount(cart = [], { percent = 0, amountMinor = 0, re
         line.from_handoff ||
         line.is_loyalty_award ||
         line.is_birthday_award ||
-        line.is_membership_included
+        line.is_membership_included ||
+        line.referral_reward_id
       ) {
         return line
       }
@@ -386,15 +388,78 @@ export function priceCartForMembership(cart = [], membershipContext = {}) {
       discountPercent,
       includedServices,
     })
+    // Repricing (customer linked/unlinked) drops a refer-a-friend reward; staff re-apply it.
     return {
       ...line,
+      referral_reward_id: undefined,
       list_price_minor: list,
       unit_price_minor: priced.unit_price_minor,
       price_minor: priced.unit_price_minor,
       is_membership_included: priced.is_membership_included,
       membership_discount_applied: priced.membership_discount_applied,
+      ...(line.referral_reward_id ? { adhoc_discount_applied: false, adhoc_discount_reason: '' } : {}),
     }
   })
+}
+
+export const REFERRAL_DISCOUNT_REASON = 'Refer-a-friend reward'
+
+/** Centavos off one unit: amount_off is capped at the price; percent_off rounds. */
+export function referralRewardMinor(unitMinor, settings = {}) {
+  const unit = Math.max(Math.floor(Number(unitMinor) || 0), 0)
+  const value = Math.max(Math.floor(Number(settings.reward_value) || 0), 0)
+  if (!unit || !value) return 0
+  if (settings.reward_kind === 'percent_off') return Math.min(unit, Math.round((unit * Math.min(value, 100)) / 100))
+  return Math.min(unit, value)
+}
+
+/**
+ * Lines a refer-a-friend reward may go on: a catalog service flagged
+ * referral_eligible (detailing and up, never carwash), quantity 1, not already
+ * free or discounted. Queue/board tickets (from_handoff) keep their floor amount
+ * — crew pay is computed from it — so they are excluded until Kirk decides.
+ */
+export function referralRewardLineError(line = {}, eligibleServiceIds = new Set()) {
+  if (normalizePosLineItemType(line.item_type) !== 'service' || !line.id) return 'Rewards go on a service, not merch.'
+  if (!eligibleServiceIds.has(line.id)) return 'Refer-a-friend rewards are for detailing and up, not carwash.'
+  if (line.from_handoff) return 'Rewards can’t go on a queue ticket yet. Ring the service up from the catalog.'
+  if (line.is_loyalty_award || line.is_birthday_award || line.is_membership_included) return 'This line is already free.'
+  if (line.adhoc_discount_applied) return 'This line already has a discount.'
+  if (Math.max(1, Number(line.quantity) || 1) !== 1) return 'Set the quantity to 1 to use the reward.'
+  return ''
+}
+
+/** Apply one reward to one line. One reward per sale. → { ok, cart, error } */
+export function applyReferralRewardToCart(cart = [], lineKey, { reward, settings, eligibleServiceIds } = {}) {
+  const lines = cart || []
+  if (!reward?.id) return { ok: false, error: 'No refer-a-friend reward to use.', cart: lines }
+  if (lines.some((l) => l.referral_reward_id)) return { ok: false, error: 'One refer-a-friend reward per sale.', cart: lines }
+  const target = lines.find((l) => l.key === lineKey)
+  if (!target) return { ok: false, error: 'Line not found.', cart: lines }
+  const why = referralRewardLineError(target, eligibleServiceIds || new Set())
+  if (why) return { ok: false, error: why, cart: lines }
+  const unit = Math.max(Math.floor(Number(target.unit_price_minor) || 0), 0)
+  const off = referralRewardMinor(unit, settings)
+  if (!off) return { ok: false, error: 'The reward value isn’t set yet.', cart: lines }
+  const next = lines.map((l) =>
+    l.key === lineKey
+      ? {
+          ...l,
+          list_price_minor: Math.max(Math.floor(Number(l.list_price_minor ?? unit) || 0), 0),
+          unit_price_minor: unit - off,
+          price_minor: unit - off,
+          adhoc_discount_applied: true,
+          adhoc_discount_reason: REFERRAL_DISCOUNT_REASON,
+          referral_reward_id: reward.id,
+        }
+      : l,
+  )
+  return { ok: true, cart: next, offMinor: off }
+}
+
+/** Remove the reward from whichever line carries it (back to its pre-reward price). */
+export function removeReferralRewardFromCart(cart = [], membershipContext) {
+  return priceCartForMembership(cart, membershipContext)
 }
 
 /** True when payment_method is in the configured POS list.

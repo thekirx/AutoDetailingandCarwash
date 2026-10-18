@@ -62,7 +62,7 @@ async function requireCustomer(accessToken) {
   return { admin, userId, user: userData.user, customer }
 }
 
-export async function loadCustomerPortal({ accessToken }) {
+export async function loadCustomerPortal({ accessToken, origin = '' }) {
   const { admin, userId, user, customer } = await requireCustomer(accessToken)
 
   const [branches, history, purchases, active, queue, loyaltySettings, loyaltyMilestones, customerRow, vehicles, membershipRow, maint] =
@@ -152,6 +152,19 @@ export async function loadCustomerPortal({ accessToken }) {
       .limit(1)
       .maybeSingle()
     birthdayPerk = perkRow || null
+  }
+
+  // Refer a friend: null while the program is off or the migration isn't applied.
+  let referral = null
+  try {
+    const { portalReferral } = await import('./referral.mjs')
+    referral = await portalReferral(admin, {
+      userId,
+      fullName: customerRow.data?.full_name || customer?.full_name || '',
+      origin: origin || undefined,
+    })
+  } catch {
+    /* never block portal on referrals */
   }
 
   const queueRows = queue.data || []
@@ -256,6 +269,7 @@ export async function loadCustomerPortal({ accessToken }) {
       perk: birthdayPerk && birthdayPerk.status === 'available' ? birthdayPerk : null,
     },
     maintenanceDue: (maint.data || []).filter((row) => maintenanceNeedsOpsAttention(row)),
+    referral,
   }
 }
 
@@ -576,7 +590,9 @@ export async function handleCustomerPortalRequest(req, res, { getAccessToken }) 
     if (req.method !== 'GET' && req.method !== 'POST') {
       return json(res, 405, { error: 'Method not allowed' })
     }
-    const result = await loadCustomerPortal({ accessToken })
+    const host = req.headers?.['x-forwarded-host'] || req.headers?.host || ''
+    const proto = req.headers?.['x-forwarded-proto'] || (String(host).startsWith('localhost') ? 'http' : 'https')
+    const result = await loadCustomerPortal({ accessToken, origin: host ? `${proto}://${host}` : '' })
     return json(res, 200, result)
   } catch (err) {
     return json(res, err.status || 500, { error: err.message || String(err) })

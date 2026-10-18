@@ -62,3 +62,43 @@ export function isBirthdayPerkActive(perk, now = new Date()) {
   if (!perk.expires_at) return true
   return new Date(perk.expires_at).getTime() > now.getTime()
 }
+
+/**
+ * The birthday gift, worded once. Every customer surface imports these, so a
+ * client change ("free service", another gift) is a one-line edit here plus the
+ * SA-editable birthday.greeting template.
+ */
+export const BIRTHDAY_GIFT_LABEL = 'free carwash'
+export const BIRTHDAY_GIFT_TITLE = 'Free carwash'
+export const BIRTHDAY_PERK_DAYS = 30
+
+const DAY_MS = 86_400_000
+/** Countdown turns amber once this few days remain. */
+export const BIRTHDAY_URGENT_DAYS = 7
+
+/**
+ * What Home shows for the birthday perk.
+ * 'day' — today is the birthday and the perk is live (hero card + greeting sheet).
+ * 'countdown' — perk live on a later day (slim row with days left).
+ * 'none' — no live perk (claimed, expired, never granted).
+ */
+export function birthdayCardState(dateOfBirth, perk, now = new Date()) {
+  if (!isBirthdayPerkActive(perk, now)) return { mode: 'none', daysLeft: 0, urgent: false }
+  const expires = perk.expires_at ? new Date(perk.expires_at).getTime() : null
+  const daysLeft = expires == null ? BIRTHDAY_PERK_DAYS : Math.max(1, Math.ceil((expires - now.getTime()) / DAY_MS))
+  if (isBirthdayToday(dateOfBirth, now)) return { mode: 'day', daysLeft, urgent: false }
+  return { mode: 'countdown', daysLeft, urgent: daysLeft <= BIRTHDAY_URGENT_DAYS }
+}
+
+/** localStorage key: the greeting sheet opens once per customer per perk year. */
+export function birthdayGreetedKey(customerId, perkYear) {
+  return `hakum-bday-greeted-${customerId || 'me'}-${perkYear || ''}`
+}
+
+/** "Nov 16" in Manila time, or '' when unknown. */
+export function formatPerkDate(iso, timeZone = MANILA) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', timeZone })
+}

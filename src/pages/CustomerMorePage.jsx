@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Bell,
   Cake,
@@ -40,6 +40,8 @@ import NotificationBell, { useUserNotifications } from '@/components/Notificatio
 import PushToggle from '@/components/PushToggle'
 import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
 import { Row, SectionHead, Skeleton } from '@/components/customer/CustomerUi'
+import { BIRTHDAY_GIFT_LABEL } from '@/lib/birthdayPerk'
+import { ProfileChecklist } from '@/components/customer/ProfileProgress'
 
 const TAB_TITLES = {
   account: ['My profile', 'Email, phone, birthday, and password.'],
@@ -137,6 +139,8 @@ export default function CustomerMorePage() {
           </em>
         </span>
       </Link>
+
+      {portal ? <ProfileChecklist profile={profile} vehicles={vehicles} /> : null}
 
       <section className="capp-section" aria-label="Garage">
         <SectionHead title="Garage" />
@@ -267,6 +271,19 @@ function AccountSection({ profile, onUpdated }) {
   const [password, setPassword] = useState('')
   const [password2, setPassword2] = useState('')
   const syntheticEmail = isSyntheticCustomerEmail(profile?.email)
+  const { hash } = useLocation()
+
+  // Profile checklist links land on a form (#email, #birthday): bring it into view once.
+  useEffect(() => {
+    const id = hash.replace('#', '')
+    if (!id) return undefined
+    const t = window.setTimeout(() => {
+      const el = document.getElementById(id)
+      el?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+      el?.querySelector('input')?.focus({ preventScroll: true })
+    }, 120)
+    return () => window.clearTimeout(t)
+  }, [hash])
 
   useEffect(() => {
     setEmail(syntheticEmail ? '' : profile?.email || '')
@@ -290,6 +307,7 @@ function AccountSection({ profile, onUpdated }) {
   return (
     <>
       <form
+        id="email"
         className="capp-card"
         onSubmit={(e) => {
           e.preventDefault()
@@ -317,6 +335,7 @@ function AccountSection({ profile, onUpdated }) {
       </form>
 
       <form
+        id="phone"
         className="capp-card"
         onSubmit={(e) => {
           e.preventDefault()
@@ -335,6 +354,7 @@ function AccountSection({ profile, onUpdated }) {
       </form>
 
       <form
+        id="birthday"
         className="capp-card"
         onSubmit={(e) => {
           e.preventDefault()
@@ -342,7 +362,7 @@ function AccountSection({ profile, onUpdated }) {
         }}
       >
         <SectionHead title="Birthday" />
-        <p className="capp-meta">Greeting plus one free service at any Hakum branch.</p>
+        <p className="capp-meta">Greeting plus one {BIRTHDAY_GIFT_LABEL} at any Hakum branch.</p>
         <label className="capp-field">
           <span>Date of birth</span>
           <input type="date" value={birthday} onChange={(e) => setBirthday(e.target.value)} />

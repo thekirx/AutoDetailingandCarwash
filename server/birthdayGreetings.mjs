@@ -3,7 +3,7 @@
  * Idempotent per customer/year via customer_birthday_perks unique key.
  */
 import { createClient } from '@supabase/supabase-js'
-import { birthdayPerkExpiresAt, birthdayQueryDays, isBirthdayToday } from '../src/lib/birthdayPerk.js'
+import { BIRTHDAY_GIFT_LABEL, birthdayPerkExpiresAt, birthdayQueryDays, isBirthdayToday } from '../src/lib/birthdayPerk.js'
 import { applyTemplateText } from '../src/lib/notificationTemplates.js'
 import { busybeeSendSms } from './busybee.mjs'
 import { isSmsNotificationsEnabled } from './notifyBooking.mjs'
@@ -105,12 +105,12 @@ export async function sendBirthdayGreeting(db, customer, perk, templates = {}) {
   const body = applyTemplateText(
     tpl?.body,
     vars,
-    `Happy birthday ${vars.name}! Enjoy a free service on us this year.`,
+    `Happy birthday ${vars.name}! Enjoy a ${BIRTHDAY_GIFT_LABEL} on us.`,
   )
   const sms = applyTemplateText(
     tpl?.sms_body,
     vars,
-    `Hakum Auto Care: Happy birthday ${vars.name}! Your free birthday service is ready.`,
+    `Hakum Auto Care: Happy birthday ${vars.name}! Your ${BIRTHDAY_GIFT_LABEL} is ready.`,
   )
 
   const inbox = await writeInbox(db, customer.id, {

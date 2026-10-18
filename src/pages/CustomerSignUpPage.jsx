@@ -15,6 +15,8 @@ import {
 } from '../lib/customerOnboarding'
 import { PLATE_FIELD_HINT } from '../lib/customerAuth'
 import { describeAuthError, describeCustomerAuthFailure } from '../lib/authErrorMessage'
+import { BIRTHDAY_GIFT_LABEL, BIRTHDAY_GIFT_TITLE } from '@/lib/birthdayPerk'
+import { forgetReferralCode, readReferralCode } from '@/lib/referral'
 
 async function authLookup(identifier) {
   const res = await fetch('/api/customer-auth-lookup', {
@@ -39,7 +41,7 @@ function FieldError({ id, message }) {
 export default function CustomerSignUpPage() {
   usePageMeta({
     title: 'Create account',
-    description: 'Join Hakum Auto Care. Add your name, plate, and birthday for a free carwash on your day.',
+    description: `Join Hakum Auto Care. Add your name, plate, and birthday for a ${BIRTHDAY_GIFT_LABEL} on your day.`,
     path: '/signup',
   })
 
@@ -55,7 +57,25 @@ export default function CustomerSignUpPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [looking, setLooking] = useState(false)
+  const [invite, setInvite] = useState(null)
   const navigate = useNavigate()
+
+  // Arrived from /r/:code — show who invited them. The code rides along to the
+  // server; a bad or ineligible code never blocks sign-up.
+  useEffect(() => {
+    const code = readReferralCode()
+    if (!code) return undefined
+    let live = true
+    fetch(`/api/referral?view=lookup&code=${encodeURIComponent(code)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((found) => {
+        if (live && found?.code) setInvite(found)
+      })
+      .catch(() => {})
+    return () => {
+      live = false
+    }
+  }, [])
 
   const stepDef = ONBOARDING_STEPS[step]
   const stepIndex = step
@@ -139,6 +159,7 @@ export default function CustomerSignUpPage() {
             password: form.password,
             confirm: form.confirm,
             accepted_terms: true,
+            referral_code: invite?.code || null,
           }),
         })
       } catch (netErr) {
@@ -157,6 +178,7 @@ export default function CustomerSignUpPage() {
         throw new Error(describeCustomerAuthFailure({ status: res.status, data: body }))
       }
 
+      forgetReferralCode()
       const loginEmail = body.email
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email: loginEmail,
@@ -188,7 +210,7 @@ export default function CustomerSignUpPage() {
     () => ({
       phone: 'Start with your number.',
       profile: 'You and your car.',
-      birthday: 'Free wash on your day.',
+      birthday: `${BIRTHDAY_GIFT_TITLE} on your day.`,
       security: 'Lock it in.',
     }),
     [],
@@ -227,6 +249,17 @@ export default function CustomerSignUpPage() {
           </li>
         ))}
       </ol>
+
+      {invite ? (
+        <div className="hakum-auth-invite" role="status">
+          <p className="hakum-auth-invite-ey">Invited by {invite.first_name}</p>
+          <p className="hakum-auth-invite-t">A {String(invite.reward_label || 'reward').toLowerCase()} is waiting.</p>
+          <p>Create your account. After your first detailing service or higher, it&apos;s yours. Carwash doesn&apos;t count.</p>
+          <p className="hakum-auth-invite-code">
+            Referral code <b>{invite.code}</b> applied
+          </p>
+        </div>
+      ) : null}
 
       {banner ? (
         <p className="hakum-auth-info" role="status">
@@ -302,7 +335,7 @@ export default function CustomerSignUpPage() {
             <div className="hakum-auth-perk" role="note">
               <Cake className="size-4" aria-hidden />
               <p>
-                Add your birthday and we treat you to a <strong>free carwash</strong> on your day, plus a greeting on
+                Add your birthday and we treat you to a <strong>{BIRTHDAY_GIFT_LABEL}</strong> on your day, plus a greeting on
                 your phone.
               </p>
             </div>
