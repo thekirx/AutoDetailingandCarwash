@@ -12,6 +12,8 @@ const APP_PAGES = [
   'src/pages/CustomerBookPage.jsx',
   'src/pages/CustomerQueuePage.jsx',
   'src/pages/CustomerLoyaltyPage.jsx',
+  'src/pages/CustomerReferralPage.jsx',
+  'src/pages/CustomerVouchersPage.jsx',
   'src/pages/CustomerBlogPage.jsx',
   'src/pages/CustomerEventsPage.jsx',
   'src/pages/CustomerMorePage.jsx',
@@ -23,7 +25,7 @@ describe('customer app frame', () => {
     assert.match(read('src/components/CustomerAppFrame.jsx'), /CustomerAccountDock/)
     assert.match(read('src/components/CustomerAccountDock.jsx'), /getCustomerAccountTabs/)
     const app = read('src/App.jsx')
-    for (const path of ['/account/queue', '/account/book', '/account/loyalty', '/account/more', '/account/blog', '/account/events']) {
+    for (const path of ['/account/queue', '/account/book', '/account/loyalty', '/account/referral', '/account/vouchers', '/account/more', '/account/blog', '/account/events']) {
       assert.match(app, new RegExp(`path="${path.replace(/\//g, '\\/')}"`), path)
     }
   })

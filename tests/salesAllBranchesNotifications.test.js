@@ -38,11 +38,9 @@ describe('sales all-branches scope', () => {
     assert.match(sql, /Sales can update bookings across branches/)
   })
 
-  it('bookingStatusAccess lets Sales update any branch on the detailing pipeline', async () => {
+  it('Customer Rep is all-branches and detailing is read-only', async () => {
     const mjs = await readProject('server/bookingStatusAccess.mjs')
-    // The branch_slug === branch check is gone for sales.
-    assert.doesNotMatch(mjs, /staff\.branch_slug === branch/)
-    assert.match(mjs, /Sales: assigned to all branches/)
+    assert.match(mjs, /staff\.role === 'sales'\) return false/)
   })
 })
 
@@ -97,15 +95,16 @@ describe('maintenance reminder seed on completion', () => {
     assert.match(mjs, /action === 'reset'/)
   })
 
-  it('reminder cron sends once per due cycle (scheduled only)', async () => {
-    const mjs = await readProject('scripts/notify-maintenance-due.mjs')
+  it('reminder cron keeps monthly texts until the visit, then the complete path resets the clock', async () => {
+    const mjs = await readProject('server/maintenanceReminders.mjs')
     const notify = await readProject('server/paintMaintenanceNotify.mjs')
+    const script = await readProject('scripts/notify-maintenance-due.mjs')
     assert.match(mjs, /sendPaintMaintenanceReminder/)
-    assert.match(mjs, /notification_settings/)
-    assert.match(mjs, /\.eq\('status', 'scheduled'\)/)
+    assert.match(mjs, /maintenanceReminderDue/)
+    assert.match(script, /runMaintenanceReminders/)
     assert.match(notify, /sendWebPushToUsers/)
     assert.match(notify, /busybeeSendSms/)
-    assert.match(notify, /status: 'notified'/)
+    assert.match(notify, /status: 'scheduled'/)
   })
 })
 

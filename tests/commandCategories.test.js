@@ -74,12 +74,14 @@ describe('command category IA', () => {
     const queueLinks = sa.filter((i) => String(i.to).startsWith('/operations/queue') && !String(i.to).includes('/new'))
     assert.ok(labels.includes('Floor Board'))
     assert.equal(queueLinks.length, 1)
-    assert.equal(queueLinks[0].label, 'Carwash Board')
+    assert.equal(queueLinks[0].label, 'Carwash Queue')
     assert.equal(queueLinks[0].to, '/operations/queue')
     assert.ok(!String(queueLinks[0].to).includes('family=detailing'))
     assert.equal(labels.includes('Car Wash Queue'), false)
     assert.equal(labels.includes('Detailing Queue'), false)
-    assert.ok(labels.includes('Planner Board'))
+    assert.ok(labels.includes('Team Planner'))
+    assert.equal(labels.includes('KPI'), false)
+    assert.equal(labels.includes('Reviews'), false)
     assert.ok(labels.includes('Settings'))
     assert.equal(canAccessSettings({ role: 'BossMich' }), true)
     const dock = getTeamLeadDock({ role: 'team_lead', branch_slug: 'bacoor' })
@@ -101,29 +103,43 @@ describe('command category IA', () => {
     assert.match(page, /kinds=\{\['service', 'package'\]\}/)
   })
 
-  it('Command sidebar puts the six main tools before the remaining groups', () => {
+  it('Command sidebar groups Floor Insight, then Configuration, with Audit under Operations Insight', () => {
     const sa = getOperationsNav({ role: 'BossMich' })
     const groups = groupOperationsNav(sa)
     const ids = groups.map((g) => g.id)
-    assert.deepEqual(ids, ['primary', 'floor', 'counter', 'customers', 'work', 'company'])
-    assert.deepEqual(groups[0].items.map((item) => item.to), [
-      '/operations/dashboard',
-      '/operations/queue',
-      '/operations/bookings',
-      '/operations/planning',
-      '/operations/pos',
-      '/operations/finance',
+    assert.deepEqual(ids, ['insight', 'hr', 'customers', 'config', 'ops-insight'])
+    assert.equal(groups[0].label, 'Floor Insight')
+    assert.deepEqual(groups[0].items.map((item) => item.label), [
+      'Floor Board',
+      'Carwash Queue',
+      'Detailing Schedule',
+      'Team Planner',
+      'Point of Sales',
+      'Vouchers',
+      'Inventory',
+      'Financials',
+      'Monthly salaries',
     ])
-    assert.equal(groups[0].items[0].label, 'Floor Board')
-    assert.ok(!sa.some((i) => i.label === 'Console'))
-    assert.ok(groups[0].items.some((i) => i.label === 'Carwash Board'))
-    assert.ok(groups[0].items.some((i) => i.label === 'Detailing Board'))
-    assert.deepEqual(groups.slice(1).flatMap((group) => group.items), sa.filter((item) => !groups[0].items.includes(item)))
-    assert.ok(!sa.some((i) => i.to === '/operations/payroll'))
-    assert.ok(groups.find((g) => g.id === 'company').items.some((i) => i.to === '/operations/settings'))
-    const labels = sa.map((i) => i.label)
-    assert.ok(labels.indexOf('Carwash Board') < labels.indexOf('Point Of Sales'))
-    assert.ok(labels.indexOf('Detailing Board') < labels.indexOf('Settings'))
+    assert.deepEqual(
+      groups.find((g) => g.id === 'config').items.map((item) => item.label),
+      [
+        'Branches',
+        'Services and Packages',
+        'Detailing Packages',
+        'Vehicle List',
+        'RBAC Delegation',
+        'Transfer car',
+        'Content',
+        'Settings',
+      ],
+    )
+    assert.deepEqual(
+      groups.find((g) => g.id === 'ops-insight').items.map((item) => item.label),
+      ['History', 'Notifications', 'Audit', 'Data Center'],
+    )
+    assert.ok(!sa.some((i) => i.label === 'Console' || i.label === 'KPI' || i.label === 'Reviews' || i.label === 'Month KPI'))
+    assert.ok(sa.some((i) => i.to === '/operations/vouchers' && i.label === 'Vouchers'))
+    assert.ok(!sa.some((i) => i.to === '/operations/payroll' || i.to === '/operations/kpi' || i.to === '/operations/reviews'))
     const layout = readFileSync(join(root, 'src/layouts/OperationsLayout.jsx'), 'utf8')
     const css = readFileSync(join(root, 'src/styles.css'), 'utf8')
     assert.match(layout, /groupOperationsNav/)

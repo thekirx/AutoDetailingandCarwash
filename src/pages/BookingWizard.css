@@ -123,6 +123,7 @@
   letter-spacing: 0;
 }
 .bk-field input,
+.bk-field select,
 .bk-wizard .suggest-field input {
   display: block;
   width: 100%;
@@ -140,6 +141,7 @@
 .bk-field input::placeholder,
 .bk-wizard .suggest-field input::placeholder { color: #8a90a8; }
 .bk-field input:focus,
+.bk-field select:focus,
 .bk-wizard .suggest-field input:focus {
   outline: none;
   border-color: var(--bk-blue);

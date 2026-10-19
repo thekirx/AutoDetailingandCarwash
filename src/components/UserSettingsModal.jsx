@@ -50,13 +50,14 @@ export default function UserSettingsModal({
   showGarage = false,
 }) {
   const { theme, setTheme, resolvedTheme } = useTheme()
-  const { signOut } = useAuth()
+  const { signOut, refreshProfile } = useAuth()
   const navigate = useNavigate()
   const [tab, setTab] = useState(initialTab)
   const [busy, setBusy] = useState(false)
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [birthday, setBirthday] = useState('')
+  const birthdayLocked = Boolean(profile?.date_of_birth_locked_at && profile?.date_of_birth)
   const [password, setPassword] = useState('')
   const [password2, setPassword2] = useState('')
   const [smsOptIn, setSmsOptIn] = useState(true)
@@ -117,10 +118,16 @@ export default function UserSettingsModal({
 
   async function savePhone(e) {
     e.preventDefault()
-    if (!isCustomer) return
     setBusy(true)
     try {
-      await portalAction('update-phone', { phone: phone.trim() })
+      if (isCustomer) {
+        await portalAction('update-phone', { phone: phone.trim() })
+      } else {
+        const { data, error } = await supabase.rpc('save_own_staff_phone', { p_phone: phone.trim() })
+        if (error) throw error
+        if (data?.ok === false) throw new Error(data.error || 'Could not save phone')
+        setPhone(data?.phone || phone.trim())
+      }
       toast.success('Phone updated')
       onUpdated?.()
     } catch (err) {
@@ -360,23 +367,82 @@ export default function UserSettingsModal({
                     Save birthday
                   </Button>
                 </form>
-              ) : null}
-
-              {isCustomer ? (
-                <form onSubmit={savePhone} className="space-y-3 border-t border-border pt-5">
+              ) : (
+                <form
+                  onSubmit={async (e) => {
+                    e.preventDefault()
+                    if (!birthday.trim()) {
+                      toast.error('Pick your date of birth.')
+                      return
+                    }
+                    setBusy(true)
+                    try {
+                      const { data, error } = await supabase.rpc('save_own_staff_birthday', {
+                        p_date: birthday.trim(),
+                      })
+                      if (error) throw error
+                      if (data?.ok === false) throw new Error(data.error || 'Could not save birthday')
+                      toast.success(data?.locked ? 'Birthday saved and locked' : 'Birthday saved')
+                      await refreshProfile?.()
+                      onUpdated?.()
+                    } catch (err) {
+                      toast.error(err.message)
+                    } finally {
+                      setBusy(false)
+                    }
+                  }}
+                  className="space-y-3 border-t border-border pt-5"
+                >
                   <div className="flex items-center gap-2 text-sm font-bold">
-                    <Phone className="size-4 text-primary" aria-hidden />
-                    Phone
+                    <Cake className="size-4 text-primary" aria-hidden />
+                    Birthday
                   </div>
+                  <p className="text-sm text-muted-foreground">
+                    {birthdayLocked
+                      ? 'Locked after the first save. Ask Super Admin only if it must change.'
+                      : 'Required for every employee, including admins. Locks after you save once.'}
+                  </p>
                   <div className="grid gap-1.5">
-                    <Label htmlFor="set-phone">Mobile number</Label>
-                    <Input id="set-phone" inputMode="tel" required className="min-h-11" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                    <Label htmlFor="set-staff-bday">Date of birth</Label>
+                    <Input
+                      id="set-staff-bday"
+                      type="date"
+                      className="min-h-11"
+                      value={birthday}
+                      disabled={birthdayLocked || busy}
+                      onChange={(e) => setBirthday(e.target.value)}
+                    />
                   </div>
-                  <Button type="submit" className="account-btn account-btn-primary min-h-11 w-full" disabled={busy}>
-                    Update phone
-                  </Button>
+                  {!birthdayLocked ? (
+                    <Button type="submit" className="min-h-11 w-full" disabled={busy}>
+                      Save birthday
+                    </Button>
+                  ) : null}
                 </form>
-              ) : null}
+              )}
+
+              <form onSubmit={savePhone} className="space-y-3 border-t border-border pt-5">
+                <div className="flex items-center gap-2 text-sm font-bold">
+                  <Phone className="size-4 text-primary" aria-hidden />
+                  Phone
+                </div>
+                <div className="grid gap-1.5">
+                  <Label htmlFor="set-phone">Mobile number</Label>
+                  <Input id="set-phone" inputMode="tel" required className="min-h-11" value={phone} onChange={(e) => setPhone(e.target.value)} />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {isCustomer
+                    ? 'Used for visit status SMS when the shop has SMS on.'
+                    : 'Your mobile for ops alerts. Managers can still change it on People.'}
+                </p>
+                <Button
+                  type="submit"
+                  className={isCustomer ? 'account-btn account-btn-primary min-h-11 w-full' : 'min-h-11 w-full'}
+                  disabled={busy}
+                >
+                  Update phone
+                </Button>
+              </form>
 
               <form onSubmit={savePassword} className="space-y-3 border-t border-border pt-5">
                 <div className="flex items-center gap-2 text-sm font-bold">

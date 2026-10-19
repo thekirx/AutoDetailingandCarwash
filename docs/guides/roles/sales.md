@@ -7,23 +7,17 @@
 
 ## Dock
 
-Detailing board · Carwash board · CRM · History · (More: none)
+Detailing Board · Carwash Board · CRM · Planner · History
 
 ## Daily flow
 
-1. Detailing board: create detailing bookings and move stages  
-2. Carwash board: watch every branch (filter by branch). Wash tickets are view only. Tap a detailing ticket to open it in the Detailing board editor (status, service, price); closing returns to Carwash board  
-3. CRM: view only. Look up customers, vehicles, visits, smart groups, and insights. No edit, add vehicle, message, or SMS  
+1. Detailing board: read only. No new bookings and no stage moves.  
+2. Carwash board: watch every branch. Tickets are view only.  
+3. CRM: create and modify customer accounts. Finance reports stay off.  
 4. History lookup by plate/phone  
-5. Maintenance tab when relevant
 
-## Enforced at
-
-- Route gate: `allowRoute` (`queue` = `canViewQueueBoard`, `queue-new` denied, `crm` = `canAccessCrm`)  
-- UI: `canEditQueueTicket` (detailing only), `canEditCrm` false hides CRM writes and the SMS tab  
-- API: `/api/booking-status` refuses Sales on non-detailing bookings  
-- DB: `bookings` insert/update RLS lets Sales write detailing-board services only
+Contract: `docs/OPS/RBAC-MATRIX.md` (Customer Rep).
 
 ## Must never see
 
-POS checkout, payroll, people, finance write, wash queue edits, new queue tickets, CRM edits or SMS sends.
+Floor Board, POS, vouchers board, financials, attendance, wash edits, detailing edits.

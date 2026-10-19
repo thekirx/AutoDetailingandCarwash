@@ -30,10 +30,11 @@
 
 - [x] My Tasks for assignees
 - [x] Attendance shows "Wash pool estimate today — ₱… unpaid" for the signed-in person (`seesOwnPayEstimate`)
+- [x] Day card on Attendance: typed sheet salary pool (`crew_day_card_snapshot`), current car/service, failed QA visit count today
 - [x] Super Admin and Investor see no estimate (contrast)
 - [x] Actual pay = the salary line on the branch's **approved** Daily Sheet; My Pay (`/operations/my-pay`) was retired 2026-10-01 and redirects to `/operations`
 
-**Test seam:** `tests/leftoverUxSeam.test.js`, `tests/plannerTasks.test.js`, `src/pages/crew/CrewAttendancePanels.jsx`
+**Test seam:** `tests/crewDayCard.test.js`, `tests/leftoverUxSeam.test.js`, `tests/plannerTasks.test.js`, `src/pages/crew/CrewAttendancePanels.jsx`
 
 ---
 

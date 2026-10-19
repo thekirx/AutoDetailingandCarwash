@@ -222,7 +222,7 @@ describe('the sheet totals computed in SQL match the ones computed in JS', () =>
     const jsBoth = norm(jsExpect[1] + ' ' + jsExpect[2])
     assert.match(
       jsBoth,
-      /openingFloatMinor.*\+\s*s\.cashMinor.*\+\s*caRepaidMinor\s*-\s*expensesMinor\s*-\s*salariesMinor\s*-\s*caReleasedMinor/,
+      /openingFloatMinor.*\+\s*s\.cashMinor.*\+\s*caRepaidMinor\s*-\s*cashExpensesMinor\s*-\s*salariesMinor\s*-\s*caReleasedMinor/,
       `JS expected-cash terms drifted: ${jsBoth}`,
     )
   })

@@ -43,7 +43,7 @@ assert(QUEUE_PROVISION_ROLES.has('BossMich'))
 assert(QUEUE_PROVISION_ROLES.has('admin'))
 assert(QUEUE_PROVISION_ROLES.has('assistant_super_admin'))
 assert(QUEUE_PROVISION_ROLES.has('team_lead'))
-assert(!QUEUE_PROVISION_ROLES.has('sales'))
+assert(QUEUE_PROVISION_ROLES.has('sales'))
 results.push('provision.roles: ok')
 
 const loyalty = buildPosSalePayload({

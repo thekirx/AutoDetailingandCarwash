@@ -21,7 +21,8 @@ const ROUTE_KEYS = [
   'queue', 'queue-new', 'attendance', 'kpi', 'my-tasks', 'pos', 'inventory', 'finance', 'crm',
   'bookings', 'reviews', 'reports', 'memberships', 'settings', 'content', 'notifications', 'history',
 ]
-const OWNER_ONLY_ROUTES = ['cars', 'data-center']
+// Floor Board and Month KPI stay Owner / Super Admin (or Ops Lead) — not Luci’s all-grants pack.
+const OWNER_ONLY_ROUTES = ['cars', 'data-center', 'dashboard', 'kpi']
 
 describe('ASA grant editor helpers', () => {
   it('groups cover every grant key exactly once', () => {

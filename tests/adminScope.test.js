@@ -30,12 +30,13 @@ import {
 describe('Admin capability matrix', () => {
   const p = { role: ROLES.ADMIN, branch_slug: 'bacoor', branch_slugs: ['bacoor', 'imus'] }
 
-  it('allows floor POS reviews planning audit; denies console finance CRM cars reports edit-queue redo roles', () => {
+  it('allows queue read, POS, finance, CRM, planning, audit; denies floor, cars, reports, edit-queue', () => {
     assert.equal(allowRoute(p, 'pos'), true)
-    assert.equal(allowRoute(p, 'finance'), false)
-    assert.equal(allowRoute(p, 'crm'), false)
+    assert.equal(allowRoute(p, 'finance'), true)
+    assert.equal(allowRoute(p, 'crm'), true)
+    assert.equal(allowRoute(p, 'dashboard'), false)
     assert.equal(allowRoute(p, 'memberships'), false)
-    assert.equal(allowRoute(p, 'queue'), false)
+    assert.equal(allowRoute(p, 'queue'), true)
     assert.equal(allowRoute(p, 'cars'), false)
     assert.equal(allowRoute(p, 'reports'), false)
     assert.equal(canAccessReports(p), false)
@@ -54,13 +55,15 @@ describe('Admin capability matrix', () => {
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
       [
-        '/operations/dashboard',
+        '/operations/queue',
         '/operations/bookings',
-        '/operations/attendance',
-        '/operations/pos',
-        '/operations/inventory',
-        '/operations/reviews',
         '/operations/planning',
+        '/operations/pos',
+        '/operations/finance',
+        '/operations/inventory',
+        '/operations/attendance',
+        '/operations/crm',
+        '/operations/my-advances',
         '/operations/history',
         '/operations/audit',
         '/operations/vehicle-transfer',

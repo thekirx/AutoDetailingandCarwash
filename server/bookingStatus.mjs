@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { sendBirthdayQueueStart } from './birthdayGreetings.mjs'
 import { notifyBookingPhotosReady, notifyBookingStatus } from './notifyBooking.mjs'
 import { canStaffUpdateBookingStatus } from './bookingStatusAccess.mjs'
 import { transitionAllowedForRole } from './bookingStatusTransitions.mjs'
@@ -306,6 +307,15 @@ export async function handleBookingStatusRequest(req, res) {
       notify = { error: String(err.message || err) }
     }
 
+    let birthdayStart = null
+    if (status === 'in_progress' && existing.status !== 'in_progress') {
+      try {
+        birthdayStart = await sendBirthdayQueueStart(db, booking)
+      } catch (err) {
+        birthdayStart = { error: String(err.message || err) }
+      }
+    }
+
     let photosNotify = null
     if (body.notify_photos) {
       try {
@@ -325,6 +335,7 @@ export async function handleBookingStatusRequest(req, res) {
       },
       experienceCard,
       notify,
+      birthdayStart,
       photosNotify,
     })
   } catch (err) {

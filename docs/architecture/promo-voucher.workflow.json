@@ -1,0 +1,39 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Hakum promo voucher",
+    "quality_profile": "showcase",
+    "output": "docs/architecture/promo-voucher.workflow.html"
+  },
+  "lanes": [
+    { "id": "office", "label": "Office" },
+    { "id": "floor", "label": "Floor" },
+    { "id": "customer", "label": "Customer" }
+  ],
+  "phases": [
+    { "id": "mint", "label": "Mint", "fromCol": 0, "toCol": 1 },
+    { "id": "apply", "label": "Apply", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
+    { "id": "close", "label": "Close", "fromCol": 4, "toCol": 5 }
+  ],
+  "mainPath": ["board", "rules", "tl", "price", "pos", "history"],
+  "nodes": [
+    { "id": "board", "lane": "office", "col": 0, "type": "frontend", "label": "Vouchers board", "sublabel": "SA / ASA" },
+    { "id": "rules", "lane": "office", "col": 1, "type": "database", "label": "promo_vouchers", "sublabel": "uses + dates", "width": 156 },
+    { "id": "tl", "lane": "floor", "col": 2, "type": "frontend", "label": "TL types code", "sublabel": "queue / detailing" },
+    { "id": "price", "lane": "floor", "col": 3, "type": "backend", "label": "Apply RPC", "sublabel": "holds a use" },
+    { "id": "pos", "lane": "floor", "col": 4, "type": "security", "label": "POS sale", "sublabel": "consume use" },
+    { "id": "history", "lane": "customer", "col": 5, "type": "frontend", "label": "Customer app", "sublabel": "rules + history" }
+  ],
+  "edges": [
+    { "from": "board", "to": "rules", "label": "create code" },
+    { "from": "rules", "to": "tl", "label": "customer quotes" },
+    { "from": "tl", "to": "price", "label": "apply_booking" },
+    { "from": "price", "to": "pos", "label": "discounted ticket" },
+    { "from": "pos", "to": "history", "label": "consume" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "Rules", "items": ["Max uses + date window", "Wash, detailing, or any", "Percent or free"] },
+    { "dot": "rose", "title": "Guards", "items": ["TL apply only", "Open tickets hold uses", "POS decrements remaining"] }
+  ]
+}

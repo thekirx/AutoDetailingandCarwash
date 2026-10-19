@@ -1,0 +1,38 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Hakum thumbs-down complaint",
+    "quality_profile": "showcase",
+    "output": "docs/architecture/thumb-down-complaint.workflow.html"
+  },
+  "lanes": [
+    { "id": "customer", "label": "Customer" },
+    { "id": "planner", "label": "Planner" }
+  ],
+  "phases": [
+    { "id": "rate", "label": "Rate", "fromCol": 0, "toCol": 1 },
+    { "id": "file", "label": "File", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
+    { "id": "review", "label": "Branch", "fromCol": 4, "toCol": 5 }
+  ],
+  "mainPath": ["visit", "thumbs_down", "payload", "rpc", "forms", "notify"],
+  "nodes": [
+    { "id": "visit", "lane": "customer", "col": 0, "type": "frontend", "label": "Last visit", "sublabel": "own booking" },
+    { "id": "thumbs_down", "lane": "customer", "col": 1, "type": "frontend", "label": "Thumbs down", "sublabel": "what happened" },
+    { "id": "payload", "lane": "customer", "col": 2, "type": "backend", "label": "submit-review", "sublabel": "completed only" },
+    { "id": "rpc", "lane": "planner", "col": 3, "type": "database", "label": "submit_public_ops_form", "sublabel": "customer-complaints", "width": 168 },
+    { "id": "forms", "lane": "planner", "col": 4, "type": "frontend", "label": "Planner forms", "sublabel": "status new" },
+    { "id": "notify", "lane": "planner", "col": 5, "type": "messagebus", "label": "Staff push", "sublabel": "SA ASA admin" }
+  ],
+  "edges": [
+    { "from": "visit", "to": "thumbs_down", "label": "down" },
+    { "from": "thumbs_down", "to": "payload", "label": "category" },
+    { "from": "payload", "to": "rpc", "label": "once" },
+    { "from": "rpc", "to": "forms" },
+    { "from": "forms", "to": "notify", "label": "ops_complaint" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "One form", "items": ["Published customer-complaints form", "Inbox is Planner Forms", "Thumbs up opens Google"] },
+    { "dot": "rose", "title": "Guards", "items": ["Completed visit only", "One file per booking", "Blank category refused"] }
+  ]
+}

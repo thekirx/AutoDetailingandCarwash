@@ -71,7 +71,10 @@ describe('the investor sees only what the investor gate allows', () => {
     const ROUTER_ROUTES = read('src/App.jsx')
     for (const key of INVESTOR_ROUTE_KEYS) {
       assert.ok(
-        ROUTER_ROUTES.includes(`/${key}`) || ROUTER_ROUTES.includes(`operations/${key}`),
+        ROUTER_ROUTES.includes(`path="${key}"`) ||
+          ROUTER_ROUTES.includes(`gate('${key}'`) ||
+          ROUTER_ROUTES.includes(`/${key}`) ||
+          ROUTER_ROUTES.includes(`operations/${key}`),
         `INVESTOR_ROUTE_KEYS lists "${key}" but App.jsx has no such operations route`,
       )
     }

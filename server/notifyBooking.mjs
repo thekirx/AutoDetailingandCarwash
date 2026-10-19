@@ -3,7 +3,9 @@
  * Best-effort: never throw to callers after durable booking writes.
  */
 import { createClient } from '@supabase/supabase-js'
-import { applyTemplateText, bookingNotifyVars, bookingTemplateKey } from '../src/lib/notificationTemplates.js'
+import { applyTemplateText, bookingNotifyVars, bookingTemplateKey, templateByKey } from '../src/lib/notificationTemplates.js'
+import { preferStoredCustomerName, renderQueueStatusSms } from '../src/lib/queueStatusSms.js'
+import { isWalkInCustomerName } from '../src/lib/queueCustomerName.js'
 import { customerNotifyAllowed } from '../src/lib/ownerRevisionsPhase7.js'
 import { smsNotificationsEnabledFromSetting } from '../src/lib/smsNotificationsToggle.js'
 import { busybeeSendSms } from './busybee.mjs'
@@ -11,6 +13,7 @@ import { loadTemplateMap, templateEnabled } from './notificationTemplatesDb.mjs'
 import { applyPaintMaintenanceOnComplete } from './paintMaintenanceSchedule.mjs'
 import { NOTIFY_EVENTS, bookingOpsEvent, branchLabel } from '../src/lib/notifyRouting.js'
 import { isBookingBoardRow } from '../src/lib/serviceKinds.js'
+import { renderDetailingBookingSms } from '../src/lib/detailingBookingSms.js'
 import { notifyRecipients, resolveStaffRecipients, sendWebPushToUsers } from './webPush.mjs'
 
 function admin() {
@@ -122,12 +125,52 @@ export async function hydrateBookingForNotify(db, booking) {
       : { data: null },
   ])
   const services = booking.services || svc?.data || undefined
+  let customerName = booking.customer_name
+  const joined = Array.isArray(booking.customers) ? booking.customers[0] : booking.customers
+  customerName = preferStoredCustomerName(customerName, joined?.full_name)
+  if (isWalkInCustomerName(customerName) && booking.customer_id) {
+    const { data: cust } = await db
+      .from('customers')
+      .select('full_name')
+      .eq('id', booking.customer_id)
+      .maybeSingle()
+    customerName = preferStoredCustomerName(customerName, cust?.full_name)
+  }
+  let specialistName = booking.specialist_name || ''
+  if (!specialistName && booking.assigned_staff_id) {
+    const { data: specialist } = await db
+      .from('staff_profiles')
+      .select('full_name')
+      .eq('id', booking.assigned_staff_id)
+      .maybeSingle()
+    specialistName = specialist?.full_name || ''
+  }
   return {
     ...booking,
+    customer_name: customerName,
+    specialist_name: specialistName,
     ...(services ? { services } : {}),
     branch_name: booking.branch_name || branchLabel(br?.data?.name, booking.branch),
     service_name: shortServiceLabel(booking.service_name || services?.name),
   }
+}
+
+/** An edited Notifications SMS replaces the detailing sheet. The stock sentence does not. */
+export function detailingSmsOverridden(status, template) {
+  if (status !== 'pending' && status !== 'confirmed') return true
+  const written = String(template?.sms_body || '').trim()
+  if (!written) return false
+  const stock = String(templateByKey(bookingTemplateKey(status, 'customer'))?.sms_body || '').trim()
+  return written !== stock
+}
+
+/** Edited SMS in Notifications replaces the rotating lines. The stock sentence does not. */
+export function smsUsesRandomPool(status, template) {
+  if (!renderQueueStatusSms(status, {}, () => 0)) return false
+  const written = String(template?.sms_body || '').trim()
+  if (!written) return true
+  const stock = String(templateByKey(bookingTemplateKey(status, 'customer'))?.sms_body || '').trim()
+  return written === stock
 }
 
 
@@ -142,7 +185,7 @@ export function isSilentRedoNotify(booking, status = booking?.status) {
 }
 
 /** Customer-facing inbox/SMS/push payload. */
-export function buildBookingNotifyPayload(booking, status, templates = null) {
+export function buildBookingNotifyPayload(booking, status, templates = null, options = {}) {
   const key = status || booking?.status
   const copy = STATUS_COPY[key]
   if (!booking || !copy || isSilentRedoNotify(booking, key)) return null
@@ -152,13 +195,20 @@ export function buildBookingNotifyPayload(booking, status, templates = null) {
   const vars = bookingNotifyVars(booking)
   const phone = booking.customer_phone
   const userId = booking.customer_id || null
+  const rotated = smsUsesRandomPool(key, tpl) ? renderQueueStatusSms(key, booking, options.random) : null
+  const detailingLine =
+    isBookingBoardRow(booking) && !detailingSmsOverridden(key, tpl)
+      ? renderDetailingBookingSms(key === 'confirmed' ? 'crew' : 'customer', booking, options.random)
+      : null
+  const sms = detailingLine || rotated || applyTemplateText(tpl?.sms_body, vars, copy.sms(booking))
+  const body = detailingLine || applyTemplateText(tpl?.body, vars, copy.body(booking))
   return {
     phone,
     userId,
     kind: copy.kind,
     title: applyTemplateText(tpl?.title, vars, copy.title),
-    body: applyTemplateText(tpl?.body, vars, copy.body(booking)),
-    sms: applyTemplateText(tpl?.sms_body, vars, copy.sms(booking)),
+    body,
+    sms,
     // Floor statuses → live queue; booking lifecycle / photos stay on account home
     url: userId
       ? ['waiting', 'in_progress', 'final_checking', 'for_payment'].includes(key)

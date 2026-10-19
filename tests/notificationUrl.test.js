@@ -11,6 +11,7 @@ assert.equal(notificationHref('/account/queue', '/account'), '/account/queue')
 assert.equal(notificationHref('/account/more?tab=alerts', '/account'), '/account/more?tab=alerts')
 assert.equal(notificationHref('https://evil.example/phish', '/account'), '/account')
 assert.equal(notificationHref('not-a-path', '/operations'), '/operations')
+assert.equal(notificationHref('/account', '/account', 'birthday_greeting'), '/account/vouchers')
 
 const sw = readFileSync('public/push-sw.js', 'utf8')
 assert.match(sw, /HAKUM_NAV/)
@@ -20,7 +21,8 @@ assert.match(sw, /client\.navigate/)
 assert.match(sw, /postMessage/)
 
 const bell = readFileSync('src/components/NotificationBell.jsx', 'utf8')
-assert.match(bell, /notificationHref\(row\.url, homeUrl\)/)
+assert.match(bell, /notificationHref\(row\.url, homeUrl, row\.kind\)/)
+assert.match(bell, /select\('id, title, body, url, kind, read_at, created_at'\)/)
 
 const more = readFileSync('src/pages/CustomerMorePage.jsx', 'utf8')
 assert.match(more, /tab=alerts/)

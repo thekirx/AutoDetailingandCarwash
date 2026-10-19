@@ -30,6 +30,9 @@
     { "source": "/api/provision-customer", "destination": "/api/customer?operation=provision-customer" },
     { "source": "/api/provision-staff", "destination": "/api/staff?operation=provision-staff" },
     { "source": "/api/public-book", "destination": "/api/bookings?operation=public-book" },
+    { "source": "/api/referral-program", "destination": "/api/bookings?operation=referral-program" },
+    { "source": "/api/referral-staff", "destination": "/api/bookings?operation=referral-staff" },
+    { "source": "/api/accessory-points", "destination": "/api/bookings?operation=accessory-points" },
     { "source": "/api/push-subscribe", "destination": "/api/notifications?operation=push-subscribe" },
     { "source": "/api/send-finance-quote", "destination": "/api/finance?operation=send-finance-quote" },
     { "source": "/api/send-push", "destination": "/api/notifications?operation=send-push" },
@@ -55,6 +58,14 @@
     {
       "path": "/api/notifications?operation=birthday-greetings",
       "schedule": "5 16 * * *"
+    },
+    {
+      "path": "/api/notifications?operation=booking-reminders",
+      "schedule": "0 0 * * *"
+    },
+    {
+      "path": "/api/notifications?operation=maintenance-reminders",
+      "schedule": "15 0 * * *"
     }
   ]
 }

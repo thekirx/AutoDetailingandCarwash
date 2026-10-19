@@ -8,6 +8,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { NamedSelect } from '@/components/ui/named-select'
 import { cn } from '@/lib/utils'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
+import { cashAdvanceReleaseError } from '@/lib/cashAdvanceCode'
 import { parsePesosToMinor } from '@/lib/shiftClose'
 import { notifyOpsEvent } from '@/lib/opsEventNotify'
 import { ROLES } from '@/auth/permissions'
@@ -66,6 +67,7 @@ function hydrateLine(row) {
     amountText: toText(row.amount_minor),
     reason: row.reason || '',
     receipt_path: row.receipt_path || null,
+    paid_from: row.kind === 'expense' ? (row.paid_from === 'gcash' ? 'gcash' : 'cash') : null,
     parts: row.parts || null,
   }
 }
@@ -321,7 +323,12 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
     patchLine(id, { amountText: text, amount_minor: parsePesosToMinor(text) ?? 0 })
   }
   function addLine(kind, extra = {}) {
-    const line = hydrateLine({ kind, amount_minor: 0, ...extra })
+    const line = hydrateLine({
+      kind,
+      amount_minor: 0,
+      ...(kind === 'expense' ? { paid_from: 'cash' } : {}),
+      ...extra,
+    })
     setLines((cur) => [...cur, line.amount_minor ? line : { ...line, amountText: '' }])
     setDirty(true)
   }
@@ -336,6 +343,10 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
   }
 
   const persist = useCallback(async () => {
+    for (const line of lines) {
+      const codeError = cashAdvanceReleaseError(line, ctx?.caRequests || [], { branch, lines })
+      if (codeError) throw new Error(codeError)
+    }
     const t = computeSheetTotals({ sales, lines, openingFloatMinor: sheetValues.opening_float_minor, countedCashMinor: sheetValues.counted_cash_minor })
     const res = await saveSheet({
       branch,
@@ -348,7 +359,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
     })
     setDirty(false)
     return res
-  }, [sales, lines, sheetValues.opening_float_minor, sheetValues.counted_cash_minor, notes, branch, date])
+  }, [sales, lines, sheetValues.opening_float_minor, sheetValues.counted_cash_minor, notes, branch, date, ctx])
 
   useEffect(() => {
     if (!editable || !dirty) return undefined
@@ -522,6 +533,19 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
                       <Label htmlFor={`ds-exp-a-${l.id}`} className="text-xs text-muted-foreground">Account</Label>
                       <NamedSelect id={`ds-exp-a-${l.id}`} className="min-h-11" value={l.account_id} onChange={(v) => patchLine(l.id, { account_id: v })} options={accountOptions} placeholder="Pick account" />
                     </div>
+                    <div className="flex flex-col gap-1">
+                      <Label htmlFor={`ds-exp-p-${l.id}`} className="text-xs text-muted-foreground">Paid from</Label>
+                      <NamedSelect
+                        id={`ds-exp-p-${l.id}`}
+                        className="min-h-11"
+                        value={l.paid_from === 'gcash' ? 'gcash' : 'cash'}
+                        onChange={(v) => patchLine(l.id, { paid_from: v })}
+                        options={[
+                          { value: 'cash', label: 'Cash (drawer)' },
+                          { value: 'gcash', label: 'GCash' },
+                        ]}
+                      />
+                    </div>
                     <AmountInput id={`ds-exp-m-${l.id}`} value={l.amountText} onChange={(v) => setAmount(l.id, v)} />
                     <div className="flex items-end gap-2">
                       <ReceiptButton
@@ -544,7 +568,11 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
                   <div key={l.id} className="ds-row">
                     <span>
                       {l.description || 'Expense'}
-                      <span className="block text-xs text-muted-foreground">{l.account_label}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {l.account_label}
+                        {l.account_label ? ' · ' : ''}
+                        {l.paid_from === 'gcash' ? 'GCash' : 'Cash'}
+                      </span>
                       <ReceiptButton line={l} editable={false} />
                     </span>
                     <Money minor={l.amount_minor} />
@@ -558,6 +586,9 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
               </Button>
             ) : null}
             <Row label="Total expenses" bold rule><Money minor={totals.expensesMinor} bold /></Row>
+            {totals.gcashExpensesMinor ? (
+              <Row label="GCash expenses (not from drawer)"><Money minor={totals.gcashExpensesMinor} /></Row>
+            ) : null}
           </section>
 
           <section className="ds-card" aria-label="Pay crew">
@@ -611,7 +642,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
           </section>
 
           <section className="ds-card" aria-label="Cash advances">
-            <SectionHead step={4} title="Cash advances" hint="Optional: skip this if no cash was given out or paid back. Not a cost — it only moves drawer cash." done={check.sections.cashAdvances} />
+            <SectionHead step={4} title="Cash advances" hint="Optional. Not a cost — it only moves drawer cash. Given out needs the approval code from Planner. Paid back does not." done={check.sections.cashAdvances} />
             {editable && (ctx?.caRequests || []).length ? (
               <div className="mb-3 flex flex-wrap gap-2">
                 {ctx.caRequests.map((r) => (
@@ -652,6 +683,21 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
                       <Label htmlFor={`ds-ca-s-${l.id}`} className="text-xs text-muted-foreground">Staff</Label>
                       <NamedSelect id={`ds-ca-s-${l.id}`} className="min-h-11" value={l.staff_id} onChange={(v) => patchLine(l.id, { staff_id: v })} options={staffOptions} placeholder="Pick staff" />
                     </div>
+                    {l.kind === 'ca_release' ? (
+                      <div className="flex flex-col gap-1">
+                        <Label htmlFor={`ds-ca-c-${l.id}`} className="text-xs text-muted-foreground">Approval code</Label>
+                        <Input
+                          id={`ds-ca-c-${l.id}`}
+                          className="min-h-11 uppercase"
+                          autoCapitalize="characters"
+                          spellCheck={false}
+                          placeholder="CAxxxx"
+                          aria-invalid={l.amount_minor > 0 && !String(l.reason || '').trim() ? true : undefined}
+                          value={l.reason || ''}
+                          onChange={(e) => patchLine(l.id, { reason: e.target.value.toUpperCase() })}
+                        />
+                      </div>
+                    ) : null}
                     <AmountInput id={`ds-ca-m-${l.id}`} value={l.amountText} onChange={(v) => setAmount(l.id, v)} />
                     <div className="flex items-end">
                       <Button type="button" variant="ghost" className="min-h-11 min-w-11" aria-label={`Remove cash advance ${i + 1}`} onClick={() => removeLine(l.id)}>
@@ -663,6 +709,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
                   <div key={l.id} className="ds-row">
                     <span>
                       {l.kind === 'ca_release' ? 'Given out' : 'Paid back'} · {l.staff_name || staffName(l.staff_id)}
+                      {l.kind === 'ca_release' && l.reason ? ` · ${l.reason}` : ''}
                     </span>
                     <Money minor={l.kind === 'ca_release' ? -l.amount_minor : l.amount_minor} />
                   </div>

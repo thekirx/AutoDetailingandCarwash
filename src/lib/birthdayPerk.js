@@ -51,10 +51,41 @@ export function isBirthdayToday(dateOfBirth, today = new Date(), timeZone = MANI
   return birthdayQueryDays(today, timeZone).days.some((row) => row.month === dob.month && row.day === dob.day)
 }
 
+const BIRTHDAY_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+
+/** BD plus four letters. One code per perk year. */
+export function mintBirthdayCode(random = Math.random) {
+  let code = 'BD'
+  for (let i = 0; i < 4; i += 1) code += BIRTHDAY_CODE_ALPHABET[Math.floor(random() * BIRTHDAY_CODE_ALPHABET.length)]
+  return code
+}
+
+export function normalizeBirthdayCode(value) {
+  return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6)
+}
+
+export const BIRTHDAY_CODE_REQUIRED = 'Type the birthday code before the service is free.'
+export const BIRTHDAY_CODE_MISMATCH = 'That birthday code does not match this customer.'
+
+export function birthdayCodeShapeError(value) {
+  const code = normalizeBirthdayCode(value)
+  if (/^BD[A-Z2-9]{4}$/.test(code)) return null
+  return BIRTHDAY_CODE_REQUIRED
+}
+
 export function birthdayPerkExpiresAt(grantedAt = new Date()) {
   const d = new Date(grantedAt)
-  d.setUTCDate(d.getUTCDate() + 30)
+  d.setUTCDate(d.getUTCDate() + 7)
   return d
+}
+
+/** First saved birthdate stays. A later change or a clear is refused. */
+export function birthdayLockError(current, next) {
+  const saved = current ? String(current).slice(0, 10) : ''
+  if (!saved) return null
+  const incoming = next ? String(next).slice(0, 10) : ''
+  if (saved === incoming) return null
+  return 'Birthday is locked after the first save.'
 }
 
 export function isBirthdayPerkActive(perk, now = new Date()) {

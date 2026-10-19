@@ -5,7 +5,8 @@ import CustomerAppFrame from '@/components/CustomerAppFrame'
 import { visitProgressFor, visitStepInfo } from '@/lib/customerVisitSteps'
 import { Badge, Skeleton } from '@/components/customer/CustomerUi'
 import { HAKUM_MESSENGER_URL } from '@/components/public/bredesign/TalkToUsButton'
-import { branchLabel, fetchPortal } from '@/lib/customerPortalClient'
+import { branchLabel, fetchPortal, portalAction } from '@/lib/customerPortalClient'
+import { canCustomerRequestReschedule, RESCHEDULE_ACK, RESCHEDULE_OPEN_STATUSES } from '@/lib/bookingReschedule'
 import { CUSTOMER_VISIT_PATH } from '@/lib/customerAccountNav'
 import { customerQueuePath } from '@/lib/liveQueuePath'
 import { usePageMeta } from '@/lib/pageMeta'
@@ -42,6 +43,8 @@ export default function CustomerVisitPage() {
   const { id } = useParams()
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
+  const [ack, setAck] = useState('')
+  const [busy, setBusy] = useState(false)
   const back = useBackOr('/account')
   usePageMeta({ title: 'Visit', description: 'Follow your car through each step.', path: CUSTOMER_VISIT_PATH })
 
@@ -62,6 +65,25 @@ export default function CustomerVisitPage() {
   const progress = visit ? visitProgressFor(visit) : null
   const info = progress ? visitStepInfo(finished ? { ...progress, isComplete: true } : progress) : null
   const car = visit ? [visit.vehicle_make, visit.vehicle_model].filter(Boolean).join(' ') : ''
+  const canReschedule = Boolean(visit && canCustomerRequestReschedule(visit))
+  const waitingOnCall = Boolean(
+    visit?.reschedule_requested_at && RESCHEDULE_OPEN_STATUSES.includes(String(visit.status || '')),
+  )
+
+  async function askReschedule() {
+    if (!visit || busy) return
+    setBusy(true)
+    setError('')
+    try {
+      const body = await portalAction('request-reschedule', { booking_id: visit.id })
+      setAck(body.message || RESCHEDULE_ACK)
+      setData(await fetchPortal())
+    } catch (err) {
+      setError(err.message || 'Could not send the reschedule request.')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return (
     <CustomerAppFrame
@@ -166,6 +188,21 @@ export default function CustomerVisitPage() {
               ) : null}
             </dl>
           </section>
+
+          {canReschedule || waitingOnCall || ack ? (
+            <section className="capp-section" aria-label="Reschedule">
+              {canReschedule ? (
+                <button type="button" className="capp-btn capp-btn-fill" disabled={busy} onClick={askReschedule}>
+                  {busy ? 'Sending…' : 'Schedule for reschedule'}
+                </button>
+              ) : null}
+              {waitingOnCall || ack ? (
+                <p className="capp-meta" role="status">
+                  {ack || RESCHEDULE_ACK}
+                </p>
+              ) : null}
+            </section>
+          ) : null}
 
           <div className="capp-actions">
             {!finished ? (

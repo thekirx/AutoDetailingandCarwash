@@ -196,23 +196,34 @@ export function suggestSalaries({
   })
 }
 
+/** Expense paid_from: cash (drawer) or gcash. Default cash for legacy rows. */
+export function expensePaidFrom(line = {}) {
+  const v = String(line?.paid_from || 'cash').toLowerCase()
+  return v === 'gcash' ? 'gcash' : 'cash'
+}
+
 /**
- * Summary panel. Every expense/salary line is paid from the drawer.
- * ponytail: no per-line "paid from" — add a column if GCash-paid expenses become common.
+ * Summary panel. Salaries and cash-paid expenses reduce expected drawer cash.
+ * GCash-paid expenses still count in P&L totals but leave the cash drawer alone.
  */
 export function computeSheetTotals({ sales = [], lines = [], openingFloatMinor = 0, countedCashMinor = null } = {}) {
   const s = summarizeSheetSales(sales)
-  const expensesMinor = sumOf(linesOf(lines, 'expense'))
+  const expenseLines = linesOf(lines, 'expense')
+  const expensesMinor = sumOf(expenseLines)
+  const cashExpensesMinor = sumOf(expenseLines.filter((l) => expensePaidFrom(l) === 'cash'))
+  const gcashExpensesMinor = sumOf(expenseLines.filter((l) => expensePaidFrom(l) === 'gcash'))
   const salariesMinor = sumOf(linesOf(lines, 'salary'))
   const caReleasedMinor = sumOf(linesOf(lines, 'ca_release'))
   const caRepaidMinor = sumOf(linesOf(lines, 'ca_repay'))
   const totalExpensesMinor = expensesMinor + salariesMinor
   const expectedCashMinor =
-    amount(openingFloatMinor) + s.cashMinor + caRepaidMinor - expensesMinor - salariesMinor - caReleasedMinor
+    amount(openingFloatMinor) + s.cashMinor + caRepaidMinor - cashExpensesMinor - salariesMinor - caReleasedMinor
   const counted = countedCashMinor == null || countedCashMinor === '' ? null : amount(countedCashMinor)
   return {
     ...s,
     expensesMinor,
+    cashExpensesMinor,
+    gcashExpensesMinor,
     salariesMinor,
     totalExpensesMinor,
     netProfitMinor: s.netMinor - totalExpensesMinor,
@@ -235,8 +246,14 @@ export function salaryLineNeedsReason(line = {}) {
 export function sheetChecklist({ sheet = {}, lines = [], sales = [] } = {}) {
   const missing = []
   const expenses = linesOf(lines, 'expense')
-  const badExpense = expenses.filter((l) => !String(l.description || '').trim() || !l.account_id || amount(l.amount_minor) <= 0)
-  if (badExpense.length) missing.push(`Finish ${badExpense.length} expense line(s): what it was, account and amount`)
+  const badExpense = expenses.filter(
+    (l) =>
+      !String(l.description || '').trim() ||
+      !l.account_id ||
+      amount(l.amount_minor) <= 0 ||
+      !['cash', 'gcash'].includes(expensePaidFrom(l)),
+  )
+  if (badExpense.length) missing.push(`Finish ${badExpense.length} expense line(s): what it was, account, amount, and cash or GCash`)
   const noReason = linesOf(lines, 'salary').filter(salaryLineNeedsReason)
   if (noReason.length) missing.push(`Add a reason for ${noReason.length} changed salary amount(s)`)
   const badSalary = linesOf(lines, 'salary').filter((l) => amount(l.amount_minor) < 0)
@@ -402,6 +419,7 @@ export function toSheetPayloadLines(lines = []) {
       amount_minor: amount(l.amount_minor),
       reason: String(l.reason || '').trim() || null,
       receipt_path: l.receipt_path || null,
+      paid_from: l.kind === 'expense' ? expensePaidFrom(l) : null,
     }))
 }
 
@@ -470,8 +488,12 @@ export function closeOfDaySlip({ sheet = {}, lines = [], sales = [], branchLabel
   for (const [id, label] of Object.entries(METHOD_LABELS)) if (t.byMethod[id]) add('Payments', label, t.byMethod[id])
   for (const f of t.byFamily) add('Services', f.label, f.minor)
 
-  for (const l of linesOf(lines, 'expense')) add('Expenses', l.description || 'Expense', amount(l.amount_minor), l.account_label || '')
+  for (const l of linesOf(lines, 'expense')) {
+    const from = expensePaidFrom(l) === 'gcash' ? 'GCash' : 'Cash'
+    add('Expenses', l.description || 'Expense', amount(l.amount_minor), [l.account_label, from].filter(Boolean).join(' · '))
+  }
   add('Expenses', 'Total expenses', t.expensesMinor)
+  if (t.gcashExpensesMinor) add('Expenses', 'Of which GCash (not drawer)', t.gcashExpensesMinor)
   for (const l of linesOf(lines, 'salary')) {
     const changed = amount(l.amount_minor) !== amount(l.suggested_minor)
     add('Salaries', who(l), amount(l.amount_minor), changed ? `Suggested ${formatAccounting(l.suggested_minor)} · ${l.reason || 'no reason'}` : '')

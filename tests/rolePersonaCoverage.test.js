@@ -16,7 +16,7 @@ const read = (rel) => readFileSync(join(root, rel), 'utf8')
 
 const EXPECTED_HOMES = Object.freeze({
   [ROLES.SUPER_ADMIN]: '/operations/dashboard',
-  [ROLES.ASSISTANT_SUPER_ADMIN]: '/operations/dashboard',
+  [ROLES.ASSISTANT_SUPER_ADMIN]: '/operations/queue',
   [ROLES.ADMIN]: '/operations/pos',
   [ROLES.OPERATIONS_LEAD]: '/operations/queue',
   [ROLES.TEAM_LEAD]: '/operations/queue',

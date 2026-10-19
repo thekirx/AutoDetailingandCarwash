@@ -36,6 +36,9 @@ export default function DaylightQueueCard({ ticket, yourMove, next, canStart, ca
         <span className="daylight-car-meta">
           {services || 'No service'}{size ? ` · ${size}` : ''}
           {next && ticket.status === 'waiting' ? <span className="daylight-next">Next</span> : null}
+          {ticket.birthdayToday && ['in_progress', 'final_checking', 'for_payment'].includes(ticket.status) ? (
+            <span className="daylight-next">Happy birthday — ask for their code</span>
+          ) : null}
         </span>
         {crew.length ? (
           <span className="daylight-crew">

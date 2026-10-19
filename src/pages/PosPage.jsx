@@ -9,6 +9,7 @@ import { createCoalescedReload } from '@/lib/coalesceReload'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { applyAdHocDiscount, assertBranchAdminCart, buildPosSalePayload, buildVisitHandoffCartLines, canChangePosCartLineQuantity, canRedeemLoyaltyAward, canRemovePosCartLine, cashTenderCoversTotal, clearPosDraft, detachHandoffFromCart, isAllowedPosPaymentMethod, isValidPaymentRef, keepQueueHandoffWhenAdding, normalizePosLineItemType, openHandoffInCart, posCartBlocksCheckout, priceCartForMembership, readPosDraft, sanitizeBranchAdminCart, stepPosCartLineQuantity, summarizePosCart, validatePosSaleCart, writePosDraft, POS_MAX_LINE_QUANTITY } from '@/lib/posSale'
 import { PRICING_SIZES, resolveServicePriceMinor, formatSizePriceRange, availablePricingSizes, serviceHasSizePricing } from '@/lib/servicePricing'
+import { productSizeRows } from '@/lib/productSizes'
 import { filterPosBayCatalog, filterPosDetailingCatalog, serviceKindFromPayCategory } from '@/lib/serviceKinds'
 import { supabase } from '@/lib/supabase'
 import { filterBranchesForProfile, pickDefaultBranchSlug } from '@/queue/queueLogic'
@@ -27,6 +28,7 @@ import { normalizePosSettings } from '@/lib/posSettings'
 import { MERCH_FAMILIES, productIsPosSellable, productMatchesMerchFamily } from '@/lib/posSellables'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { announcePayment, announceTest, readAnnouncerOn, unlockAudio, useAnnouncerDevice, writeAnnouncerOn } from '@/lib/posAnnouncer'
+import { BIRTHDAY_CODE_MISMATCH, birthdayCodeShapeError, normalizeBirthdayCode } from '@/lib/birthdayPerk'
 import { parsePesosToMinor } from '@/lib/shiftClose'
 import {
   DEFAULT_COMPENSATION_RULES,
@@ -156,6 +158,7 @@ function PosCounterPage() {
   useAnnouncerDevice(announcerOn)
   const [activeMembership, setActiveMembership] = useState(null)
   const [birthdayPerk, setBirthdayPerk] = useState(null)
+  const [birthdayCode, setBirthdayCode] = useState('')
   const [membershipsEnabled, setMembershipsEnabled] = useState(true)
 
   const membershipContext = useMemo(
@@ -197,7 +200,7 @@ function PosCounterPage() {
         .eq('is_archived', false),
       supabase
         .from('products')
-        .select('id, name, price_minor, category, stock_qty, sku, tags, usage_kind')
+        .select('id, name, price_minor, category, stock_qty, sku, tags, usage_kind, size_options')
         .eq('is_active', true)
         .eq('is_archived', false),
       supabase.from('daily_sales_summary').select('*').eq('sale_date', today).eq('branch', branch).maybeSingle(),
@@ -246,11 +249,13 @@ function PosCounterPage() {
       }
     }
     setProducts(
-      productRows.map((p) => ({
-        ...p,
-        branch_stock_qty: stockMap[p.id],
-        stock_qty: stockMap[p.id] != null ? stockMap[p.id] : p.stock_qty,
-      })),
+      productRows
+        .filter((p) => stockMap[p.id] != null)
+        .map((p) => ({
+          ...p,
+          branch_stock_qty: stockMap[p.id],
+          stock_qty: stockMap[p.id],
+        })),
     )
     setTodayStats(stats.data)
     setHandoffs(handoffRes.data || [])
@@ -426,14 +431,19 @@ function PosCounterPage() {
     const q = query.trim().toLowerCase()
     return (products || [])
       .filter((p) => productMatchesMerchFamily(p, merchFamilyFilter))
-      .map((p) => ({
-        key: `product-${p.id}`,
-        item_type: 'product',
-        id: p.id,
-        name: p.name,
-        price_minor: p.price_minor,
-        meta: `Stock ${p.branch_stock_qty != null ? p.branch_stock_qty : p.stock_qty}${p.sku ? ` · ${p.sku}` : ''}`,
-      }))
+      .map((p) => {
+        const sizes = productSizeRows(p)
+        return {
+          key: `product-${p.id}`,
+          item_type: 'product',
+          id: p.id,
+          name: p.name,
+          price_minor: sizes.length ? Math.min(...sizes.map((s) => s.price_minor)) : p.price_minor,
+          size_options: sizes.map((s) => ({ slug: s.label, label: s.label, short: s.label })),
+          size_prices: Object.fromEntries(sizes.map((s) => [s.label, s.price_minor])),
+          meta: `Stock ${p.branch_stock_qty != null ? p.branch_stock_qty : p.stock_qty}${p.sku ? ` · ${p.sku}` : ''}`,
+        }
+      })
       .filter((item) => !q || item.name.toLowerCase().includes(q) || (item.meta || '').toLowerCase().includes(q))
   }, [products, query, merchFamilyFilter])
 
@@ -631,6 +641,7 @@ function PosCounterPage() {
   async function refreshBirthdayPerk(customerIdValue) {
     if (!customerIdValue) {
       setBirthdayPerk(null)
+      setBirthdayCode('')
       return
     }
     const { data } = await supabase
@@ -652,6 +663,7 @@ function PosCounterPage() {
     setCustomerSearch('')
     setActiveMembership(null)
     setBirthdayPerk(null)
+    setBirthdayCode('')
     setLoyaltyStamps(0)
     setLoyaltyMilestones([])
     setCart((current) =>
@@ -724,6 +736,13 @@ function PosCounterPage() {
     if (birthdayAward && !birthdayPerk) {
       toast.error('No birthday perk available for this customer.')
       return
+    }
+    if (birthdayAward) {
+      const shape = birthdayCodeShapeError(birthdayCode)
+      if (shape) {
+        toast.error(shape)
+        return
+      }
     }
     if (activeHandoff && !keepQueueHandoffWhenAdding(item)) {
       toast.message(`${formatQueueTicket(ticketBooking)} set aside — this is now a walk-in order.`)
@@ -958,6 +977,7 @@ function PosCounterPage() {
     } else {
       setActiveMembership(null)
       setBirthdayPerk(null)
+      setBirthdayCode('')
       setLoyaltyStamps(0)
       setLoyaltyMilestones([])
     }
@@ -1039,6 +1059,24 @@ function PosCounterPage() {
       return
     }
     const resolvedCustomerId = committed.customerId || customerId
+    const typedBirthdayCode = normalizeBirthdayCode(birthdayCode)
+    if (cart.some((l) => l.is_birthday_award)) {
+      const shape = birthdayCodeShapeError(typedBirthdayCode)
+      if (shape || !resolvedCustomerId) {
+        toast.error(shape || 'Link the customer before using a birthday code.')
+        setSaving(false)
+        return
+      }
+      const { data: matches, error: matchErr } = await supabase.rpc('birthday_code_matches', {
+        p_customer_id: resolvedCustomerId,
+        p_code: typedBirthdayCode,
+      })
+      if (matchErr || !matches) {
+        toast.error(matchErr?.message || BIRTHDAY_CODE_MISMATCH)
+        setSaving(false)
+        return
+      }
+    }
 
     const noteParts = []
     const walkInLabel = [
@@ -1102,12 +1140,25 @@ function PosCounterPage() {
         toast.warning(err.message || 'Sale saved — customer notify failed')
       }
     }
+    if (handoff?.booking_id) {
+      supabase.rpc('consume_booking_promo_voucher', {
+        p_booking_id: handoff.booking_id,
+        p_sale_id: data?.sale_id || null,
+      }).then(({ error: promoErr, data: promoData }) => {
+        if (promoErr) toast.warning(promoErr.message || 'Voucher use not counted')
+        else if (promoData && promoData.ok === false && promoData.error !== 'No voucher on this ticket.') {
+          toast.warning(promoData.error || 'Voucher use not counted')
+        }
+      })
+    }
     // Loyalty claim thank-you SMS — fire and forget, server dedupes per sale.
     if (resolvedCustomerId && cart.some((l) => l.is_birthday_award)) {
       supabase.rpc('claim_birthday_perk', {
         p_customer_id: resolvedCustomerId,
         p_sale_id: data?.sale_id || null,
-      }).then(({ error: claimErr }) => {
+        p_code: typedBirthdayCode,
+      }).then(({ error: claimErr, data: claimData }) => {
+        if (claimData && claimData.ok === false) toast.warning(claimData.error || 'Birthday perk not marked claimed')
         if (claimErr) toast.warning(claimErr.message || 'Birthday perk not marked claimed')
       })
     }
@@ -1243,7 +1294,20 @@ function PosCounterPage() {
   const customerPerks =
     birthdayPerk || activeMembership ? (
       <>
-        {birthdayPerk ? <p className="mt-1 text-xs font-medium text-primary">Birthday free service available</p> : null}
+        {birthdayPerk ? (
+          <label className="mt-1 block text-xs font-medium text-primary">
+            Birthday free service available
+            <Input
+              value={birthdayCode}
+              onChange={(e) => setBirthdayCode(e.target.value.toUpperCase())}
+              placeholder="Birthday code"
+              autoComplete="off"
+              maxLength={8}
+              className="mt-1 h-9 uppercase"
+              aria-label="Birthday code"
+            />
+          </label>
+        ) : null}
         {activeMembership ? (
           <p className="mt-1 text-xs font-medium text-primary">
             {activeMembership.name}
@@ -1924,13 +1988,16 @@ function PosTileGrid({ items, onAdd, empty, birthdayPerk, loyaltyReady, sizeByKe
     const slug = selectedSize(item)
     if (!slug) return { ...item, catalog_item_key: item.key }
     const label = PRICING_SIZES.find((x) => x.slug === slug)?.label || slug
+    const product = item.item_type === 'product'
     return {
       ...item,
       key: `${item.key}-${slug}`,
       catalog_item_key: item.key,
       price_minor: priceFor(item),
-      meta: [item.meta, `Size ${label}`].filter(Boolean).join(' · '),
-      vehicle_size: slug,
+      meta: [item.meta, product ? label : `Size ${label}`].filter(Boolean).join(' · '),
+      vehicle_size: product ? null : slug,
+      size_label: product ? label : null,
+      name: product ? `${item.name} (${label})` : item.name,
     }
   }
 
@@ -1974,20 +2041,24 @@ function PosTileGrid({ items, onAdd, empty, birthdayPerk, loyaltyReady, sizeByKe
               </span>
             </button>
             {options.length > 0 ? (
-              <div className="flex gap-1 border-t border-border p-1.5" role="group" aria-label={`${item.name} size`}>
-                {options.map((sz) => (
+              <div className={`flex gap-1 border-t border-border p-1.5 ${options.some((sz) => String(sz.short || sz.label).length > 2) ? 'flex-wrap' : ''}`} role="group" aria-label={`${item.name} size`}>
+                {options.map((sz) => {
+                  const named = String(sz.short || sz.label).length > 2
+                  return (
                   <Button
                     key={sz.slug}
                     type="button"
                     size="sm"
                     variant={slug === sz.slug ? 'secondary' : 'ghost'}
                     aria-pressed={slug === sz.slug}
-                    className="min-h-9 flex-1 px-1 text-[11px] font-bold"
+                    aria-label={sz.label}
+                    className={`min-h-9 px-1.5 text-xs font-bold ${named ? '' : 'flex-1 px-1'}`}
                     onClick={() => onPickSize(item.key, sz.slug)}
                   >
-                    {sz.label}
+                    {sz.short || sz.label}
                   </Button>
-                ))}
+                  )
+                })}
               </div>
             ) : null}
             {loyaltyReady || birthdayPerk ? (

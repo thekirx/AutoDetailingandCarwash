@@ -84,7 +84,7 @@ describe('P0 access gates', () => {
 describe('Landing + shell matrix', () => {
   const cases = [
     [ROLES.SUPER_ADMIN, '/operations/dashboard', 'command'],
-    [ROLES.ASSISTANT_SUPER_ADMIN, '/operations/dashboard', 'command'],
+    [ROLES.ASSISTANT_SUPER_ADMIN, '/operations/queue', 'command'],
     [ROLES.ADMIN, '/operations/pos', 'command'],
     [ROLES.INVESTOR, '/operations/finance', 'command'],
     [ROLES.TEAM_LEAD, '/operations/queue', 'floor'],
@@ -131,15 +131,16 @@ describe('Negative allowRoute denials', () => {
     assert.equal(allowRoute(p, 'crm'), true)
   })
 
-  it('investor: Floor Board, POS (view), Finance + Reports only', () => {
+  it('investor: read-only queue, detailing, POS, vouchers, finance', () => {
     const p = profile(ROLES.INVESTOR)
-    assert.deepEqual(allowedKeys(p).sort(), ['dashboard', 'finance', 'pos', 'reports'])
+    assert.deepEqual(allowedKeys(p).sort(), ['bookings', 'finance', 'pos', 'queue', 'reports'])
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
-      ['/operations/dashboard', '/operations/pos', '/operations/finance'],
+      ['/operations/queue', '/operations/bookings', '/operations/pos', '/operations/vouchers', '/operations/finance'],
     )
     assert.equal(allowRoute(p, 'reports'), true)
-    for (const key of ['queue', 'queue-new', 'bookings', 'people', 'settings', 'inventory', 'attendance', 'kpi']) {
+    assert.equal(allowRoute(p, 'dashboard'), false)
+    for (const key of ['queue-new', 'people', 'settings', 'inventory', 'attendance', 'kpi', 'planning']) {
       assert.equal(allowRoute(p, key), false, key)
     }
   })

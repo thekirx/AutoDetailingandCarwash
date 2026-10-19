@@ -100,7 +100,7 @@ export async function loadSheetContext(branch, date) {
       .from('ops_form_submissions')
       .select('id, payload, status, respondent_label, created_at, ops_forms!inner(kind)')
       .eq('ops_forms.kind', 'cash_advance')
-      .in('status', ['new', 'resolved'])
+      .eq('status', 'resolved')
       .gte('created_at', `${previousDay(previousDay(date))}T00:00:00+08:00`)
       .order('created_at', { ascending: false })
       .limit(50),
@@ -125,7 +125,8 @@ export async function loadSheetContext(branch, date) {
   })
   const caRequests = (caRes.data || []).filter((r) => {
     const b = String(r.payload?.branch || '').toLowerCase()
-    return !b || b === branch
+    const code = String(r.payload?.approval_code || '').trim()
+    return (!b || b === branch) && r.status === 'resolved' && code
   })
   return { sales, sheet, accounts, attendance, suggestions, rules, staff: staffRes.data || [], caRequests }
 }

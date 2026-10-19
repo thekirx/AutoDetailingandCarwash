@@ -41,6 +41,12 @@ export function tintSuggestionTier(answers) {
 /* "7 years" → "7-year warranty", "Lifetime" → "Lifetime warranty". */
 export const tintWarranty = w => `${String(w).replace(/^(\d+) years?$/i, '$1-year')} warranty`
 export const tintPeso = n => `₱${Number(n).toLocaleString('en-PH')}`
+
+/** Customer heading. Blank stays the current title so old configs do not change. */
+export function tintFinderTitle(config) {
+  const title = String(config?.pageTitle || '').trim()
+  return title || 'Tint Finder'
+}
 export function recommendTint(config, answers) {
   if (TINT_QUESTIONS.some(q => !q.choices.some(c => c.id === answers?.[q.key]))) return []
   return TINT_SUGGESTION_TIERS[tintSuggestionTier(answers)].options.filter(id => config.options[id]).map(id => {
@@ -93,6 +99,7 @@ export function validateTintConfig(c) {
       if (b.length!==1 || b[0].benefits.length!==3 || new Set(b[0].benefits).size!==3 || b[0].benefits.some(id=>!c.benefits.some(v=>v.id===id))) return 'Each benefit rule must select three distinct benefits.'
     }
     if (c.benefits.length!==9 || new Set(c.benefits.map(b=>b.id)).size!==9 || c.benefits.some(b=>!safeText(b.title)||!safeText(b.description)||! /^[1-9]$/.test(b.id))) return 'Keep the nine original benefit IDs and their descriptions.'
+    if (c.pageTitle != null && c.pageTitle !== '' && (typeof c.pageTitle !== 'string' || c.pageTitle.trim().length < 1 || c.pageTitle.trim().length > 80)) return 'The page title must be 80 characters or fewer.'
     if (typeof c.sealEnabled!=='boolean' || !Array.isArray(c.sealVerifiedPackages) || c.sealVerifiedPackages.some(id=>!c.packages[id])) return 'Invalid certification settings.'
     if (c.sealEnabled && !c.sealVerifiedPackages.length) return 'Verify at least one package before enabling the seal.'
     return ''

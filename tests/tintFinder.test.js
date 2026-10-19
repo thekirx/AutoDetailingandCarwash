@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { test } from 'node:test'
-import { recommendTint, suggestTint, tintPackageName, tintWarranty, orderedBenefits, validateTintConfig, buildTintLead } from '../src/lib/tintFinder.js'
+import { recommendTint, suggestTint, tintPackageName, tintWarranty, tintFinderTitle, orderedBenefits, validateTintConfig, buildTintLead } from '../src/lib/tintFinder.js'
 const config = JSON.parse(readFileSync(new URL('../src/data/tintFinderConfig.json', import.meta.url)))
 /* Approved 9 Oct 2026: poor eyesight → lightest (but with privacy or balance →
    lightest tinted front over a darker rear, 17 Oct 2026); night, prescription or
@@ -82,6 +82,25 @@ test('personalized benefits appear first once, with all nine retained',()=>{
  assert.deepEqual(list.slice(0,3).map(b=>b.id),['2','6','1'])
  assert.equal(new Set(list.map(b=>b.id)).size,9)
  assert.equal(list.filter(b=>b.personalized).length,3)
+})
+test('the dedicated page tab follows the saved title and the service page does not',()=>{
+ const src=readFileSync(new URL('../src/components/public/TintFinder.jsx',import.meta.url),'utf8')
+ assert.match(src,/standalone \? <FinderPageTitle/)
+ assert.match(src,/usePageMeta/)
+ const settings=readFileSync(new URL('../src/pages/settings/TintFinderSettingsPage.jsx',import.meta.url),'utf8')
+ assert.match(settings,/to="\/tint-finder"/)
+ const pos=readFileSync(new URL('../src/pages/PosPage.jsx',import.meta.url),'utf8')
+ assert.match(pos,/flex-wrap/)
+ assert.match(pos,/length > 2/)
+})
+test('page title is optional and stays Tint Finder until Sir saves one',()=>{
+ assert.equal(tintFinderTitle({}),'Tint Finder')
+ assert.equal(tintFinderTitle({pageTitle:'  Find your shade  '}),'Find your shade')
+ const c=structuredClone(config)
+ c.pageTitle='Find your shade'
+ assert.equal(validateTintConfig(c),'')
+ c.pageTitle='x'.repeat(81)
+ assert.match(validateTintConfig(c),/80 characters/)
 })
 test('business price and film-pair edits change results without implementation changes',()=>{
  const c=structuredClone(config); c.packages.ceramic.prices.sedan=6500; c.options['OPT-F'].rear='C20'

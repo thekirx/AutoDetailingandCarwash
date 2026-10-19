@@ -10,6 +10,8 @@ import {
   applyOwnerSetQty,
   applyReconLine,
   applyRestockQty,
+  branchAssignmentRows,
+  branchOnHand,
   productIsResellable,
   reconUsageQty,
 } from '../src/lib/inventoryBranchStock.js'
@@ -47,6 +49,23 @@ describe('inventoryBranchStock helpers', () => {
     assert.equal(applyRestockQty(5, 3), 8)
     assert.equal(applyOwnerSetQty(-2), 0)
     assert.equal(applyOwnerSetQty(17), 17)
+  })
+
+  it('assigns a sellable to a branch only when a stock row exists', () => {
+    const catalog = [
+      { id: 'a', name: 'Freshener', category: 'accessories', usage_kind: 'resellable' },
+      { id: 'c', name: 'Shirt', category: 'clothing', usage_kind: 'resellable' },
+      { id: 'chem', name: 'Soap', category: 'merch', usage_kind: 'internal' },
+    ]
+    const stock = { c: 0 }
+    assert.deepEqual(branchAssignmentRows(catalog, stock, 'assigned').map((row) => row.id), ['c'])
+    assert.equal(branchAssignmentRows(catalog, stock, 'assigned')[0].on_hand, 0)
+    assert.deepEqual(branchAssignmentRows(catalog, stock, 'unassigned').map((row) => row.id), ['a'])
+    assert.deepEqual(branchAssignmentRows(catalog, stock, 'accessories').map((row) => row.id), ['a'])
+    assert.deepEqual(branchAssignmentRows(catalog, stock, 'sellables').map((row) => row.id), ['c'])
+    assert.equal(branchOnHand([{ branch_slug: 'bacoor', qty: 2 }], 'bacoor'), 2)
+    assert.equal(branchOnHand([{ branch_slug: 'bacoor', qty: 0 }], 'bacoor'), 0)
+    assert.equal(branchOnHand([{ branch_slug: 'bacoor', qty: 2 }], 'imus'), null)
   })
 })
 
@@ -94,9 +113,25 @@ describe('inventory P4 migrations + pages (source scan)', () => {
     assert.match(inv, /BranchInventoryPage/)
     assert.match(inv, /canManageServices/)
     assert.match(inv, /canRestockInventory/)
+    assert.match(inv, /id: 'recon'/)
+    assert.doesNotMatch(inv, /id: 'stock'/)
     assert.match(branch, /Restock/)
     assert.match(branch, /Sunday Recon/)
     assert.match(branch, /product_branch_stock/)
+    assert.match(branch, /Assign to branch/)
+    assert.match(branch, /branch-stock-filter/)
+    assert.match(branch, /Not at this branch/)
+    const pos = read('src/pages/PosPage.jsx')
+    assert.match(pos, /stockMap\[p\.id\] != null/)
+    assert.doesNotMatch(pos, /stockMap\[p\.id\] != null \? stockMap\[p\.id\] : p\.stock_qty/)
     assert.match(branch, /inventory_recons/)
+  })
+
+  it('activating a product does not turn an internal item into a sellable', () => {
+    const api = read('src/lib/adminApi.js')
+    const start = api.indexOf('export async function updateProduct')
+    const body = api.slice(start, api.indexOf('\nexport async function', start + 20))
+    assert.match(body, /if \(payload\.usage_kind !== undefined\)/)
+    assert.doesNotMatch(body, /usage_kind: payload\.usage_kind === 'internal' \? 'internal' : 'resellable'/)
   })
 })

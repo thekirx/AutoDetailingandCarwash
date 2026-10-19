@@ -177,7 +177,14 @@ function formFromService(row) {
   }
 }
 
-export default function ServicesManagePage({ embedded = false, catalogScope = 'all' }) {
+const LOCKED_MSG = 'Inventory is locked. Ask Super Admin to unlock.'
+
+export default function ServicesManagePage({
+  embedded = false,
+  catalogScope = 'all',
+  crudLocked = false,
+  canMutate = true,
+} = {}) {
   const { profile } = useAuth()
   const [services, setServices] = useState([])
   const [form, setForm] = useState(() => emptyForm(catalogScope))
@@ -220,8 +227,15 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
     return <Navigate to="/operations/access-denied" replace />
   }
 
+  function assertCanMutate() {
+    if (canMutate) return true
+    toast.error(LOCKED_MSG)
+    return false
+  }
+
   async function onCreate(event) {
     event.preventDefault()
+    if (!assertCanMutate()) return
     setSaving(true)
     try {
       const size_prices = sizePayloadFromForm(form)
@@ -246,6 +260,7 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
   async function onSaveEdit(event) {
     event.preventDefault()
     if (!editing) return
+    if (!assertCanMutate()) return
     setSaving(true)
     try {
       const size_prices = sizePayloadFromForm(editing)
@@ -279,6 +294,7 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
   }
 
   async function toggleActive(row) {
+    if (!assertCanMutate()) return
     try {
       const edit = formFromService(row)
       await updateService(row.id, {
@@ -299,6 +315,7 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
   }
 
   async function onArchive(id) {
+    if (!assertCanMutate()) return
     if (!window.confirm('Archive this catalog item?')) return
     try {
       await archiveService(id)
@@ -326,6 +343,11 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
 
   return (
     <section className={`flex flex-col gap-8 ${embedded ? '' : ''}`}>
+      {crudLocked && !canMutate ? (
+        <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground" role="status">
+          {LOCKED_MSG}
+        </p>
+      ) : null}
       {!embedded && (
         <div>
           <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Catalog</p>
@@ -523,7 +545,7 @@ export default function ServicesManagePage({ embedded = false, catalogScope = 'a
               {scopedRows.length} active item{scopedRows.length === 1 ? '' : 's'} in this tab
             </CardDescription>
           </div>
-          <Button type="button" className="min-h-11" onClick={() => setCreateOpen(true)}>
+          <Button type="button" className="min-h-11" onClick={() => setCreateOpen(true)} disabled={!canMutate}>
             <Plus size={16} className="mr-1.5" aria-hidden />
             {createLabel}
           </Button>

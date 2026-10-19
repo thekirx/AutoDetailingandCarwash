@@ -91,6 +91,7 @@ export async function applyPaintMaintenanceOnComplete(db, booking) {
     next_due_at: nextDue,
     branch_slug: booking.branch || null,
     status: 'scheduled',
+    last_notified_at: null,
     updated_at: new Date().toISOString(),
   }
 

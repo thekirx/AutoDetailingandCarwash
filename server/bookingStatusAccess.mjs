@@ -2,8 +2,7 @@
  * Pure gate for /api/booking-status — service role bypasses bookings RLS,
  * so callers must enforce branch scope here.
  */
-import { isCrmSafeBookingStatus, isSalesBoardBookingStatus } from './crmBookingStatus.mjs'
-import { isBookingBoardRow } from '../src/lib/serviceKinds.js'
+import { isCrmSafeBookingStatus } from './crmBookingStatus.mjs'
 
 function hasAsaGrant(staff, key) {
   const grants = staff?.permission_grants
@@ -40,12 +39,8 @@ export function canStaffUpdateBookingStatus(staff, booking, opts = {}) {
   // Marketing: Bookings view is read-only.
   if (staff.role === 'marketing') return false
 
-  // Sales: assigned to all branches — detailing board pipeline only, any branch. Wash is view only.
-  if (staff.role === 'sales') {
-    const next = opts.nextStatus
-    if (!next || !isSalesBoardBookingStatus(next)) return false
-    return isBookingBoardRow(booking)
-  }
+  // Customer Rep (sales): detailing and queue are read-only (docs/OPS/RBAC-MATRIX.md).
+  if (staff.role === 'sales') return false
 
   if (staff.role === 'team_lead') {
     if (!staff.branch_slug || staff.branch_slug !== branch) return false

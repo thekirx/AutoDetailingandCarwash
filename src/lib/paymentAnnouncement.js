@@ -20,6 +20,12 @@ export function spellPlate(plate) {
   return runs.map((run) => run.split('').join(' ')).join(', ')
 }
 
+/** Counter voice speaks only a visit that is ready for payment. */
+export function isReadyForPaymentVoice(row) {
+  const booking = Array.isArray(row?.bookings) ? row.bookings[0] : row?.bookings
+  return booking?.status === 'for_payment'
+}
+
 export function buildPaymentAnnouncement({ make, model, plate } = {}) {
   const m = clean(make)
   const mdl = clean(model)

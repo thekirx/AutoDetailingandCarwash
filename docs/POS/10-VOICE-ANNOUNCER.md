@@ -33,16 +33,24 @@ The system never picks Microsoft David (male) when a female English voice exists
 
 ## Cost
 
-Free. The browser voice runs in Edge or Chrome at no charge, with no per-car fee and no monthly bill. Example: 3 branches × 50 cars a day = 4,500 announcements a month = ₱0.
+**Browser fallback (default without AI keys):** free. Edge/Chrome, no per-car fee.
 
-Production has no `GEMINI_API_KEY`, so `/api/pos-announce` answers **501** and the device uses the browser voice. That 501 in the browser console is expected, not an error. Do not add the key unless Hakum chooses the Gemini voice: it replaces Rosa, is not Filipino-accented, and costs about ₱0.05 per car (₱0.10 from 2027) once past Google's free tier.
+**ElevenLabs (preferred when `ELEVENLABS_API_KEY` is set):** same English voiceline, soft high female “station / keigo commercial” delivery (Lily by default). Billed on your ElevenLabs plan. Server-only key — never `VITE_*`.
+
+**Gemini fallback:** if ElevenLabs has a temporary outage (or only `GEMINI_API_KEY` is set), the same English line is synthesized with Aoede.
+
+**Free voice when ElevenLabs credit is gone:** a 402, or a quota/credit error, stops further ElevenLabs calls for that server process. The counter then uses the free browser voice (Rosa on Edge). Gemini is not called for a finished credit balance. A clip already saved for that exact sentence is still played from cache, so a repeat plate does not spend tokens.
+
+**Clip cache (token saver):** clips are keyed by the spoken sentence + voice settings (not `handoff_id`). First play synthesizes once; repeats for the same plate/line hit memory, then private Storage bucket `pos-announce-clips`. Returning customers do not burn TTS tokens again.
+
+Without either key, `/api/pos-announce` answers **501** and the device uses Rosa / browser voice. That 501 is expected.
 
 ## How it works
 
 | Step | Code |
 |---|---|
 | Realtime INSERT on `pos_handoffs` reaches the counter | `src/pages/PosPage.jsx` |
-| Chime, then the AI clip if it answers within 2.5 s, else the browser voice | `src/lib/posAnnouncer.js` |
+| Chime, then the AI clip if it answers within 4.5 s, else the browser voice | `src/lib/posAnnouncer.js` |
 | Sentence and voice choice | `src/lib/paymentAnnouncement.js` (`buildPaymentAnnouncement`, `pickAnnouncerVoice`, `waitForVoices`) |
 | Optional AI voice (staff-only, branch-scoped) | `server/posAnnounceApi.mjs` |
 
@@ -52,8 +60,9 @@ Browsers report an empty voice list right after page load and fill it in later; 
 
 ```bash
 node --test tests/paymentAnnouncement.test.js
+node --env-file=.env scripts/_pos-voice-ai-compare.mjs
 EDGE=1 BASE_URL=http://localhost:5173 node --env-file=.env scripts/_pos-voice-check.mjs
 CHROME=1 BASE_URL=http://localhost:5173 node --env-file=.env scripts/_pos-voice-check.mjs
 ```
 
-The browser check is non-destructive: the waiting ticket is simulated and any sale post is blocked. In Edge and Chrome mode it checks every spoken line uses the female voice, then really speaks the sentence with it.
+`_pos-voice-ai-compare.mjs` writes ElevenLabs + Gemini clips (same English line, station-style woman) into `e2e-evidence/pos-voice/` plus `compare-station.html`. Needs `ELEVENLABS_API_KEY` and `GEMINI_API_KEY` (default Gemini voice **Aoede**, female). The browser check is non-destructive.

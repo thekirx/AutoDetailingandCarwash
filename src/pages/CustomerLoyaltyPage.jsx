@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Cake, Check, Gift, Percent, Star } from 'lucide-react'
+import { Cake, Check, Gift, Percent, Star, Ticket } from 'lucide-react'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
 import StampTrack from '@/components/customer/StampTrack'
 import { Row, SectionHead, Skeleton, Stat } from '@/components/customer/CustomerUi'
 import { fetchPortal } from '@/lib/customerPortalClient'
-import { CUSTOMER_LOYALTY_PATH } from '@/lib/customerAccountNav'
+import { CUSTOMER_LOYALTY_PATH, CUSTOMER_REFERRAL_PATH, CUSTOMER_VOUCHERS_PATH } from '@/lib/customerAccountNav'
+import { formatDiscountPercent, normalizeReferralProgram } from '@/lib/referralProgram'
 import { usePageMeta } from '@/lib/pageMeta'
 
 /** /account/loyalty — stamps, next reward, membership, points. All values from /api/customer-portal. */
@@ -121,17 +122,33 @@ export default function CustomerLoyaltyPage() {
               )
             })}
             <Row
+              icon={Gift}
+              title="Your referral code"
+              sub={`Share it. You get ${formatDiscountPercent(normalizeReferralProgram(data?.rewards?.program).discount_rate)} off detailing when a friend uses it.`}
+              to={CUSTOMER_REFERRAL_PATH}
+              chevron
+            />
+            <Row
+              icon={Ticket}
+              title="Vouchers"
+              sub="Birthday car wash and the accessory shop."
+              to={CUSTOMER_VOUCHERS_PATH}
+              chevron
+            />
+            <Row
               icon={Cake}
               title="Birthday carwash"
               sub={
                 birthday?.perk
                   ? 'Your free service is ready. Show this at any branch.'
-                  : birthday?.date_of_birth
-                    ? 'One free service on your birthday month.'
-                    : 'Add your birthday in Settings to unlock.'
+                  : birthday?.is_today
+                    ? 'Today is your birthday. Claim it on Vouchers.'
+                    : birthday?.date_of_birth
+                      ? 'One free service on your birthday.'
+                      : 'Add your birthday in Settings to unlock.'
               }
-              to={birthday?.date_of_birth ? undefined : '/account/more?tab=account'}
-              chevron={!birthday?.date_of_birth}
+              to={CUSTOMER_VOUCHERS_PATH}
+              chevron
             />
           </div>
         </section>

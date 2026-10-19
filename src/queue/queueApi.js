@@ -1,3 +1,4 @@
+import { isBirthdayToday } from '../lib/birthdayPerk'
 import { supabase } from '../lib/supabase'
 import { getAccessTokenFresh } from '../lib/authToken'
 import { notifyOpsEvent } from '../lib/opsEventNotify'
@@ -261,6 +262,14 @@ export async function fetchOperationsSnapshot(profile, { branchFilter = 'all', f
 
   const today = getTodayDate()
   const queueRows = queue.data || []
+  const birthdayIds = [...new Set(queueRows.map((ticket) => ticket.customer_id).filter(Boolean))].slice(0, 200)
+  if (birthdayIds.length) {
+    const births = await supabase.from('customers').select('id, date_of_birth').in('id', birthdayIds)
+    const todayIds = new Set(
+      (births.data || []).filter((row) => isBirthdayToday(row.date_of_birth)).map((row) => row.id),
+    )
+    for (const ticket of queueRows) ticket.birthdayToday = todayIds.has(ticket.customer_id)
+  }
   // Open jobs stay on the floor until POS completes — services, packages, detailing alike.
   const activeQueue = queueRows.filter(
     (ticket) => boardStatuses.includes(ticket.status) && isTicketOnTodayFloor(ticket, today),

@@ -87,6 +87,18 @@ test('totals: over/short sign — counted below expected is short (negative)', (
   assert.equal(missing.overShortMinor, null)
 })
 
+test('totals: GCash expenses hit P&L but not expected drawer cash', () => {
+  const lines = [
+    { kind: 'expense', description: 'Soap', account_id: 'a12', amount_minor: 5000, paid_from: 'cash' },
+    { kind: 'expense', description: 'Ads', account_id: 'a17', amount_minor: 2000, paid_from: 'gcash' },
+  ]
+  const t = computeSheetTotals({ sales: SALES, lines, openingFloatMinor: 100000, countedCashMinor: null })
+  assert.equal(t.expensesMinor, 7000)
+  assert.equal(t.cashExpensesMinor, 5000)
+  assert.equal(t.gcashExpensesMinor, 2000)
+  assert.equal(t.expectedCashMinor, 100000 + 50000 - 5000)
+})
+
 test('salary reason: required only when amount differs from suggestion', () => {
   assert.equal(salaryLineNeedsReason({ kind: 'salary', suggested_minor: 100, amount_minor: 100 }), false)
   assert.equal(salaryLineNeedsReason({ kind: 'salary', suggested_minor: 100, amount_minor: 150 }), true)

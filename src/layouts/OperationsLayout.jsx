@@ -2,6 +2,7 @@ import {
   ArrowLeftRight,
   BarChart3,
   Building2,
+  Car,
   CarFront,
   ClipboardList,
   Clock,
@@ -35,6 +36,7 @@ import {
   Newspaper,
   Star,
   Search,
+  TicketPercent,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
@@ -61,6 +63,7 @@ import {
   canSeeAllBranches,
   usesCommandShell,
 } from '../auth/permissions'
+import { internalRoleLabel } from '../auth/internalRoles'
 import { resolvePostLoginPath } from '../auth/authRedirect'
 import { supabase } from '@/lib/supabase'
 import NotificationBell from '@/components/NotificationBell'
@@ -106,6 +109,7 @@ const iconMap = {
   BarChart3,
   ListChecks,
   ShoppingCart,
+  TicketPercent,
   Wallet,
   Contact,
   Sparkles,
@@ -115,6 +119,7 @@ const iconMap = {
   LineChart,
   Crown,
   Building2,
+  Car,
   UserPlus,
   ScrollText,
   Columns3,
@@ -136,21 +141,10 @@ const iconMap = {
 /** Daylight display words for the floor app. Permissions still decide which items exist; this only renames them on screen.
     The admin board keeps the client's own names (Floor Board, Final Checking, Failed QA). */
 const DAYLIGHT_LABELS = { Attendance: 'Time clock', New: 'New car' }
-const DAYLIGHT_GROUPS = { floor: 'Today', books: 'Money' }
 const daylightLabel = (label) => DAYLIGHT_LABELS[label] || label
 
 function formatRole(role) {
-  if (role === 'team_lead') return 'Team Lead'
-  if (role === 'BossMich') return 'Super Admin'
-  if (role === 'assistant_super_admin') return 'Assistant Super Admin'
-  if (role === 'admin') return 'Branch Admin'
-  if (role === 'operations_lead') return 'Operations Lead'
-  if (role === 'staff') return 'Crew'
-  if (role === 'marketing') return 'Marketing'
-  if (role === 'detailer') return 'Detailer'
-  if (role === 'video_editor') return 'Video Editor'
-  if (role === 'investor') return 'Investor'
-  return role || 'Ops'
+  return internalRoleLabel(role)
 }
 
 function formatScope(profile, names = {}) {
@@ -491,9 +485,21 @@ function DetailerFloorShell({ profile, signOut }) {
   )
 }
 
-function commandNavIsActive(pathname, to) {
-  const path = String(to || '').split('?')[0]
+function commandNavIsActive(pathname, search, to) {
+  const [path, query] = String(to || '').split('?')
   if (!path) return false
+  if (query) {
+    const want = new URLSearchParams(query)
+    const have = new URLSearchParams(search)
+    for (const [key, value] of want) {
+      if (have.get(key) !== value) return false
+    }
+    return pathname === path
+  }
+  if (path === '/operations/inventory') {
+    const tab = new URLSearchParams(search).get('tab')
+    if (tab === 'bay' || tab === 'detailing') return false
+  }
   if (path.endsWith('/console') || path.endsWith('/dashboard')) return pathname === path
   return pathname === path || pathname.startsWith(`${path}/`)
 }
@@ -505,18 +511,18 @@ function CommandNavList({ items }) {
 
   return groups.map((group) => (
     <SidebarGroup key={group.id} className="command-nav-group">
-      <SidebarGroupLabel>{DAYLIGHT_GROUPS[group.id] || group.label}</SidebarGroupLabel>
+      <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu>
           {group.items.map(({ label: itemLabel, to, icon }) => {
             const Icon = iconMap[icon] || ClipboardList
             const path = to.split('?')[0]
-            const end = path.endsWith('/console') || path.endsWith('/dashboard')
+            const end = path.endsWith('/console') || path.endsWith('/dashboard') || to.includes('?')
             return (
               <SidebarMenuItem key={to}>
                 <SidebarMenuButton
                   className="command-nav-btn"
-                  isActive={commandNavIsActive(location.pathname, to)}
+                  isActive={commandNavIsActive(location.pathname, location.search, to)}
                   tooltip={itemLabel}
                   render={
                     <NavLink
@@ -554,7 +560,7 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
           : 'Command'
 
   const crumb = useMemo(() => {
-    const match = navigation.find((item) => commandNavIsActive(location.pathname, item.to))
+    const match = navigation.find((item) => commandNavIsActive(location.pathname, location.search, item.to))
     return match?.label || label
   }, [navigation, location.pathname, label])
 

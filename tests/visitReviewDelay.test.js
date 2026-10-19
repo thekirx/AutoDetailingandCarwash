@@ -11,24 +11,25 @@ import {
 } from '../src/lib/visitReviewDelay.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
-const hour = 60 * 60 * 1000
+const min = 60 * 1000
 
-describe('rate last visit after one hour', () => {
+describe('rate last visit after 15 minutes', () => {
   const now = new Date('2026-09-28T10:00:00.000Z').getTime()
 
-  it('hides the card until an hour after the last line in the visit finishes', () => {
+  it('hides the card until 15 minutes after the last line in the visit finishes', () => {
+    assert.equal(REVIEW_DELAY_MS, 15 * min)
     const history = [
       {
         id: 'wash',
         visit_group_id: 'v1',
         status: 'completed',
-        for_payment_at: new Date(now - hour + 60_000).toISOString(),
-        completed_at: new Date(now - 30 * 60_000).toISOString(),
+        for_payment_at: new Date(now - REVIEW_DELAY_MS + 60_000).toISOString(),
+        completed_at: new Date(now - 5 * min).toISOString(),
       },
       {
         id: 'older',
         status: 'completed',
-        completed_at: new Date(now - 3 * hour).toISOString(),
+        completed_at: new Date(now - 3 * 60 * min).toISOString(),
       },
     ]
     assert.equal(latestReviewableVisit(history, now), null)
@@ -37,7 +38,7 @@ describe('rate last visit after one hour', () => {
     assert.equal(reviewDelayRemainingMs(history, now) <= 60_000, true)
   })
 
-  it('shows the visit once the hour has passed, and waits while a sibling is still open', () => {
+  it('shows the visit once the delay has passed, and waits while a sibling is still open', () => {
     const ready = [
       {
         id: 'done',

@@ -185,6 +185,8 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
   const [cancelOpen, setCancelOpen] = useState(false)
   const [vehicleTypeDraft, setVehicleTypeDraft] = useState('medium')
   const [priceOpen, setPriceOpen] = useState(false)
+  const [voucherCode, setVoucherCode] = useState('')
+  const [promoApplied, setPromoApplied] = useState(null)
   const crewPanelRef = useRef(null)
   const bayServices = useMemo(() => filterPosBayCatalog(services), [services])
 
@@ -203,8 +205,24 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
       if (data.ticket) {
         const lines = await fetchVisitLines(data.ticket).catch(() => [])
         setVisitLines(lines)
+        const { data: promo } = await supabase
+          .from('bookings')
+          .select('promo_voucher_id, promo_discount_minor, promo_vouchers(code, title)')
+          .eq('id', bookingId)
+          .maybeSingle()
+        setPromoApplied(
+          promo?.promo_voucher_id
+            ? {
+                id: promo.promo_voucher_id,
+                code: promo.promo_vouchers?.code,
+                title: promo.promo_vouchers?.title,
+                discount_minor: promo.promo_discount_minor,
+              }
+            : null,
+        )
       } else {
         setVisitLines([])
+        setPromoApplied(null)
       }
     } catch (err) {
       setLoadError(err.message)
@@ -737,6 +755,51 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
             </p>
           ) : null}
         </Panel>
+
+        {showEditActions ? (
+          <Panel title="Voucher code" icon={BadgeCheck} className={variant === 'modal' ? '' : 'order-4'}>
+            {promoApplied ? (
+              <p className="text-sm text-foreground">
+                Applied <span className="font-mono font-semibold">{promoApplied.code}</span>
+                {promoApplied.title ? ` · ${promoApplied.title}` : ''}
+                {promoApplied.discount_minor
+                  ? ` · saved ${formatMoney(promoApplied.discount_minor)}`
+                  : ''}
+              </p>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end">
+                <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
+                  Customer shows this code
+                  <input
+                    value={voucherCode}
+                    onChange={(event) => setVoucherCode(event.target.value.toUpperCase())}
+                    placeholder="Voucher code"
+                    autoComplete="off"
+                    maxLength={16}
+                    className="mt-2 min-h-12 w-full rounded-xl border border-border bg-background px-4 py-3 text-base uppercase text-foreground outline-none focus:border-primary/60"
+                  />
+                </label>
+                <ActionButton
+                  loading={saving === 'voucher'}
+                  onClick={() =>
+                    runAction('voucher', async () => {
+                      const { data, error } = await supabase.rpc('apply_booking_promo_voucher', {
+                        p_booking_id: ticket.booking_id || bookingId,
+                        p_code: voucherCode,
+                      })
+                      if (error) throw error
+                      if (data && data.ok === false) throw new Error(data.error || 'Voucher not applied')
+                      setVoucherCode('')
+                      onUpdated?.(data)
+                    })
+                  }
+                >
+                  Apply voucher
+                </ActionButton>
+              </div>
+            )}
+          </Panel>
+        ) : null}
 
         {showEditActions && canEditServicePrice ? (
           <details

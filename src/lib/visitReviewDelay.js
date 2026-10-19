@@ -1,6 +1,6 @@
-/** Rate-your-last-visit waits until an hour after the visit's last line finishes. */
+/** Rate-your-last-visit waits 15 minutes after the visit's last line finishes (Michi C20). */
 
-export const REVIEW_DELAY_MS = 60 * 60 * 1000
+export const REVIEW_DELAY_MS = 15 * 60 * 1000
 
 const OPEN_STATUSES = new Set([
   'pending',
@@ -60,14 +60,14 @@ function latestFinishedGroup(history = []) {
   return best
 }
 
-/** Latest visit whose every line has finished, even inside the review hour. */
+/** Latest visit whose every line has finished, even inside the review delay. */
 export function latestFinishedVisit(history = []) {
   return latestFinishedGroup(history)?.row || null
 }
 
 /**
  * Latest finished visit, only after REVIEW_DELAY_MS from its last line.
- * A newer visit still inside the hour hides older visits.
+ * A newer visit still inside the delay hides older visits.
  */
 export function latestReviewableVisit(history = [], now = Date.now()) {
   const latest = latestFinishedGroup(history)

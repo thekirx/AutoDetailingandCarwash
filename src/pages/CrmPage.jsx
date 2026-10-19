@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { Contact, MessageSquare, Search, UserPlus } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessCrm, canEditCrm, canWriteFinance, getBranchScopeList, isAdmin } from '@/auth/permissions'
+import { canAccessCrm, canEditCrm, canSendCustomerSms, canWriteFinance, getBranchScopeList, isAdmin } from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { applyBranchScope, chunkIds, collectPaged } from '@/lib/crmInsights'
@@ -65,7 +65,7 @@ export default function CrmPage() {
   const { profile } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const crmEdit = canEditCrm(profile)
-  const tab = resolveOpsTab(searchParams.get('tab'), crmEdit ? CRM_TABS : CRM_TABS.filter((id) => id !== 'sms'), 'directory')
+  const tab = resolveOpsTab(searchParams.get('tab'), canSendCustomerSms(profile) ? CRM_TABS : CRM_TABS.filter((id) => id !== 'sms'), 'directory')
   const [customers, setCustomers] = useState([])
   const [query, setQuery] = useState('')
   const [selected, setSelected] = useState(null)
@@ -120,7 +120,7 @@ export default function CrmPage() {
     }
 
     const select =
-      'id, full_name, first_name, last_name, phone, email, loyalty_points, loyalty_stamps, created_at, notify_sms, notify_push, is_disabled'
+      'id, full_name, first_name, last_name, phone, email, date_of_birth, loyalty_points, loyalty_stamps, created_at, notify_sms, notify_push, is_disabled'
     try {
       if (customerIds) {
         const rows = []

@@ -1,6 +1,6 @@
 /**
  * Customer portal data (service role) — JWT customer → history / garage / queue / loyalty.
- * POST actions: add-vehicle | update-vehicle | archive-vehicle | sync-email | update-phone | update-birthday | submit-review
+ * POST actions: add-vehicle | update-vehicle | archive-vehicle | sync-email | update-phone | update-birthday | submit-review | request-reschedule | claim-birthday | redeem-accessory
  * (kept in step with mutateCustomerPortal by scripts/check-portal-actions.mjs)
  */
 import { createClient } from '@supabase/supabase-js'
@@ -10,12 +10,37 @@ import { maintenanceNeedsOpsAttention } from '../src/lib/paintMaintenance.js'
 import { isValidCustomerPlate, plateValidationError, safeVehiclePhotoUrl } from '../src/lib/customerAuth.js'
 import { buildLoyaltyProgress } from '../src/lib/loyaltyLogic.js'
 import { buildThumbReview } from '../src/lib/serviceReviews.js'
+import { thumbDownComplaintPayload } from '../src/lib/opsForms.js'
+import { notifyOpsFormComplaint } from './notifyOpsForm.mjs'
 import { CUSTOMER_ACTIVE_VISIT_STATUSES } from '../src/lib/customerPortalActive.js'
 import { prepareGaragePlateChange } from '../src/lib/customerGarage.js'
 import { inferPhPricingSize } from '../src/lib/phVehicleSizes.js'
 import { normalizePricingSize } from '../src/lib/servicePricing.js'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
 import { branchName, notifyStaffEvent } from './notifyOpsEvent.mjs'
+import { requestBookingReschedule } from './bookingReschedule.mjs'
+import { birthdayLockError, birthdayQueryDays, isBirthdayToday } from '../src/lib/birthdayPerk.js'
+import { normalizeReferralProgram } from '../src/lib/referralProgram.js'
+import { mintReferralCode } from '../src/lib/friendReferral.js'
+import { ensureBirthdayPerk } from './birthdayGreetings.mjs'
+
+async function ensureReferralCode(admin, customerId, existing) {
+  if (existing) return existing
+  for (let i = 0; i < 6; i += 1) {
+    const code = mintReferralCode()
+    const { data, error } = await admin
+      .from('customers')
+      .update({ referral_code: code })
+      .eq('id', customerId)
+      .is('referral_code', null)
+      .select('referral_code')
+      .maybeSingle()
+    if (data?.referral_code) return data.referral_code
+    if (error && error.code !== '23505') return null
+  }
+  const { data } = await admin.from('customers').select('referral_code').eq('id', customerId).maybeSingle()
+  return data?.referral_code || null
+}
 
 async function googleReviewUrl(admin, slug) {
   if (!slug) return null
@@ -83,7 +108,7 @@ export async function loadCustomerPortal({ accessToken }) {
         .limit(40),
       admin
         .from('bookings')
-        .select('id, branch, status, vehicle_plate, vehicle_make, vehicle_model, scheduled_start, notes, final_price_minor, queue_number, service_id, visit_group_id, for_payment_at, completed_at, services(name, slug, pay_category)')
+        .select('id, branch, status, vehicle_plate, vehicle_make, vehicle_model, scheduled_start, notes, reschedule_requested_at, final_price_minor, queue_number, service_id, visit_group_id, for_payment_at, completed_at, services(name, slug, pay_category)')
         .eq('customer_id', userId)
         .in('status', CUSTOMER_ACTIVE_VISIT_STATUSES)
         .order('scheduled_start', { ascending: true }),
@@ -105,7 +130,7 @@ export async function loadCustomerPortal({ accessToken }) {
         .eq('is_active', true)
         .order('sort_order')
         .order('threshold_points'),
-      admin.from('customers').select('loyalty_stamps, loyalty_points, phone, email, full_name, date_of_birth').eq('id', userId).maybeSingle(),
+      admin.from('customers').select('loyalty_stamps, loyalty_points, phone, email, full_name, date_of_birth, referral_code').eq('id', userId).maybeSingle(),
       admin
         .from('vehicles')
         .select('id, plate_number, vehicle_make, vehicle_model, vehicle_year, vehicle_type, color, photo_url, icon')
@@ -127,32 +152,50 @@ export async function loadCustomerPortal({ accessToken }) {
         .in('status', ['scheduled', 'notified']),
     ])
 
-  let birthdayPerk = null
-  try {
-    const { grantBirthdayIfDue } = await import('./birthdayGreetings.mjs')
-    const granted = await grantBirthdayIfDue(admin, {
-      id: userId,
-      full_name: customerRow.data?.full_name || customer.full_name,
-      phone: customerRow.data?.phone || customer.phone,
-      date_of_birth: customerRow.data?.date_of_birth || customer.date_of_birth,
-    })
-    if (granted?.perk) birthdayPerk = granted.perk
-  } catch {
-    /* never block portal on birthday */
-  }
+  const { data: perkRow } = await admin
+    .from('customer_birthday_perks')
+    .select('id, perk_year, status, expires_at, claimed_at, greeting_sent_at, code')
+    .eq('customer_id', userId)
+    .eq('status', 'available')
+    .gt('expires_at', new Date().toISOString())
+    .order('perk_year', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+  const birthdayPerk = perkRow || null
+  const { data: usedPerk } = await admin
+    .from('customer_birthday_perks')
+    .select('id')
+    .eq('customer_id', userId)
+    .eq('perk_year', birthdayQueryDays().year)
+    .eq('status', 'claimed')
+    .maybeSingle()
 
-  if (!birthdayPerk) {
-    const { data: perkRow } = await admin
-      .from('customer_birthday_perks')
-      .select('id, perk_year, status, expires_at, claimed_at, greeting_sent_at')
+  const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
+  const [{ data: promoRows }, { data: promoHistory }] = await Promise.all([
+    admin
+      .from('promo_vouchers')
+      .select(
+        'id, code, title, rules_text, discount_kind, discount_percent, applies_to, starts_on, ends_on, max_uses, uses_count, is_active',
+      )
+      .eq('is_active', true)
+      .order('created_at', { ascending: false })
+      .limit(40),
+    admin
+      .from('promo_voucher_redemptions')
+      .select(
+        'id, discount_minor, consumed_at, created_at, promo_vouchers(code, title), bookings(vehicle_plate, branch, status)',
+      )
       .eq('customer_id', userId)
-      .eq('status', 'available')
-      .gt('expires_at', new Date().toISOString())
-      .order('perk_year', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    birthdayPerk = perkRow || null
-  }
+      .order('created_at', { ascending: false })
+      .limit(40),
+  ])
+  const activePromos = (promoRows || []).filter((row) => {
+    const start = row.starts_on ? String(row.starts_on).slice(0, 10) : ''
+    const end = row.ends_on ? String(row.ends_on).slice(0, 10) : ''
+    if (start && todayKey < start) return false
+    if (end && todayKey > end) return false
+    return Number(row.max_uses) - Number(row.uses_count) > 0
+  })
 
   const queueRows = queue.data || []
   const queueByBranch = {}
@@ -220,8 +263,33 @@ export async function loadCustomerPortal({ accessToken }) {
     phone: customerRow.data?.phone || customer?.phone || user.user_metadata?.phone || null,
     email: customerRow.data?.email || customer?.email || user.email,
     date_of_birth: customerRow.data?.date_of_birth || customer?.date_of_birth || null,
+    referral_code: null,
     role: 'customer',
   }
+  profile.referral_code = await ensureReferralCode(admin, userId, customerRow.data?.referral_code)
+
+  const [credits, shop, redemptions, programRow] = await Promise.all([
+    admin
+      .from('referral_credits')
+      .select('id, status')
+      .eq('referrer_customer_id', userId)
+      .eq('status', 'available'),
+    admin
+      .from('products')
+      .select('id, name, points_price, product_branch_stock(branch_slug, qty)')
+      .or('usage_kind.is.null,usage_kind.neq.internal')
+      .eq('is_active', true)
+      .eq('is_archived', false)
+      .gt('points_price', 0)
+      .order('name'),
+    admin
+      .from('accessory_redemptions')
+      .select('id, points_spent, status, created_at, branch_slug, products(name)')
+      .eq('customer_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(12),
+    admin.rpc('referral_program_settings'),
+  ])
 
   const membership = membershipsEnabled && membershipRow.data
     ? {
@@ -253,9 +321,23 @@ export async function loadCustomerPortal({ accessToken }) {
     },
     birthday: {
       date_of_birth: profile.date_of_birth,
+      is_today: isBirthdayToday(profile.date_of_birth),
       perk: birthdayPerk && birthdayPerk.status === 'available' ? birthdayPerk : null,
+      used: Boolean(usedPerk),
+    },
+    vouchers: {
+      active: activePromos,
+      history: promoHistory || [],
+    },
+    rewards: {
+      referral_code: profile.referral_code,
+      available_discounts: (credits.data || []).length,
+      program: normalizeReferralProgram(Array.isArray(programRow.data) ? programRow.data[0] : programRow.data),
+      shop: shop.data || [],
+      redemptions: redemptions.data || [],
     },
     maintenanceDue: (maint.data || []).filter((row) => maintenanceNeedsOpsAttention(row)),
+    maintenanceSchedules: maint.data || [],
   }
 }
 
@@ -429,6 +511,10 @@ export async function mutateCustomerPortal({ accessToken, body }) {
 
   if (action === 'update-birthday') {
     const raw = String(body.date_of_birth || '').trim()
+    const { data: saved, error: savedErr } = await admin.from('customers').select('date_of_birth').eq('id', userId).maybeSingle()
+    if (savedErr) throw Object.assign(new Error(savedErr.message), { status: 400 })
+    const lock = birthdayLockError(saved?.date_of_birth, raw)
+    if (lock) throw Object.assign(new Error(lock), { status: 400 })
     if (!raw) {
       const { error } = await admin.from('customers').update({ date_of_birth: null }).eq('id', userId)
       if (error) throw Object.assign(new Error(error.message), { status: 400 })
@@ -520,7 +606,49 @@ export async function mutateCustomerPortal({ accessToken, body }) {
     const google_review_url = body.vote === 'up' ? await googleReviewUrl(admin, booking.branch) : null
     if (existing?.id) return { ok: true, already: true, id: existing.id, google_review_url }
 
-    const { data: profile } = await admin.from('customers').select('full_name').eq('id', userId).maybeSingle()
+    const { data: profile } = await admin.from('customers').select('full_name, phone').eq('id', userId).maybeSingle()
+    let complaint_id = null
+    if (body.vote === 'down') {
+      const complaint = thumbDownComplaintPayload({
+        name: profile?.full_name || booking.customer_name,
+        phone: profile?.phone,
+        branch: booking.branch,
+        category: body.category,
+        description: body.description || body.comment,
+        bookingId,
+      })
+      if (!complaint) {
+        throw Object.assign(new Error('Choose what went wrong and tell us what happened.'), { status: 400 })
+      }
+      const { data: prior } = await admin
+        .from('ops_form_submissions')
+        .select('id')
+        .contains('payload', { booking_id: bookingId })
+        .limit(1)
+        .maybeSingle()
+      if (prior?.id) {
+        complaint_id = prior.id
+      } else {
+        const { data: filed, error: formErr } = await admin.rpc('submit_public_ops_form', {
+          p_slug: 'customer-complaints',
+          p_payload: complaint,
+          p_calendar_at: null,
+          p_respondent_label: complaint.customer_name,
+        })
+        if (formErr) throw Object.assign(new Error(formErr.message), { status: 400 })
+        complaint_id = filed?.id || null
+        try {
+          await notifyOpsFormComplaint({
+            formName: 'Customer Complaints',
+            payload: complaint,
+            submissionId: complaint_id,
+            branch: booking.branch || null,
+          })
+        } catch {
+          /* complaint is saved; staff alert is best-effort */
+        }
+      }
+    }
     const { data, error } = await admin
       .from('service_reviews')
       .insert({
@@ -540,18 +668,58 @@ export async function mutateCustomerPortal({ accessToken, body }) {
       if (error.code === '23505') return { ok: true, already: true }
       throw Object.assign(new Error(error.message), { status: 400 })
     }
-    try {
-      await notifyStaffEvent(admin, 'review', {
-        id: data?.id,
-        rating: overall,
-        name: profile?.full_name || booking.customer_name,
-        branchName: await branchName(admin, booking.branch),
-        comment: body.comment,
-      }, { branch: booking.branch || null })
-    } catch {
-      /* ponytail: review is saved; staff alert is best-effort */
+    if (body.vote !== 'down') {
+      try {
+        await notifyStaffEvent(admin, 'review', {
+          id: data?.id,
+          rating: overall,
+          name: profile?.full_name || booking.customer_name,
+          branchName: await branchName(admin, booking.branch),
+          comment: body.comment,
+        }, { branch: booking.branch || null })
+      } catch {
+        /* ponytail: review is saved; staff alert is best-effort */
+      }
     }
-    return { ok: true, id: data?.id, google_review_url }
+    return { ok: true, id: data?.id, google_review_url, complaint_id }
+  }
+
+  if (action === 'request-reschedule') {
+    return requestBookingReschedule(admin, { userId, bookingId: body.booking_id })
+  }
+
+  if (action === 'claim-birthday') {
+    const { data: cust, error } = await admin
+      .from('customers')
+      .select('id, date_of_birth, full_name')
+      .eq('id', userId)
+      .maybeSingle()
+    if (error) throw Object.assign(new Error(error.message), { status: 400 })
+    if (!cust?.date_of_birth) {
+      throw Object.assign(new Error('Add your birthday in Settings first.'), { status: 400 })
+    }
+    if (!isBirthdayToday(cust.date_of_birth)) {
+      throw Object.assign(new Error('The free car wash is available on your birthday.'), { status: 400 })
+    }
+    const perk = await ensureBirthdayPerk(admin, cust)
+    if (perk?.status === 'claimed') {
+      throw Object.assign(new Error('This year\'s birthday car wash is already used.'), { status: 400 })
+    }
+    return { ok: true, perk }
+  }
+
+  if (action === 'redeem-accessory') {
+    const productId = String(body.product_id || '').trim()
+    const branch = String(body.branch_slug || '').trim()
+    if (!productId) throw Object.assign(new Error('Choose an item.'), { status: 400 })
+    if (!branch) throw Object.assign(new Error('Choose a pickup branch.'), { status: 400 })
+    const { data, error } = await admin.rpc('redeem_accessory', {
+      p_customer: userId,
+      p_product: productId,
+      p_branch: branch,
+    })
+    if (error) throw Object.assign(new Error(error.message), { status: 400 })
+    return data
   }
 
   throw Object.assign(new Error('Unknown action.'), { status: 400 })

@@ -21,7 +21,7 @@ One counter page for cars waiting to pay + merch/coffee sell. Daily Sheet is a s
 | Customer | TL takes **no** name or contact. BA fills the **Customer** card on the ticket: mobile + email (unique — typing either autofills an existing customer, otherwise Charge / Save creates one account), then first / last name. Phone + email of two different customers is refused. Blank = guest sale |
 | One customer at a time | Add-ons join the open ticket's sale. Opening another ticket with add-ons in the order asks before moving them |
 
-SA / ASA with POS still see bay + detailing catalogs for walk-in / override cases.
+SA / ASA with POS still see bay + detailing catalogs for walk-in / override cases. Car-size buttons on a service tile are S, M, L, and XL. The line under the name keeps the full size (Small, Medium, Large, Extra Large). Sellables use the names saved on the product (12 oz, M, XL) when sizes exist.
 
 ## Layout
 

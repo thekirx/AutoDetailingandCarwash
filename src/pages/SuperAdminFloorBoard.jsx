@@ -5,10 +5,11 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canSeeAllBranches, ROLES } from '@/auth/permissions'
+import { canSeeAllBranches, isAssistantSuperAdmin, isSuperAdmin, ROLES } from '@/auth/permissions'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { canReviewDailySheet } from '@/lib/dailySheet'
 import FloorMoneyPanel from './FloorMoneyPanel'
+import ReferralRank from '@/components/bookings/ReferralRank'
 import { paymentMethodLabel } from '@/lib/paymentMethods'
 import { createCoalescedReload } from '@/lib/coalesceReload'
 import { supabase } from '@/lib/supabase'
@@ -448,6 +449,10 @@ export default function SuperAdminFloorBoard() {
         <p className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-950 dark:text-red-100" role="alert">
           {error}
         </p>
+      ) : null}
+
+      {isSuperAdmin(profile) || isAssistantSuperAdmin(profile) ? (
+        <ReferralRank start={range.start} end={range.end} branch={branchFilter} />
       ) : null}
 
       <LaneStrip family="wash" />

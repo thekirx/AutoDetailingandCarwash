@@ -20,7 +20,7 @@ export function useUserNotifications() {
       }
       const { data } = await supabase
         .from('user_notifications')
-        .select('id, title, body, url, read_at, created_at')
+        .select('id, title, body, url, kind, read_at, created_at')
         .order('created_at', { ascending: false })
         .limit(20)
       const next = data || []
@@ -145,7 +145,7 @@ export default function NotificationBell({
             {rows.map((row) => (
               <Link
                 key={row.id}
-                to={notificationHref(row.url, homeUrl)}
+                to={notificationHref(row.url, homeUrl, row.kind)}
                 onClick={() => openRow(row)}
                 className={capp ? `capp-inbox-row${row.read_at ? '' : ' is-new'}` : 'block border-b border-border/60 px-3 py-2.5 text-left hover:bg-muted/50'}
               >

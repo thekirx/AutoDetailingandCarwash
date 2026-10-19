@@ -1,6 +1,7 @@
 /**
- * SA-configurable compensation engine (wash pool + ceramic detailing splits).
+ * SA-configurable compensation engine (wash pool + detailing splits).
  * Amounts in minor units (centavos). Percentages are whole numbers (35 = 35%).
+ * Settings keys stay ceramic_* for DB compatibility; UI copy says Detailing.
  */
 
 export const PAYOUT_FREQUENCIES = Object.freeze([

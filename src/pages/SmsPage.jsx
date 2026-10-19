@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { MessageSquareWarning, Plus } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessMarketing, isAdmin } from '@/auth/permissions'
+import { canSendCustomerSms, isAdmin } from '@/auth/permissions'
 import { getSmsNotificationsEnabled, setSmsNotificationsEnabled } from '@/lib/adminApi'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { busybeeProviderStatusLabel } from '@/lib/busybeeHealth'
@@ -69,7 +69,7 @@ export default function SmsPage({ embedded = false }) {
     load()
   }, [load])
 
-  if (!canAccessMarketing(profile)) {
+  if (!canSendCustomerSms(profile)) {
     if (embedded) return <p className="text-sm text-muted-foreground">SMS requires CRM access.</p>
     return <Navigate to="/operations/access-denied" replace />
   }

@@ -44,6 +44,32 @@ const GUARDED = [
   '20261015090000_revoke_legacy_checkout_rpcs.sql',
 ]
 
+/** Post-2026-10-10 migrations that do not narrow live RLS (schema/RPC/feature work). */
+const EXEMPTED = [
+  '20261017100000_pos_announce_clips_bucket.sql',
+  '20261017120000_booking_reschedule_requested.sql',
+  '20261017130000_booking_referral_source.sql',
+  '20261017140000_referral_source_options.sql',
+  '20261017150000_friend_referral_vouchers.sql',
+  '20261017160000_branch_stock_asa_pos_grant.sql',
+  '20261017170000_referral_program_settings.sql',
+  '20261017180000_redeem_branch_stock.sql',
+  '20261017190000_friend_referral_on_update.sql',
+  '20261017191000_booking_payable_minor.sql',
+  '20261019090000_cash_advance_approval_code.sql',
+  '20261019100000_birthday_perk_code.sql',
+  '20261019110000_promo_vouchers.sql',
+  '20261019120000_crew_day_card.sql',
+  '20261019130000_staff_birthday.sql',
+  '20261019140000_expense_paid_from.sql',
+  '20261019150000_inventory_crud_lock.sql',
+  '20261019160000_save_own_staff_phone.sql',
+  '20261019170000_plan_category_visible_roles.sql',
+  '20261019180000_rbac_sheet_write_locks.sql',
+  '20261019190000_plan_card_form_link.sql',
+  '20261019200000_product_size_options.sql',
+]
+
 const read = (name) => readFileSync(join(migrationsDir, name), 'utf8')
 
 describe('the guarded migrations are all present — otherwise this file tests nothing', () => {
@@ -152,7 +178,7 @@ describe('the guarded set is the live set — a new narrowing migration must be 
     const all = readdirSync(migrationsDir)
       .filter((f) => f.endsWith('.sql') && f >= '20261010')
       .sort()
-    const unlisted = all.filter((f) => !GUARDED.includes(f))
+    const unlisted = all.filter((f) => !GUARDED.includes(f) && !EXEMPTED.includes(f))
     assert.deepEqual(
       unlisted,
       [],

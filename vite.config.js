@@ -81,6 +81,18 @@ function attachHakumApis(server) {
     return handleCustomerHistoryRequest(req, res)
   })
   mount('/api/public-book', (req, res) => handlePublicBookRequest(req, res))
+  mount('/api/referral-program', async (req, res) => {
+    const { handleReferralProgramRequest } = await import('./server/referralProgram.mjs')
+    return handleReferralProgramRequest(req, res)
+  })
+  mount('/api/referral-staff', async (req, res) => {
+    const { handleReferralStaffRequest } = await import('./server/referralStaff.mjs')
+    return handleReferralStaffRequest(req, res)
+  })
+  mount('/api/accessory-points', async (req, res) => {
+    const { handleAccessoryPointsRequest } = await import('./server/accessoryPoints.mjs')
+    return handleAccessoryPointsRequest(req, res)
+  })
   mount('/api/public-inquiry', (req, res) => handlePublicInquiryRequest(req, res))
   mount('/api/plate-lookup', async (req, res) => {
     const { handlePublicPlateLookup } = await import('./server/publicPlateLookup.mjs')

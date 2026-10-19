@@ -1,3 +1,5 @@
+import { productSizePriceMinor } from './productSizes.js'
+
 /**
  * Cart line for a queue→POS handoff.
  * Never use the handoff row id as service_id (complete_pos_sale would FK-fail or stamp wrong loyalty).
@@ -439,6 +441,8 @@ export function resolveCatalogListMinor(line = {}, { services = [], products = [
   const kind = normalizePosLineItemType(line.item_type)
   if (kind === 'product') {
     const product = (products || []).find((p) => p.id === line.id || p.id === line.product_id)
+    const sized = productSizePriceMinor(product, line.size_label)
+    if (sized != null) return sized
     return Math.max(Math.floor(Number(product?.price_minor ?? line.list_price_minor ?? line.price_minor) || 0), 0)
   }
   const service = (services || []).find((s) => s.id === line.id || s.id === line.service_id)
@@ -597,7 +601,9 @@ export function buildPosSalePayload({
         // null when handoff has no booking.service_id — never pass a non-service uuid
         service_id: item_type === 'service' && line.id ? line.id : null,
         product_id: item_type === 'product' && line.id ? line.id : null,
-        name: line.name,
+        name: line.size_label && !String(line.name || '').includes(line.size_label)
+          ? `${line.name} (${line.size_label})`
+          : line.name,
         quantity: line.quantity,
         unit_price_minor:
           line.is_loyalty_award || line.is_birthday_award || line.is_membership_included ? 0 : line.unit_price_minor,
@@ -605,6 +611,7 @@ export function buildPosSalePayload({
         is_birthday_award: Boolean(line.is_birthday_award),
         is_membership_included: Boolean(line.is_membership_included),
         vehicle_size: line.vehicle_size || null,
+        size_label: line.size_label || null,
       }
     }),
   }

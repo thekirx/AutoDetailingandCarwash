@@ -2,6 +2,8 @@ import { CUSTOMER_QUEUE_PATH } from './liveQueuePath.js'
 
 export const CUSTOMER_BOOK_PATH = '/account/book'
 export const CUSTOMER_LOYALTY_PATH = '/account/loyalty'
+export const CUSTOMER_REFERRAL_PATH = '/account/referral'
+export const CUSTOMER_VOUCHERS_PATH = '/account/vouchers'
 export const CUSTOMER_MORE_PATH = '/account/more'
 export const CUSTOMER_VISIT_PATH = '/account/visit'
 
@@ -19,7 +21,9 @@ export function getCustomerAccountTabs() {
 export function customerAccountTabId(pathname = '') {
   if (pathname.startsWith('/account/book')) return 'book'
   if (pathname.startsWith('/account/queue') || pathname.startsWith('/queue')) return 'queue'
-  if (pathname.startsWith('/account/loyalty')) return 'rewards'
+  if (pathname.startsWith('/account/loyalty') || pathname.startsWith('/account/referral') || pathname.startsWith('/account/vouchers')) {
+    return 'rewards'
+  }
   if (pathname.startsWith('/account/visit')) return 'home'
   if (pathname.startsWith('/account/more') || pathname.startsWith('/account/events') || pathname.startsWith('/account/blog')) {
     return 'me'

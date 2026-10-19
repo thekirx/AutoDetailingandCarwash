@@ -107,7 +107,7 @@ function isDeniedWall(url) {
 const PERSONAS = [
   { id: 'boss', role: ROLES.SUPER_ADMIN, deny: null, money: true },
   { id: 'asa', role: ROLES.ASSISTANT_SUPER_ADMIN, deny: null, money: true },
-  { id: 'admin', role: ROLES.ADMIN, deny: '/operations/finance', money: true },
+  { id: 'admin', role: ROLES.ADMIN, deny: '/operations/dashboard', money: true },
   { id: 'opslead', role: ROLES.OPERATIONS_LEAD, deny: '/operations/people', money: false },
   { id: 'tl', role: ROLES.TEAM_LEAD, deny: '/operations/pos', money: false },
   { id: 'sales', role: ROLES.SALES, deny: '/operations/pos', money: false },
@@ -115,7 +115,7 @@ const PERSONAS = [
   { id: 'detailer', role: ROLES.DETAILER, deny: '/operations/queue', money: false },
   { id: 'marketing', role: ROLES.MARKETING, deny: '/operations/pos', money: false },
   { id: 'video', role: ROLES.VIDEO_EDITOR, deny: '/operations/queue', money: false },
-  { id: 'investor', role: ROLES.INVESTOR, deny: '/operations/queue', money: false },
+  { id: 'investor', role: ROLES.INVESTOR, deny: '/operations/dashboard', money: false },
 ]
 
 /**

@@ -4,11 +4,12 @@
  * Opt-in per device — only the tablet wired to the speaker should turn it on.
  */
 import { useEffect } from 'react'
-import { buildPaymentAnnouncement, pickAnnouncerVoice, waitForVoices } from '@/lib/paymentAnnouncement'
+import { buildPaymentAnnouncement, isReadyForPaymentVoice, pickAnnouncerVoice, waitForVoices } from '@/lib/paymentAnnouncement'
 import { getAccessTokenFresh } from '@/lib/authToken'
 
 const STORAGE_KEY = 'hakum.pos.announcer'
-const AI_VOICE_WAIT_MS = 2500
+/** ElevenLabs station-style clips need a bit longer than Gemini; browser falls back after this. */
+const AI_VOICE_WAIT_MS = 4500
 const clipUrls = new Map()
 let aiVoiceOff = false
 let audioCtx = null
@@ -95,7 +96,8 @@ async function fetchAiClip(handoffId, text) {
       body: JSON.stringify({ handoff_id: handoffId }),
       signal: abort.signal,
     })
-    if (res.status === 501) aiVoiceOff = true
+    // 402: ElevenLabs credit is gone. Later cars use the free browser voice immediately.
+    if (res.status === 402 || res.status === 501) aiVoiceOff = true
     if (!res.ok || !String(res.headers.get('content-type') || '').startsWith('audio/')) return null
     const url = URL.createObjectURL(await res.blob())
     clipUrls.set(text, url)
@@ -121,8 +123,9 @@ function enqueue(task) {
   return queue
 }
 
-/** One pos_handoffs row (with bookings join) → chime + voice. Calls are spoken one after another. */
+/** One ready-for-payment handoff → chime + voice. Other queue statuses stay silent. */
 export function announcePayment(row) {
+  if (!isReadyForPaymentVoice(row)) return Promise.resolve()
   const booking = row?.bookings || {}
   const text = buildPaymentAnnouncement({
     make: booking.vehicle_make,

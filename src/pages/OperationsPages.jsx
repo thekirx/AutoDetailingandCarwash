@@ -31,7 +31,8 @@ import {
   QUEUE_FAMILY_DETAILING,
   ticketQueueFamily,
 } from '../lib/queueFamilies'
-import { allowRoute, canAccessPos, canEditQueueTicket, canManagePeople, canSeeAllBranches, canViewPlanning, canViewRedoLane, isInvestor, isSalesRole, ROLES, isSuperAdmin } from '../auth/permissions'
+import { allowRoute, canAccessPos, canEditQueueTicket, canManagePeople, canSeeAllBranches, canViewPlanning, canViewRedoLane, isAssistantSuperAdmin, isInvestor, isSalesRole, ROLES, isSuperAdmin } from '../auth/permissions'
+import ReferralRank from '../components/bookings/ReferralRank'
 import {
   DEFAULT_COMPENSATION_RULES,
   normalizeCompensationSettings,
@@ -226,7 +227,7 @@ function TicketCard({ ticket, timingWarnings, onOpen, compact = false, viewOnly 
     return (
       <div className={`floor-ticket queue-ticket-card bk-ticket-compact ${compact ? 'queue-ticket-compact' : ''}`} aria-label={`View only · ${label}`}>
         {body}
-      </div>
+        </div>
     )
   }
   return (
@@ -504,6 +505,9 @@ function ScopedFloorDashboard() {
           </>
         )}
       </div>
+      {isAssistantSuperAdmin(profile) ? (
+        <ReferralRank start={range.start} end={range.end} branch={branchFilter} />
+      ) : null}
       <div className="mt-4">
         <p className="mb-2 text-[10px] font-bold tracking-[0.18em] text-muted-foreground uppercase">Services &amp; Packages</p>
         <div className={`grid gap-3 grid-cols-2 sm:gap-4 ${queueMetricCols}`}>

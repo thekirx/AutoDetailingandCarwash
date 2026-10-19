@@ -14,7 +14,7 @@ export { phoneLoginEmail }
 
 /** Queue walk-in provision: SA / Admin / ASA / Team Lead (TL forced to own branch at ticket create). */
 // Queue (SA / ASA / TL / Operations Lead) plus Branch Admin, who registers customers at POS and CRM.
-export const QUEUE_PROVISION_ROLES = new Set(['BossMich', 'admin', 'assistant_super_admin', 'team_lead', 'operations_lead'])
+export const QUEUE_PROVISION_ROLES = new Set(['BossMich', 'admin', 'assistant_super_admin', 'team_lead', 'operations_lead', 'sales'])
 
 function randomTempPassword() {
   return `Hakum-${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}!`
@@ -416,6 +416,8 @@ export const CUSTOMER_REFERENCING_TABLES = new Set([
   'customer_notes',
   'finance_quotes',
   'vehicle_maintenance_schedules',
+  'referral_credits',
+  'accessory_redemptions',
 ])
 
 /**

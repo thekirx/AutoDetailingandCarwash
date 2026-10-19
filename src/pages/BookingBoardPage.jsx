@@ -10,8 +10,10 @@ import {
   canAccessBookingBoard,
   canAdvanceBookingStatus,
   canCheckInFormBooking,
+  canConfirmBookingSchedule,
   canCreateBookings,
   canEditBookings,
+  canEditQueueOperations,
   canModifyBookingServicePrice,
   canSeeAllBranches,
   getBranchScopeList,
@@ -19,6 +21,8 @@ import {
   isFormBookingsOnlyRole,
   ROLES,
 } from '@/auth/permissions'
+import ReferralSourceFields, { useReferralStaff } from '@/components/bookings/ReferralSourceFields'
+import { friendCodeAccountError, normalizeReferral, referralRequiredError } from '@/lib/referralSource'
 import {
   DETAILING_BOARD_STATUSES,
   bookingLaneDomId,
@@ -89,7 +93,6 @@ import { ArrowUpDown, CalendarDays, ChevronLeft, ChevronRight, ChevronsLeft, Che
 
 const BOOKING_SHELL_TABS = Object.freeze([
   { id: 'board', label: 'Board' },
-  { id: 'list', label: 'List' },
   { id: 'table', label: 'Table' },
   { id: 'calendar', label: 'Calendar' },
   { id: 'maintenance', label: 'Maintenance' },
@@ -126,7 +129,11 @@ const emptyBooking = {
   vehicle_model: '',
   vehicle_type: 'medium',
   notes: '',
-  status: 'pending',
+  referral_source: '',
+  referred_by_name: '',
+  referred_by_staff_id: '',
+  status: 'confirmed',
+  assigned_staff_id: '',
   price_pesos: '',
 }
 
@@ -249,6 +256,7 @@ function BookingStageTicket({
     <>
       <p className="bk-ticket-service">{service}</p>
       <p className="bk-ticket-car-plate">{carPlate}</p>
+      {booking.reschedule_requested_at ? <p className="bk-ticket-status">Call to reschedule</p> : null}
       {isList ? (
         <p className="bk-ticket-status">
           {detailingBoardStatusLabel(booking.status) || STATUS_LABELS[booking.status] || booking.status}
@@ -294,13 +302,14 @@ function selectItems(options = []) {
 }
 
 const BOOKING_ROW_SELECT =
-  'id, customer_name, customer_phone, branch, status, scheduled_start, scheduled_end, completed_at, created_at, updated_at, assigned_staff_id, notes, vehicle_make, vehicle_model, vehicle_plate, vehicle_type, service_id, final_price_minor, price_minor, queue_number, services(name, slug, pay_category)'
+  'id, customer_id, customer_name, customer_phone, branch, status, scheduled_start, scheduled_end, completed_at, created_at, updated_at, assigned_staff_id, notes, reschedule_requested_at, referral_source, referred_by_name, referred_by_staff_id, vehicle_make, vehicle_model, vehicle_plate, vehicle_type, service_id, final_price_minor, price_minor, queue_number, promo_voucher_id, services(name, slug, pay_category)'
 
 export default function BookingBoardPage() {
   const { profile } = useAuth()
   const navigate = useNavigate()
   const canEdit = canEditBookings(profile)
   const canCreate = canCreateBookings(profile)
+  const canSchedule = canConfirmBookingSchedule(profile)
   const canEditServicePrice = canModifyBookingServicePrice(profile)
   const isMarketing = profile?.role === ROLES.MARKETING
   const bookingsReadOnly = isMarketing || isBranchAdmin(profile)
@@ -317,6 +326,7 @@ export default function BookingBoardPage() {
   const tab = shellTabs.some((t) => t.id === searchParams.get('tab')) ? searchParams.get('tab') : 'board'
   const floorStage = searchParams.get('stage')
   const [bookings, setBookings] = useState([])
+  const referralStaff = useReferralStaff()
   const [branches, setBranches] = useState([])
   const [services, setServices] = useState([])
   const [branchFilter, setBranchFilter] = useState(canSeeAllBranches(profile) ? 'all' : (getBranchScopeList(profile)?.[0] || 'all'))
@@ -334,8 +344,27 @@ export default function BookingBoardPage() {
   const [calView, setCalView] = useState(Views.WEEK)
   const [tablePageSize, setTablePageSize] = useState(BOOKING_TABLE_DEFAULT_PAGE_SIZE)
   const [formOpen, setFormOpen] = useState(false)
+  const [detailers, setDetailers] = useState([])
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState(emptyBooking)
+  const [voucherCode, setVoucherCode] = useState('')
+  const [voucherBusy, setVoucherBusy] = useState(false)
+  const canApplyVoucher = canEditQueueOperations(profile)
+  useEffect(() => {
+    if (!formOpen) return undefined
+    let stop = false
+    supabase
+      .from('staff_profiles')
+      .select('id, full_name, branch_slug')
+      .eq('is_active', true)
+      .eq('role', 'detailer')
+      .then(({ data }) => {
+        if (!stop) setDetailers(data || [])
+      })
+    return () => {
+      stop = true
+    }
+  }, [formOpen])
   const [saving, setSaving] = useState(false)
   const [boardFilter, setBoardFilter] = useState('pending')
   const [crewDialog, setCrewDialog] = useState(null)
@@ -865,6 +894,7 @@ export default function BookingBoardPage() {
     setForm({
       customer_name: booking.customer_name || '',
       customer_phone: booking.customer_phone || '',
+      customer_id: booking.customer_id || null,
       branch: booking.branch || '',
       scheduled_start: booking.scheduled_start ? booking.scheduled_start.slice(0, 16) : '',
       service_id: split.serviceId,
@@ -874,7 +904,11 @@ export default function BookingBoardPage() {
       vehicle_model: booking.vehicle_model || '',
       vehicle_type: normalizePricingSize(booking.vehicle_type),
       notes: booking.notes || '',
+      referral_source: booking.referral_source || '',
+      referred_by_name: booking.referred_by_name || '',
+      referred_by_staff_id: booking.referred_by_staff_id || '',
       status: booking.status || 'pending',
+      assigned_staff_id: booking.assigned_staff_id || '',
       price_pesos:
         booking.final_price_minor != null
           ? String(Number(booking.final_price_minor) / 100)
@@ -887,7 +921,7 @@ export default function BookingBoardPage() {
 
   async function saveBooking(event) {
     event.preventDefault()
-    if (editing ? !canEdit : !canCreate) return
+    if (editing ? !(canEdit || canSchedule) : !canCreate) return
     const make = form.vehicle_make.trim()
     const model = form.vehicle_model.trim()
     const parentId = form.service_id
@@ -914,6 +948,16 @@ export default function BookingBoardPage() {
       toast.error('New bookings start as Booking Placeholder or Assigned to Branch.')
       return
     }
+    const referral = normalizeReferral({
+      source: form.referral_source,
+      name: form.referred_by_name,
+      staff: referralStaff,
+    })
+    const referralError = referralRequiredError(referral) || friendCodeAccountError(referral, form.customer_id)
+    if (referralError) {
+      toast.error(referralError)
+      return
+    }
     setSaving(true)
     const payload = {
       customer_name: form.customer_name.trim(),
@@ -927,25 +971,48 @@ export default function BookingBoardPage() {
       vehicle_model: model,
       vehicle_type: normalizePricingSize(form.vehicle_type),
       notes: form.notes.trim() || null,
+      referral_source: referral.referral_source,
+      referred_by_name: referral.referred_by_name,
+      referred_by_staff_id: referral.referred_by_staff_id,
     }
     if (canEditServicePrice && form.price_pesos !== '') {
       const pesos = Number(String(form.price_pesos).replace(/,/g, ''))
       if (Number.isFinite(pesos) && pesos >= 0) {
         payload.final_price_minor = Math.round(pesos * 100)
+        payload.price_minor = Math.round(pesos * 100)
       }
     }
     // Status changes write queue_events (can_manage_branch). Sales is not a queue manager —
     // create may set pending/confirmed; edits keep status and use board advance actions.
-    if (!editing) payload.status = form.status
-    const { error } = editing
+    payload.assigned_staff_id = form.assigned_staff_id || null
+    const dateMoved =
+      Boolean(editing) && String(editing.scheduled_start || '').slice(0, 16) !== String(form.scheduled_start || '')
+    if (dateMoved && editing.reschedule_requested_at) payload.reschedule_requested_at = null
+    if (!editing) payload.status = 'confirmed'
+    else if (canSchedule && ['pending', 'confirmed'].includes(editing.status || form.status)) payload.status = 'confirmed'
+    const scheduleChanged =
+      !editing ||
+      String(editing.scheduled_start || '').slice(0, 16) !== String(form.scheduled_start || '') ||
+      String(editing.assigned_staff_id || '') !== String(form.assigned_staff_id || '')
+    const { data: saved, error } = editing
       ? await supabase.from('bookings').update(payload).eq('id', editing.id).select('id').single()
       : await supabase.from('bookings').insert(payload).select('id').single()
+    if (!error && scheduleChanged && saved?.id) {
+      const token = await getAccessTokenFresh()
+      if (token) {
+        await fetch('/api/notify-booking', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ booking_id: saved.id, status: 'confirmed' }),
+        }).catch(() => null)
+      }
+    }
     setSaving(false)
     if (error) {
       toast.error(error.message)
       return
     }
-    toast.success(editing ? 'Booking updated' : 'Booking created')
+    toast.success(editing ? 'Final schedule saved. The customer is notified.' : 'Booking confirmed. The customer is notified.')
     setFormOpen(false)
     load()
   }
@@ -1121,7 +1188,7 @@ export default function BookingBoardPage() {
               branchNameBySlug={branchNameBySlug}
               nextActionFor={floorNextAction}
               onAdvance={move}
-              onOpen={canEdit || canEditServicePrice ? openEdit : null}
+              onOpen={canEdit || canEditServicePrice || canSchedule ? openEdit : null}
               onArrived={load}
               readOnlyHint={isTeamLead ? 'Payment handoff happens at POS.' : 'View only — Team Lead moves stages.'}
             />
@@ -1175,7 +1242,7 @@ export default function BookingBoardPage() {
                         booking={booking}
                         variant="lane"
                         tone={col.tone}
-                        canOpen={canEdit || canEditServicePrice}
+                        canOpen={canEdit || canEditServicePrice || canSchedule}
                         onOpen={openEdit}
                       />
                     ))}
@@ -1191,80 +1258,6 @@ export default function BookingBoardPage() {
             </div>
           </div>
           )}
-        </TabsContent>
-
-        <TabsContent value="list" className="mt-4 min-w-0">
-          <div className="bk-list">
-            <div className="bk-list-toolbar">
-              <div className="min-w-0">
-                <p className="bk-table-count">
-                  {tableSlice.total} booking{tableSlice.total === 1 ? '' : 's'}
-                </p>
-                <p className="bk-table-range">
-                  {rangeLabel}
-                  {searchQuery.trim() ? ` · “${searchQuery.trim()}”` : ''}
-                </p>
-              </div>
-              <div className="bk-list-filters">
-                <div className="bk-search-wrap">
-                  <Label htmlFor="bk-list-search" className="sr-only">Search bookings</Label>
-                  <Input
-                    id="bk-list-search"
-                    type="search"
-                    className="bk-list-search min-h-11 w-full"
-                    placeholder="Search name, phone, plate, branch…"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    autoComplete="off"
-                  />
-                </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter} items={statusFilterItems}>
-                  <SelectTrigger id="bk-list-status" className="min-h-11 w-full cursor-pointer" aria-label="Filter by status">
-                    <SelectValue placeholder="All statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All statuses</SelectItem>
-                    {visibleColumns.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={kindFilter} onValueChange={setKindFilter} items={kindFilterItems}>
-                  <SelectTrigger id="bk-list-kind" className="min-h-11 w-full cursor-pointer" aria-label="Service family">
-                    <SelectValue placeholder="Detailing" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="detailing">Detailing (ceramic · tint · PPF)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="bk-card-list" aria-label="Booking list">
-              {tableSlice.rows.map((booking) => (
-                <BookingStageTicket
-                  key={booking.id}
-                  booking={booking}
-                  variant="list"
-                  tone={visibleColumns.find((c) => c.id === booking.status)?.tone}
-                  canOpen={canEdit || canEditServicePrice}
-                  onOpen={openEdit}
-                />
-              ))}
-              {!tableSlice.total ? (
-                <p className="rounded-2xl border border-dashed border-border bg-background/60 p-6 text-center text-sm text-muted-foreground">
-                  No bookings match this search and filters.
-                </p>
-              ) : null}
-            </div>
-
-            <BookingPager
-              slice={tableSlice}
-              pageSize={tablePageSize}
-              onPageSize={setTablePageSize}
-              onPage={setTablePage}
-            />
-          </div>
         </TabsContent>
 
         <TabsContent value="table" className="mt-4 min-w-0">
@@ -1351,6 +1344,9 @@ export default function BookingBoardPage() {
                         <span className={cn('bk-status-pill', tone)}>
                           {detailingBoardStatusLabel(b.status) || STATUS_LABELS[b.status] || b.status}
                         </span>
+                        {b.reschedule_requested_at ? (
+                          <div className="mt-1 text-xs text-foreground">Call to reschedule</div>
+                        ) : null}
                       </TableCell>
                       <TableCell>
                         <div className="bk-table-actions">
@@ -1417,7 +1413,7 @@ export default function BookingBoardPage() {
                     dayHeaderFormat: (date, culture, loc) => loc.format(date, 'EEE MMM d', culture),
                   }}
                   style={{ minHeight: 420 }}
-                  onSelectEvent={(ev) => canEdit && openEdit(ev.resource)}
+                  onSelectEvent={(ev) => (canEdit || canSchedule) && openEdit(ev.resource)}
                 />
               </div>
             </CardContent>
@@ -1460,6 +1456,14 @@ export default function BookingBoardPage() {
               <Label htmlFor="bk-name">Customer name</Label>
               <Input id="bk-name" required value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} />
             </div>
+            <ReferralSourceFields
+              source={form.referral_source}
+              name={form.referred_by_name}
+              staffId={form.referred_by_staff_id}
+              staff={referralStaff}
+              accountError={friendCodeAccountError({ referral_source: form.referral_source }, form.customer_id)}
+              onChange={(patch) => setForm((current) => ({ ...current, ...patch }))}
+            />
             <div className="flex flex-col gap-2">
               <Label htmlFor="bk-phone">Phone</Label>
               <Input id="bk-phone" value={form.customer_phone} onChange={(e) => setForm({ ...form, customer_phone: e.target.value })} />
@@ -1539,9 +1543,41 @@ export default function BookingBoardPage() {
                 </Select>
               </div>
             ) : null}
+            {editing?.reschedule_requested_at ? (
+              <p className="text-sm text-foreground" role="status">
+                This customer asked to reschedule. Call them, then set the new day below. They cannot pick a date themselves.
+              </p>
+            ) : null}
             <div className="flex flex-col gap-2">
-              <Label htmlFor="bk-start">Scheduled start</Label>
+              <Label htmlFor="bk-start">Final schedule</Label>
               <Input id="bk-start" type="datetime-local" required value={form.scheduled_start} onChange={(e) => setForm({ ...form, scheduled_start: e.target.value })} />
+              <p className="text-xs text-muted-foreground">
+                Call the customer first, then set the day you agreed. Saving sends a text, an in-app notice, and a phone notification.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="bk-specialist">Specialist</Label>
+              <Input
+                id="bk-specialist"
+                list="bk-specialist-list"
+                value={detailers.find((row) => row.id === form.assigned_staff_id)?.full_name || form.specialist_name || ''}
+                placeholder="Who will do this job"
+                onChange={(e) => {
+                  const name = e.target.value
+                  const match = detailers.find((row) => row.full_name === name)
+                  setForm((current) => ({
+                    ...current,
+                    specialist_name: name,
+                    assigned_staff_id: match?.id || '',
+                  }))
+                }}
+              />
+              <datalist id="bk-specialist-list">
+                {detailers.map((row) => (
+                  <option key={row.id} value={row.full_name} />
+                ))}
+              </datalist>
+              <p className="text-xs text-muted-foreground">Shown in the confirmation text once this booking is confirmed.</p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="flex flex-col gap-2 sm:col-span-2">
@@ -1629,6 +1665,50 @@ export default function BookingBoardPage() {
               <Label htmlFor="bk-notes">Notes</Label>
               <Textarea id="bk-notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
             </div>
+            {editing && canApplyVoucher && !editing.promo_voucher_id && !['completed', 'cancelled'].includes(editing.status) ? (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                <label className="grid flex-1 gap-1.5">
+                  <Label htmlFor="bk-voucher">Voucher code</Label>
+                  <Input
+                    id="bk-voucher"
+                    value={voucherCode}
+                    onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                    placeholder="Customer shows this code"
+                    autoComplete="off"
+                    maxLength={16}
+                    className="uppercase"
+                  />
+                </label>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="min-h-11"
+                  disabled={voucherBusy || !voucherCode.trim()}
+                  onClick={async () => {
+                    setVoucherBusy(true)
+                    try {
+                      const { data, error } = await supabase.rpc('apply_booking_promo_voucher', {
+                        p_booking_id: editing.id,
+                        p_code: voucherCode,
+                      })
+                      if (error) throw error
+                      if (data && data.ok === false) throw new Error(data.error || 'Voucher not applied')
+                      toast.success(`Voucher ${data.code} applied`)
+                      setVoucherCode('')
+                      setEditing({ ...editing, promo_voucher_id: data.voucher_id, final_price_minor: data.final_price_minor })
+                      setForm({ ...form, price_pesos: data.final_price_minor != null ? String(Number(data.final_price_minor) / 100) : form.price_pesos })
+                      await load()
+                    } catch (err) {
+                      toast.error(err.message)
+                    } finally {
+                      setVoucherBusy(false)
+                    }
+                  }}
+                >
+                  {voucherBusy ? 'Applying…' : 'Apply voucher'}
+                </Button>
+              </div>
+            ) : null}
             {editing ? (
               <div className="bk-edit-stage-actions">
                 {canAdvanceStatus && editingNext ? (

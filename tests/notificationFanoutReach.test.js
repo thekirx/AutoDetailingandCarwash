@@ -175,7 +175,7 @@ describe('the SQL writers of inbox rows agree with the JS routing table', () => 
       'review_shift_close must stay revoked, or the payroll url becomes a live redirect',
     )
     // And the redirect it points at is a real route, not a 404.
-    assert.match(rule0(), /\/operations\/finance/)
+    assert.match(rule0(), /\/operations\/monthly-payroll/)
   })
 })
 

@@ -110,33 +110,19 @@ describe('booking table ledger', () => {
     assert.match(page, /useState\('detailing'\)/)
   })
 
-  it('list tab is a searchable roster, separate from the board kanban', () => {
+  it('detailing board has no List tab; the table stays the searchable roster', () => {
     const page = readFileSync(join(root, 'src/pages/BookingBoardPage.jsx'), 'utf8')
     const css = readFileSync(join(root, 'src/styles.css'), 'utf8')
     assert.match(page, /allowedBookingViews\(profile, BOOKING_SHELL_TABS\)/)
-    assert.match(page, /OpsTabList/)
-    assert.match(page, /id: 'list'/)
+    assert.doesNotMatch(page, /id: 'list'/)
+    assert.doesNotMatch(page, /TabsContent value="list"/)
     const boardBlock = page.slice(
       page.indexOf('TabsContent value="board"'),
-      page.indexOf('TabsContent value="list"'),
-    )
-    const listBlock = page.slice(
-      page.indexOf('TabsContent value="list"'),
       page.indexOf('TabsContent value="table"'),
     )
     assert.match(boardBlock, /booking-lane-board/)
     assert.doesNotMatch(boardBlock, /className="bk-card-list"/)
-    assert.match(listBlock, /className="bk-list"/)
-    assert.match(listBlock, /className="bk-card-list"/)
-    assert.match(listBlock, /id="bk-list-search"/)
-    assert.match(listBlock, /id="bk-list-status"/)
-    assert.match(listBlock, /id="bk-list-kind"/)
-    assert.match(page, /filterBookingList/)
-    assert.match(css, /\.bk-list\s*\{[^}]*container-name:\s*bk-list/s)
-    assert.match(css, /\.bk-list-search[^{]*\{[^}]*min-height:\s*2\.75rem/)
-    assert.match(css, /\.bk-list-search[^{]*\{[^}]*font-size:\s*1rem/)
     assert.match(css, /\.booking-lane-board\s*\{[^}]*grid-template-columns:\s*minmax\(0,\s*1fr\)/s)
-    assert.match(css, /@container bk-board \(max-width: 43\.99rem\)[\s\S]*?\.bk-lane-dimmed/)
     assert.doesNotMatch(css, /\.booking-lane-board\s*\{[^}]*display:\s*none/s)
   })
 

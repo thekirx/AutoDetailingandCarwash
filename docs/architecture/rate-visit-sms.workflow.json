@@ -1,0 +1,39 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Hakum rate-your-visit SMS",
+    "quality_profile": "showcase",
+    "output": "docs/architecture/rate-visit-sms.workflow.html"
+  },
+  "lanes": [
+    { "id": "shop", "label": "Shop day" },
+    { "id": "cron", "label": "Reminders" },
+    { "id": "customer", "label": "Customer" }
+  ],
+  "phases": [
+    { "id": "finish", "label": "Finish", "fromCol": 0, "toCol": 1 },
+    { "id": "wait", "label": "Wait 15m", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
+    { "id": "rate", "label": "Rate", "fromCol": 4, "toCol": 5 }
+  ],
+  "mainPath": ["complete", "delay", "cron", "sms", "account", "thumbs"],
+  "nodes": [
+    { "id": "complete", "lane": "shop", "col": 0, "type": "database", "label": "Visit done", "sublabel": "wash or detail", "width": 128 },
+    { "id": "delay", "lane": "cron", "col": 1, "type": "backend", "label": "15 min delay", "sublabel": "REVIEW_DELAY", "width": 128 },
+    { "id": "cron", "lane": "cron", "col": 2, "type": "backend", "label": "Reminders cron", "sublabel": "rateVisit", "width": 128 },
+    { "id": "sms", "lane": "cron", "col": 3, "type": "messagebus", "label": "BusyBee SMS", "sublabel": "rate_visit", "width": 128 },
+    { "id": "account", "lane": "customer", "col": 4, "type": "frontend", "label": "Rate card", "sublabel": "in account", "width": 128 },
+    { "id": "thumbs", "lane": "customer", "col": 5, "type": "frontend", "label": "Thumbs", "sublabel": "Google / form", "width": 128 }
+  ],
+  "edges": [
+    { "from": "complete", "to": "delay", "label": "finish" },
+    { "from": "delay", "to": "cron", "label": "eligible" },
+    { "from": "cron", "to": "sms", "label": "once" },
+    { "from": "sms", "to": "account", "label": "open app" },
+    { "from": "account", "to": "thumbs", "label": "up / down" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "Customer only", "items": ["Outbound BusyBee SMS", "No owner daily SMS", "Deduped rate_visit_<id>"] },
+    { "dot": "rose", "title": "Window", "items": ["Not before 15 minutes", "Skip older than 6 hours", "UI uses same delay"] }
+  ]
+}

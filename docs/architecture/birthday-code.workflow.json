@@ -1,0 +1,38 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Hakum birthday code",
+    "quality_profile": "showcase",
+    "output": "docs/architecture/birthday-code.workflow.html"
+  },
+  "lanes": [
+    { "id": "customer", "label": "Customer" },
+    { "id": "shop", "label": "Shop" }
+  ],
+  "phases": [
+    { "id": "grant", "label": "Grant", "fromCol": 0, "toCol": 1 },
+    { "id": "start", "label": "Start", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
+    { "id": "redeem", "label": "Redeem", "fromCol": 4, "toCol": 5 }
+  ],
+  "mainPath": ["save", "code", "start", "banner", "sms", "pos"],
+  "nodes": [
+    { "id": "save", "lane": "customer", "col": 0, "type": "frontend", "label": "Save birthday", "sublabel": "locks after first" },
+    { "id": "code", "lane": "customer", "col": 1, "type": "database", "label": "Birthday code", "sublabel": "BD + 4, 7 days", "width": 156 },
+    { "id": "start", "lane": "shop", "col": 2, "type": "frontend", "label": "Start car", "sublabel": "Team Lead" },
+    { "id": "banner", "lane": "shop", "col": 3, "type": "frontend", "label": "Queue greeting", "sublabel": "code stays hidden" },
+    { "id": "sms", "lane": "customer", "col": 4, "type": "backend", "label": "Customer SMS", "sublabel": "code included" },
+    { "id": "pos", "lane": "shop", "col": 5, "type": "security", "label": "POS types code", "sublabel": "once this year" }
+  ],
+  "edges": [
+    { "from": "save", "to": "code", "label": "on the birthday" },
+    { "from": "code", "to": "start", "label": "car arrives" },
+    { "from": "start", "to": "banner", "label": "today" },
+    { "from": "banner", "to": "sms", "label": "customer only" },
+    { "from": "sms", "to": "pos", "label": "typed match" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "One code", "items": ["Lasts 7 days", "Once a year", "Customer shows it"] },
+    { "dot": "rose", "title": "Guards", "items": ["Birthdate locks", "Wrong code stays priced", "Staff card hides the code"] }
+  ]
+}

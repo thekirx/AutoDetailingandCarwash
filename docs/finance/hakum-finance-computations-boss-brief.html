@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hakum Auto Care — Finance &amp; Daily Sheet Computations</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({ startOnLoad: true, theme: "neutral", securityLevel: "loose" });
+  </script>
+  <style>
+    @page { size: A4; margin: 14mm 12mm; }
+    @media print {
+      body { background: white !important; }
+      .no-print { display: none !important; }
+      .page-break { break-before: page; }
+      a { text-decoration: none; color: inherit; }
+      .shadow, .shadow-sm { box-shadow: none !important; }
+    }
+    .formula {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.92rem;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.5rem;
+      padding: 0.65rem 0.85rem;
+    }
+    .badge-ok { background: #dcfce7; color: #166534; }
+    .badge-note { background: #fef3c7; color: #92400e; }
+    .badge-arch { background: #e0e7ff; color: #3730a3; }
+    table.sheet td, table.sheet th { border-bottom: 1px solid #e2e8f0; padding: 0.4rem 0.5rem; }
+    table.sheet th { text-align: left; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.04em; color: #64748b; }
+    .num { font-variant-numeric: tabular-nums; text-align: right; font-family: ui-monospace, monospace; }
+  </style>
+</head>
+<body class="bg-stone-100 text-slate-900 font-sans antialiased">
+  <main class="max-w-4xl mx-auto px-5 py-10 space-y-10 print:max-w-none print:px-0 print:py-0">
+
+    <!-- Cover -->
+    <header class="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+      <p class="text-xs font-bold tracking-[0.2em] uppercase text-slate-500">Hakum Auto Care · Internal brief</p>
+      <h1 class="mt-2 text-3xl font-semibold tracking-tight text-slate-900">Finance &amp; Daily Sheet computations</h1>
+      <p class="mt-3 max-w-2xl text-slate-600 leading-relaxed">
+        How every peso is calculated — from paid POS tickets, through the Daily Sheet (expenses, salaries, cash advances, drawer), to Finance P&amp;L.
+        Source of truth in code: <code class="text-sm bg-slate-100 px-1 rounded">src/lib/dailySheet.js</code>,
+        <code class="text-sm bg-slate-100 px-1 rounded">src/lib/salesSummary.js</code>,
+        <code class="text-sm bg-slate-100 px-1 rounded">src/lib/compensation.js</code>,
+        and SQL <code class="text-sm bg-slate-100 px-1 rounded">daily_sheet_server_totals</code>.
+      </p>
+      <div class="mt-5 flex flex-wrap gap-2 text-xs">
+        <span class="badge-ok rounded-full px-3 py-1 font-semibold">POS + Finance share one formula set</span>
+        <span class="badge-ok rounded-full px-3 py-1 font-semibold">Money in centavos (÷100 = pesos)</span>
+        <span class="badge-note rounded-full px-3 py-1 font-semibold">Asia/Manila business day</span>
+        <span class="rounded-full bg-slate-100 px-3 py-1 font-semibold text-slate-600">Prepared 18 Oct 2026</span>
+      </div>
+    </header>
+
+    <!-- Flow -->
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+      <h2 class="text-xl font-semibold">1. Money path (who owns what)</h2>
+      <div class="rounded-lg border border-slate-100 bg-white p-3 overflow-x-auto">
+        <pre class="mermaid">
+flowchart LR
+  POS["Paid POS tickets<br/>income truth"] --> DS["Daily Sheet<br/>1 branch · 1 Manila day"]
+  DS --> BA["Branch Admin<br/>expenses · pay · CA · count cash"]
+  BA --> SUB["Submit"]
+  SUB --> FIN["SA / ASA Finance<br/>Approve or Return"]
+  FIN -->|Approve| BOOKS["Posted expenses<br/>+ salaries on books"]
+  BOOKS --> PL["Finance P&amp;L<br/>paid POS + posted costs"]
+  FIN -->|Approve| PUSH["Web push to BA<br/>release pay"]
+        </pre>
+      </div>
+      <ul class="text-sm text-slate-700 space-y-1 list-disc pl-5">
+        <li><strong>Sales cannot be typed</strong> on the sheet — they come only from paid POS tickets that day.</li>
+        <li><strong>Expenses and salaries on a draft do not hit the books</strong> until the sheet is approved.</li>
+        <li><strong>Cash advances are not costs</strong> — they move drawer cash only; they never change net profit.</li>
+        <li>Crew are paid only after <strong>Approve</strong> (same-day release by Branch Admin).</li>
+      </ul>
+    </section>
+
+    <!-- Sales formulas -->
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+      <h2 class="text-xl font-semibold">2. Sales on the Daily Sheet</h2>
+      <p class="text-sm text-slate-600">Only tickets with status <code>paid</code> or <code>refunded</code> count. Manila calendar date of <code>occurred_at</code> must match the sheet’s business date.</p>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div class="formula">Gross = Σ (total + discount) for paid &amp; refunded</div>
+        <div class="formula">Discounts = Σ discount on those tickets</div>
+        <div class="formula">Refunds = Σ total where status = refunded</div>
+        <div class="formula">Net sales = Σ total where status = paid</div>
+        <div class="formula">Transactions = count of paid tickets</div>
+        <div class="formula">Average sale = Net ÷ Transactions</div>
+      </div>
+      <p class="text-sm text-slate-600">Payment buckets (Cash / GCash / Card / Bank / Other) sum the <em>paid</em> ticket totals by method. Unknown methods go to <strong>Other</strong> — they never invent drawer cash.</p>
+      <div class="formula">Cash sales (drawer) = Σ paid totals where payment method is cash (blank method = cash)</div>
+    </section>
+
+    <!-- Sheet totals -->
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+      <h2 class="text-xl font-semibold">3. Daily Sheet — expenses, salaries, profit, drawer</h2>
+      <p class="text-sm text-slate-600">Every expense and salary line is treated as paid from the cash drawer. JS (<code>computeSheetTotals</code>) and SQL (<code>daily_sheet_server_totals</code>) use the same arithmetic.</p>
+
+      <h3 class="font-semibold text-slate-800">Money out (costs)</h3>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div class="formula">Expenses = Σ amount of kind = expense</div>
+        <div class="formula">Salaries = Σ amount of kind = salary</div>
+        <div class="formula">Total costs = Expenses + Salaries</div>
+        <div class="formula">Net profit (day) = Net sales − Total costs</div>
+      </div>
+
+      <h3 class="font-semibold text-slate-800 mt-4">Cash advances (not costs)</h3>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div class="formula">CA given out = Σ kind = ca_release</div>
+        <div class="formula">CA paid back = Σ kind = ca_repay</div>
+      </div>
+      <p class="text-sm text-amber-800 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+        Advances never enter Net profit. They only change Expected cash.
+      </p>
+
+      <h3 class="font-semibold text-slate-800 mt-4">Drawer</h3>
+      <div class="formula space-y-1">
+        <div>Expected cash =</div>
+        <div class="pl-4">Opening float</div>
+        <div class="pl-4">+ Cash sales</div>
+        <div class="pl-4">+ CA paid back</div>
+        <div class="pl-4">− Expenses − Salaries − CA given out</div>
+      </div>
+      <div class="formula mt-2">Over / Short = Counted cash − Expected cash</div>
+      <p class="text-sm text-slate-600">If Over/Short ≠ 0, a note is required before Submit.</p>
+    </section>
+
+    <!-- Worked example -->
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4 page-break">
+      <h2 class="text-xl font-semibold">4. Worked example (one branch, one day)</h2>
+      <p class="text-sm text-slate-600">Illustrative numbers only — to verify the formulas read correctly.</p>
+
+      <table class="sheet w-full text-sm">
+        <thead>
+          <tr><th>Item</th><th class="text-right">Amount (₱)</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Gross sales</td><td class="num">50,000.00</td></tr>
+          <tr><td>Discounts</td><td class="num">(2,000.00)</td></tr>
+          <tr><td>Refunds</td><td class="num">(500.00)</td></tr>
+          <tr><td><strong>Net sales</strong> (paid tickets)</td><td class="num"><strong>47,500.00</strong></td></tr>
+          <tr><td class="pl-4 text-slate-500">of which Cash</td><td class="num text-slate-500">20,000.00</td></tr>
+          <tr><td class="pl-4 text-slate-500">of which GCash / Card / Other</td><td class="num text-slate-500">27,500.00</td></tr>
+          <tr><td>Expenses (supplies, meals, …)</td><td class="num">(3,500.00)</td></tr>
+          <tr><td>Salaries (crew pay on sheet)</td><td class="num">(8,000.00)</td></tr>
+          <tr><td><strong>Net profit (day)</strong></td><td class="num"><strong>36,000.00</strong></td></tr>
+          <tr><td>Opening float</td><td class="num">5,000.00</td></tr>
+          <tr><td>CA given out</td><td class="num">(300.00)</td></tr>
+          <tr><td>CA paid back</td><td class="num">100.00</td></tr>
+          <tr><td><strong>Expected cash</strong></td><td class="num"><strong>13,300.00</strong></td></tr>
+          <tr><td>Counted cash</td><td class="num">13,250.00</td></tr>
+          <tr><td><strong>Over / Short</strong></td><td class="num text-red-700"><strong>(50.00) short</strong></td></tr>
+        </tbody>
+      </table>
+      <div class="formula text-xs leading-relaxed">
+        Expected = 5,000 + 20,000 + 100 − 3,500 − 8,000 − 300 = <strong>13,300</strong><br />
+        Net profit = 47,500 − 3,500 − 8,000 = <strong>36,000</strong> (CA does not appear)
+      </div>
+    </section>
+
+    <!-- Suggested pay -->
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+      <h2 class="text-xl font-semibold">5. Suggested crew pay (Settings → Daily sheet rules)</h2>
+      <p class="text-sm text-slate-600">Suggestions only. Branch Admin may change any amount; a change needs a reason. Pay posts when the sheet is approved.</p>
+
+      <h3 class="font-semibold">Per person suggestion</h3>
+      <div class="formula">Suggested pay = Daily rate + Wash pool share + Detailing share</div>
+
+      <h3 class="font-semibold mt-3">Wash pool (bay crew)</h3>
+      <ol class="text-sm list-decimal pl-5 space-y-1 text-slate-700">
+        <li>Wash-eligible sales = paid car wash / package lines (not merch, not PPF, not detailing).</li>
+        <li>Pool = Wash-eligible sales × <strong>wash_pool_pct</strong> (default <strong>35%</strong>).</li>
+        <li>Split across clocked-in bay crew by attendance weight.</li>
+        <li><strong>Excluded from pool:</strong> Team Lead, Detailer, Admin, Sales, Marketing, Investor.</li>
+      </ol>
+      <div class="formula mt-2">Person share = Pool × (their weight ÷ sum of weights)</div>
+      <p class="text-sm text-slate-600">Default weights: Present = 1.0 · Late = 0.7 · Absent = 0. With clock-in time, weight can be remaining shift ÷ scheduled shift.</p>
+
+      <h3 class="font-semibold mt-3">Detailing / ceramic share</h3>
+      <ol class="text-sm list-decimal pl-5 space-y-1 text-slate-700">
+        <li>Start from detailing job amount.</li>
+        <li>Optional: subtract free shirt (default ₱500) and card fee % (default 3.5%).</li>
+        <li>Crew % (solo default 20%, or split 10% when detailer assigned) + Detailer % (default 10%).</li>
+      </ol>
+
+      <h3 class="font-semibold mt-3">Team Lead / daily rate</h3>
+      <p class="text-sm text-slate-700">Team Leads use <code>staff_profiles.daily_rate_minor</code> (only SA / ASA with finance_write may set it). That amount is the daily portion of their suggestion; they are not in the wash pool.</p>
+
+      <h3 class="font-semibold mt-3">Monthly office salaries</h3>
+      <p class="text-sm text-slate-700">Branch Admins and office staff monthly pay are entered as <strong>Finance → Bills</strong> under account <strong>14</strong> — not on the bay Daily Sheet.</p>
+    </section>
+
+    <!-- Expenses / P&L -->
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4 page-break">
+      <h2 class="text-xl font-semibold">6. Expenses &amp; Finance P&amp;L</h2>
+
+      <h3 class="font-semibold">When expenses hit the books</h3>
+      <ul class="text-sm list-disc pl-5 space-y-1 text-slate-700">
+        <li>Sheet expense / salary lines → posted as paid <code>expenses</code> on <strong>Approve</strong> (once; approve again posts nothing new).</li>
+        <li>Finance Bills (rent, utilities, office salary, …) → P&amp;L when status is paid / posted.</li>
+        <li>P&amp;L income = <strong>paid POS only</strong>. Sheet never invents revenue.</li>
+      </ul>
+
+      <div class="grid gap-3 sm:grid-cols-2 mt-3">
+        <div class="formula">P&amp;L Income = Σ finance_daily_pl where kind = income</div>
+        <div class="formula">P&amp;L Expenses = Σ finance_daily_pl where kind = expense</div>
+        <div class="formula">P&amp;L Net = Income − Expenses</div>
+        <div class="formula">Margin % = Net ÷ Income × 100</div>
+      </div>
+
+      <h3 class="font-semibold mt-4">Expense accounts (Xero-style codes)</h3>
+      <table class="sheet w-full text-sm">
+        <thead><tr><th>Code</th><th>Account</th></tr></thead>
+        <tbody>
+          <tr><td class="num">10</td><td>Meals and Entertainment</td></tr>
+          <tr><td class="num">11</td><td>Apparel Inventory</td></tr>
+          <tr><td class="num">12</td><td>Chemical and Other Inventory</td></tr>
+          <tr><td class="num">13</td><td>Coffee and Other Supplies</td></tr>
+          <tr><td class="num">14</td><td>Employee Salary and Incentives</td></tr>
+          <tr><td class="num">15</td><td>Equipments and Tools</td></tr>
+          <tr><td class="num">16</td><td>Labor and Repair Maintenance</td></tr>
+          <tr><td class="num">17</td><td>Marketing Expenses</td></tr>
+          <tr><td class="num">18</td><td>Online Expenses and Others</td></tr>
+          <tr><td class="num">19</td><td>Rent and Operating Utilities</td></tr>
+          <tr><td class="num">20</td><td>Shipping and/or Delivery Fees</td></tr>
+          <tr><td class="num">21</td><td>Taxes and Accounting Fees</td></tr>
+        </tbody>
+      </table>
+      <p class="text-sm text-slate-600">Crew salaries from the Daily Sheet post under <strong>14</strong>.</p>
+    </section>
+
+    <!-- Checklist for boss -->
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
+      <h2 class="text-xl font-semibold">7. Sanity checklist (does this make sense?)</h2>
+      <ul class="text-sm space-y-2 text-slate-800">
+        <li class="flex gap-2"><span class="badge-ok rounded px-2 py-0.5 text-xs font-bold shrink-0">OK</span> Net profit ignores cash advances — advances are loans to / from crew, not shop cost.</li>
+        <li class="flex gap-2"><span class="badge-ok rounded px-2 py-0.5 text-xs font-bold shrink-0">OK</span> Expected cash only adds <em>cash</em> sales, not GCash/card — those never entered the drawer.</li>
+        <li class="flex gap-2"><span class="badge-ok rounded px-2 py-0.5 text-xs font-bold shrink-0">OK</span> POS screen and Finance sheet show the same totals (one JS module + matching SQL).</li>
+        <li class="flex gap-2"><span class="badge-ok rounded px-2 py-0.5 text-xs font-bold shrink-0">OK</span> Approver cannot approve their own submitted sheet (owner / BossMich exempt).</li>
+        <li class="flex gap-2"><span class="badge-note rounded px-2 py-0.5 text-xs font-bold shrink-0">NOTE</span> Suggested pay ≠ guaranteed pay. BA override + reason is intentional.</li>
+        <li class="flex gap-2"><span class="badge-note rounded px-2 py-0.5 text-xs font-bold shrink-0">NOTE</span> Wash pool % and ceramic % live in Settings → Daily sheet rules (defaults above).</li>
+      </ul>
+    </section>
+
+    <!-- Architecture appendix for engineering (skill) -->
+    <section class="rounded-2xl border border-indigo-200 bg-indigo-50/40 p-6 shadow-sm space-y-4 page-break no-print-keep">
+      <div class="flex flex-wrap items-center gap-2">
+        <h2 class="text-xl font-semibold text-indigo-950">Appendix — Engineering deepening notes</h2>
+        <span class="badge-arch rounded-full px-3 py-1 text-xs font-semibold">Architecture · not for floor ops</span>
+      </div>
+      <p class="text-sm text-indigo-900/80">Vocabulary: <strong>module</strong>, <strong>interface</strong>, <strong>depth</strong>, <strong>seam</strong>, <strong>adapter</strong>, <strong>leverage</strong>, <strong>locality</strong>.</p>
+
+      <article class="rounded-xl border border-indigo-100 bg-white p-4 space-y-2">
+        <div class="flex flex-wrap gap-2 items-center">
+          <h3 class="font-semibold">Keep sheet totals one deep module</h3>
+          <span class="rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-0.5">Strong</span>
+          <span class="text-xs text-slate-500">in-process</span>
+        </div>
+        <p class="text-sm text-slate-700"><strong>Files:</strong> <code>dailySheet.js</code> · <code>daily_sheet_server_totals</code> · POS Daily Sheet · Finance Daily sheets</p>
+        <p class="text-sm"><strong>Problem:</strong> Drawer arithmetic used to leak into separate METHOD maps (BUG-081 / BUG-086).</p>
+        <p class="text-sm"><strong>Solution:</strong> Keep all day-money formulas behind <code>computeSheetTotals</code> / SQL twin; screens only display.</p>
+        <p class="text-sm text-slate-600"><strong>Wins:</strong> Locality of money bugs · One test surface · POS/Finance cannot disagree</p>
+      </article>
+
+      <article class="rounded-xl border border-indigo-100 bg-white p-4 space-y-2">
+        <div class="flex flex-wrap gap-2 items-center">
+          <h3 class="font-semibold">Salary suggestion as one pay-preview module</h3>
+          <span class="rounded-full bg-amber-100 text-amber-900 text-xs font-bold px-2 py-0.5">Worth exploring</span>
+          <span class="text-xs text-slate-500">in-process</span>
+        </div>
+        <p class="text-sm text-slate-700"><strong>Files:</strong> <code>suggestSalaries</code> → <code>buildPayrollPreview</code> → <code>compensation.js</code></p>
+        <p class="text-sm"><strong>Problem:</strong> Understanding one day’s suggested pay requires three modules.</p>
+        <p class="text-sm"><strong>Solution:</strong> Deepen a single “day pay suggestion” interface that returns parts (daily / wash / detailing) without callers knowing wash-pool internals.</p>
+      </article>
+
+      <article class="rounded-xl border border-indigo-100 bg-white p-4 space-y-2">
+        <div class="flex flex-wrap gap-2 items-center">
+          <h3 class="font-semibold">Server sales rollup for Finance year views</h3>
+          <span class="rounded-full bg-slate-200 text-slate-700 text-xs font-bold px-2 py-0.5">Speculative</span>
+          <span class="text-xs text-slate-500">ports &amp; adapters</span>
+        </div>
+        <p class="text-sm text-slate-700"><strong>Files:</strong> <code>salesSummary.js</code> (browser rollup over raw sales)</p>
+        <p class="text-sm"><strong>Problem:</strong> Large date ranges roll up in the browser (noted ceiling in code).</p>
+        <p class="text-sm"><strong>Solution:</strong> Optional <code>finance_sales_summary</code> view adapter — only if year-scale loads hurt.</p>
+      </article>
+
+      <p class="text-sm font-medium text-indigo-950 pt-2">Top recommendation: protect the sheet-totals module — do not re-split Expected cash math into screens.</p>
+    </section>
+
+    <footer class="text-xs text-slate-500 pb-8 print:pb-0">
+      Hakum Auto Care · Computations brief · Generated from live code path (Daily Sheet era, post 2026-10-01).
+      Guides: <code>docs/daily-sheet/README.md</code> · <code>docs/OPS/MONEY-CONTRACT.md</code>.
+    </footer>
+  </main>
+</body>
+</html>

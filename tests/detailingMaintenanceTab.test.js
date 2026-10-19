@@ -34,7 +34,7 @@ describe('Detailing Maintenance tab contract', () => {
   })
 
   it('cron and ops share sendPaintMaintenanceReminder', () => {
-    const cron = readFileSync(join(root, 'scripts/notify-maintenance-due.mjs'), 'utf8')
+    const cron = readFileSync(join(root, 'server/maintenanceReminders.mjs'), 'utf8')
     const notify = readFileSync(join(root, 'server/paintMaintenanceNotify.mjs'), 'utf8')
     assert.match(cron, /sendPaintMaintenanceReminder/)
     assert.match(notify, /export async function sendPaintMaintenanceReminder/)

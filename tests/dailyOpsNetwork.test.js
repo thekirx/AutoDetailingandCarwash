@@ -365,11 +365,11 @@ describe('Principal QA — close → Finance accept → payroll → books (both 
     assert.equal(imusPl.net, 875_000)
   })
 
-  it('BA closes; SA finance; investor views POS but cannot open the Queue', () => {
+  it('BA closes; SA finance; investor views POS and the queue read-only', () => {
     assert.equal(allowRoute({ role: ROLES.ADMIN }, 'pos'), true)
     assert.equal(allowRoute({ role: ROLES.SUPER_ADMIN }, 'payroll'), false)
     assert.equal(allowRoute({ role: ROLES.SUPER_ADMIN }, 'finance'), true)
-    assert.equal(allowRoute({ role: ROLES.INVESTOR }, 'queue'), false)
+    assert.equal(allowRoute({ role: ROLES.INVESTOR }, 'queue'), true)
     assert.equal(allowRoute({ role: ROLES.INVESTOR }, 'pos'), true)
   })
 })

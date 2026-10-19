@@ -75,7 +75,6 @@ test('role matrix: everyone who may write, may write', () => {
     ['BossMich', {}],
     ['assistant_super_admin', {}],
     ['team_lead', {}],
-    ['sales', {}],
     ['detailer', {}],
     ['operations_lead', {}],
   ]
@@ -126,13 +125,13 @@ test('team_lead is denied the for_payment lane', () => {
   )
 })
 
-test('sales may only move detailing bookings to sales-board statuses', () => {
+test('Customer Rep (sales) is read-only on detailing and queue', () => {
   const detailing = { ...BOOKING, services: { slug: 'ppf-basic', pay_category: 'detailing' } }
   const wash = { ...BOOKING, services: { slug: 'basic-wash', pay_category: 'wash' } }
   assert.equal(canStaffUpdateBookingStatus(staff('sales'), detailing, { nextStatus: 'for_payment' }), false)
-  assert.equal(canStaffUpdateBookingStatus(staff('sales'), detailing, { nextStatus: 'in_progress' }), true)
-  assert.equal(canStaffUpdateBookingStatus(staff('sales'), wash, { nextStatus: 'in_progress' }), false, 'wash is view only for Sales')
-  assert.equal(canStaffUpdateBookingStatus(staff('sales'), BOOKING, { nextStatus: 'in_progress' }), false, 'unknown service is refused')
+  assert.equal(canStaffUpdateBookingStatus(staff('sales'), detailing, { nextStatus: 'in_progress' }), false)
+  assert.equal(canStaffUpdateBookingStatus(staff('sales'), wash, { nextStatus: 'in_progress' }), false)
+  assert.equal(canStaffUpdateBookingStatus(staff('sales'), BOOKING, { nextStatus: 'in_progress' }), false)
 })
 
 test('missing role or booking is refused', () => {

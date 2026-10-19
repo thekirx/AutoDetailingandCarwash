@@ -17,7 +17,14 @@ export function adminDb() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
-export const LIFECYCLE_KINDS = ['welcome_app', 'loyalty_claim', 'visit_milestone_4', 'visit_milestone_10', 'self_test']
+export const LIFECYCLE_KINDS = [
+  'welcome_app',
+  'loyalty_claim',
+  'visit_milestone_4',
+  'visit_milestone_10',
+  'rate_visit',
+  'self_test',
+]
 
 export function buildLifecycleSms(kind, { appUrl = '', name = '', templates = null } = {}) {
   const url = String(appUrl || '').trim()
@@ -38,6 +45,12 @@ export function buildLifecycleSms(kind, { appUrl = '', name = '', templates = nu
       return "Hakum Auto Care: That's your 4th completed visit! You're only 2 visits away from a free car freshener or coffee on us."
     case 'visit_milestone_10':
       return 'Hakum Auto Care: 10 visits, amazing! Your loyalty card is back to zero. Claim your free premium wax on your next visit. Thank you!'
+    case 'rate_visit':
+      return (
+        'Hakum Auto Care: How was your visit? Open your account'
+        + `${url ? ` (${url}/account)` : ''}`
+        + ' to rate it — thumbs up or tell us what went wrong.'
+      )
     case 'self_test':
       return 'Hakum Auto Care: Test alert for this number. Visit updates will arrive here when SMS is on.'
     default:

@@ -148,7 +148,7 @@ describe('Live leftover SQL', () => {
 })
 
 describe('Branch Admin allowRoute matches Command nav', () => {
-  it('denies finance CRM people console by URL; keeps POS floor reviews audit', () => {
+  it('allows finance and CRM; denies people, console, floor, settings', () => {
     const p = { role: ROLES.ADMIN, branch_slug: 'bacoor', branch_slugs: ['bacoor'] }
     const navKeys = getOperationsNav(p).map((i) => {
       const rest = String(i.to).split('?')[0].replace(/^\/operations\//, '')
@@ -158,8 +158,9 @@ describe('Branch Admin allowRoute matches Command nav', () => {
       assert.equal(allowRoute(p, key), true, key)
     }
     assert.equal(allowRoute(p, 'pos'), true)
-    assert.equal(allowRoute(p, 'finance'), false)
-    assert.equal(allowRoute(p, 'crm'), false)
+    assert.equal(allowRoute(p, 'finance'), true)
+    assert.equal(allowRoute(p, 'crm'), true)
+    assert.equal(allowRoute(p, 'dashboard'), false)
     assert.equal(allowRoute(p, 'people'), false)
     assert.equal(allowRoute(p, 'console'), false)
     assert.equal(allowRoute(p, 'memberships'), false)

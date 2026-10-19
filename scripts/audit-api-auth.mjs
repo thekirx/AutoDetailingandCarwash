@@ -45,6 +45,8 @@ const PUBLIC = {
     'public booking. The optional JWT only attaches customer_id, and only when customers.role = customer (resolveBookingCustomerId) — never phone or metadata',
   handleNotifyOpsFormRequest:
     'public form notifier. The bearer is optional by design ("staff fill may send a bearer; public forms do not"); rate limited per IP',
+  handleReferralStaffRequest:
+    'public booking form loads employee names for the "talked to an employee" choice. Returns id, name, role, and branch only',
   handleDemoLoginRequest:
     'one-click demo sign-in for testing (owner decision 2026-10-12). Unauthenticated BY DEFINITION — the point is to sign in without a session. It 404s without the QA key (only its SHA-256 is in the repo), and it returns a session for a FIXED set of known demo accounts, never an arbitrary identity. It mints a one-time link server-side and returns only tokens, so no credential is involved. DEMO_LOGIN_ENABLED=false removes the route entirely. Recorded on BUG-088.',
 }
@@ -62,6 +64,9 @@ const DELEGATED = {
   handleDataCenterRequest: 'requireSuperAdmin() -> staff.role must be exactly BossMich',
   handleNotifyBookingRequest: 'bearer -> staff_profiles -> ALLOWED role allowlist -> 403',
   handleBusybeeRequest: 'bearer -> staff_profiles -> inline role allowlist -> 403',
+  handleBookingRemindersRequest: 'scheduledRunGate -> CRON_SECRET or active BossMich / assistant_super_admin',
+  handleMaintenanceRemindersRequest: 'scheduledRunGate -> CRON_SECRET or active BossMich / assistant_super_admin',
+  handleBirthdayGreetingsRequest: 'scheduledRunGate -> CRON_SECRET or active BossMich / assistant_super_admin',
 }
 
 /** Known answers. If these change, the detector is wrong and says so. */
@@ -89,7 +94,7 @@ for (const { path, name: file } of handlerFiles()) {
     name: m[1],
     file: `${file.includes('.') ? path.slice(path.indexOf(join('api', 'x')) >= 0 ? root.length + 1 : root.length + 1) : path}`,
     auth: /bearer\(req\)/.test(body) || /getAccessToken\(\)/.test(body),
-    cron: /cronAuthorized|CRON_SECRET/.test(body),
+    cron: /cronAuthorized|CRON_SECRET|scheduledRunGate/.test(body),
     scopedHere:
       /branch_slug|user_has_branch_access|branchFilter|_ROLES\b|is_super_admin|current_user_role|permission_grants|hasGrant|canEdit|canAccess|user_id|auth\.uid\(\)/.test(
         body,

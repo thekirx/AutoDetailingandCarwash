@@ -1,7 +1,7 @@
 {
   "ok": false,
   "url": "https://lybxhpzzqqyqswvuwpxv.supabase.co",
-  "at": "2026-10-08T16:21:10.940Z",
+  "at": "2026-10-16T15:31:24.538Z",
   "bySeverity": {
     "Info": 2,
     "High": 1
@@ -9,26 +9,43 @@
   "findings": [
     {
       "severity": "Info",
-      "section": "dailysheet",
-      "message": "sheet status distribution",
-      "approved": 58,
-      "returned": 1,
-      "submitted": 1
+      "section": "auth",
+      "message": "staff roles (paged, complete)",
+      "total": 26,
+      "staff (inactive) archived": 6,
+      "sales": 1,
+      "investor": 2,
+      "staff": 5,
+      "marketing": 1,
+      "operations_lead": 1,
+      "detailer": 2,
+      "video_editor": 1,
+      "BossMich": 1,
+      "assistant_super_admin": 1,
+      "team_lead": 2,
+      "admin": 3
     },
     {
       "severity": "Info",
-      "section": "dailysheet",
-      "message": "every stored sheet matches the app's own totals for its sales and lines",
-      "sheetsCompared": 60,
-      "note": "Recomputed with computeSheetTotals() from src/lib/dailySheet.js, not a restatement of its rules."
+      "section": "auth",
+      "message": "push enrollment (paged, keyed on user_id)",
+      "activeStaff": 20,
+      "subscriptionRows": 3,
+      "enrolledActiveStaff": 0,
+      "notEnrolled": 20,
+      "nonStaffSubscriptions": 3,
+      "inactiveStaffSubscriptions": 0,
+      "nonStaffRoles": [
+        "customer"
+      ]
     },
     {
       "severity": "High",
-      "section": "dailysheet",
-      "message": "every Daily Sheet is from the seeded demo month — the close-of-day path is unproven on real trading",
-      "sheets": 60,
-      "seededSheets": 60,
-      "note": "No sheet exists for any real POS sale, so sheet arithmetic has only ever been validated against seed data. Close one real shop day and re-run this audit. BUG-065."
+      "section": "auth",
+      "message": "most active staff have no push subscription",
+      "activeStaff": 20,
+      "enrolled": 0,
+      "note": "Ops blocker: no phone alert reaches the floor. The endpoint resolves on production and the subscribe handler keys the row on the auth uid, so this is an enrollment gap, not a broken path. Enabling it is a per-device browser action and is NOT automatable."
     }
   ]
 }

@@ -1,10 +1,10 @@
 {
   "ok": true,
-  "base": "https://auto-detailingand-carwash.vercel.app",
-  "passed": 84,
-  "total": 84,
+  "base": "http://127.0.0.1:5174",
+  "passed": 87,
+  "total": 87,
   "failed": [],
   "backendFindings": [],
   "evidence": "e2e-evidence/nav-walk",
-  "at": "2026-10-13T06:15:30.246Z"
+  "at": "2026-10-15T09:37:05.867Z"
 }

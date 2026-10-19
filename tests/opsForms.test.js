@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { describe, it } from 'node:test'
 import {
   FIXED_FORM_TEMPLATES,
@@ -15,6 +16,7 @@ import {
   slugifyFormName,
   submissionTitle,
   templateFields,
+  thumbDownComplaintPayload,
   validatePayload,
   withLiveBranchOptions,
 } from '../src/lib/opsForms.js'
@@ -85,6 +87,41 @@ describe('opsForms smart builder', () => {
     const live = withLiveBranchOptions(seeded, ['bacoor', 'batangas'])
     assert.deepEqual(live.find((f) => f.key === 'branch').options, ['bacoor', 'batangas'])
     assert.deepEqual(live.find((f) => f.key === 'service').options, ['Ceramic'])
+  })
+})
+
+describe('thumbs down complaint', () => {
+  it('builds the customer-complaints payload or refuses a blank', () => {
+    assert.equal(
+      thumbDownComplaintPayload({ name: 'Ana', branch: 'bacoor', category: 'Nope', description: 'Waited' }),
+      null,
+    )
+    assert.equal(thumbDownComplaintPayload({ name: 'Ana', branch: 'bacoor', category: 'Wait time', description: '  ' }), null)
+    assert.deepEqual(
+      thumbDownComplaintPayload({
+        name: ' Ana ',
+        phone: '0917',
+        branch: 'bacoor',
+        category: 'Wait time',
+        description: ' Too long ',
+        bookingId: 'bk-1',
+      }),
+      {
+        customer_name: 'Ana',
+        phone: '0917',
+        branch: 'bacoor',
+        category: 'Wait time',
+        description: 'Too long',
+        booking_id: 'bk-1',
+      },
+    )
+    const portal = readFileSync(new URL('../server/customerPortal.mjs', import.meta.url), 'utf8')
+    const home = readFileSync(new URL('../src/pages/CustomerAccountPage.jsx', import.meta.url), 'utf8')
+    assert.match(portal, /submit_public_ops_form/)
+    assert.match(portal, /customer-complaints/)
+    assert.match(home, /Send complaint/)
+    assert.match(home, /COMPLAINT_CATEGORIES/)
+    assert.equal(NOTIFY_EVENTS.review.urls[0], '/operations/planning?tab=forms')
   })
 })
 

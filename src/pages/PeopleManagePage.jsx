@@ -47,20 +47,21 @@ import {
 } from '@/lib/peopleDirectory'
 import { summarizeTodayAttendance } from '@/lib/attendanceInsights'
 import { BASELINE_TEMPLATES, validateRoleDefinition } from '@/lib/roleDefinitions'
+import { generalAdminSheetGrants, internalRoleLabel, roleAccessSummary } from '@/auth/internalRoles'
 import { cn } from '@/lib/utils'
 
 const ROLE_LABELS = {
-  admin: 'Admin',
-  assistant_super_admin: 'Assistant Super Admin',
-  operations_lead: 'Operations Lead',
-  team_lead: 'Team Lead',
-  staff: 'Staff',
-  sales: 'Sales',
-  marketing: 'Marketing',
-  detailer: 'Detailer',
-  video_editor: 'Video Editor',
-  investor: 'Investor',
-  BossMich: 'Super Admin',
+  admin: internalRoleLabel('admin'),
+  assistant_super_admin: internalRoleLabel('assistant_super_admin'),
+  operations_lead: internalRoleLabel('operations_lead'),
+  team_lead: internalRoleLabel('team_lead'),
+  staff: internalRoleLabel('staff'),
+  sales: internalRoleLabel('sales'),
+  marketing: internalRoleLabel('marketing'),
+  detailer: internalRoleLabel('detailer'),
+  video_editor: internalRoleLabel('video_editor'),
+  investor: internalRoleLabel('investor'),
+  BossMich: internalRoleLabel('BossMich'),
 }
 
 function toggleSlug(list, slug) {
@@ -150,19 +151,19 @@ export default function PeopleManagePage() {
   const roleOptions = useMemo(() => {
     const base = [
       { value: 'team_lead', label: 'Team Lead' },
-      { value: 'staff', label: 'Staff' },
+      { value: 'staff', label: 'Crew' },
     ]
     if (canCreateAdminAccounts(profile)) {
       return [
-        { value: 'admin', label: 'Admin (multi-branch)' },
-        { value: 'assistant_super_admin', label: 'Assistant Super Admin' },
+        { value: 'admin', label: 'Branch Admin (assigned branches)' },
+        { value: 'assistant_super_admin', label: 'General Admin (all branches)' },
         { value: 'operations_lead', label: 'Operations Lead (all branches)' },
         ...base,
         { value: 'detailer', label: 'Detailer' },
-        { value: 'sales', label: 'Sales (form bookings)' },
-        { value: 'marketing', label: 'Marketing' },
+        { value: 'sales', label: 'Customer Rep (all branches)' },
+        { value: 'marketing', label: 'Marketing (all branches)' },
         { value: 'video_editor', label: 'Video Editor' },
-        { value: 'investor', label: 'Investor' },
+        { value: 'investor', label: 'Investor (specific branch)' },
       ]
     }
     return base
@@ -391,9 +392,9 @@ export default function PeopleManagePage() {
       title="Users and access"
       description={
         isSuperAdmin(profile)
-          ? 'Create roles, assign multi-branch scope, and toggle Assistant Super Admin grants. Reload after edits; open sessions pick up grant changes on next auth refresh.'
+          ? 'Create accounts using the access sheet. General Admin grants start with finance write and planning edit on. Reload after edits.'
           : canEditAssistantGrants(profile)
-            ? 'Manage people and ASA grants for your authority. Branch-scoped data follows assignments.'
+            ? 'Manage people and General Admin grants. Branch-scoped roles follow the branch you assign.'
             : 'Create Team Leads and staff for your assigned branch.'
       }
       actions={
@@ -532,6 +533,7 @@ export default function PeopleManagePage() {
                       ...f,
                       role,
                       attendance_enabled: role === 'operations_lead' ? false : f.attendance_enabled,
+                      permission_grants: role === ROLES.ASSISTANT_SUPER_ADMIN ? generalAdminSheetGrants() : f.permission_grants,
                     }))
                   }
                 >
@@ -542,7 +544,13 @@ export default function PeopleManagePage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {roleAccessSummary(form.role) ? (
+                  <p className="text-sm text-muted-foreground">{roleAccessSummary(form.role)}</p>
+                ) : null}
               </div>
+              {!showBranchPicker(form.role, form.permission_grants) ? (
+                <p className="text-sm text-muted-foreground">Branch access: all branches.</p>
+              ) : null}
               {showBranchPicker(form.role, form.permission_grants) && usesMultiBranch(form.role, form.permission_grants) && (
                 <div className="flex flex-col gap-2">
                   <Label>Branches (multi)</Label>
@@ -960,7 +968,13 @@ export default function PeopleManagePage() {
                     ))}
                   </SelectContent>
                 </Select>
+                {roleAccessSummary(editing.role) ? (
+                  <p className="text-sm text-muted-foreground">{roleAccessSummary(editing.role)}</p>
+                ) : null}
               </div>
+              {!showBranchPicker(editing.role, editing.permission_grants) ? (
+                <p className="text-sm text-muted-foreground">Branch access: all branches.</p>
+              ) : null}
               {showBranchPicker(editing.role, editing.permission_grants) && (
                   <div className="flex flex-col gap-2">
                   <Label>{usesMultiBranch(editing.role, editing.permission_grants) ? 'Branches (multi)' : 'Branch'}</Label>

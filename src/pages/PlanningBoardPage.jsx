@@ -5,6 +5,7 @@ import { useAuth } from '@/auth/AuthProvider'
 import { canEditPlanning, canViewPlanning } from '@/auth/permissions'
 import { createCoalescedReload } from '@/lib/coalesceReload'
 import { PLAN_BOARD_DETAIL_SELECT, PLAN_BOARDS_LIST_SELECT, defaultPlanListId, pickPlannerBoard, plannerTabFromSearch, plannerTabsForAccess, visiblePlannerBoards } from '@/lib/plannerBoard'
+import { filterCategoriesForRole } from '@/lib/planCategoryRoles'
 import { hrefForCalendarItem } from '@/lib/plannerCalendar'
 import { collectPaged } from '@/lib/crmInsights'
 import { isBookingBoardRow } from '@/lib/serviceKinds'
@@ -46,7 +47,8 @@ const ASSIGNEE_CARD_SELECT = `
   id, staff_id, status, proof_url, proof_note, proof_submitted_at, reviewed_at,
   staff_profiles ( id, full_name ),
   plan_cards (
-    id, title, description, labels, due_at, position, created_at, updated_at, created_by, category_id, proof_required, list_id,
+    id, title, description, labels, due_at, position, created_at, updated_at, created_by, category_id, proof_required, list_id, form_id,
+    ops_forms ( id, name ),
     plan_checklist_items ( id, title, done, position ),
     plan_lists ( id, title )
   )
@@ -95,6 +97,10 @@ export default function PlanningBoardPage() {
   const [calExtra, setCalExtra] = useState({ events: [], bookings: [], forms: [] })
 
   const lists = useMemo(() => [...(board?.plan_lists || [])].sort((a, b) => a.position - b.position), [board])
+  const visibleCategories = useMemo(
+    () => (canEdit ? categories : filterCategoriesForRole(categories, profile?.role)),
+    [canEdit, categories, profile?.role],
+  )
   const cards = useMemo(
     () => (canEdit ? flattenPlannerCards(board) : assignedCards),
     [canEdit, board, assignedCards],
@@ -121,7 +127,7 @@ export default function PlanningBoardPage() {
 
   const load = useCallback(async () => {
     const requested = searchParams.get('board')
-    const catQ = supabase.from('plan_categories').select('id, name, color, position').order('position')
+    const catQ = supabase.from('plan_categories').select('id, name, color, position, visible_roles').order('position')
     if (!canEdit) {
       const [{ data: catRows }, { data: mine, error: mineErr }] = await Promise.all([
         catQ,
@@ -147,7 +153,7 @@ export default function PlanningBoardPage() {
     ])
     const loadErr = boardErr || catErr || staffErr || tplErr || reviewErr
     if (loadErr) toast.error(loadErr.message)
-    const visible = visiblePlannerBoards(boardRows)
+    const visible = visiblePlannerBoards(boardRows, profile)
     setBoards(visible)
     setCategories(catRows || [])
     setStaff(staffRows || [])
@@ -407,7 +413,7 @@ export default function PlanningBoardPage() {
                 <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
                   <option value="all">Any category</option>
                   <option value="none">Uncategorized</option>
-                  {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  {visibleCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                 </select>
               </label>
               <label>
@@ -465,6 +471,7 @@ export default function PlanningBoardPage() {
                       {col.map((card) => (
                         <button key={card.id} type="button" className="planner-v2-card planner-ticket" onClick={() => openCard(card.id)}>
                           <strong>{card.title}</strong>
+                          {card.ops_forms?.name ? <span>{card.ops_forms.name}</span> : null}
                           <span>{card.plan_card_assignees?.[0]?.staff_profiles?.full_name || 'Unassigned'}</span>
                           <em>{(card.plan_card_assignees?.[0]?.status || 'todo').replace('_', ' ')}{card.due_at ? ` · ${new Date(card.due_at).toLocaleDateString()}` : ''}</em>
                         </button>
@@ -580,7 +587,7 @@ export default function PlanningBoardPage() {
           card={activeCard.id === 'new' ? null : activeCard}
           listId={defaultPlanListId(lists)}
           lists={lists}
-          categories={categories}
+          categories={visibleCategories}
           checklistTemplates={templates}
           canEdit={canEdit}
           onClose={() => openCard(null)}

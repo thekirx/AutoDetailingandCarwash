@@ -27,10 +27,10 @@ describe('TL has no Floor Board', () => {
     assert.equal(getOperationsNav(tl).some((i) => i.to === '/operations/dashboard'), false)
   })
 
-  it('owner, crew and branch admin keep the Floor Board', () => {
+  it('owner and crew keep the Floor Board; branch admin does not', () => {
     assert.equal(allowRoute({ role: ROLES.SUPER_ADMIN }, 'dashboard'), true)
     assert.equal(allowRoute({ role: ROLES.STAFF, branch_slug: 'bacoor' }, 'dashboard'), true)
-    assert.equal(allowRoute({ role: ROLES.ADMIN, branch_slug: 'bacoor' }, 'dashboard'), true)
+    assert.equal(allowRoute({ role: ROLES.ADMIN, branch_slug: 'bacoor' }, 'dashboard'), false)
   })
 })
 

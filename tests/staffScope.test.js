@@ -22,7 +22,7 @@ import {
 describe('Staff capability matrix', () => {
   const p = { role: ROLES.STAFF, branch_slug: 'bacoor', branch_slugs: ['bacoor'] }
 
-  it('keeps Attendance, Floor, Queue, Crew, and KPI read-only for crew', () => {
+  it('keeps Attendance, Floor, Queue, Crew read-only; month KPI is Ops Lead / SA only', () => {
     assert.equal(canViewAssignedTasks(p), true)
     assert.equal(allowRoute(p, 'my-tasks'), true)
     assert.equal(allowRoute(p, 'attendance'), true)
@@ -33,7 +33,7 @@ describe('Staff capability matrix', () => {
     assert.equal(allowRoute(p, 'queue'), false)
     assert.equal(allowRoute(p, 'queue-new'), false)
     assert.equal(allowRoute(p, 'crew'), false)
-    assert.equal(allowRoute(p, 'kpi'), true)
+    assert.equal(allowRoute(p, 'kpi'), false)
     assert.equal(allowRoute(p, 'pos'), false)
     assert.equal(allowRoute(p, 'finance'), false)
     assert.equal(allowRoute(p, 'console'), false)
@@ -47,14 +47,14 @@ describe('Staff capability matrix', () => {
     assert.equal(allowRoute(p, 'history'), false)
     assert.deepEqual(
       getStaffMore(p).map((item) => item.to),
-      ['/operations/dashboard', '/operations/kpi'],
+      ['/operations/dashboard'],
     )
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
       [
         '/operations/attendance',
+        '/operations/my-advances',
         '/operations/dashboard',
-        '/operations/kpi',
         '/operations/my-tasks',
         '/operations/planning',
       ],

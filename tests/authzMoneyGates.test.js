@@ -262,10 +262,10 @@ test('KPI scope uses kpi_all, independent of branches_all', () => {
 })
 
 test('marketing access follows CRM, and queue-service follows the queue page', () => {
-  assert.equal(canAccessMarketing(profile(ROLES.MARKETING)), true)
+  assert.equal(canAccessMarketing(profile(ROLES.MARKETING)), false)
   assert.equal(canAccessMarketing(profile(ROLES.SUPER_ADMIN)), true)
   assert.equal(canAccessMarketing(asa({ crm: false })), false)
-  assert.equal(canAccessMarketing(profile(ROLES.SALES)), false, 'Sales works bookings, not CRM')
+  assert.equal(canAccessMarketing(profile(ROLES.SALES)), true, 'Customer Rep creates and modifies customers')
   assert.equal(canAccessMarketing(profile(ROLES.STAFF)), false)
 
   // canAddQueueService delegates to the queue page, which is TL / OL / SA / ASA.

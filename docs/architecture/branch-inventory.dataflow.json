@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "Branch inventory assignment",
+    "subtitle": "Shared catalog. On-hand and POS money live on product_branch_stock.",
+    "output": "docs/architecture/branch-inventory.dataflow.html",
+    "viewBox": [1080, 500],
+    "animation": "trace",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "assign",
+        "label": "Assign to a branch",
+        "focus": ["catalog", "inventory", "stock"],
+        "note": "SA, ASA, and BA pick a branch. A stock row, even at qty 0, means the sellable is on that branch."
+      },
+      {
+        "id": "sale",
+        "label": "POS money path",
+        "focus": ["stock", "pos", "sale", "ledger"],
+        "note": "The register lists only rows for the open branch. complete_pos_sale deducts that row or fails closed."
+      }
+    ]
+  },
+  "stages": [
+    { "label": "Catalog" },
+    { "label": "Assign" },
+    { "label": "Branch stock" },
+    { "label": "Register" },
+    { "label": "Ledger" }
+  ],
+  "nodes": [
+    { "id": "catalog", "type": "database", "label": "Product catalog", "sublabel": "products", "stage": 0, "row": 0, "tag": "shared SKU" },
+    { "id": "inventory", "type": "frontend", "label": "Inventory", "sublabel": "SA · ASA · BA", "stage": 1, "row": 0, "tag": "branch filter" },
+    { "id": "recon", "type": "frontend", "label": "Sunday recon", "sublabel": "BA leftover", "stage": 1, "row": 1, "tag": "internal use" },
+    { "id": "stock", "type": "database", "label": "Branch stock", "sublabel": "product_branch_stock", "stage": 2, "row": 0, "tag": "qty per branch" },
+    { "id": "pos", "type": "frontend", "label": "POS", "sublabel": "open branch", "stage": 3, "row": 0, "tag": "assigned only" },
+    { "id": "sale", "type": "backend", "label": "complete_pos_sale", "sublabel": "fail closed", "stage": 3, "row": 1, "tag": "peso lines" },
+    { "id": "ledger", "type": "database", "label": "Stock movements", "sublabel": "product_stock_movements", "stage": 4, "row": 1, "tag": "sale" }
+  ],
+  "flows": [
+    { "id": "catalog-list", "from": "catalog", "to": "inventory", "label": "catalog", "classification": "SKU and peso price", "variant": "default", "route": "straight", "labelDy": -28 },
+    { "id": "assign-row", "from": "inventory", "to": "stock", "label": "assign", "classification": "row means on this branch", "variant": "emphasis", "route": "straight", "labelAt": [423, 108] },
+    { "id": "recon-set", "from": "recon", "to": "stock", "label": "leftover", "classification": "Sunday count", "variant": "dashed", "route": "bottom-channel", "channelY": 360, "labelAt": [480, 380] },
+    { "id": "pos-read", "from": "stock", "to": "pos", "label": "on-hand", "classification": "no global fallback", "variant": "emphasis", "route": "straight", "labelAt": [640, 108] },
+    { "id": "ticket", "from": "pos", "to": "sale", "label": "lines", "classification": "branch slug", "variant": "emphasis", "route": "straight", "labelAt": [760, 220] },
+    { "id": "deduct", "from": "sale", "to": "stock", "label": "deduct", "classification": "insufficient stock fails", "variant": "security", "route": "bottom-channel", "channelY": 430, "labelAt": [620, 450] },
+    { "id": "movement", "from": "sale", "to": "ledger", "label": "sale row", "classification": "branch_slug", "variant": "default", "route": "straight", "labelAt": [900, 320] }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "One assignment",
+      "items": [
+        "A product_branch_stock row assigns the sellable to that branch",
+        "Qty 0 is assigned and out of stock",
+        "No row means the branch does not sell it"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Money stays on the branch",
+      "items": [
+        "POS does not fall back to products.stock_qty",
+        "complete_pos_sale deducts the branch row or raises Insufficient branch stock",
+        "Point price stays on the shared catalog"
+      ]
+    },
+    {
+      "dot": "orange",
+      "title": "Who writes",
+      "items": [
+        "SA, ASA with merch or POS grant, and the branch admin assign",
+        "Branch admin can raise qty and cannot delete a row",
+        "Only SA and ASA remove a row, and only after on-hand is 0"
+      ]
+    }
+  ]
+}

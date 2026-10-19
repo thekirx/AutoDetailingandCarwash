@@ -13,10 +13,13 @@ import { handleNotificationBroadcastRequest } from '../server/notificationBroadc
 import { handleNotificationBroadcastKindsRequest } from '../server/notificationBroadcastKindsApi.mjs'
 import { handleNotificationTemplatesRequest } from '../server/notificationTemplatesApi.mjs'
 import { handleBirthdayGreetingsRequest } from '../server/birthdayGreetingsApi.mjs'
+import { handleBookingRemindersRequest } from '../server/bookingRemindersApi.mjs'
+import { handleMaintenanceRemindersRequest } from '../server/maintenanceRemindersApi.mjs'
 
 export const operations = Object.freeze({
   busybee: handleBusybeeRequest,
   'lifecycle-sms': handleLifecycleSmsRequest,
+  'maintenance-reminders': handleMaintenanceRemindersRequest,
   'notify-booking': handleNotifyBookingRequest,
   'notify-ops-form': handleNotifyOpsFormRequest,
   'notify-planner': handleNotifyPlannerRequest,
@@ -30,6 +33,7 @@ export const operations = Object.freeze({
   'notification-broadcast-kinds': handleNotificationBroadcastKindsRequest,
   'notification-templates': handleNotificationTemplatesRequest,
   'birthday-greetings': handleBirthdayGreetingsRequest,
+  'booking-reminders': handleBookingRemindersRequest,
 })
 
 export default createGateway(operations)

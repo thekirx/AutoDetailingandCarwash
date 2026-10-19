@@ -1,7 +1,8 @@
 import { Link, Navigate } from 'react-router-dom'
 import { ShoppingCart, Wallet, Sun } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessPos, isSuperAdmin } from '@/auth/permissions'
+import { canAccessPos, canManageServices, isSuperAdmin } from '@/auth/permissions'
+import ReferralProgramCard from '@/components/ops/ReferralProgramCard'
 import { canReviewDailySheet } from '@/lib/dailySheet'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import { SETTINGS_HUB_COPY } from '@/components/ops/opsGuideCopy'
@@ -9,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 
 /** Policy destinations only — People / Branches / Audit / Content stay in Command nav. */
 const TILES = [
-  { key: 'tint-finder', title: 'Tint Finder', description: 'Film specifications, package prices, recommendation rules and customer requests.', to: '/operations/settings/tint-finder', icon: Sun, allow: isSuperAdmin },
+  { key: 'tint-finder', title: 'Tint Finder', description: 'Page title, film specifications, package prices, recommendation rules, and customer requests.', to: '/operations/settings/tint-finder', icon: Sun, allow: isSuperAdmin },
   {
     key: 'pos',
     title: 'POS settings',
@@ -32,8 +33,9 @@ const TILES = [
 export default function SettingsHubPage() {
   const { profile } = useAuth()
   const tiles = TILES.filter((t) => t.allow(profile))
+  const canReferral = canManageServices(profile)
 
-  if (!tiles.length) {
+  if (!tiles.length && !canReferral) {
     return <Navigate to="/operations/access-denied" replace />
   }
 
@@ -70,6 +72,11 @@ export default function SettingsHubPage() {
           )
         })}
       </div>
+      {canReferral ? (
+        <div className="mt-6 max-w-3xl">
+          <ReferralProgramCard />
+        </div>
+      ) : null}
     </OpsPageShell>
   )
 }

@@ -10,6 +10,7 @@ import {
   canAccessBookingBoard,
   canEditQueueOperations,
   canViewAssignedTasks,
+  canViewQueueBoard,
   canViewQueueOperations,
   getOperationsNav,
   redirectForRole,
@@ -20,22 +21,23 @@ import { CRM_SAFE_BOOKING_STATUSES, isCrmSafeBookingStatus } from '../server/crm
 describe('Marketing capability matrix', () => {
   const p = { role: ROLES.MARKETING, branch_slug: 'bacoor', branch_slugs: ['bacoor'] }
 
-  it('allows CRM + readonly Bookings; denies floor queue POS finance console my-tasks', () => {
+  it('allows CRM + readonly queue and detailing; denies Floor Board POS finance my-tasks', () => {
     assert.equal(canAccessCrm(p), true)
     assert.equal(allowRoute(p, 'crm'), true)
     assert.equal(redirectForRole(ROLES.MARKETING), '/operations/crm')
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
-      ['/operations/crm', '/operations/bookings', '/operations/planning', '/operations/notifications', '/operations/history'],
+      ['/operations/queue', '/operations/bookings', '/operations/planning', '/operations/crm', '/operations/notifications', '/operations/history'],
     )
     assert.equal(canAccessPos(p), false)
     assert.equal(canAccessFinance(p), false)
     assert.equal(canAccessConsole(p), false)
     assert.equal(canAccessBookingBoard(p), true)
+    assert.equal(canViewQueueBoard(p), true)
     assert.equal(canViewQueueOperations(p), false)
     assert.equal(canEditQueueOperations(p), false)
     assert.equal(canViewAssignedTasks(p), false)
-    assert.equal(allowRoute(p, 'queue'), false)
+    assert.equal(allowRoute(p, 'queue'), true)
     assert.equal(allowRoute(p, 'pos'), false)
     assert.equal(allowRoute(p, 'finance'), false)
     assert.equal(allowRoute(p, 'console'), false)

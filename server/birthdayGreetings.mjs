@@ -3,7 +3,8 @@
  * Idempotent per customer/year via customer_birthday_perks unique key.
  */
 import { createClient } from '@supabase/supabase-js'
-import { birthdayPerkExpiresAt, birthdayQueryDays, isBirthdayToday } from '../src/lib/birthdayPerk.js'
+import { birthdayPerkExpiresAt, birthdayQueryDays, isBirthdayToday, mintBirthdayCode } from '../src/lib/birthdayPerk.js'
+import { CUSTOMER_VOUCHERS_PATH } from '../src/lib/customerAccountNav.js'
 import { applyTemplateText } from '../src/lib/notificationTemplates.js'
 import { busybeeSendSms } from './busybee.mjs'
 import { isSmsNotificationsEnabled } from './notifyBooking.mjs'
@@ -30,17 +31,40 @@ async function writeInbox(db, userId, payload) {
   return error ? { error: error.message } : { inserted: 1 }
 }
 
-async function logSmsEvent(db, { phone, message, eventType, customerId, status, providerResponse }) {
+async function logSmsEvent(db, { phone, message, eventType, customerId, bookingId, status, providerResponse }) {
   await db.from('sms_events').insert({
     phone,
     message,
     event_type: eventType,
     customer_id: customerId || null,
+    booking_id: bookingId || null,
     provider: 'busybee',
     status,
     provider_response: providerResponse || null,
     sent_at: status === 'sent' ? new Date().toISOString() : null,
   })
+}
+
+const PERK_COLS = 'id, customer_id, perk_year, status, expires_at, greeting_sent_at, claimed_at, code'
+
+async function attachBirthdayCode(db, row) {
+  if (!row || row.code) return row
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const code = mintBirthdayCode()
+    const { data, error } = await db
+      .from('customer_birthday_perks')
+      .update({ code })
+      .eq('id', row.id)
+      .is('code', null)
+      .select(PERK_COLS)
+      .maybeSingle()
+    if (!error && data?.code) return data
+    if (error?.code === '23505') continue
+    if (error) throw new Error(error.message)
+    const again = await db.from('customer_birthday_perks').select(PERK_COLS).eq('id', row.id).maybeSingle()
+    if (again.data?.code) return again.data
+  }
+  throw new Error('Could not mint a birthday code.')
 }
 
 export async function listBirthdayCustomers(db, today = new Date()) {
@@ -60,39 +84,43 @@ export async function listBirthdayCustomers(db, today = new Date()) {
 export async function ensureBirthdayPerk(db, customer, { year, now = new Date() } = {}) {
   const { year: y } = birthdayQueryDays(now)
   const perkYear = year || y
-  const expires = birthdayPerkExpiresAt(now).toISOString()
-  const { data, error } = await db
+  const existing = await db
     .from('customer_birthday_perks')
-    .upsert(
-      {
+    .select(PERK_COLS)
+    .eq('customer_id', customer.id)
+    .eq('perk_year', perkYear)
+    .maybeSingle()
+  if (existing.error) throw new Error(existing.error.message)
+  if (existing.data) return attachBirthdayCode(db, existing.data)
+
+  const expires = birthdayPerkExpiresAt(now).toISOString()
+  for (let attempt = 0; attempt < 5; attempt += 1) {
+    const code = mintBirthdayCode()
+    const { data, error } = await db
+      .from('customer_birthday_perks')
+      .insert({
         customer_id: customer.id,
         perk_year: perkYear,
         status: 'available',
         expires_at: expires,
-      },
-      { onConflict: 'customer_id,perk_year', ignoreDuplicates: true },
-    )
-    .select('id, customer_id, perk_year, status, expires_at, greeting_sent_at, claimed_at')
-    .maybeSingle()
-  if (error && error.code !== '23505') {
-    const existing = await db
-      .from('customer_birthday_perks')
-      .select('id, customer_id, perk_year, status, expires_at, greeting_sent_at, claimed_at')
-      .eq('customer_id', customer.id)
-      .eq('perk_year', perkYear)
+        code,
+      })
+      .select(PERK_COLS)
       .maybeSingle()
-    if (existing.error) throw new Error(existing.error.message)
-    return existing.data
+    if (!error && data) return data
+    if (error?.code === '23505') {
+      const again = await db
+        .from('customer_birthday_perks')
+        .select(PERK_COLS)
+        .eq('customer_id', customer.id)
+        .eq('perk_year', perkYear)
+        .maybeSingle()
+      if (again.data) return attachBirthdayCode(db, again.data)
+      continue
+    }
+    if (error) throw new Error(error.message)
   }
-  if (data) return data
-  const { data: row, error: readErr } = await db
-    .from('customer_birthday_perks')
-    .select('id, customer_id, perk_year, status, expires_at, greeting_sent_at, claimed_at')
-    .eq('customer_id', customer.id)
-    .eq('perk_year', perkYear)
-    .maybeSingle()
-  if (readErr) throw new Error(readErr.message)
-  return row
+  throw new Error('Could not mint a birthday code.')
 }
 
 export async function sendBirthdayGreeting(db, customer, perk, templates = {}) {
@@ -100,24 +128,27 @@ export async function sendBirthdayGreeting(db, customer, perk, templates = {}) {
   if (tpl && tpl.enabled === false) return { skipped: true, reason: 'disabled' }
   if (perk?.greeting_sent_at) return { skipped: true, reason: 'already_sent' }
 
-  const vars = { name: customer.full_name || 'there' }
+  const code = String(perk?.code || '').trim()
+  const vars = { name: customer.full_name || 'there', code }
   const title = applyTemplateText(tpl?.title, vars, 'Happy birthday from Hakum')
-  const body = applyTemplateText(
+  let body = applyTemplateText(
     tpl?.body,
     vars,
-    `Happy birthday ${vars.name}! Enjoy a free service on us this year.`,
+    `Happy birthday ${vars.name}! Your code is ${code}. Show it at any Hakum branch. It lasts 7 days.`,
   )
-  const sms = applyTemplateText(
+  let sms = applyTemplateText(
     tpl?.sms_body,
     vars,
-    `Hakum Auto Care: Happy birthday ${vars.name}! Your free birthday service is ready.`,
+    `Hakum Auto Care: Happy birthday ${vars.name}! Your birthday code is ${code}. Show it at the branch. It lasts 7 days.`,
   )
+  if (code && !body.includes(code)) body = `${body} Code ${code}. Valid 7 days.`
+  if (code && !sms.includes(code)) sms = `${sms} Code ${code}. Valid 7 days.`
 
   const inbox = await writeInbox(db, customer.id, {
     kind: 'birthday_greeting',
     title,
     body,
-    url: '/account',
+    url: CUSTOMER_VOUCHERS_PATH,
     tag: `birthday-${customer.id}-${perk?.perk_year || new Date().getFullYear()}`,
   })
 
@@ -127,7 +158,7 @@ export async function sendBirthdayGreeting(db, customer, perk, templates = {}) {
       userIds: [customer.id],
       title,
       body,
-      url: '/account',
+      url: CUSTOMER_VOUCHERS_PATH,
       tag: `birthday-${customer.id}`,
       kind: 'birthday_greeting',
     })
@@ -157,6 +188,68 @@ export async function sendBirthdayGreeting(db, customer, perk, templates = {}) {
       .is('greeting_sent_at', null)
   }
 
+  return { ok: true, inbox, push, sms: smsResult }
+}
+
+/** Customer SMS + inbox when the bay starts their car on their birthday. The code stays off the staff card. */
+export async function sendBirthdayQueueStart(db, booking) {
+  if (!booking?.id || !booking.customer_id) return { skipped: true, reason: 'no_customer' }
+  const { data: customer, error } = await db
+    .from('customers')
+    .select('id, full_name, phone, date_of_birth')
+    .eq('id', booking.customer_id)
+    .maybeSingle()
+  if (error) throw new Error(error.message)
+  if (!customer || !isBirthdayToday(customer.date_of_birth)) return { skipped: true, reason: 'not_birthday' }
+
+  const tag = `birthday-start-${booking.id}`
+  const [{ data: priorSms }, { data: priorNote }] = await Promise.all([
+    db.from('sms_events').select('id').eq('event_type', 'birthday_queue_start').eq('booking_id', booking.id).limit(1).maybeSingle(),
+    db.from('user_notifications').select('id').eq('tag', tag).limit(1).maybeSingle(),
+  ])
+  if (priorSms?.id || priorNote?.id) return { skipped: true, reason: 'already_sent' }
+
+  const { year } = birthdayQueryDays()
+  const perk = await ensureBirthdayPerk(db, customer, { year })
+  const code = String(perk?.code || '').trim()
+  const name = customer.full_name || 'there'
+  const body = code
+    ? `Happy birthday ${name}! We started on your car. Show code ${code} at the counter. It lasts 7 days.`
+    : `Happy birthday ${name}! We started on your car.`
+  const inbox = await writeInbox(db, customer.id, {
+    kind: 'birthday_queue_start',
+    title: 'Happy birthday',
+    body,
+    url: CUSTOMER_VOUCHERS_PATH,
+    tag,
+  })
+  let push = null
+  try {
+    push = await sendWebPushToUsers({
+      userIds: [customer.id],
+      title: 'Happy birthday',
+      body,
+      url: CUSTOMER_VOUCHERS_PATH,
+      tag,
+      kind: 'birthday_queue_start',
+    })
+  } catch (err) {
+    push = { error: String(err.message || err) }
+  }
+  let smsResult = null
+  const phone = String(customer.phone || '').trim()
+  if (phone && (await isSmsNotificationsEnabled(db))) {
+    smsResult = await busybeeSendSms({ phone, message: `Hakum Auto Care: ${body}` })
+    await logSmsEvent(db, {
+      phone,
+      message: `Hakum Auto Care: ${body}`,
+      eventType: 'birthday_queue_start',
+      customerId: customer.id,
+      bookingId: booking.id,
+      status: smsResult.status,
+      providerResponse: smsResult.providerResponse,
+    })
+  }
   return { ok: true, inbox, push, sms: smsResult }
 }
 

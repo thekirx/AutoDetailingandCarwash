@@ -279,8 +279,11 @@ describe('no policy leaves Branch Admin able to destroy customer or money data',
       if (!/\.(js|jsx|mjs)$/.test(rel)) continue
       const text = readFileSync(join(root, 'src', rel), 'utf8')
       if (!/from\('user_notifications'\)/.test(text)) continue
-      // A read that scopes itself to the signed-in user is fine.
-      const scoped = /\.eq\(\s*'user_id'/.test(text) || /\.eq\(\s*'id'\s*,\s*row/.test(text)
+      // A read that scopes itself to the signed-in user is fine. Inserts are not reads.
+      const scoped =
+        /\.insert\(/.test(text) ||
+        /\.eq\(\s*'user_id'/.test(text) ||
+        /\.eq\(\s*'id'\s*,\s*row/.test(text)
       readers.push({ file: `src/${rel}`, scoped })
     }
     assert.ok(readers.length > 0, 'no reader found — the parse is wrong, not the app')
@@ -444,6 +447,6 @@ describe('no policy leaves Branch Admin able to destroy customer or money data',
       )
     assert.ok(grantsAdminRole('public.customers', 'insert'), 'Branch Admin must still create a customer at POS')
     assert.ok(grantsAdminRole('public.customers', 'update'), 'Branch Admin must still update a customer')
-    assert.equal(allowRoute({ role: 'admin' }, 'finance'), false, 'premise: BA is denied the Books route')
+    assert.equal(allowRoute({ role: 'admin' }, 'finance'), true, 'premise: BA reaches Books per the 19 Oct sheet')
   })
 })

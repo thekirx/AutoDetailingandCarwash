@@ -6,14 +6,14 @@
 
 ## Dock
 
-Detailing board · Attendance · Tasks
+Detailing Board · Attendance · Tasks · Advances
 
 ## Daily flow
 
 1. My detailing board  
 2. Update stage / proof  
 3. Clock attendance  
-4. Tasks
+4. Tasks · Advances (cash-advance requests you filed)
 
 ## Must never see
 

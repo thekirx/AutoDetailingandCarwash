@@ -57,6 +57,8 @@ export default function TaskModal({
   const [dueAt, setDueAt] = useState(card?.due_at ? isoToDatetimeLocalValue(card.due_at) : '')
   const [categoryId, setCategoryId] = useState(card?.category_id || '')
   const [proofRequired, setProofRequired] = useState(Boolean(card?.proof_required))
+  const [formId, setFormId] = useState(card?.form_id || '')
+  const [forms, setForms] = useState([])
   const [items, setItems] = useState([...(card?.plan_checklist_items || [])].sort(sortByPos))
   const [assignees, setAssignees] = useState([...(card?.plan_card_assignees || [])])
   const [pickedIds, setPickedIds] = useState(() => (card?.plan_card_assignees || []).map((a) => a.staff_id).filter(Boolean))
@@ -84,6 +86,7 @@ export default function TaskModal({
     setDueAt(card?.due_at ? isoToDatetimeLocalValue(card.due_at) : '')
     setCategoryId(card?.category_id || '')
     setProofRequired(Boolean(card?.proof_required))
+    setFormId(card?.form_id || '')
     setItems([...(card?.plan_checklist_items || [])].sort(sortByPos))
     setAssignees([...(card?.plan_card_assignees || [])])
     setPickedIds((card?.plan_card_assignees || []).map((a) => a.staff_id).filter(Boolean))
@@ -111,6 +114,22 @@ export default function TaskModal({
   }, [])
 
   useEffect(() => {
+    supabase
+      .from('ops_forms')
+      .select('id, name, kind')
+      .eq('is_active', true)
+      .neq('status', 'archived')
+      .order('name')
+      .then(({ data, error }) => {
+        if (error) {
+          if (canEdit) toast.error(error.message)
+          return
+        }
+        setForms(data || [])
+      })
+  }, [canEdit])
+
+  useEffect(() => {
     if (!canEdit) return
     supabase
       .from('staff_profiles')
@@ -135,6 +154,7 @@ export default function TaskModal({
         due_at: datetimeLocalToIso(dueAt),
         category_id: categoryId || null,
         proof_required: proofRequired,
+        form_id: formId || null,
         ...(moving ? { position: nextPlanCardPosition(lists, listId) } : {}),
         updated_at: new Date().toISOString(),
       })
@@ -174,6 +194,7 @@ export default function TaskModal({
           due_at: datetimeLocalToIso(dueAt),
           category_id: categoryId || null,
           proof_required: proofRequired,
+          form_id: formId || null,
           position: nextPlanCardPosition(lists, listId),
           created_by: user?.id || null,
         })
@@ -424,6 +445,29 @@ export default function TaskModal({
               </select>
             </label>
           </div>
+
+          <label className="mt-4 block text-xs font-medium text-muted-foreground">
+            Linked form
+            <select
+              className="mt-1 min-h-11 w-full rounded-xl border border-input bg-background px-3 py-2 text-sm"
+              value={formId}
+              onChange={(e) => setFormId(e.target.value)}
+              disabled={!canEdit}
+            >
+              <option value="">None</option>
+              {forms.map((form) => (
+                <option key={form.id} value={form.id}>{form.name}</option>
+              ))}
+            </select>
+          </label>
+          {formId ? (
+            <a
+              className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary underline"
+              href={`/operations/planning?tab=forms&results=${formId}`}
+            >
+              Open {forms.find((form) => form.id === formId)?.name || card?.ops_forms?.name || 'form'} results
+            </a>
+          ) : null}
 
           <label className="mt-4 block text-xs font-medium text-muted-foreground">
             Deadline (optional)

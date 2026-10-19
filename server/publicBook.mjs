@@ -2,9 +2,12 @@ import { createClient } from '@supabase/supabase-js'
 import { notifyBookingStatus } from './notifyBooking.mjs'
 import { bearer, json, readJsonBody, setCors, clientIp, rateLimit } from './httpUtil.mjs'
 import { resolveBookingCustomerId } from './publicBookCustomer.mjs'
+import { friendCodeAccountError, normalizeReferral, referralRequiredError } from '../src/lib/referralSource.js'
+import { listReferralStaff } from './referralStaff.mjs'
 import { plateValidationError } from '../src/lib/customerAuth.js'
 import { inferPhPricingSize } from '../src/lib/phVehicleSizes.js'
 import { isBookingBoardService } from '../src/lib/serviceKinds.js'
+import { isCustomerBookable } from '../src/lib/bookingLead.js'
 
 function admin() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
@@ -50,6 +53,11 @@ export async function handlePublicBookRequest(req, res) {
     if (plateError) return json(res, 400, { error: plateError })
     if (!vehicle_make || !vehicle_model) {
       return json(res, 400, { error: 'Vehicle brand and model are required.' })
+    }
+    if (!isCustomerBookable(scheduled_start)) {
+      return json(res, 400, {
+        error: 'Pick a day at least 2 days ahead. The branch checks availability before the first two days.',
+      })
     }
 
     const db = admin()
@@ -109,10 +117,27 @@ export async function handlePublicBookRequest(req, res) {
       }
     }
 
+    let staff = []
+    try {
+      staff = await listReferralStaff(db)
+    } catch {
+      staff = []
+    }
+    const referral = normalizeReferral({
+      source: body.referral_source,
+      name: body.referred_by_name,
+      staff,
+    })
+    const referralError = referralRequiredError(referral) || friendCodeAccountError(referral, customer_id)
+    if (referralError) return json(res, 400, { error: referralError })
+
     const insert = {
       customer_name,
       customer_phone,
       customer_id,
+      referral_source: referral.referral_source,
+      referred_by_name: referral.referred_by_name,
+      referred_by_staff_id: referral.referred_by_staff_id,
       vehicle_plate,
       vehicle_make,
       vehicle_model,

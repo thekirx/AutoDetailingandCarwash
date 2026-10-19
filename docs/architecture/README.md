@@ -27,6 +27,11 @@ node $archify visual-check .\docs\architecture\<name>.workflow.html --json
 | **Full shop-day lifecycle (all roles)** | `workflow` | [`shop-day-flops.workflow.html`](./shop-day-flops.workflow.html) · [spec](./shop-day-flops.workflow.json) |
 | **Daily Sheet money path** | `workflow` | [`daily-sheet.workflow.html`](./daily-sheet.workflow.html) · [spec](./daily-sheet.workflow.json) |
 | **Daily Sheet statuses** | `lifecycle` | [`daily-sheet.lifecycle.html`](./daily-sheet.lifecycle.html) · [spec](./daily-sheet.lifecycle.json) |
+| **Branch inventory** | `dataflow` | [`branch-inventory.dataflow.html`](./branch-inventory.dataflow.html) · [spec](./branch-inventory.dataflow.json) |
+| **Thumbs-down complaint** | `workflow` | [`thumb-down-complaint.workflow.html`](./thumb-down-complaint.workflow.html) · [spec](./thumb-down-complaint.workflow.json) |
+| **Cash advance code** | `workflow` | [`cash-advance-code.workflow.html`](./cash-advance-code.workflow.html) · [spec](./cash-advance-code.workflow.json) |
+| **Birthday code** | `workflow` | [`birthday-code.workflow.html`](./birthday-code.workflow.html) · [spec](./birthday-code.workflow.json) |
+| **Promo voucher** | `workflow` | [`promo-voucher.workflow.html`](./promo-voucher.workflow.html) · [spec](./promo-voucher.workflow.json) |
 | Money triangle detail | `workflow` / `dataflow` | create on demand → `money-path` |
 | Queue statuses | `lifecycle` | create on demand → `queue-status` |
 | Daily Sheet reopen | `sequence` | create on demand → `daily-sheet-reopen` |

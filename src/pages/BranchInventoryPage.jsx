@@ -8,9 +8,10 @@ import OpsGuideCard from '@/components/ops/OpsGuideCard'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import OpsTabList from '@/components/ops/OpsTabBar'
 import { BRANCH_STOCK_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
-import { applyOwnerSetQty, applyReconLine, applyRestockQty, reconUsageQty } from '@/lib/inventoryBranchStock'
+import { applyOwnerSetQty, applyReconLine, applyRestockQty, branchAssignmentRows, reconUsageQty } from '@/lib/inventoryBranchStock'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { supabase } from '@/lib/supabase'
+import { getAccessTokenFresh } from '@/lib/authToken'
 import { fetchBranches } from '@/queue/queueApi'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,16 +32,25 @@ function mostRecentSunday(isoDate = getLocalCalendarDate()) {
   return d.toISOString().slice(0, 10)
 }
 
-export default function BranchInventoryPage({ embedded = false } = {}) {
+const LOCKED_MSG = 'Inventory is locked. Ask Super Admin to unlock.'
+
+export default function BranchInventoryPage({
+  embedded = false,
+  defaultTab = 'restock',
+  crudLocked = false,
+  canMutate = true,
+} = {}) {
   const { profile, user } = useAuth()
   const canCatalog = canManageServices(profile)
   const scopeList = getBranchScopeList(profile)
-  const [tab, setTab] = useState('restock')
+  const [tab, setTab] = useState(defaultTab === 'recon' ? 'recon' : 'restock')
+  const [stockFilter, setStockFilter] = useState('assigned')
   const [branches, setBranches] = useState([])
   const [branch, setBranch] = useState('')
   const [products, setProducts] = useState([])
   const [stockByProduct, setStockByProduct] = useState({})
   const [restockQty, setRestockQty] = useState({})
+  const [pointPrice, setPointPrice] = useState({})
   const [ownerQty, setOwnerQty] = useState({})
   const [leftoverQty, setLeftoverQty] = useState({})
   const [recons, setRecons] = useState([])
@@ -58,7 +68,7 @@ export default function BranchInventoryPage({ embedded = false } = {}) {
       const [prodRes, stockRes, reconRes] = await Promise.all([
         supabase
           .from('products')
-          .select('id, name, sku, category, tags, usage_kind, is_active')
+          .select('id, name, sku, category, tags, usage_kind, is_active, points_price')
           .eq('is_active', true)
           .eq('is_archived', false)
           .order('name'),
@@ -74,6 +84,12 @@ export default function BranchInventoryPage({ embedded = false } = {}) {
       if (stockRes.error) throw stockRes.error
       if (reconRes.error) throw reconRes.error
       setProducts(prodRes.data || [])
+      const points = {}
+      for (const row of prodRes.data || []) {
+        if (String(row.usage_kind || '').toLowerCase() === 'internal') continue
+        points[row.id] = row.points_price == null ? '' : String(row.points_price)
+      }
+      setPointPrice(points)
       const map = {}
       for (const row of stockRes.data || []) map[row.product_id] = Number(row.qty) || 0
       setStockByProduct(map)
@@ -105,8 +121,97 @@ export default function BranchInventoryPage({ embedded = false } = {}) {
     () => products.filter((p) => String(p.usage_kind || '').toLowerCase() === 'internal'),
     [products],
   )
+  const visibleProducts = useMemo(
+    () => branchAssignmentRows(products, stockByProduct, stockFilter),
+    [products, stockByProduct, stockFilter],
+  )
+  const pointItems = useMemo(
+    () => branchAssignmentRows(products, stockByProduct, 'assigned'),
+    [products, stockByProduct],
+  )
+
+  async function saveAccessoryPoints(product) {
+    if (!assertCanMutate()) return
+    const points = Math.floor(Number(pointPrice[product.id]))
+    if (!Number.isFinite(points) || points < 0) {
+      toast.error('Enter a point price, or 0 to hide it from the shop.')
+      return
+    }
+    setSaving(true)
+    try {
+      const token = await getAccessTokenFresh()
+      const res = await fetch('/api/accessory-points', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ product_id: product.id, points_price: points }),
+      })
+      const body = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(body.error || 'Could not save points')
+      toast.success(`${product.name} is ${points === 0 ? 'hidden from the shop' : `${points} points`}`)
+      await load()
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function assertCanMutate() {
+    if (canMutate) return true
+    toast.error(LOCKED_MSG)
+    return false
+  }
+
+  async function assignToBranch(product) {
+    if (!branch || stockByProduct[product.id] != null) return
+    if (!assertCanMutate()) return
+    setSaving(true)
+    try {
+      const { error } = await supabase.from('product_branch_stock').insert({
+        product_id: product.id,
+        branch_slug: branch,
+        qty: 0,
+      })
+      if (error) throw error
+      toast.success(`${product.name} is on this branch`)
+      await load()
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function removeFromBranch(product) {
+    if (!canCatalog) return
+    if (!assertCanMutate()) return
+    const onHand = Number(stockByProduct[product.id]) || 0
+    if (onHand > 0) {
+      toast.error('Set on-hand to 0 before removing it from this branch.')
+      return
+    }
+    setSaving(true)
+    try {
+      const { error } = await supabase
+        .from('product_branch_stock')
+        .delete()
+        .eq('product_id', product.id)
+        .eq('branch_slug', branch)
+      if (error) throw error
+      toast.success(`${product.name} is off this branch`)
+      await load()
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   async function onRestock(product) {
+    if (!assertCanMutate()) return
     const add = Math.max(0, Math.floor(Number(restockQty[product.id]) || 0))
     if (add < 1) {
       toast.error('Enter a restock quantity')
@@ -152,6 +257,7 @@ export default function BranchInventoryPage({ embedded = false } = {}) {
 
   async function onOwnerSet(product) {
     if (!canCatalog) return
+    if (!assertCanMutate()) return
     const next = applyOwnerSetQty(ownerQty[product.id])
     setSaving(true)
     try {
@@ -191,6 +297,7 @@ export default function BranchInventoryPage({ embedded = false } = {}) {
   }
 
   async function onSubmitRecon() {
+    if (!assertCanMutate()) return
     if (!internalProducts.length) {
       toast.error('No internal-use products to reconcile')
       return
@@ -233,6 +340,7 @@ export default function BranchInventoryPage({ embedded = false } = {}) {
   }
 
   async function onApproveRecon(recon) {
+    if (!assertCanMutate()) return
     if (!canCatalog) return
     setSaving(true)
     try {
@@ -291,6 +399,7 @@ export default function BranchInventoryPage({ embedded = false } = {}) {
   }
 
   async function onRejectRecon(recon) {
+    if (!assertCanMutate()) return
     if (!canCatalog) return
     setSaving(true)
     try {
@@ -323,6 +432,12 @@ export default function BranchInventoryPage({ embedded = false } = {}) {
 
   const body = (
     <>
+      {crudLocked ? (
+        <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground" role="status">
+          Inventory is locked.{canMutate ? ' You can still edit as Super Admin.' : ' Ask Super Admin to unlock before restock or recon.'}
+        </p>
+      ) : null}
+
       {!embedded ? (
         <OpsGuideCard
           title="How branch stock works"
@@ -335,10 +450,10 @@ export default function BranchInventoryPage({ embedded = false } = {}) {
 
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex min-w-[12rem] flex-col gap-1">
-          <Label>Branch</Label>
+          <Label htmlFor="branch-stock-branch">Branch</Label>
           <Select value={branch} onValueChange={setBranch} disabled={!branchOptions.length}>
-            <SelectTrigger>
-              <SelectValue placeholder="Branch" />
+            <SelectTrigger id="branch-stock-branch">
+              <SelectValue placeholder="Choose a branch" />
             </SelectTrigger>
             <SelectContent>
               {branchOptions.map((b) => (
@@ -346,6 +461,20 @@ export default function BranchInventoryPage({ embedded = false } = {}) {
                   {b.name || b.slug}
                 </SelectItem>
               ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex min-w-[12rem] flex-col gap-1">
+          <Label htmlFor="branch-stock-filter">Show</Label>
+          <Select value={stockFilter} onValueChange={setStockFilter}>
+            <SelectTrigger id="branch-stock-filter">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="assigned">At this branch</SelectItem>
+              <SelectItem value="unassigned">Not at this branch</SelectItem>
+              <SelectItem value="accessories">Accessories</SelectItem>
+              <SelectItem value="sellables">Sellables</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -367,15 +496,23 @@ export default function BranchInventoryPage({ embedded = false } = {}) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {products.map((p) => (
+              {visibleProducts.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={canCatalog ? 6 : 5} className="text-muted-foreground">
+                    {stockFilter === 'unassigned'
+                      ? 'Every sellable is already on this branch.'
+                      : 'Nothing on this branch yet. Switch to Not at this branch and assign it.'}
+                  </TableCell>
+                </TableRow>
+              ) : visibleProducts.map((p) => (
                 <TableRow key={p.id}>
                   <TableCell>
                     <div className="font-medium">{p.name}</div>
                     {p.sku ? <div className="text-xs text-muted-foreground">{p.sku}</div> : null}
                   </TableCell>
-                  <TableCell className="capitalize">{p.usage_kind || 'resellable'}</TableCell>
+                  <TableCell className="capitalize">{p.category === 'accessories' ? 'Accessory' : (p.usage_kind || 'resellable')}</TableCell>
                   <TableCell className="text-right tabular-nums">
-                    {stockByProduct[p.id] == null ? '—' : stockByProduct[p.id]}
+                    {p.on_hand == null ? '—' : p.on_hand}
                   </TableCell>
                   <TableCell>
                     <Input
@@ -383,6 +520,7 @@ export default function BranchInventoryPage({ embedded = false } = {}) {
                       min="1"
                       className="w-24"
                       value={restockQty[p.id] ?? ''}
+                      disabled={!p.assigned}
                       onChange={(e) => setRestockQty((s) => ({ ...s, [p.id]: e.target.value }))}
                     />
                   </TableCell>
@@ -394,23 +532,61 @@ export default function BranchInventoryPage({ embedded = false } = {}) {
                           min="0"
                           className="w-24"
                           value={ownerQty[p.id] ?? ''}
+                          disabled={!p.assigned}
                           onChange={(e) => setOwnerQty((s) => ({ ...s, [p.id]: e.target.value }))}
                         />
-                        <Button type="button" variant="outline" size="sm" disabled={saving} onClick={() => onOwnerSet(p)}>
+                        <Button type="button" variant="outline" size="sm" disabled={saving || !p.assigned} onClick={() => onOwnerSet(p)}>
                           Set
                         </Button>
                       </div>
                     </TableCell>
                   )}
                   <TableCell>
-                    <Button type="button" size="sm" disabled={saving} onClick={() => onRestock(p)}>
-                      Restock
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                      {p.assigned ? (
+                        <Button type="button" size="sm" disabled={saving} onClick={() => onRestock(p)}>
+                          Restock
+                        </Button>
+                      ) : (
+                        <Button type="button" size="sm" disabled={saving || !branch} onClick={() => assignToBranch(p)}>
+                          Assign to branch
+                        </Button>
+                      )}
+                      {canCatalog && p.assigned ? (
+                        <Button type="button" size="sm" variant="ghost" disabled={saving} onClick={() => removeFromBranch(p)}>
+                          Remove
+                        </Button>
+                      ) : null}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
             </TableBody>
           </Table>
+          <div className="mt-6 flex flex-col gap-3">
+            <h2 className="text-base font-semibold text-foreground">Point prices</h2>
+            <p className="text-sm text-muted-foreground">Point price is the same at every branch. Assign the accessory or sellable to this branch first. 0 keeps it out of the voucher shop.</p>
+            {pointItems.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Nothing is assigned to this branch yet.</p>
+            ) : pointItems.map((product) => (
+              <div key={product.id} className="flex flex-wrap items-end gap-2">
+                <div className="flex min-w-40 flex-1 flex-col gap-1">
+                  <Label htmlFor={`points-${product.id}`}>{product.name}</Label>
+                  <Input
+                    id={`points-${product.id}`}
+                    type="number"
+                    min="0"
+                    className="w-32"
+                    value={pointPrice[product.id] ?? ''}
+                    onChange={(e) => setPointPrice((s) => ({ ...s, [product.id]: e.target.value }))}
+                  />
+                </div>
+                <Button type="button" size="sm" disabled={saving} onClick={() => saveAccessoryPoints(product)}>
+                  Save points
+                </Button>
+              </div>
+            ))}
+          </div>
         </TabsContent>
 
         <TabsContent value="recon" className="mt-0 outline-none space-y-6">

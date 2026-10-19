@@ -911,7 +911,7 @@ export function hasValidTeamLeadBranch(profile) {
 
 export function requiresTeamLeadBranchSetup(profile) {
   return (
-    (profile?.role === 'team_lead' || profile?.role === 'sales') &&
+    profile?.role === 'team_lead' &&
     !hasValidTeamLeadBranch(profile)
   )
 }

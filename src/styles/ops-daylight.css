@@ -214,6 +214,32 @@
 .daylight-clock-rules li::before { content: ''; position: absolute; left: 4px; top: 17px; width: 8px; height: 8px; border-radius: 50%; background: var(--blue, #052699); }
 .daylight-clock-pay { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 14px; color: var(--ink-2, #41486B); }
 .daylight-clock-pay svg { color: var(--blue, #052699); }
+.daylight-day-card { display: grid; gap: 10px; margin: 0; padding: 12px 0 0; border-top: 1px solid #EEEEE8; }
+.daylight-day-card > div { display: grid; gap: 2px; }
+.daylight-day-card dt { margin: 0; font-size: 11px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-2, #41486B); }
+.daylight-day-card dd { margin: 0; font-size: 14px; line-height: 1.4; color: var(--ink, #0B1233); }
+.daylight-bday-banner,
+.daylight-bday-nudge {
+  display: flex; align-items: center; gap: 8px; margin: 0; padding: 12px 14px;
+  border-radius: 12px; font-size: 14px; line-height: 1.4; color: var(--ink, #0B1233);
+}
+.daylight-bday-banner { background: #FBEFD9; border: 1px solid #E8D4A8; }
+.daylight-bday-nudge { background: #E9EDFC; border: 1px solid #C9D0F0; color: var(--ink-2, #41486B); }
+.daylight-bday-board {
+  display: grid; gap: 12px; padding: 16px 18px; background: #fff;
+  border: 1px solid #E1E1DA; border-radius: 12px; color: var(--ink, #0B1233);
+}
+.daylight-bday-board h2 {
+  display: flex; align-items: center; gap: 8px; margin: 0;
+  font-family: var(--font-ops), 'Gilmer', sans-serif; font-size: 16px; font-weight: 700;
+}
+.daylight-bday-board ul { display: grid; gap: 0; margin: 0; padding: 0; list-style: none; }
+.daylight-bday-board li {
+  display: flex; justify-content: space-between; gap: 12px; padding: 10px 0;
+  border-top: 1px solid #EEEEE8; font-size: 14px;
+}
+.daylight-bday-board li:first-child { border-top: 0; padding-top: 0; }
+.daylight-bday-board li.is-today { font-weight: 700; color: #8A5A12; }
 .daylight-clock-error { margin: 0; padding: 10px 12px; border-radius: 8px; background: #FBE4E4; color: #A3262C; font-size: 14px; line-height: 1.5; }
 .daylight-clock-actions { display: grid; gap: 10px; }
 .daylight-clock .daylight-button { flex: none; width: 100%; }

@@ -40,3 +40,37 @@ export function applyRestockQty(currentQty, addQty) {
 export function applyOwnerSetQty(nextQty) {
   return Math.max(0, Number(nextQty) || 0)
 }
+
+/** On-hand at one branch. Null means the sellable is not assigned there. */
+export function branchOnHand(stockRows, branchSlug) {
+  const row = (stockRows || []).find((item) => item?.branch_slug === branchSlug)
+  if (!row) return null
+  return Math.max(0, Number(row.qty) || 0)
+}
+
+/** A sellable is at a branch only when product_branch_stock has a row, including qty 0. */
+export function isAssignedToBranch(stockByProduct, productId) {
+  return stockByProduct != null && Object.prototype.hasOwnProperty.call(stockByProduct, productId)
+}
+
+/**
+ * Branch assignment list. Internal-use products stay on Sunday recon.
+ * filter: assigned | unassigned | accessories | sellables
+ */
+export function branchAssignmentRows(products = [], stockByProduct = {}, filter = 'assigned') {
+  const sellable = (products || []).filter((row) => productIsResellable(row) !== false)
+  return sellable
+    .filter((row) => {
+      const assigned = isAssignedToBranch(stockByProduct, row.id)
+      const accessory = String(row.category || '').toLowerCase() === 'accessories'
+      if (filter === 'unassigned') return !assigned
+      if (filter === 'accessories') return accessory
+      if (filter === 'sellables') return assigned && !accessory
+      return assigned
+    })
+    .map((row) => ({
+      ...row,
+      assigned: isAssignedToBranch(stockByProduct, row.id),
+      on_hand: isAssignedToBranch(stockByProduct, row.id) ? Number(stockByProduct[row.id]) || 0 : null,
+    }))
+}

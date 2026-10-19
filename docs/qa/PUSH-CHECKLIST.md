@@ -16,9 +16,11 @@ Branch rule: people assigned to a branch (Branch Admin, Team Lead, crew, detaile
 | TL assigns crew to a car | Only the assigned crew (just the new batch) | `/operations/my-tasks` |
 | Branch Admin submits the Daily Sheet | SA + ASA with `finance_view` (not the submitter) | `/operations/finance?tab=sheets&sheet=…` |
 | SA / ASA approves or returns the Daily Sheet | The Branch Admin who submitted it | `/operations/pos?tab=sheet&date=…` |
-| Cash advance requested | That branch's Branch Admin (releases it on the Daily Sheet; SA / ASA approve it with the sheet) | `/operations/pos?tab=sheet` |
+| Cash advance requested | That branch's Branch Admin. Cash does not leave until it is approved. | `/operations/pos?tab=sheet` |
+| Cash advance approved | That branch's Branch Admin, with the code to type on the Daily Sheet | `/operations/pos?tab=sheet` |
 | Public partnership inquiry / complaint | SA + ASA | `/operations/inquiries` |
-| Customer review | SA, ASA, Ops Lead + that branch's Branch Admin | `/operations/reviews` |
+| Customer thumbs up | SA, ASA, Ops Lead + that branch's Branch Admin | `/operations/planning?tab=forms` |
+| Customer thumbs down | Same people, via the Customer Complaints form | `/operations/planning?tab=forms` |
 | Staff complaint form | SA, ASA + that branch's Branch Admin (global only if no branch) | `/operations/planning?tab=forms` |
 | POS sale / expense | SA, ASA + that branch's Branch Admin (never the person who rang it) | `/operations/pos` (expenses tab for expenses) |
 | Planner card assigned | Each assignee (marketing, video, crew, …) | A page that person can open (Planning or My tasks) |

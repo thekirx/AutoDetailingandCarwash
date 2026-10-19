@@ -37,26 +37,28 @@ describe('RBAC Part 1 matrix', () => {
         '/operations/dashboard',
         '/operations/queue',
         '/operations/bookings',
-        '/operations/attendance',
-        '/operations/kpi',
-        '/operations/pos',
-        '/operations/inventory',
-        '/operations/crm',
-        '/operations/reviews',
-        '/operations/memberships',
-        '/operations/finance',
         '/operations/planning',
-        '/operations/history',
-        '/operations/notifications',
-        '/operations/people',
+        '/operations/pos',
+        '/operations/vouchers',
+        '/operations/inventory',
+        '/operations/finance',
+        '/operations/monthly-payroll',
+        '/operations/attendance',
+        '/operations/crm',
+        '/operations/memberships',
+        '/operations/inquiries',
         '/operations/branches',
+        '/operations/inventory?tab=bay',
+        '/operations/inventory?tab=detailing',
         '/operations/cars',
+        '/operations/people',
         '/operations/vehicle-transfer',
         '/operations/content',
+        '/operations/settings',
+        '/operations/history',
+        '/operations/notifications',
         '/operations/audit',
         '/operations/data-center',
-        '/operations/inquiries',
-        '/operations/settings',
       ],
     )
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/my-pay' || i.to === '/operations/payroll'))
@@ -115,7 +117,7 @@ describe('RBAC Part 1 matrix', () => {
     )
   })
 
-  it('Admin keeps planning capability; Command nav includes Floor + POS + ops tools (no Queue)', () => {
+  it('Admin keeps planning; Command nav is queue read, POS, finance, CRM (no Floor Board)', () => {
     const p = { role: ROLES.ADMIN, branch_slug: 'bacoor', branch_slugs: ['bacoor', 'imus'] }
     assert.equal(canViewPlanning(p), true)
     assert.equal(canEditPlanning(p), true)
@@ -125,13 +127,15 @@ describe('RBAC Part 1 matrix', () => {
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
       [
-        '/operations/dashboard',
+        '/operations/queue',
         '/operations/bookings',
-        '/operations/attendance',
-        '/operations/pos',
-        '/operations/inventory',
-        '/operations/reviews',
         '/operations/planning',
+        '/operations/pos',
+        '/operations/finance',
+        '/operations/inventory',
+        '/operations/attendance',
+        '/operations/crm',
+        '/operations/my-advances',
         '/operations/history',
         '/operations/audit',
         '/operations/vehicle-transfer',
@@ -142,7 +146,7 @@ describe('RBAC Part 1 matrix', () => {
 
   it('Planner nav: Branch Admin, staff Tasks, video editor calendar only', () => {
     const ba = { role: ROLES.ADMIN, branch_slug: 'bacoor', branch_slugs: ['bacoor'] }
-    assert.ok(getOperationsNav(ba).some((i) => i.to === '/operations/planning' && i.label === 'Planner Board'))
+    assert.ok(getOperationsNav(ba).some((i) => i.to === '/operations/planning' && i.label === 'Team Planner'))
     const staff = { role: ROLES.STAFF, branch_slug: 'bacoor' }
     assert.ok(getOperationsNav(staff).some((i) => i.to === '/operations/planning'))
     assert.ok(!getOperationsNav(staff).some((i) => String(i.to).includes('tab=forms')))
@@ -160,9 +164,10 @@ describe('RBAC Part 1 matrix', () => {
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
       [
-        '/operations/crm',
+        '/operations/queue',
         '/operations/bookings',
         '/operations/planning',
+        '/operations/crm',
         '/operations/notifications',
         '/operations/history',
       ],
@@ -170,7 +175,7 @@ describe('RBAC Part 1 matrix', () => {
   })
 
   it('homes and sales redirect to bookings', () => {
-    assert.equal(redirectForRole(ROLES.ASSISTANT_SUPER_ADMIN), '/operations/dashboard')
+    assert.equal(redirectForRole(ROLES.ASSISTANT_SUPER_ADMIN), '/operations/queue')
     assert.equal(redirectForRole(ROLES.MARKETING), '/operations/crm')
     assert.equal(redirectForRole(ROLES.STAFF), '/operations/attendance')
     assert.equal(redirectForRole(ROLES.SALES), '/operations/bookings')

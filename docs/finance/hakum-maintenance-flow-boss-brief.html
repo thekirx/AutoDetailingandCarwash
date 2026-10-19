@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Hakum Auto Care — Paint Maintenance Flow</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script type="module">
+    import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: "base",
+      themeVariables: {
+        primaryColor: "#f8fafc",
+        primaryTextColor: "#0f172a",
+        primaryBorderColor: "#94a3b8",
+        lineColor: "#64748b",
+        secondaryColor: "#ecfdf5",
+        tertiaryColor: "#fff7ed",
+        fontFamily: "ui-sans-serif, system-ui, sans-serif",
+      },
+      securityLevel: "loose",
+    });
+  </script>
+  <style>
+    @page { size: A4; margin: 12mm 10mm; }
+    @media print {
+      body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .page-break { break-before: page; }
+      .shadow-sm { box-shadow: none !important; }
+    }
+    .diagram { background: #fff; border: 1px solid #e2e8f0; border-radius: 0.75rem; padding: 0.75rem 0.5rem; overflow-x: auto; }
+    .step {
+      border: 1px solid #e2e8f0; border-radius: 0.75rem; background: #fff; padding: 0.85rem 1rem;
+    }
+    .pill { display: inline-flex; align-items: center; border-radius: 999px; padding: 0.15rem 0.65rem; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.02em; }
+    .pill-green { background: #dcfce7; color: #166534; }
+    .pill-amber { background: #fef3c7; color: #92400e; }
+    .pill-slate { background: #f1f5f9; color: #334155; }
+    .pill-rose { background: #ffe4e6; color: #9f1239; }
+    .formula {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.85rem; background: #f8fafc; border: 1px solid #e2e8f0;
+      border-radius: 0.5rem; padding: 0.55rem 0.75rem;
+    }
+    table.grid td, table.grid th { border-bottom: 1px solid #e2e8f0; padding: 0.45rem 0.5rem; font-size: 0.875rem; }
+    table.grid th { text-align: left; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; }
+  </style>
+</head>
+<body class="bg-stone-100 text-slate-900 font-sans antialiased">
+  <main class="max-w-4xl mx-auto px-5 py-10 space-y-8 print:max-w-none print:px-0 print:py-2">
+
+    <header class="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
+      <p class="text-xs font-bold tracking-[0.22em] uppercase text-slate-500">Hakum Auto Care · Operations brief</p>
+      <h1 class="mt-2 text-3xl font-semibold tracking-tight">Paint maintenance — full workflow</h1>
+      <p class="mt-3 max-w-2xl text-slate-600 leading-relaxed">
+        How a car enters the 6-month paint program after Ceramic or PPF, how reminders go out,
+        how staff check the car in when it returns, and how completing maintenance resets the clock.
+      </p>
+      <div class="mt-4 flex flex-wrap gap-2">
+        <span class="pill pill-green">One schedule per plate</span>
+        <span class="pill pill-amber">Default every 6 months</span>
+        <span class="pill pill-slate">Asia/Manila dates</span>
+        <span class="pill pill-slate">18 Oct 2026</span>
+      </div>
+    </header>
+
+    <!-- Big picture -->
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+      <h2 class="text-xl font-semibold">1. The loop at a glance</h2>
+      <div class="diagram">
+        <pre class="mermaid">
+flowchart TD
+  A["Ceramic Coating or PPF<br/>completed at the bay"] --> B["Enroll plate<br/>vehicle_maintenance_schedules"]
+  B --> C["next_due_at =<br/>complete date + 6 months"]
+  C --> D{"Within 30 days of due?"}
+  D -->|Yes · monthly| E["BusyBee SMS + optional web push<br/>Book paint maintenance"]
+  E --> F["Customer books / walks in"]
+  F --> G["Staff: Car arrived · Start intake<br/>Paint Maintenance booking"]
+  G --> H["Board: Vehicle intake → … → Done"]
+  H --> I["Complete = reset clock<br/>next_due_at += 6 months again"]
+  I --> C
+  D -->|Not yet| C
+        </pre>
+      </div>
+      <p class="text-sm text-slate-600">
+        Dedup key: <strong>normalized plate + program <code>paint_maintenance</code></strong>.
+        A plate never gets two active schedules. Ceramic/PPF enroll; Paint Maintenance visits reset the due date.
+      </p>
+    </section>
+
+    <!-- Enroll / reset -->
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+      <h2 class="text-xl font-semibold">2. Enroll vs reset</h2>
+      <div class="diagram">
+        <pre class="mermaid">
+flowchart LR
+  subgraph enroll ["Enroll jobs"]
+    C1["Ceramic Coating"]
+    C2["Paint Protection Film"]
+  end
+  subgraph reset ["Reset job"]
+    M1["Paint Maintenance"]
+  end
+  enroll --> S["Active schedule<br/>status: scheduled"]
+  reset --> S
+  S --> D["next_due_at = event date + N months<br/>N from notification settings · default 6"]
+        </pre>
+      </div>
+      <table class="grid w-full">
+        <thead><tr><th>Service</th><th>When booking is completed</th><th>What happens</th></tr></thead>
+        <tbody>
+          <tr>
+            <td>Ceramic Coating</td>
+            <td>Successful release / completed</td>
+            <td>Create or refresh schedule · set <code>coated_at</code> · due in N months</td>
+          </tr>
+          <tr>
+            <td>PPF</td>
+            <td>Successful release / completed</td>
+            <td>Same program — still one row per plate</td>
+          </tr>
+          <tr>
+            <td>Paint Maintenance</td>
+            <td>Completed return visit</td>
+            <td>Keep original coated date · move <code>next_due_at</code> forward · clear last notify stamp</td>
+          </tr>
+          <tr>
+            <td>Tint / other detailing</td>
+            <td>—</td>
+            <td>Does not touch this program</td>
+          </tr>
+        </tbody>
+      </table>
+      <div class="formula">Trigger: notifyBookingStatus(…, 'completed') → applyPaintMaintenanceOnComplete(…)</div>
+    </section>
+
+    <!-- Timeline visual -->
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4 page-break">
+      <h2 class="text-xl font-semibold">3. Timeline (example)</h2>
+      <p class="text-sm text-slate-600">Ceramic finished <strong>18 Apr 2026</strong> · default 6 months · due <strong>18 Oct 2026</strong>.</p>
+      <div class="relative pl-2">
+        <div class="absolute left-4 top-2 bottom-2 w-0.5 bg-slate-200"></div>
+        <div class="space-y-3">
+          <div class="step relative ml-6">
+            <span class="absolute -left-8 top-3 h-3 w-3 rounded-full bg-emerald-500 ring-4 ring-white"></span>
+            <p class="text-xs font-bold uppercase tracking-wide text-emerald-700">Day 0 · Enroll</p>
+            <p class="text-sm">Ceramic completed. Schedule created. Status <code>scheduled</code>. Next due = +6 months.</p>
+          </div>
+          <div class="step relative ml-6">
+            <span class="absolute -left-8 top-3 h-3 w-3 rounded-full bg-slate-300 ring-4 ring-white"></span>
+            <p class="text-xs font-bold uppercase tracking-wide text-slate-500">Months 1–5</p>
+            <p class="text-sm">Quiet. Cron looks ahead 30 days only. Ops list shows overdue / due-soon / not-yet-reminded plates.</p>
+          </div>
+          <div class="step relative ml-6">
+            <span class="absolute -left-8 top-3 h-3 w-3 rounded-full bg-amber-500 ring-4 ring-white"></span>
+            <p class="text-xs font-bold uppercase tracking-wide text-amber-700">Day −30 · First auto reminder</p>
+            <p class="text-sm">Within 30 days of due → SMS (and push if customer account). Stamp <code>last_notified_at</code>. Then every <strong>30 days</strong> until the visit.</p>
+          </div>
+          <div class="step relative ml-6">
+            <span class="absolute -left-8 top-3 h-3 w-3 rounded-full bg-sky-500 ring-4 ring-white"></span>
+            <p class="text-xs font-bold uppercase tracking-wide text-sky-700">Due window · Ops</p>
+            <p class="text-sm">Bookings → Maintenance: Notify client / Remind again. Or customer books from the app link.</p>
+          </div>
+          <div class="step relative ml-6">
+            <span class="absolute -left-8 top-3 h-3 w-3 rounded-full bg-violet-500 ring-4 ring-white"></span>
+            <p class="text-xs font-bold uppercase tracking-wide text-violet-700">Arrival · Start intake</p>
+            <p class="text-sm">TL / BA / OL / ASA / SA: creates Paint Maintenance booking at <strong>Vehicle intake</strong>, texts waiting status. Duplicate open booking → blocked (409).</p>
+          </div>
+          <div class="step relative ml-6">
+            <span class="absolute -left-8 top-3 h-3 w-3 rounded-full bg-emerald-600 ring-4 ring-white"></span>
+            <p class="text-xs font-bold uppercase tracking-wide text-emerald-800">Complete · Reset</p>
+            <p class="text-sm">Clock resets. New next due = complete date + 6 months. Loop continues.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Reminder rules -->
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+      <h2 class="text-xl font-semibold">4. Reminder rules (cron + manual)</h2>
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div class="formula">Lead: next_due_at within 30 Manila days</div>
+        <div class="formula">Repeat: ≥ 30 days since last_notified_at</div>
+        <div class="formula">Statuses eligible: scheduled · notified</div>
+        <div class="formula">Channels: SMS and/or web push (settings)</div>
+      </div>
+      <div class="diagram">
+        <pre class="mermaid">
+flowchart TD
+  CRON["Vercel cron · 08:15 Manila<br/>/api/notifications?operation=maintenance-reminders"] --> GATE["Cron secret or SA/ASA"]
+  GATE --> Q["Load schedules due within 30 days"]
+  Q --> F{"maintenanceReminderDue?"}
+  F -->|No| SKIP["Skip"]
+  F -->|Yes| SEND["sendPaintMaintenanceReminder"]
+  SEND --> SMS["BusyBee outbound SMS<br/>customer phone"]
+  SEND --> PUSH["Web push → /account/book?service=paint-maintenance"]
+  SEND --> MARK["Stamp last_notified_at"]
+  MANUAL["Ops: Notify client / Remind again<br/>POST /api/maintenance-schedules"] --> SEND
+        </pre>
+      </div>
+      <p class="text-sm text-amber-900 bg-amber-50 border border-amber-100 rounded-lg px-3 py-2">
+        SMS policy: outbound customer reminders only · no inbound replies · no owner daily SMS.
+      </p>
+    </section>
+
+    <!-- Ops UI -->
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4 page-break">
+      <h2 class="text-xl font-semibold">5. Where staff work it</h2>
+      <div class="diagram">
+        <pre class="mermaid">
+flowchart TB
+  PAGE["/operations/bookings"] --> TABS["Board · Calendar · Maintenance"]
+  TABS --> LIST["Maintenance list<br/>overdue → due soon → upcoming"]
+  LIST --> ACT1["Notify client / Remind again"]
+  LIST --> ACT2["Set / bump next due date"]
+  LIST --> ACT3["Car arrived · Start intake"]
+  ACT3 --> BOARD["Paint Maintenance card<br/>status = waiting · Vehicle intake"]
+  BOARD --> PIPE["TL advances stages<br/>BA owns reminders for branch"]
+  PIPE --> DONE["Completed → reset schedule"]
+        </pre>
+      </div>
+      <table class="grid w-full">
+        <thead><tr><th>Role</th><th>May do</th></tr></thead>
+        <tbody>
+          <tr><td>Team Lead</td><td>See list · advance board · start intake at own branch</td></tr>
+          <tr><td>Branch Admin</td><td>Reminders for own branch · start intake · board mostly read-only</td></tr>
+          <tr><td>Sales / Marketing / Ops Lead</td><td>See schedules (Sales books remotely via New booking)</td></tr>
+          <tr><td>SA / ASA</td><td>All branches · set type intervals (6–24 months) · arrive anywhere</td></tr>
+        </tbody>
+      </table>
+      <h3 class="font-semibold text-slate-800 pt-2">Urgency on the list</h3>
+      <div class="flex flex-wrap gap-2 text-sm">
+        <span class="pill pill-rose">Overdue — past next_due_at</span>
+        <span class="pill pill-amber">Due soon — within 14 days</span>
+        <span class="pill pill-slate">Upcoming — further out</span>
+      </div>
+      <p class="text-sm text-slate-600">Search still finds plates that were already reminded. Open schedules follow the plate on vehicle transfer.</p>
+    </section>
+
+    <!-- Arrival detail -->
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+      <h2 class="text-xl font-semibold">6. Arrival → booking (data flow)</h2>
+      <div class="diagram">
+        <pre class="mermaid">
+sequenceDiagram
+  participant Staff as TL / BA / OL / SA
+  participant API as maintenance-schedules
+  participant DB as Supabase
+  participant SMS as BusyBee
+  Staff->>API: POST arrive + schedule id
+  API->>DB: Check no open Paint Maintenance for plate
+  API->>DB: Load vehicle / customer / last booking
+  API->>DB: Insert booking status=waiting · priced by size
+  API->>SMS: notifyBookingStatus waiting
+  API-->>Staff: booking id · board shows car
+        </pre>
+      </div>
+      <ul class="text-sm list-disc pl-5 space-y-1 text-slate-700">
+        <li>Needs plate, phone, and make/model on file — otherwise use <strong>New booking</strong>.</li>
+        <li>Price from Paint Maintenance catalog × vehicle size.</li>
+        <li>Notes stamped: “Paint maintenance arrival”.</li>
+        <li>If that plate is already open on the board → error, show current stage.</li>
+      </ul>
+    </section>
+
+    <!-- Customer path -->
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+      <h2 class="text-xl font-semibold">7. Customer side</h2>
+      <div class="diagram">
+        <pre class="mermaid">
+flowchart LR
+  R["Reminder SMS / push"] --> L["/account/book?service=paint-maintenance"]
+  L --> W["Customer book wizard"]
+  W --> P["Pending booking"]
+  P --> S["Staff confirms · bay work"]
+  APP["Customer app · maintenance due"] --> L
+        </pre>
+      </div>
+      <p class="text-sm text-slate-600">
+        Portal shows schedules that need attention. Push deep-links straight into booking Paint Maintenance.
+        Guest path still works via public /book or phone booking with staff.
+      </p>
+    </section>
+
+    <!-- Checklist -->
+    <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm space-y-3">
+      <h2 class="text-xl font-semibold">8. Sanity checklist</h2>
+      <ul class="text-sm space-y-2">
+        <li class="flex gap-2"><span class="pill pill-green shrink-0">OK</span> One active schedule per plate — Ceramic then PPF does not double-enroll.</li>
+        <li class="flex gap-2"><span class="pill pill-green shrink-0">OK</span> Completing Paint Maintenance resets due date; completing Ceramic refreshes coated date.</li>
+        <li class="flex gap-2"><span class="pill pill-green shrink-0">OK</span> Auto reminders start ~30 days before due and repeat monthly until the visit.</li>
+        <li class="flex gap-2"><span class="pill pill-green shrink-0">OK</span> Arrival creates waiting intake booking and texts the customer.</li>
+        <li class="flex gap-2"><span class="pill pill-amber shrink-0">NOTE</span> Interval months are editable by SA/ASA (notification settings / Maintenance type row).</li>
+        <li class="flex gap-2"><span class="pill pill-amber shrink-0">NOTE</span> This is paint maintenance — not the detailing booking 7/3/1 day SMS reminders (those are a separate cron).</li>
+      </ul>
+    </section>
+
+    <footer class="text-xs text-slate-500 pb-6">
+      Hakum Auto Care · Maintenance flow brief · Code:
+      <code>paintMaintenance.js</code> ·
+      <code>paintMaintenanceSchedule.mjs</code> ·
+      <code>maintenanceReminders.mjs</code> ·
+      <code>maintenanceSchedulesApi.mjs</code> ·
+      Guide: <code>docs/guides/pages/bookings-maintenance.md</code>
+    </footer>
+  </main>
+</body>
+</html>

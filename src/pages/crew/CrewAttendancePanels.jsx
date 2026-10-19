@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
+  Cake,
   ChevronLeft,
   ChevronRight,
   Clock3,
@@ -74,6 +75,8 @@ import {
   toCompensationSettingsRow,
 } from '@/lib/compensation'
 import { describeClock, myWeek } from '@/lib/daylightClock'
+import { formatCurrentCarLine } from '@/lib/crewDayCard'
+import { staffNeedsBirthday } from '@/lib/staffBirthday'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { supabase } from '@/lib/supabase'
 import { attendanceRowsToCsv, downloadTextFile } from '@/lib/attendanceExport'
@@ -151,6 +154,8 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(ATTENDANCE_PAGE_SIZE)
   const [myPayMinor, setMyPayMinor] = useState(null)
+  const [dayCard, setDayCard] = useState(null)
+  const [staffBirthdays, setStaffBirthdays] = useState([])
   const [crewFloor, setCrewFloor] = useState(null)
   const [compRules, setCompRules] = useState(DEFAULT_COMPENSATION_RULES)
   const [clockError, setClockError] = useState('')
@@ -172,14 +177,19 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
     }
     setLoading(true)
     try {
-      const [matrixRes, floorRes, rulesRes, alertRows] = await Promise.all([
+      const [matrixRes, floorRes, rulesRes, alertRows, bdayRes] = await Promise.all([
         fetchAttendanceMatrix({ branchSlug, period }),
         showRegister ? fetchCrewFloorSnapshot(branchSlug).catch(() => null) : Promise.resolve(null),
         showPayPreview
           ? supabase.from('compensation_settings').select('*').eq('id', 1).maybeSingle()
           : Promise.resolve({ data: null }),
         seesLocationAlerts ? fetchLocationAlerts(branchSlug).catch(() => []) : Promise.resolve([]),
+        supabase.rpc('staff_birthdays_month', { p_branch: branchSlug }).then(({ data, error }) => {
+          if (error) throw error
+          return data
+        }).catch(() => null),
       ])
+      setStaffBirthdays(Array.isArray(bdayRes?.people) ? bdayRes.people : [])
       const { staff: staffRows, attendance: attRows, range } = matrixRes
       setStaff(staffRows)
       setAttendance(attRows)
@@ -192,19 +202,25 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
         setMyToday(attRows.find((r) => r.staff_id === profile.id && r.attendance_date === today) || null)
         const startIso = `${today}T00:00:00+08:00`
         const endIso = `${today}T23:59:59.999+08:00`
-        const sales = await collectPaged(async (from, to) => {
-          const { data, error } = await supabase
-            .from('sales')
-            .select('id, branch, total_minor, sale_line_items(line_total_minor, services(pay_category))')
-            .eq('status', 'paid')
-            .eq('branch', branchSlug)
-            .gte('occurred_at', startIso)
-            .lte('occurred_at', endIso)
-            .order('occurred_at', { ascending: false })
-            .range(from, to)
-          if (error) throw error
-          return data || []
-        }, 1000)
+        const [sales, daySnap] = await Promise.all([
+          collectPaged(async (from, to) => {
+            const { data, error } = await supabase
+              .from('sales')
+              .select('id, branch, total_minor, sale_line_items(line_total_minor, services(pay_category))')
+              .eq('status', 'paid')
+              .eq('branch', branchSlug)
+              .gte('occurred_at', startIso)
+              .lte('occurred_at', endIso)
+              .order('occurred_at', { ascending: false })
+              .range(from, to)
+            if (error) throw error
+            return data || []
+          }, 1000),
+          supabase.rpc('crew_day_card_snapshot', { p_branch: branchSlug }).then(({ data, error }) => {
+            if (error) throw error
+            return data
+          }),
+        ])
         const roster = staffRows.map((member) => {
           const rec = attRows.find((r) => r.staff_id === member.id && r.attendance_date === today)
           return {
@@ -222,8 +238,10 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
         })
         const mine = plan.rows.find((row) => row.id === profile.id || row.staff_id === profile.id)
         setMyPayMinor(mine ? mine.pay_minor : null)
+        setDayCard(daySnap?.ok ? daySnap : null)
       } else {
         setMyPayMinor(null)
+        setDayCard(null)
       }
     } catch (err) {
       toast.error(err.message)
@@ -377,8 +395,24 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
     }
   }
 
+  const todayStaffBirthdays = staffBirthdays.filter((row) => row.is_today)
+  const needsOwnBirthday = staffNeedsBirthday(profile)
+
   return (
     <div className="flex flex-col gap-5">
+      {todayStaffBirthdays.length ? (
+        <p className="daylight-bday-banner" role="status">
+          <Cake className="size-4" aria-hidden />
+          Today&apos;s birthday
+          {todayStaffBirthdays.length === 1 ? '' : 's'}:{' '}
+          {todayStaffBirthdays.map((row) => row.full_name).filter(Boolean).join(', ')}
+        </p>
+      ) : null}
+      {needsOwnBirthday && showClock ? (
+        <p className="daylight-bday-nudge" role="status">
+          Save your birthday in Settings (account). It locks after the first save.
+        </p>
+      ) : null}
       {showClock ? (
         <section className="daylight-clock" aria-labelledby="daylight-clock-title">
           <div className="daylight-clock-status">
@@ -403,6 +437,31 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
               <Wallet className="size-4" aria-hidden />
               Wash pool estimate today — {formatMoney(myPayMinor)} unpaid
             </p>
+          ) : null}
+          {seesOwnPayEstimate(profile) && dayCard ? (
+            <dl className="daylight-day-card">
+              <div>
+                <dt>Sheet salaries</dt>
+                <dd>
+                  {Number(dayCard.sheet_salaries_minor) > 0
+                    ? `${formatMoney(dayCard.sheet_salaries_minor)} typed${dayCard.sheet_status ? ` · ${dayCard.sheet_status}` : ''}`
+                    : dayCard.sheet_status
+                      ? `₱0 typed · ${dayCard.sheet_status}`
+                      : 'None typed yet'}
+                </dd>
+              </div>
+              <div>
+                <dt>Current car</dt>
+                <dd>{formatCurrentCarLine(dayCard.current_car)}</dd>
+              </div>
+              <div>
+                <dt>Failed QA</dt>
+                <dd>
+                  {Number(dayCard.failed_qa_count) || 0} visit
+                  {Number(dayCard.failed_qa_count) === 1 ? '' : 's'} today
+                </dd>
+              </div>
+            </dl>
           ) : null}
           {clockError ? (
             <p role="alert" className="daylight-clock-error">
@@ -443,6 +502,23 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
               <p className="daylight-week-key">Blue = on time · orange = late · red = absent</p>
             </div>
           ) : null}
+        </section>
+      ) : null}
+
+      {staffBirthdays.length ? (
+        <section className="daylight-bday-board" aria-labelledby="daylight-bday-title">
+          <h2 id="daylight-bday-title">
+            <Cake className="size-4" aria-hidden />
+            Birthdays this month
+          </h2>
+          <ul>
+            {staffBirthdays.map((row) => (
+              <li key={row.id} className={row.is_today ? 'is-today' : undefined}>
+                <span>{row.full_name}</span>
+                <span>{row.month_day}</span>
+              </li>
+            ))}
+          </ul>
         </section>
       ) : null}
 

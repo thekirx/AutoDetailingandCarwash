@@ -12,6 +12,7 @@ import { branchDistanceKm } from '@/lib/branchGeo'
 import { branchLabel, fetchPortal, greeting, initials, portalAction } from '@/lib/customerPortalClient'
 import { formatDistanceKm, loadCustomerPin, resolveCustomerQueueBranch } from '@/lib/customerLocation'
 import { buildThumbReview } from '@/lib/serviceReviews'
+import { COMPLAINT_CATEGORIES, thumbDownComplaintPayload } from '@/lib/opsForms'
 import { latestFinishedVisit, latestReviewableVisit, reviewDelayRemainingMs } from '@/lib/visitReviewDelay'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
 import NotificationBell from '@/components/NotificationBell'
@@ -127,6 +128,7 @@ export default function CustomerAccountPage() {
   const [ratingOpen, setRatingOpen] = useState(false)
   const [ratingVote, setRatingVote] = useState('')
   const [ratingComment, setRatingComment] = useState('')
+  const [ratingCategory, setRatingCategory] = useState('')
   const [ratingSaving, setRatingSaving] = useState(false)
   const [ratingDone, setRatingDone] = useState(false)
   const [reviewNow, setReviewNow] = useState(() => Date.now())
@@ -140,6 +142,7 @@ export default function CustomerAccountPage() {
   const loyalty = data?.loyalty
   const birthday = data?.birthday
   const dueMaintenance = data?.maintenanceDue || []
+  const maintenanceSchedules = data?.maintenanceSchedules || dueMaintenance
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -224,20 +227,39 @@ export default function CustomerAccountPage() {
   async function submitReview(vote) {
     const scores = buildThumbReview(vote, ratingComment)
     if (!scores || !reviewVisit?.id) return
+    if (vote === 'down') {
+      const complaint = thumbDownComplaintPayload({
+        name: authProfile.full_name,
+        phone: authProfile.phone,
+        branch: reviewVisit.branch,
+        category: ratingCategory,
+        description: ratingComment,
+        bookingId: reviewVisit.id,
+      })
+      if (!complaint) {
+        toast.error('Choose what went wrong and tell us what happened.')
+        return
+      }
+    }
     setRatingVote(vote)
     setRatingSaving(true)
     try {
-      const body = await portalAction('submit-review', { booking_id: reviewVisit.id, ...scores })
+      const body = await portalAction('submit-review', {
+        booking_id: reviewVisit.id,
+        ...scores,
+        category: vote === 'down' ? ratingCategory : undefined,
+        description: vote === 'down' ? ratingComment : undefined,
+      })
       setRatingDone(true)
       setRatingOpen(false)
       const link = body.google_review_url || reviewBranch?.google_review_url || ''
       if (vote === 'up' && link) {
         window.open(link, '_blank', 'noopener,noreferrer')
-        toast.success('Thanks — Google reviews is open so you can share it there.')
+        toast.success('Thanks. Google reviews is open so you can share it there.')
       } else if (vote === 'up') {
         toast.success('Thanks. This branch has no Google review link yet.')
       } else {
-        toast.success(body.already ? 'Already rated this visit' : 'Thanks — we will look into it.')
+        toast.success(body.already ? 'Already rated this visit' : 'Thanks. The branch has your complaint.')
       }
     } catch (err) {
       toast.error(err.message || 'Could not submit review')
@@ -380,22 +402,24 @@ export default function CustomerAccountPage() {
         </div>
       )}
 
-      {dueMaintenance.length ? (
+      {maintenanceSchedules.length ? (
         <div className="capp-card capp-span" role="status">
           <div className="capp-card-row">
             <span className="capp-row-icon" aria-hidden>
               <Wrench size={18} strokeWidth={1.75} />
             </span>
             <div className="min-w-0">
-              <strong>Paint maintenance due</strong>
+              <strong>{dueMaintenance.length ? 'Paint maintenance due' : 'Paint maintenance'}</strong>
               <p className="text-sm text-muted-foreground">
-                {dueMaintenance.map((row) => row.plate_number || 'Your car').join(', ')} should come in for maintenance. Book a paint maintenance visit.
+                {dueMaintenance.length
+                  ? `${dueMaintenance.map((row) => row.plate_number || 'Your car').join(', ')} should come in. Book the visit and the next reminder starts after it is done.`
+                  : `${maintenanceSchedules.map((row) => row.plate_number || 'Your car').join(', ')} is on a maintenance plan. Book when you are ready.`}
               </p>
             </div>
           </div>
           <Link
             className="capp-btn capp-btn-fill mt-3"
-            to={`${CUSTOMER_BOOK_PATH}?service=paint-maintenance&plate=${encodeURIComponent(dueMaintenance[0].plate_number || '')}`}
+            to={`${CUSTOMER_BOOK_PATH}?service=paint-maintenance&plate=${encodeURIComponent((dueMaintenance[0] || maintenanceSchedules[0]).plate_number || '')}`}
           >
             Book maintenance
           </Link>
@@ -603,17 +627,38 @@ export default function CustomerAccountPage() {
                   type="button"
                   className={`capp-thumb${ratingVote === 'down' ? ' is-on' : ''}`}
                   disabled={ratingSaving}
-                  onClick={() => submitReview('down')}
+                  onClick={() => setRatingVote('down')}
                 >
                   <ThumbsDown size={22} strokeWidth={1.75} aria-hidden />
                   Thumbs down
                 </button>
               </div>
-              <label className="capp-field">
-                <span>Note (optional)</span>
-                <textarea rows={2} value={ratingComment} onChange={(e) => setRatingComment(e.target.value)} placeholder="Tell us what stood out" />
-              </label>
-              <p className="capp-meta">A thumbs up opens this branch&apos;s Google review page.</p>
+              {ratingVote === 'down' ? (
+                <>
+                  <label className="capp-field">
+                    <span>What went wrong</span>
+                    <select value={ratingCategory} onChange={(e) => setRatingCategory(e.target.value)}>
+                      <option value="">Choose</option>
+                      {COMPLAINT_CATEGORIES.map((item) => (
+                        <option key={item} value={item}>{item}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="capp-field">
+                    <span>What happened</span>
+                    <textarea rows={3} value={ratingComment} onChange={(e) => setRatingComment(e.target.value)} placeholder="What should we fix?" />
+                  </label>
+                  <button type="button" className="capp-btn capp-btn-fill min-h-11" disabled={ratingSaving} onClick={() => submitReview('down')}>
+                    Send complaint
+                  </button>
+                </>
+              ) : (
+                <label className="capp-field">
+                  <span>Note (optional)</span>
+                  <textarea rows={2} value={ratingComment} onChange={(e) => setRatingComment(e.target.value)} placeholder="Tell us what stood out" />
+                </label>
+              )}
+              <p className="capp-meta">Thumbs up opens this branch&apos;s Google review page. Thumbs down files a complaint on the planner.</p>
             </DialogContent>
           </Dialog>
         </section>

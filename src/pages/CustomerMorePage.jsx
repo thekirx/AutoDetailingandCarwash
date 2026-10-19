@@ -17,6 +17,8 @@ import {
   Newspaper,
   Phone,
   Plus,
+  Share2,
+  Ticket,
   UserRound,
 } from 'lucide-react'
 import { useTheme } from 'next-themes'
@@ -32,7 +34,7 @@ import { isValidCustomerPlate, plateValidationError, PLATE_FIELD_HINT, safeVehic
 import { VEHICLE_ICON_PRESETS, normalizeVehicleIcon, vehicleIconGlyph } from '@/lib/ownerRevisionsPhase7'
 import { normalizePricingSize, PRICING_SIZES } from '@/lib/servicePricing'
 import { fetchPortal, initials, portalAction } from '@/lib/customerPortalClient'
-import { CUSTOMER_BOOK_PATH, CUSTOMER_LOYALTY_PATH, CUSTOMER_MORE_PATH } from '@/lib/customerAccountNav'
+import { CUSTOMER_BOOK_PATH, CUSTOMER_LOYALTY_PATH, CUSTOMER_MORE_PATH, CUSTOMER_REFERRAL_PATH, CUSTOMER_VOUCHERS_PATH } from '@/lib/customerAccountNav'
 import { notificationHref } from '@/lib/notificationUrl'
 import { usePageMeta } from '@/lib/pageMeta'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
@@ -159,6 +161,8 @@ export default function CustomerMorePage() {
         <SectionHead title="More" />
         <div className="capp-group">
           <Row icon={Gift} title="Rewards" chevron to={CUSTOMER_LOYALTY_PATH} />
+          <Row icon={Share2} title="Your referral code" chevron to={CUSTOMER_REFERRAL_PATH} />
+          <Row icon={Ticket} title="Vouchers" chevron to={CUSTOMER_VOUCHERS_PATH} />
           <Row icon={CalendarDays} title="Events" chevron to="/account/events" />
           <Row icon={Newspaper} title="Blog" chevron to="/account/blog" />
           <Row icon={LifeBuoy} title="Help and support" chevron to="/contact" />
@@ -338,19 +342,26 @@ function AccountSection({ profile, onUpdated }) {
         className="capp-card"
         onSubmit={(e) => {
           e.preventDefault()
+          if (profile?.date_of_birth) return
           run(() => portalAction('update-birthday', { date_of_birth: birthday.trim() }), birthday.trim() ? 'Birthday saved' : 'Birthday cleared')
         }}
       >
         <SectionHead title="Birthday" />
-        <p className="capp-meta">Greeting plus one free service at any Hakum branch.</p>
+        <p className="capp-meta">
+          {profile?.date_of_birth
+            ? 'Birthday is locked after the first save.'
+            : 'Greeting plus one free service at any Hakum branch. The date locks after you save it.'}
+        </p>
         <label className="capp-field">
           <span>Date of birth</span>
-          <input type="date" value={birthday} onChange={(e) => setBirthday(e.target.value)} />
+          <input type="date" value={birthday} onChange={(e) => setBirthday(e.target.value)} disabled={Boolean(profile?.date_of_birth)} />
         </label>
-        <button type="submit" className="capp-btn capp-btn-fill" disabled={busy}>
-          <Cake size={16} strokeWidth={1.75} aria-hidden />
-          Save birthday
-        </button>
+        {profile?.date_of_birth ? null : (
+          <button type="submit" className="capp-btn capp-btn-fill" disabled={busy}>
+            <Cake size={16} strokeWidth={1.75} aria-hidden />
+            Save birthday
+          </button>
+        )}
       </form>
 
       <form
@@ -749,7 +760,7 @@ function AlertsSection({ phone, smsOptIn, setSmsOptIn }) {
                 title={row.title}
                 sub={row.body}
                 end={formatWhen(row.created_at)}
-                to={notificationHref(row.url, '/account')}
+                to={notificationHref(row.url, '/account', row.kind)}
                 onClick={() => markRead(row)}
               />
             ))}

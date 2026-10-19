@@ -7,11 +7,11 @@ export const PEOPLE_DIRECTORY_TABS = Object.freeze([
   { id: 'office', label: 'Office', roles: ['operations_lead', 'assistant_super_admin', 'marketing', 'sales', 'video_editor', 'investor', 'BossMich'] },
 ])
 
-/** Roles that pick one or more shop branches when hiring / editing. */
-const BRANCH_PICKER_ROLES = new Set(['admin', 'team_lead', 'staff', 'marketing', 'sales', 'detailer', 'video_editor', 'investor'])
+/** Roles that pick a shop branch. Marketing and Customer Rep are all-branches (19 Oct sheet). */
+const BRANCH_PICKER_ROLES = new Set(['admin', 'team_lead', 'staff', 'detailer', 'video_editor', 'investor'])
 
 export function usesMultiBranch(role, grants) {
-  if (role === 'admin' || role === 'marketing' || role === 'investor') return true
+  if (role === 'admin' || role === 'investor') return true
   if (role === 'assistant_super_admin' && grants && grants.branches_all === false) return true
   return false
 }

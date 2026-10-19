@@ -12,6 +12,9 @@ import { packagesForService, bookedDetailingServiceId } from '@/lib/detailingPac
 import { pointsLabel } from '@/lib/loyaltyPoints'
 import { seedBookingFromVehicle } from '@/lib/uiDeadControls'
 import { plateValidationError, PLATE_FIELD_HINT } from '@/lib/customerAuth'
+import { bookableDayDates, earliestBookableDay } from '@/lib/bookingLead'
+import ReferralSourceFields, { useReferralStaff } from '@/components/bookings/ReferralSourceFields'
+import { friendCodeAccountError, referralRequiredError } from '@/lib/referralSource'
 import { usePageMeta } from '@/lib/pageMeta'
 import { CUSTOMER_BOOK_PATH, customerVisitPath } from '@/lib/customerAccountNav'
 import { CUSTOMER_QUEUE_PATH } from '@/lib/liveQueuePath'
@@ -46,13 +49,8 @@ function slotLabel(hhmm) {
   return d.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })
 }
 
-function nextDays(n = 7) {
-  const today = new Date()
-  return Array.from({ length: n }, (_, i) => {
-    const d = new Date(today)
-    d.setDate(today.getDate() + i)
-    return d
-  })
+function nextDays() {
+  return bookableDayDates(14)
 }
 
 const EMPTY_FORM = {
@@ -66,6 +64,9 @@ const EMPTY_FORM = {
   service_id: '',
   package_id: '',
   branch: '',
+  referral_source: '',
+  referred_by_name: '',
+  referred_by_staff_id: '',
 }
 
 /** /account/book — same /api/public-book backend as the public /book page, laid out as an app screen. */
@@ -81,7 +82,8 @@ export default function CustomerBookPage() {
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [form, setForm] = useState(EMPTY_FORM)
-  const [day, setDay] = useState(isoDay(new Date()))
+  const referralStaff = useReferralStaff()
+  const [day, setDay] = useState(() => earliestBookableDay())
   const [time, setTime] = useState('10:00')
   const [otherTime, setOtherTime] = useState(false)
   const [flowOpen, setFlowOpen] = useState(false)
@@ -197,7 +199,7 @@ export default function CustomerBookPage() {
         ? !plateValidationError(form.vehicle_plate)
         : stepId === 'when'
           ? Boolean(day && time)
-          : Boolean(form.customer_first_name && form.customer_phone)
+          : Boolean(form.customer_first_name && form.customer_phone) && !referralRequiredError(form) && !friendCodeAccountError(form, authProfile?.role === 'customer' ? user?.id : null)
 
   function openFlow(serviceId) {
     setForm((f) => ({ ...f, service_id: serviceId, package_id: '' }))
@@ -326,7 +328,11 @@ export default function CustomerBookPage() {
                 key={b.id}
                 icon={CalendarDays}
                 title={[b.service_name, b.vehicle_plate].filter(Boolean).join(' · ') || 'Booking'}
-                sub={b.visit?.label || b.status}
+                sub={
+                  b.reschedule_requested_at
+                    ? 'We’ll call you to set a new time'
+                    : b.visit?.label || b.status
+                }
                 chevron
                 to={customerVisitPath(b.id)}
               />
@@ -541,6 +547,9 @@ export default function CustomerBookPage() {
                     Change
                   </button>
                 </p>
+                <p className="capp-flow-sub">
+                  Today and tomorrow stay closed so the branch can check the bay. Your request is tentative until they call to confirm the final day.
+                </p>
                 <div className="capp-days" role="radiogroup" aria-label="Date">
                   {days.map((d) => {
                     const id = isoDay(d)
@@ -650,6 +659,15 @@ export default function CustomerBookPage() {
                     <span>Mobile</span>
                     <input required inputMode="tel" value={form.customer_phone} onChange={(e) => set('customer_phone', e.target.value)} />
                   </label>
+                  <ReferralSourceFields
+                    variant="capp"
+                    source={form.referral_source}
+                    name={form.referred_by_name}
+                    staffId={form.referred_by_staff_id}
+                    staff={referralStaff}
+                    accountError={friendCodeAccountError(form, authProfile?.role === 'customer' ? user?.id : null)}
+                    onChange={(patch) => setForm((current) => ({ ...current, ...patch }))}
+                  />
                 </div>
               </>
             ) : null}

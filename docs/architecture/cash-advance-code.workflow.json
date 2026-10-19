@@ -1,0 +1,38 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Hakum cash advance code",
+    "quality_profile": "showcase",
+    "output": "docs/architecture/cash-advance-code.workflow.html"
+  },
+  "lanes": [
+    { "id": "planner", "label": "Planner" },
+    { "id": "sheet", "label": "Daily Sheet" }
+  ],
+  "phases": [
+    { "id": "ask", "label": "Ask", "fromCol": 0, "toCol": 1 },
+    { "id": "code", "label": "Code", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
+    { "id": "cash", "label": "Cash", "fromCol": 4, "toCol": 5 }
+  ],
+  "mainPath": ["request", "approve", "code", "typed", "drawer", "finance"],
+  "nodes": [
+    { "id": "request", "lane": "planner", "col": 0, "type": "frontend", "label": "Cash advance", "sublabel": "employee asks" },
+    { "id": "approve", "lane": "planner", "col": 1, "type": "security", "label": "Approve", "sublabel": "SA or ASA" },
+    { "id": "code", "lane": "planner", "col": 2, "type": "database", "label": "approve_cash_advance", "sublabel": "CA + 4", "width": 168 },
+    { "id": "typed", "lane": "sheet", "col": 3, "type": "frontend", "label": "Given out", "sublabel": "BA types code" },
+    { "id": "drawer", "lane": "sheet", "col": 4, "type": "backend", "label": "Expected cash", "sublabel": "not profit" },
+    { "id": "finance", "lane": "sheet", "col": 5, "type": "frontend", "label": "Finance sheet", "sublabel": "approve the day" }
+  ],
+  "edges": [
+    { "from": "request", "to": "approve", "label": "new" },
+    { "from": "approve", "to": "code", "label": "mint" },
+    { "from": "code", "to": "typed", "label": "push code" },
+    { "from": "typed", "to": "drawer", "label": "amount matches" },
+    { "from": "drawer", "to": "finance", "label": "with the sheet" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "One code", "items": ["SA or ASA approves on Planner Forms", "Branch Admin types the code", "Paid back needs no code"] },
+    { "dot": "rose", "title": "Guards", "items": ["No code, no cash leaves", "Amount must match the request", "A used code is refused"] }
+  ]
+}

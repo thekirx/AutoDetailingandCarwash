@@ -1,9 +1,13 @@
+import { CUSTOMER_VOUCHERS_PATH } from './customerAccountNav.js'
+
 /**
  * Resolve inbox / push deep links for React Router.
  * Absolute same-origin URLs → path+search+hash. Bare "/" → fallback (customer home).
  * External origins are rejected so Link never escapes the app shell.
+ * A birthday greeting always opens the voucher page, including rows saved before that path.
  */
-export function notificationHref(url, fallback = '/account') {
+export function notificationHref(url, fallback = '/account', kind = '') {
+  if (kind === 'birthday_greeting') return CUSTOMER_VOUCHERS_PATH
   const fb = String(fallback || '/account').trim() || '/account'
   const raw = String(url || '').trim()
   if (!raw || raw === '/') return fb

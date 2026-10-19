@@ -12,6 +12,7 @@ import {
   plannerSwatchValue,
   reorderPlanRows,
 } from '@/lib/plannerBoard'
+import { PLAN_CATEGORY_ROLE_OPTIONS, normalizeVisibleRoles } from '@/lib/planCategoryRoles'
 import { toast } from 'sonner'
 
 function Section({ eyebrow, title, hint, children }) {
@@ -63,9 +64,11 @@ export default function PlanningConfigurePanel({
   const [editListTitle, setEditListTitle] = useState('')
   const [catName, setCatName] = useState('')
   const [catColor, setCatColor] = useState('var(--color-brand-primary)')
+  const [catRoles, setCatRoles] = useState([])
   const [editingCatId, setEditingCatId] = useState(null)
   const [editCatName, setEditCatName] = useState('')
   const [editCatColor, setEditCatColor] = useState('var(--color-brand-primary)')
+  const [editCatRoles, setEditCatRoles] = useState([])
   const [tmplName, setTmplName] = useState('')
   const [tmplItems, setTmplItems] = useState('')
   const [editingTmplId, setEditingTmplId] = useState(null)
@@ -190,11 +193,13 @@ export default function PlanningConfigurePanel({
       name: catName.trim(),
       color: catColor,
       position: nextPlanListPosition(categories),
+      visible_roles: normalizeVisibleRoles(catRoles),
     })
     if (error) return toast.error(error.message)
     toast.success('Category added')
     setCatName('')
     setCatColor('var(--color-brand-primary)')
+    setCatRoles([])
     onChanged()
   }
 
@@ -203,12 +208,36 @@ export default function PlanningConfigurePanel({
     if (!editingCatId || !editCatName.trim()) return
     const { error } = await supabase
       .from('plan_categories')
-      .update({ name: editCatName.trim(), color: editCatColor })
+      .update({
+        name: editCatName.trim(),
+        color: editCatColor,
+        visible_roles: normalizeVisibleRoles(editCatRoles),
+      })
       .eq('id', editingCatId)
     if (error) return toast.error(error.message)
     toast.success('Category saved')
     setEditingCatId(null)
     onChanged()
+  }
+
+  function RoleChecks({ value, onChange }) {
+    return (
+      <div className="grid gap-1 sm:grid-cols-2">
+        <p className="sm:col-span-2 text-xs text-muted-foreground">Leave all unchecked so every role sees this category.</p>
+        {PLAN_CATEGORY_ROLE_OPTIONS.map((opt) => (
+          <label key={opt.id} className="flex min-h-11 items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={value.includes(opt.id)}
+              onChange={() =>
+                onChange(value.includes(opt.id) ? value.filter((x) => x !== opt.id) : [...value, opt.id])
+              }
+            />
+            {opt.label}
+          </label>
+        ))}
+      </div>
+    )
   }
 
   async function removeCategory(id) {
@@ -341,10 +370,11 @@ export default function PlanningConfigurePanel({
         </ul>
       </Section>
 
-      <Section eyebrow="Shop-wide" title="Categories" hint="Shared across every board. Deleting a category leaves tasks uncategorized.">
+      <Section eyebrow="Shop-wide" title="Categories" hint="Shared across every board. Pick which roles see each category. Deleting leaves tasks uncategorized.">
         <form onSubmit={addCategory} className="grid gap-2">
           <Input required placeholder="Category name" value={catName} onChange={(e) => setCatName(e.target.value)} />
           <Swatches value={catColor} onChange={setCatColor} />
+          <RoleChecks value={catRoles} onChange={setCatRoles} />
           <Button type="submit" className="min-h-11 w-fit">Add category</Button>
         </form>
         <ul className="mt-3 space-y-2">
@@ -354,6 +384,7 @@ export default function PlanningConfigurePanel({
                 <form onSubmit={saveCategory} className="grid gap-2">
                   <Input required value={editCatName} onChange={(e) => setEditCatName(e.target.value)} />
                   <Swatches value={editCatColor} onChange={setEditCatColor} />
+                  <RoleChecks value={editCatRoles} onChange={setEditCatRoles} />
                   <div className="flex flex-wrap gap-2">
                     <Button type="submit" size="sm" className="min-h-11">Save</Button>
                     <Button type="button" size="sm" variant="ghost" className="min-h-11" onClick={() => setEditingCatId(null)}>Cancel</Button>
@@ -361,12 +392,32 @@ export default function PlanningConfigurePanel({
                 </form>
               ) : (
                 <div className="flex min-h-11 flex-wrap items-center justify-between gap-2">
-                  <span className="flex items-center gap-2 text-sm">
-                    <i className="size-3 rounded-full" style={{ background: c.color }} />
-                    {c.name}
+                  <span className="flex min-w-0 flex-col gap-0.5 text-sm">
+                    <span className="flex items-center gap-2">
+                      <i className="size-3 rounded-full" style={{ background: c.color }} />
+                      {c.name}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      {(c.visible_roles || []).length
+                        ? `Roles: ${(c.visible_roles || []).join(', ')}`
+                        : 'Visible to every role'}
+                    </span>
                   </span>
                   <div className="flex gap-1">
-                    <Button type="button" size="sm" variant="ghost" className="min-h-11" onClick={() => { setEditingCatId(c.id); setEditCatName(c.name); setEditCatColor(c.color || 'var(--color-brand-primary)') }}>Edit</Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="min-h-11"
+                      onClick={() => {
+                        setEditingCatId(c.id)
+                        setEditCatName(c.name)
+                        setEditCatColor(c.color || 'var(--color-brand-primary)')
+                        setEditCatRoles([...(c.visible_roles || [])])
+                      }}
+                    >
+                      Edit
+                    </Button>
                     <Button type="button" size="sm" variant="ghost" className="min-h-11 text-destructive" onClick={() => removeCategory(c.id)}>Delete</Button>
                   </div>
                 </div>

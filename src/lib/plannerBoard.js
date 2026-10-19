@@ -19,7 +19,8 @@ export const PLAN_BOARD_DETAIL_SELECT = `
   plan_lists (
     id, title, position,
     plan_cards (
-      id, title, description, labels, due_at, position, created_at, updated_at, created_by, category_id, proof_required,
+      id, title, description, labels, due_at, position, created_at, updated_at, created_by, category_id, proof_required, form_id,
+      ops_forms ( id, name ),
       plan_checklist_items ( id, title, done, position ),
       plan_card_assignees (
         id, staff_id, status, proof_url, proof_note, proof_submitted_at, reviewed_at, staff_profiles ( id, full_name )
@@ -52,8 +53,23 @@ export function isPlannerBoardVisible(board) {
   return true
 }
 
-export function visiblePlannerBoards(boards) {
-  return (Array.isArray(boards) ? boards : []).filter(isPlannerBoardVisible)
+/** 19 Oct matrix: TL, Branch Admin, Marketing, Customer Rep have no Cash advance board. */
+const CASH_ADVANCE_BOARD_HIDDEN_ROLES = new Set(['team_lead', 'admin', 'marketing', 'sales'])
+
+export function isCashAdvancePlannerBoard(board) {
+  return /cash\s*advance/i.test(String(board?.name || ''))
+}
+
+export function hidesCashAdvancePlannerBoard(profile) {
+  return CASH_ADVANCE_BOARD_HIDDEN_ROLES.has(profile?.role)
+}
+
+export function visiblePlannerBoards(boards, profile) {
+  return (Array.isArray(boards) ? boards : []).filter((board) => {
+    if (!isPlannerBoardVisible(board)) return false
+    if (hidesCashAdvancePlannerBoard(profile) && isCashAdvancePlannerBoard(board)) return false
+    return true
+  })
 }
 
 export function pickPlannerBoard(boards, wantedIdOrName) {
@@ -108,6 +124,10 @@ export function plannerSwatchValue(hex) {
 export function plannerTabsForAccess({ canEdit, role } = {}) {
   if (role === 'video_editor') {
     return PLANNER_TABS.filter((t) => t.id === 'board' || t.id === 'calendar')
+  }
+  // Crew: Forms first (submit cash advance / equipment), then own assigned tasks only.
+  if (role === 'staff') {
+    return PLANNER_TABS.filter((t) => t.id === 'forms').concat(PLANNER_TABS.filter((t) => t.id === 'board'))
   }
   return PLANNER_TABS.filter((t) => (t.id !== 'review' && t.id !== 'configure') || canEdit)
 }

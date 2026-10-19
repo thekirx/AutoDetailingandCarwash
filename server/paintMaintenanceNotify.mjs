@@ -53,7 +53,7 @@ export async function sendPaintMaintenanceReminder({
   markNotified = true,
 }) {
   if (!row?.id) return { ok: false, error: 'missing_row' }
-  if (!force && row.status !== 'scheduled') {
+  if (!force && row.status !== 'scheduled' && row.status !== 'notified') {
     return { ok: false, error: 'not_scheduled', status: row.status }
   }
 
@@ -125,7 +125,7 @@ export async function sendPaintMaintenanceReminder({
   if (markNotified) {
     const { error: upErr } = await db
       .from('vehicle_maintenance_schedules')
-      .update({ status: 'notified', last_notified_at: new Date().toISOString() })
+      .update({ status: 'scheduled', last_notified_at: new Date().toISOString(), updated_at: new Date().toISOString() })
       .eq('id', row.id)
     if (upErr) result.markError = upErr.message
   }

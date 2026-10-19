@@ -23,7 +23,7 @@ describe('payroll frontend retired for the Daily Sheet', () => {
       assert.equal(existsSync(join(root, rel)), false, rel)
     }
     const app = read('src/App.jsx')
-    assert.match(app, /path="payroll" element=\{<Navigate to="\/operations\/finance\?tab=sheets" replace \/>\}/)
+    assert.match(app, /path="payroll" element=\{<Navigate to="\/operations\/monthly-payroll" replace \/>\}/)
     assert.match(app, /path="my-pay" element=\{<Navigate to="\/operations" replace \/>\}/)
     assert.match(app, /path="settings\/payroll" element=\{<Navigate to="\/operations\/settings\/daily-sheet" replace \/>\}/)
     assert.doesNotMatch(app, /gate\('payroll'|gate\('my-pay'/)

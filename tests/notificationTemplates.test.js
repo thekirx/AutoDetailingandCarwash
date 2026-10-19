@@ -1,11 +1,16 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
+  BIRTHDAY_CODE_REQUIRED,
+  birthdayCodeShapeError,
+  birthdayLockError,
   birthdayPerkExpiresAt,
   birthdayQueryDays,
   isBirthdayPerkActive,
   isBirthdayToday,
   isLeapYear,
+  mintBirthdayCode,
+  normalizeBirthdayCode,
   parseDateOnly,
 } from '../src/lib/birthdayPerk.js'
 import {
@@ -55,7 +60,7 @@ describe('system notification catalog', () => {
     const bday = merged.find((t) => t.key === 'birthday.greeting')
     assert.equal(bday.title, 'Happy bday')
     assert.equal(bday.enabled, false)
-    assert.match(bday.body, /free service/)
+    assert.match(bday.body, /\{code\}/)
     assert.equal(bday.sms_body, 'SMS hi {name}')
     assert.equal(merged.length, SYSTEM_TEMPLATES.length)
   })
@@ -121,18 +126,26 @@ describe('birthday calendar', () => {
     assert.equal(isBirthdayToday('2000-02-29', leap), false)
   })
 
-  it('expires a perk after 30 days', () => {
+  it('expires a perk after 7 days and mints a BD code', () => {
     const granted = new Date('2026-08-11T00:00:00Z')
     const expires = birthdayPerkExpiresAt(granted)
-    assert.ok(expires.getTime() > granted.getTime())
+    assert.equal(expires.toISOString().slice(0, 10), '2026-08-18')
     assert.equal(
-      isBirthdayPerkActive({ status: 'available', expires_at: expires.toISOString() }, new Date('2026-08-20T00:00:00Z')),
+      isBirthdayPerkActive({ status: 'available', expires_at: expires.toISOString() }, new Date('2026-08-17T00:00:00Z')),
       true,
     )
     assert.equal(
-      isBirthdayPerkActive({ status: 'available', expires_at: expires.toISOString() }, new Date('2026-09-20T00:00:00Z')),
+      isBirthdayPerkActive({ status: 'available', expires_at: expires.toISOString() }, new Date('2026-08-19T00:00:00Z')),
       false,
     )
     assert.equal(isBirthdayPerkActive({ status: 'claimed', expires_at: expires.toISOString() }, granted), false)
+    assert.match(mintBirthdayCode(() => 0), /^BD[A-Z2-9]{4}$/)
+    assert.equal(normalizeBirthdayCode(' bd-ab 23 '), 'BDAB23')
+    assert.equal(birthdayLockError(null, '1990-04-02'), null)
+    assert.equal(birthdayLockError('1990-04-02', '1990-04-02'), null)
+    assert.equal(birthdayLockError('1990-04-02', '1991-01-01'), 'Birthday is locked after the first save.')
+    assert.equal(birthdayLockError('1990-04-02', ''), 'Birthday is locked after the first save.')
+    assert.equal(birthdayCodeShapeError('bdab23'), null)
+    assert.equal(birthdayCodeShapeError(''), BIRTHDAY_CODE_REQUIRED)
   })
 })

@@ -24,6 +24,8 @@ describe('customer account bottom nav', () => {
     assert.equal(customerAccountTabId('/account/blog'), 'me')
     assert.equal(customerAccountTabId('/account/events'), 'me')
     assert.equal(customerAccountTabId('/account/loyalty'), 'rewards')
+    assert.equal(customerAccountTabId('/account/referral'), 'rewards')
+    assert.equal(customerAccountTabId('/account/vouchers'), 'rewards')
     assert.equal(customerAccountTabId('/account/more'), 'me')
     assert.equal(customerAccountTabId('/account/queue'), 'queue')
     assert.equal(customerAccountTabId('/queue/bacoor'), 'queue')
@@ -36,6 +38,8 @@ describe('customer account bottom nav', () => {
     }
     assert.equal(customerScreenDepth('/account/more', '?tab=garage'), 1)
     assert.equal(customerScreenDepth('/account/events', ''), 1)
+    assert.equal(customerScreenDepth('/account/referral', ''), 1)
+    assert.equal(customerScreenDepth('/account/vouchers', ''), 1)
     assert.equal(customerScreenDepth('/account/visit/b1', ''), 1)
     assert.equal(customerVisitPath('b 1'), '/account/visit/b%201')
   })

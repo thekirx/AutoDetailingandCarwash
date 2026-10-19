@@ -1,4 +1,4 @@
-/** Last-N guest notes + add form for queue / CRM. */
+/** Last-N guest notes + add form for queue / CRM. Shows author · date (C14). */
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { validateCustomerNote, CUSTOMER_NOTE_TYPES, isRegularGuest } from '@/lib/customerNotes'
+import { attachNoteAuthors, formatNoteAuthorDate } from '@/lib/customerNoteDisplay'
 import { normalizePlate } from '@/lib/customerAuth'
 import { toast } from 'sonner'
 
@@ -30,15 +31,25 @@ export default function CustomerNotesPanel({
     }
     let q = supabase
       .from('customer_notes')
-      .select('id, body, note_type, plate_normalized, created_at, customer_id')
+      .select('id, body, note_type, plate_normalized, created_at, created_by, customer_id')
       .is('archived_at', null)
       .order('created_at', { ascending: false })
       .limit(limit)
     if (customerId) q = q.eq('customer_id', customerId)
     else q = q.eq('plate_normalized', plateNorm)
     const { data, error: err } = await q
-    if (err) toast.error(err.message)
-    else setNotes(data || [])
+    if (err) {
+      toast.error(err.message)
+      return
+    }
+    const rows = data || []
+    const ids = [...new Set(rows.map((n) => n.created_by).filter(Boolean))]
+    let nameRows = []
+    if (ids.length) {
+      const { data: names } = await supabase.rpc('staff_display_names', { p_ids: ids })
+      nameRows = names || []
+    }
+    setNotes(attachNoteAuthors(rows, nameRows))
   }, [customerId, plate, limit])
 
   useEffect(() => {
@@ -89,6 +100,9 @@ export default function CustomerNotesPanel({
             <li key={n.id} className="rounded-lg border border-border px-3 py-2 text-sm">
               <p className="text-xs uppercase tracking-wide text-muted-foreground">{n.note_type}</p>
               <p>{n.body}</p>
+              <p className="mt-1 text-xs text-muted-foreground" data-testid="note-author-date">
+                {formatNoteAuthorDate({ authorName: n.author_name, createdAt: n.created_at })}
+              </p>
             </li>
           ))}
         </ul>

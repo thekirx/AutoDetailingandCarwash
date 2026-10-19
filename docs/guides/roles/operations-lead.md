@@ -6,12 +6,12 @@
 
 ## Nav
 
-Queue · KPI · POS · CRM (view only) · Reviews · Planner · History · Finance (view) · Audit
+Carwash Queue · Team Planner · Point of Sales · Financials (view) · Customers (view only) · My advances · History · Audit
 
 ## Daily flow
 
 1. Network queue across branches (branch filter on the board)  
-2. Crew / KPI  
+2. Floor Board holds wait, service time, and failed QA for roles that have it. This role has no Floor Board.  
 3. CRM lookups: Directory, Smart groups, Insights. Open **View** on a customer to read visits, purchases and **Notes** (Team Lead ticket notes from the New ticket form, plus guest notes)  
 4. Planner (Board, Calendar, Forms, Events, Review)  
 5. Finance view  

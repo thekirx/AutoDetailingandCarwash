@@ -47,7 +47,10 @@ describe('buildOpsEventCopy', () => {
 
   it('cash advance request shows pesos and sends the BA to the Daily Sheet', () => {
     const req = buildOpsEventCopy('cash_advance_submitted', { submissionId: 's1', employee: 'Ben', amountMinor: 150000, branchName: 'Bacoor' })
-    assert.equal(req.body, "Ben · ₱1,500 @ Bacoor. Release it on today's Daily Sheet.")
+    assert.equal(req.body, 'Ben · ₱1,500 @ Bacoor. Waiting for approval before any cash leaves the drawer.')
+    const ok = buildOpsEventCopy('cash_advance_approved', { submissionId: 's1', employee: 'Ben', amountMinor: 150000, branchName: 'Bacoor', code: 'CA7K2M' })
+    assert.equal(ok.body, 'Ben · ₱1,500 @ Bacoor. Code CA7K2M. Type it on the Daily Sheet to give the cash.')
+    assert.equal(ok.tag, 'ca-ok-s1')
     assert.equal(req.tag, 'ca-req-s1')
   })
 

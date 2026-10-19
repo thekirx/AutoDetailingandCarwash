@@ -6,7 +6,7 @@ The dedicated finder lives at `/tint-finder`, using the existing Hakum marketing
 
 1. Apply `supabase/migrations/20261005130000_tint_finder.sql` using the project’s normal migration process. It creates the catalog and private request inbox and seeds the handover’s exact catalog and rules.
 2. Deploy the branch with the existing public inquiry API environment variables. `SUPABASE_SERVICE_ROLE_KEY` stays server-side.
-3. Sign in as Super Admin and open **Settings → Tint Finder** (`/operations/settings/tint-finder`). Check prices, film specs, recommendation rules and supplier benefit claims.
+3. Sign in as Super Admin and open **Settings → Tint Finder** (`/operations/settings/tint-finder`). The page title is the first field. Blank keeps **Tint Finder** on the heading and on the `/tint-finder` browser tab. **View Tint Finder** opens that page. Then check prices, film specs, recommendation rules and supplier benefit claims.
 4. Confirm the exact films against the Skin Cancer Foundation recommended product list before checking any verified package or enabling the seal. The default is disabled; the results display the seal only when every recommended package is marked verified.
 5. Test a request against a staging database and confirm it appears in the inbox. A request is a sales lead, not a confirmed appointment or an automatic insertion into the booking calendar.
 

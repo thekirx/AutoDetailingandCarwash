@@ -3,8 +3,9 @@ import { useEffect, useRef, useState } from 'react'
 import { ArrowLeft, ArrowRight, Check, CheckCircle2, Info, RotateCcw, ShieldCheck } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { isApprovalPreview } from '../../lib/approvalPreview'
+import { usePageMeta } from '../../lib/pageMeta'
 import { useTintFinderConfig } from '../../lib/tintFinderData'
-import { TINT_MOST_POPULAR, TINT_QUESTIONS, TINT_VEHICLES, orderedBenefits, suggestTint, tintPackageName, tintPeso, tintShade, tintWarranty } from '../../lib/tintFinder'
+import { TINT_MOST_POPULAR, TINT_QUESTIONS, TINT_VEHICLES, orderedBenefits, suggestTint, tintFinderTitle, tintPackageName, tintPeso, tintShade, tintWarranty } from '../../lib/tintFinder'
 import { tintFilmPhoto } from '../../lib/tintFilmPhotos'
 import { usePublicBranches } from '../../lib/branches'
 import { submitPublicInquiry } from '../../lib/publicInquiryApi'
@@ -88,6 +89,15 @@ function TintBooking({option,config,answers,onCancel}) {
     </form>}
   </div>
 }
+function FinderPageTitle({ title }) {
+  usePageMeta({
+    title,
+    description: 'Answer four quick questions to find your recommended front and rear tint shades, compare three nano ceramic tint options, and request a booking with Hakum Auto Care.',
+    path: '/tint-finder',
+  })
+  return null
+}
+
 export default function TintFinder({ standalone = false }) {
   const {config,loading}=useTintFinderConfig()
   const [step,setStep]=useState(0)
@@ -106,13 +116,13 @@ export default function TintFinder({ standalone = false }) {
   const move=n=>{setSelected(n<4?answers[TINT_QUESTIONS[n].key] || null:null);setBooking(null);setStep(n)}
   const next=()=>{setAnswers(a=>({...a,[q.key]:selected}));setSelected(answers[TINT_QUESTIONS[step+1]?.key] || null);setStep(s=>s+1)}
   const Heading = standalone ? 'h1' : 'p'
-  return <><section className={`tf-section${standalone ? ' tf-standalone' : ''}`} id="tint-finder" aria-labelledby="tint-finder-title">
+  return <>{standalone ? <FinderPageTitle title={tintFinderTitle(config)} /> : null}<section className={`tf-section${standalone ? ' tf-standalone' : ''}`} id="tint-finder" aria-labelledby="tint-finder-title">
     {isApprovalPreview && <aside className="tf-approval-review" aria-label="Client design choices"><span>Client review · A / Original</span><nav><a href="/tint-designs/index.html">All designs</a>{['B','C','D','E'].map(id=><a key={id} href={`/tint-designs/option-${id.toLowerCase()}.html`}>{id}</a>)}</nav></aside>}
     <div className="bd-shell">
-      <div className="tf-section-head"><Heading className="bd-eyebrow" id="tint-finder-title">Tint Finder</Heading><p>Four quick questions. We’ll suggest a front and rear shade, in all three tints.</p></div>
+      <div className="tf-section-head"><Heading className="bd-eyebrow" id="tint-finder-title">{tintFinderTitle(config)}</Heading><p>Four quick questions. We’ll suggest a front and rear shade, in all three tints.</p></div>
       {step<4 ? <div className="tf-quiz">
         <div className="tf-question">
-          <div className="tf-progress-label"><span>Step {step+1} of 4</span><span>Tint Finder</span></div>
+          <div className="tf-progress-label"><span>Step {step+1} of 4</span><span>{tintFinderTitle(config)}</span></div>
           <div className="tf-progress" role="progressbar" aria-label="Questionnaire progress" aria-valuemin={0} aria-valuemax={4} aria-valuenow={step+1}>{TINT_QUESTIONS.map((v,i)=><span className={i<=step?'is-filled':''} key={v.key}/>)}</div>
           <h3 ref={title} tabIndex={-1}>{q.title}</h3><p>{q.hint}</p>
           <div className="tf-choices" role="group" aria-label={q.title}>{q.choices.map(c=><button type="button" key={c.id} aria-pressed={selected===c.id} className={selected===c.id?'is-selected':''} onClick={()=>setSelected(c.id)}><span><strong>{c.label}</strong>{c.description && <small>{c.description}</small>}</span><span className="tf-choice-mark" aria-hidden="true">{selected===c.id && <Check size={17}/>}</span></button>)}</div>

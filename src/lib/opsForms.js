@@ -1,7 +1,7 @@
 /** Fixed ops form templates — field helpers, slug, validation, share/QR */
 
 export const FORM_KINDS = [
-  { value: 'complaint', label: 'Complaint' },
+  { value: 'complaint', label: 'Feedback' },
   { value: 'event', label: 'Events RSVP' },
   { value: 'equipment_repair', label: 'Equipment repairs' },
   { value: 'cash_advance', label: 'Cash advance' },
@@ -315,6 +315,31 @@ export function extractComplaintBranch(payload = {}) {
 }
 
 // Back-compat exports used by older planningPart6 imports
+export const COMPLAINT_CATEGORIES = Object.freeze([
+  'Service quality',
+  'Wait time',
+  'Damage',
+  'Staff',
+  'Other',
+])
+
+/** Payload for the published customer-complaints form. Null when a required field is blank. */
+export function thumbDownComplaintPayload({ name, phone, branch, category, description, bookingId } = {}) {
+  const customer_name = String(name || '').trim()
+  const site = String(branch || '').trim()
+  const cat = COMPLAINT_CATEGORIES.includes(category) ? category : ''
+  const text = String(description || '').trim()
+  if (!customer_name || !site || !cat || !text) return null
+  return {
+    customer_name,
+    phone: String(phone || '').trim(),
+    branch: site,
+    category: cat,
+    description: text,
+    booking_id: bookingId ? String(bookingId) : null,
+  }
+}
+
 export function complaintFields() {
   return templateFields('complaint')
 }

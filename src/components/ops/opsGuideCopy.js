@@ -46,12 +46,12 @@ export const INVENTORY_WORKFLOW_STEPS = Object.freeze([
   {
     id: 'merch',
     title: 'Merch and sellables',
-    body: 'Coffee, shirts, and add-ons that POS sells under Merch. Family tags control which tile group they appear in.',
+    body: 'Coffee, shirts, and add-ons. Edit branch on-hand on each product row. Low stock blocks POS for that branch.',
   },
   {
-    id: 'stock',
-    title: 'Branch stock',
-    body: 'Restock arrivals and Sunday leftover recon per branch. Low stock blocks POS merch sales for that branch.',
+    id: 'recon',
+    title: 'Sunday recon',
+    body: 'Internal chemicals: count leftovers, submit for Super Admin approval. Restock sellables on the merch table.',
   },
 ])
 

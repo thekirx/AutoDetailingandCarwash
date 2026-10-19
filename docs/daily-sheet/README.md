@@ -52,10 +52,10 @@ Cash advances are **not** costs. They move cash in the drawer but never change p
 
 ### Cash advances, start to finish
 
-1. A crew member asks in **Planner → Forms → Cash advance**. Their branch's Branch Admin gets a push (*Cash advance request*) that opens **POS → Daily sheet**.
-2. On the sheet, the request shows as a one-tap chip (e.g. *+ Juan · ₱300.00*). Tapping it adds a *Given out* line; the cash leaves the drawer.
-3. Repayments are *Paid back* lines. Both change **Expected cash** only.
-4. SA / ASA approve the advance together with the sheet. Nothing is posted to the P&L for advances.
+1. A crew member asks in **Planner → Forms → Cash advance**. Their branch's Branch Admin gets a push that cash is waiting for approval. No cash leaves yet.
+2. Super Admin or Assistant Super Admin opens that form's Results and taps **Approve**. That mints a code (`CA` plus 4 characters) and pushes it to the Branch Admin. **Decline** archives the request and mints nothing.
+3. On the Daily Sheet, an approved request shows as a chip (name and amount, not the code). *Given out* needs that code typed in, and the amount must match the request. *Paid back* does not need a code. Both change **Expected cash** only.
+4. SA / ASA approve the sheet in Finance. The drawer's expected cash already includes the advance. Nothing is posted to the P&L for advances. A code already used on another sheet is refused.
 
 Suggested salaries use the rules in **Settings → Daily sheet rules** (`compensation_settings`):
 wash pool = car wash sales × pool %, split by attendance weight (Team Leads excluded);

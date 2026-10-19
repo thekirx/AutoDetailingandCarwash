@@ -1,6 +1,9 @@
-/** Single source of truth for Hakum RBAC. BossMich = Super Admin; assistant_super_admin = lesser elevated. */
+/**
+ * Single source of truth for Hakum RBAC.
+ * Named-account sheet (19 Oct 2026): docs/OPS/RBAC-MATRIX.md — do not drift.
+ * BossMich = Owner + Super Admin (identical full access). assistant_super_admin = General Admin (no Floor Board).
+ */
 
-import { isBookingBoardRow } from '../lib/serviceKinds.js'
 import { canTransferVehicle } from '../lib/vehicleTransfer.js'
 
 export const ROLES = {
@@ -207,8 +210,8 @@ export function getBranchScopeList(profile) {
   if (!profile) return []
   if (isSuperAdmin(profile)) return null
   if (isAssistantSuperAdmin(profile) && hasGrant(profile, 'branches_all')) return null
-  // Sales + Operations Lead — network-wide scope.
-  if (profile?.role === ROLES.SALES || isOperationsLead(profile)) return null
+  // Sales, Marketing, Operations Lead — network-wide scope (19 Oct matrix: All Branches).
+  if (profile?.role === ROLES.SALES || profile?.role === ROLES.MARKETING || isOperationsLead(profile)) return null
   const multi = Array.isArray(profile.branch_slugs) ? profile.branch_slugs.filter(Boolean) : []
   if (multi.length) return multi
   if (profile.branch_slug) return [profile.branch_slug]
@@ -420,17 +423,17 @@ export function canEditAttendanceRoles(profile) {
 export function canAccessAttendance(profile) {
   if (!profile) return false
   if (isSuperAdmin(profile) || isAssistantSuperAdmin(profile) || isOperationsLead(profile)) return true
-  return [ROLES.ADMIN, ROLES.TEAM_LEAD, ROLES.STAFF, ROLES.DETAILER, ROLES.MARKETING, ROLES.VIDEO_EDITOR].includes(
+  return [ROLES.ADMIN, ROLES.TEAM_LEAD, ROLES.STAFF, ROLES.DETAILER, ROLES.VIDEO_EDITOR].includes(
     profile.role,
   )
 }
 
-/** Personal geofenced time in / time out — not Operations Lead (salary without attendance). */
+/** Personal geofenced time in / time out — not Operations Lead (salary without attendance). Marketing has no HR. */
 export function canUseAttendanceClock(profile) {
   if (!profile) return false
   if (isOperationsLead(profile)) return false
   if (profile.attendance_enabled === false) return false
-  return [ROLES.ADMIN, ROLES.TEAM_LEAD, ROLES.STAFF, ROLES.DETAILER, ROLES.MARKETING, ROLES.VIDEO_EDITOR].includes(
+  return [ROLES.ADMIN, ROLES.TEAM_LEAD, ROLES.STAFF, ROLES.DETAILER, ROLES.VIDEO_EDITOR].includes(
     profile.role,
   )
 }
@@ -441,29 +444,43 @@ export function canAccessConsole() {
 }
 
 export function canEditBookings(profile) {
-  // Bookings service/price edits: Sales + Super Admin only (client rule).
-  return isSuperAdmin(profile) || profile?.role === ROLES.SALES
+  // Service/price edits: Super Admin only. Customer Rep (sales) is detailing read-only (RBAC matrix).
+  return isSuperAdmin(profile)
 }
 
 export function canCreateBookings(profile) {
-  return isSuperAdmin(profile) || profile?.role === ROLES.SALES || profile?.role === ROLES.TEAM_LEAD
+  return isSuperAdmin(profile) || profile?.role === ROLES.TEAM_LEAD
 }
 
-/** CRM view. Sales and Operations Lead read it; writes need canEditCrm. */
+/** Team Lead sets the final date. Branch Admin and Customer Rep are detailing read-only. */
+export function canConfirmBookingSchedule(profile) {
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'bookings')
+  return profile?.role === ROLES.TEAM_LEAD
+}
+
+/** CRM view. Matrix: TL + Marketing read; BA + Customer Rep (sales) create/modify; Investor none. */
 export function canAccessCrm(profile) {
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'crm')
-  return has(profile, [ROLES.MARKETING, ROLES.SALES, ROLES.OPERATIONS_LEAD])
+  return has(profile, [ROLES.MARKETING, ROLES.SALES, ROLES.OPERATIONS_LEAD, ROLES.TEAM_LEAD, ROLES.ADMIN])
 }
 
-/** CRM writes: edit customer, add vehicle, message, SMS, guest notes. Sales and Operations Lead are view only. */
+/** CRM writes: BA + Customer Rep (sales) + Marketing is read-only. Ops Lead and Team Lead are read-only. */
 export function canEditCrm(profile) {
-  return canAccessCrm(profile) && !has(profile, [ROLES.SALES, ROLES.OPERATIONS_LEAD])
+  return canAccessCrm(profile) && !has(profile, [ROLES.MARKETING, ROLES.OPERATIONS_LEAD, ROLES.TEAM_LEAD])
 }
 
-/** @deprecated SMS lives under CRM; kept for redirects */
+/** @deprecated CRM-edit alias. Campaign SMS uses canSendCustomerSms. */
 export function canAccessMarketing(profile) {
   return canEditCrm(profile)
+}
+
+/** Manual SMS campaigns. Customer Rep edits the customer file and does not send blasts. */
+export function canSendCustomerSms(profile) {
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'crm')
+  return isBranchAdmin(profile)
 }
 
 /** Bookings view: Sales, Super Admin/ASA, Marketing (readonly), Detailer, TL (ticket), Branch Admin (readonly). */
@@ -473,6 +490,7 @@ export function canAccessBookingBoard(profile) {
   if (profile?.role === ROLES.TEAM_LEAD) return true
   if (isBranchAdmin(profile)) return true
   if (isSuperAdmin(profile)) return true
+  if (isInvestor(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'bookings')
   return profile?.role === ROLES.SALES
 }
@@ -484,7 +502,6 @@ export function canAdvanceBookingStatus(profile) {
     ...ADMIN_ROLES,
     ROLES.TEAM_LEAD,
     ROLES.OPERATIONS_LEAD,
-    ROLES.SALES,
     ROLES.DETAILER,
   ])
 }
@@ -498,11 +515,11 @@ export function isFormBookingsOnlyRole(profile) {
   return profile?.role === ROLES.SALES
 }
 
-/** Sales may advance the full detailing board; Marketing is read-only. */
+/** Marketing and Customer Rep (sales) are detailing read-only. */
 export function canCheckInFormBooking(profile) {
   if (!profile) return false
-  if (profile.role === ROLES.MARKETING) return false
-  if (profile.role === ROLES.SALES || isSuperAdmin(profile)) return true
+  if (profile.role === ROLES.MARKETING || profile.role === ROLES.SALES) return false
+  if (isSuperAdmin(profile)) return true
   return canAdvanceBookingStatus(profile)
 }
 
@@ -516,7 +533,7 @@ export function canViewPlanning(profile) {
   return (
     isAdmin(profile) ||
     isOperationsLead(profile) ||
-    has(profile, [ROLES.STAFF, ROLES.TEAM_LEAD, ROLES.MARKETING, ROLES.VIDEO_EDITOR])
+    has(profile, [ROLES.STAFF, ROLES.TEAM_LEAD, ROLES.MARKETING, ROLES.SALES, ROLES.VIDEO_EDITOR])
   )
 }
 
@@ -531,6 +548,11 @@ export function canEditPlanning(profile) {
  * Equipment repairs: crew (staff) only. Cash advance: all employees except Super Admin.
  * Complaint / Events RSVP: any planning viewer (plus public share links).
  */
+/** Super Admin, or any Assistant Super Admin. Branch Admin types the code; they do not mint it. */
+export function canApproveCashAdvance(profile) {
+  return isSuperAdmin(profile) || isAssistantSuperAdmin(profile)
+}
+
 export function canSubmitOpsFormKind(profile, kind) {
   if (!profile?.role) return false
   if (kind === 'equipment_repair') return profile.role === ROLES.STAFF
@@ -547,6 +569,11 @@ export function canSubmitOpsFormKind(profile, kind) {
   }
   if (kind === 'complaint' || kind === 'event' || kind === 'detailing') return canViewPlanning(profile)
   return false
+}
+
+/** Own cash-advance submissions list (drawer cash, not P&L). */
+export function canAccessMyAdvances(profile) {
+  return canSubmitOpsFormKind(profile, 'cash_advance')
 }
 
 /** SA / ASA with planning_edit can open every template for edit + results. */
@@ -573,15 +600,15 @@ export function canAccessQueuePage(profile) {
   return canEditQueueOperations(profile)
 }
 
-/** Queue board view: the four queue roles plus Sales (all branches, read only except detailing). */
+/** Queue board view: editors, plus read-only BA, Marketing, Customer Rep, Investor (19 Oct matrix). */
 export function canViewQueueBoard(profile) {
-  return canAccessQueuePage(profile) || profile?.role === ROLES.SALES
+  if (canAccessQueuePage(profile)) return true
+  return has(profile, [ROLES.SALES, ROLES.ADMIN, ROLES.MARKETING, ROLES.INVESTOR])
 }
 
-/** Who may open a ticket from the Queue board. Sales only works detailing tickets (Bookings editor). */
-export function canEditQueueTicket(profile, ticket) {
-  if (canEditQueueOperations(profile)) return true
-  return profile?.role === ROLES.SALES && isBookingBoardRow(ticket)
+/** Who may open a ticket from the Queue board. Read-only roles never edit. */
+export function canEditQueueTicket(profile) {
+  return canEditQueueOperations(profile)
 }
 
 /** Adding a service line to a queue ticket follows the same four roles. */
@@ -594,10 +621,22 @@ export function canViewQueueOperations(profile) {
   return has(profile, QUEUE_VIEWER_ROLES)
 }
 
-/** Floor Board (/operations/dashboard): queue viewers except Team Lead and Operations Lead, who work from Queue. Investor: view only. */
+/**
+ * Floor Board: Owner + Super Admin (BossMich) and crew watch.
+ * General Admin, Branch Admin, Team Lead, Marketing, Customer Rep, and Investor have no Floor Board (docs/OPS/RBAC-MATRIX.md).
+ */
 export function canAccessFloorBoard(profile) {
-  if (isInvestor(profile)) return true
-  return canViewQueueOperations(profile) && !has(profile, [ROLES.TEAM_LEAD, ROLES.OPERATIONS_LEAD])
+  if (isSuperAdmin(profile)) return true
+  return profile?.role === ROLES.STAFF
+}
+
+/**
+ * Month KPI (/operations/kpi): Operations Lead (no Floor Board) + Super Admin.
+ * Live wait / service / failed QA stay on Floor Board for everyone else.
+ */
+export function canAccessKpi(profile) {
+  if (isSuperAdmin(profile)) return true
+  return isOperationsLead(profile)
 }
 
 const TEAM_LEAD_BOOKING_VIEWS = Object.freeze(['board', 'calendar'])
@@ -660,6 +699,16 @@ export function canAccessReviews(profile) {
   return profile?.role === ROLES.ADMIN
 }
 
+/** Promo voucher board writes — Owner / Super Admin / General Admin. */
+export function canManageVouchers(profile) {
+  return isSuperAdmin(profile) || isAssistantSuperAdmin(profile)
+}
+
+/** Voucher board: managers, plus Investor read-only (19 Oct matrix). */
+export function canViewVouchers(profile) {
+  return canManageVouchers(profile) || isInvestor(profile)
+}
+
 export function canAccessMemberships(profile) {
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'memberships')
@@ -698,46 +747,31 @@ export function usesFloorAppShell(profile) {
   )
 }
 
-/** Shop-day order for the Command sidebar. Flatten order follows this. */
+/** Command sidebar order. Sir Michi, 18 Oct 2026. */
 export const COMMAND_NAV_GROUP_ORDER = Object.freeze([
-  'floor',
-  'counter',
+  'insight',
+  'hr',
   'customers',
-  'books',
-  'work',
-  'company',
+  'config',
+  'ops-insight',
 ])
 
 export const COMMAND_NAV_GROUP_LABELS = Object.freeze({
-  floor: 'Floor',
-  counter: 'Counter',
+  insight: 'Floor Insight',
+  hr: 'Human Resource',
   customers: 'Customers',
-  books: 'Books',
-  work: 'Work',
-  company: 'Company',
+  config: 'Configuration',
+  'ops-insight': 'Operations Insight',
 })
 
 function nav(label, to, icon, group) {
   return { label, to, icon, group }
 }
 
-const PRIMARY_NAV_PATHS = [
-  '/operations/dashboard',
-  '/operations/queue',
-  '/operations/bookings',
-  '/operations/planning',
-  '/operations/pos',
-  '/operations/finance',
-]
-
-/** Put daily commands first, then retain the remaining tools in their existing order. */
+/** Group the nav in list order. Callers put Floor Insight items first. */
 export function groupOperationsNav(items = []) {
   const groups = []
-  const primary = PRIMARY_NAV_PATHS.flatMap((path) =>
-    items.filter((item) => item.to.split('?')[0] === path),
-  )
-  if (primary.length) groups.push({ id: 'primary', label: 'Main', items: primary })
-  for (const item of items.filter((item) => !primary.includes(item))) {
+  for (const item of items) {
     const id = COMMAND_NAV_GROUP_ORDER.includes(item.group) ? item.group : 'more'
     const last = groups[groups.length - 1]
     if (last && last.id === id) {
@@ -757,9 +791,11 @@ export function groupOperationsNav(items = []) {
 export function getOperationsNav(profile) {
   if (isInvestor(profile)) {
     return [
-      nav('Floor Board', '/operations/dashboard', 'Gauge', 'floor'),
-      nav('Point Of Sales', '/operations/pos', 'ShoppingCart', 'counter'),
-      nav('Finance', '/operations/finance', 'Wallet', 'books'),
+      nav('Carwash Queue', '/operations/queue', 'ClipboardList', 'insight'),
+      nav('Detailing Schedule', '/operations/bookings', 'Kanban', 'insight'),
+      nav('Point of Sales', '/operations/pos', 'ShoppingCart', 'insight'),
+      nav('Vouchers', '/operations/vouchers', 'TicketPercent', 'insight'),
+      nav('Financials', '/operations/finance', 'Wallet', 'insight'),
     ]
   }
 
@@ -772,70 +808,75 @@ export function getOperationsNav(profile) {
 
   if (profile?.role === ROLES.DETAILER) {
     return [
-      nav('Detailing Board', '/operations/bookings', 'Kanban', 'floor'),
-      nav('Attendance', '/operations/attendance', 'Clock', 'floor'),
-      nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'work'),
+      nav('Detailing Schedule', '/operations/bookings', 'Kanban', 'insight'),
+      nav('Attendance', '/operations/attendance', 'Clock', 'hr'),
+      nav('My advances', '/operations/my-advances', 'Wallet', 'hr'),
+      nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'hr'),
     ]
   }
 
   if (profile?.role === ROLES.MARKETING) {
     return [
-      nav('CRM', '/operations/crm', 'Contact', 'customers'),
-      nav('Detailing Board', '/operations/bookings', 'Kanban', 'floor'),
-      nav('Planner Board', '/operations/planning', 'Columns3', 'work'),
-      nav('Notifications', '/operations/notifications', 'Bell', 'work'),
-      nav('History', '/operations/history', 'History', 'work'),
+      nav('Carwash Queue', '/operations/queue', 'ClipboardList', 'insight'),
+      nav('Detailing Schedule', '/operations/bookings', 'Kanban', 'insight'),
+      nav('Team Planner', '/operations/planning', 'Columns3', 'insight'),
+      nav('Customers', '/operations/crm', 'Contact', 'customers'),
+      nav('Notifications', '/operations/notifications', 'Bell', 'ops-insight'),
+      nav('History', '/operations/history', 'History', 'ops-insight'),
     ]
   }
 
   if (profile?.role === ROLES.SALES) {
     return [
-      nav('Detailing Board', '/operations/bookings', 'Kanban', 'floor'),
-      nav('Carwash Board', '/operations/queue', 'ClipboardList', 'floor'),
-      nav('CRM', '/operations/crm', 'Contact', 'customers'),
-      nav('History', '/operations/history', 'History', 'work'),
+      nav('Carwash Queue', '/operations/queue', 'ClipboardList', 'insight'),
+      nav('Detailing Schedule', '/operations/bookings', 'Kanban', 'insight'),
+      nav('Team Planner', '/operations/planning', 'Columns3', 'insight'),
+      nav('Customers', '/operations/crm', 'Contact', 'customers'),
+      nav('History', '/operations/history', 'History', 'ops-insight'),
     ]
   }
 
-  // Branch Admin: live floor → counter → customers → work → company.
+  // Branch Admin: no Floor Board. Queue + detailing are read-only. POS + finance + HR are full.
   if (isBranchAdmin(profile)) {
     return [
-      nav('Floor', '/operations/dashboard', 'Gauge', 'floor'),
-      nav('Detailing Board', '/operations/bookings', 'Kanban', 'floor'),
-      nav('Attendance', '/operations/attendance', 'Clock', 'floor'),
-      nav('Point Of Sales', '/operations/pos', 'ShoppingCart', 'counter'),
-      nav('Inventory', '/operations/inventory', 'Package', 'counter'),
-      nav('Reviews', '/operations/reviews', 'Star', 'customers'),
-      nav('Planner Board', '/operations/planning', 'Columns3', 'work'),
-      nav('History', '/operations/history', 'History', 'work'),
-      nav('Audit', '/operations/audit', 'ScrollText', 'company'),
-      nav('Transfer car', '/operations/vehicle-transfer', 'ArrowLeftRight', 'company'),
+      nav('Carwash Queue', '/operations/queue', 'ClipboardList', 'insight'),
+      nav('Detailing Schedule', '/operations/bookings', 'Kanban', 'insight'),
+      nav('Team Planner', '/operations/planning', 'Columns3', 'insight'),
+      nav('Point of Sales', '/operations/pos', 'ShoppingCart', 'insight'),
+      nav('Financials', '/operations/finance', 'Wallet', 'insight'),
+      nav('Inventory', '/operations/inventory', 'Package', 'insight'),
+      nav('Attendance', '/operations/attendance', 'Clock', 'hr'),
+      nav('Customers', '/operations/crm', 'Contact', 'customers'),
+      nav('My advances', '/operations/my-advances', 'Wallet', 'hr'),
+      nav('History', '/operations/history', 'History', 'ops-insight'),
+      nav('Audit', '/operations/audit', 'ScrollText', 'ops-insight'),
+      nav('Transfer car', '/operations/vehicle-transfer', 'ArrowLeftRight', 'config'),
     ]
   }
 
   // Operations Lead: network-wide BA∪TL ops, no personal clock.
   if (isOperationsLead(profile)) {
     return [
-      nav('Carwash Board', '/operations/queue', 'ClipboardList', 'floor'),
-      nav('KPI', '/operations/kpi', 'BarChart3', 'floor'),
-      nav('Point Of Sales', '/operations/pos', 'ShoppingCart', 'counter'),
-      nav('CRM', '/operations/crm', 'Contact', 'customers'),
-      nav('Reviews', '/operations/reviews', 'Star', 'customers'),
-      nav('Planner Board', '/operations/planning', 'Columns3', 'work'),
-      nav('History', '/operations/history', 'History', 'work'),
-      nav('Finance', '/operations/finance', 'Wallet', 'books'),
-      nav('Audit', '/operations/audit', 'ScrollText', 'company'),
+      nav('Carwash Queue', '/operations/queue', 'ClipboardList', 'insight'),
+      nav('Team Planner', '/operations/planning', 'Columns3', 'insight'),
+      nav('Point of Sales', '/operations/pos', 'ShoppingCart', 'insight'),
+      nav('Financials', '/operations/finance', 'Wallet', 'insight'),
+      nav('Customers', '/operations/crm', 'Contact', 'customers'),
+      nav('My advances', '/operations/my-advances', 'Wallet', 'hr'),
+      nav('Month KPI', '/operations/kpi', 'Gauge', 'ops-insight'),
+      nav('History', '/operations/history', 'History', 'ops-insight'),
+      nav('Audit', '/operations/audit', 'ScrollText', 'ops-insight'),
     ]
   }
 
   // Crew can observe their branch floor without gaining queue editing rights.
   if (profile?.role === ROLES.STAFF) {
     return [
-      nav('Attendance', '/operations/attendance', 'Clock', 'floor'),
-      nav('Floor', '/operations/dashboard', 'Gauge', 'floor'),
-      nav('KPI', '/operations/kpi', 'BarChart3', 'floor'),
-      nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'work'),
-      nav('Planner Board', '/operations/planning', 'Columns3', 'work'),
+      nav('Attendance', '/operations/attendance', 'Clock', 'hr'),
+      nav('My advances', '/operations/my-advances', 'Wallet', 'hr'),
+      nav('Floor Board', '/operations/dashboard', 'Gauge', 'insight'),
+      nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'hr'),
+      nav('Team Planner', '/operations/planning', 'Columns3', 'insight'),
     ]
   }
 
@@ -848,84 +889,91 @@ export function getOperationsNav(profile) {
         : 'Dashboard'
 
   if (canAccessFloorBoard(profile)) {
-    items.push(nav(floorBoardLabel, '/operations/dashboard', 'Gauge', 'floor'))
+    items.push(nav(floorBoardLabel, '/operations/dashboard', 'Gauge', 'insight'))
   }
   if (canAccessQueuePage(profile)) {
-    items.push(nav('Carwash Board', '/operations/queue', 'ClipboardList', 'floor'))
+    items.push(nav('Carwash Queue', '/operations/queue', 'ClipboardList', 'insight'))
   }
   if (canAccessBookingBoard(profile)) {
-    items.push(nav('Detailing Board', '/operations/bookings', 'Kanban', 'floor'))
+    items.push(nav('Detailing Schedule', '/operations/bookings', 'Kanban', 'insight'))
   }
-  if (canViewQueueOperations(profile)) {
-    items.push(
-      nav('Attendance', '/operations/attendance', 'Clock', 'floor'),
-      nav('KPI', '/operations/kpi', 'BarChart3', 'floor'),
-    )
-  } else if (canAccessAttendance(profile) && profile?.role !== ROLES.STAFF) {
-    items.push(nav('Attendance', '/operations/attendance', 'Clock', 'floor'))
+  if (canViewPlanning(profile)) {
+    items.push(nav('Team Planner', '/operations/planning', 'Columns3', 'insight'))
   }
-
   if (canAccessPos(profile)) {
-    items.push(nav('Point Of Sales', '/operations/pos', 'ShoppingCart', 'counter'))
+    items.push(nav('Point of Sales', '/operations/pos', 'ShoppingCart', 'insight'))
+  }
+  if (canManageVouchers(profile)) {
+    items.push(nav('Vouchers', '/operations/vouchers', 'TicketPercent', 'insight'))
   }
   if (canAccessInventory(profile)) {
-    items.push(nav('Inventory', '/operations/inventory', 'Package', 'counter'))
+    items.push(nav('Inventory', '/operations/inventory', 'Package', 'insight'))
+  }
+  if (canAccessFinance(profile)) {
+    items.push(nav('Financials', '/operations/finance', 'Wallet', 'insight'))
+  } else if (canAccessReports(profile)) {
+    items.push(nav('Financials', '/operations/finance?tab=reports', 'Wallet', 'insight'))
+  }
+  if (canEditFinanceBooks(profile)) {
+    items.push(nav('Monthly salaries', '/operations/monthly-payroll', 'Banknote', 'insight'))
+  }
+
+  if (canViewQueueOperations(profile) || (canAccessAttendance(profile) && profile?.role !== ROLES.STAFF)) {
+    items.push(nav('Attendance', '/operations/attendance', 'Clock', 'hr'))
+  }
+  if (canAccessMyAdvances(profile) && profile?.role !== ROLES.STAFF) {
+    items.push(nav('My advances', '/operations/my-advances', 'Wallet', 'hr'))
+  }
+  if (canViewAssignedTasks(profile) && profile?.role !== ROLES.STAFF && !isSuperAdmin(profile)) {
+    items.push(nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'hr'))
   }
 
   if (canAccessCrm(profile)) {
-    items.push(nav('CRM', '/operations/crm', 'Contact', 'customers'))
-  }
-  if (canAccessReviews(profile)) {
-    items.push(nav('Reviews', '/operations/reviews', 'Star', 'customers'))
+    items.push(nav('Customers', '/operations/crm', 'Contact', 'customers'))
   }
   if (canAccessMemberships(profile)) {
     items.push(nav('Memberships', '/operations/memberships', 'Crown', 'customers'))
   }
-
-  if (canAccessFinance(profile)) {
-    items.push(nav('Finance', '/operations/finance', 'Wallet', 'books'))
-  } else if (canAccessReports(profile)) {
-    items.push(nav('Finance', '/operations/finance?tab=reports', 'Wallet', 'books'))
-  }
-  if (canViewPlanning(profile)) {
-    items.push(nav('Planner Board', '/operations/planning', 'Columns3', 'work'))
-  }
-  if (canViewAssignedTasks(profile) && profile?.role !== ROLES.STAFF && !isSuperAdmin(profile)) {
-    items.push(nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'work'))
-  }
-  if (canAccessHistory(profile)) {
-    items.push(nav('History', '/operations/history', 'History', 'work'))
-  }
-  if (canAccessNotifications(profile)) {
-    items.push(nav('Notifications', '/operations/notifications', 'Bell', 'work'))
+  if (canAccessInquiries(profile)) {
+    items.push(nav('Inquiries', '/operations/inquiries', 'Inbox', 'customers'))
   }
 
-  if (canManagePeople(profile)) {
-    items.push(nav('People', '/operations/people', 'UserPlus', 'company'))
-  }
   if (canManageBranches(profile)) {
-    items.push(nav('Branches', '/operations/branches', 'Building2', 'company'))
+    items.push(nav('Branches', '/operations/branches', 'Building2', 'config'))
+  }
+  if (canManageServices(profile)) {
+    items.push(
+      nav('Services and Packages', '/operations/inventory?tab=bay', 'Car', 'config'),
+      nav('Detailing Packages', '/operations/inventory?tab=detailing', 'Sparkles', 'config'),
+    )
   }
   if (canManageVehicleCatalog(profile)) {
-    items.push(nav('Cars', '/operations/cars', 'CarFront', 'company'))
+    items.push(nav('Vehicle List', '/operations/cars', 'CarFront', 'config'))
+  }
+  if (canManagePeople(profile)) {
+    items.push(nav('RBAC Delegation', '/operations/people', 'UserPlus', 'config'))
   }
   if (canTransferVehicle(profile)) {
-    items.push(nav('Transfer car', '/operations/vehicle-transfer', 'ArrowLeftRight', 'company'))
+    items.push(nav('Transfer car', '/operations/vehicle-transfer', 'ArrowLeftRight', 'config'))
   }
   if (canManageSiteContent(profile)) {
-    items.push(nav('Content', '/operations/content', 'Newspaper', 'company'))
-  }
-  if (canAccessAudit(profile)) {
-    items.push(nav('Audit', '/operations/audit', 'ScrollText', 'company'))
-  }
-  if (canAccessDataCenter(profile)) {
-    items.push(nav('Data Center', '/operations/data-center', 'Database', 'company'))
-  }
-  if (canAccessInquiries(profile)) {
-    items.push(nav('Inquiries', '/operations/inquiries', 'Inbox', 'company'))
+    items.push(nav('Content', '/operations/content', 'Newspaper', 'config'))
   }
   if (canAccessSettings(profile)) {
-    items.push(nav('Settings', '/operations/settings', 'Settings', 'company'))
+    items.push(nav('Settings', '/operations/settings', 'Settings', 'config'))
+  }
+
+  if (canAccessHistory(profile)) {
+    items.push(nav('History', '/operations/history', 'History', 'ops-insight'))
+  }
+  if (canAccessNotifications(profile)) {
+    items.push(nav('Notifications', '/operations/notifications', 'Bell', 'ops-insight'))
+  }
+  if (canAccessAudit(profile)) {
+    items.push(nav('Audit', '/operations/audit', 'ScrollText', 'ops-insight'))
+  }
+  if (canAccessDataCenter(profile)) {
+    items.push(nav('Data Center', '/operations/data-center', 'Database', 'ops-insight'))
   }
   return items
 }
@@ -946,9 +994,10 @@ export function getTeamLeadDock(profile) {
 export function getTeamLeadMore(profile) {
   const more = []
   if (canAccessHistory(profile)) more.push({ label: 'History', to: '/operations/history', icon: 'History' })
-  if (canViewQueueOperations(profile)) more.push({ label: 'KPI', to: '/operations/kpi', icon: 'BarChart3' })
   if (canViewAssignedTasks(profile)) more.push({ label: 'My Tasks', to: '/operations/my-tasks', icon: 'ListChecks' })
   if (canViewPlanning(profile)) more.push({ label: 'Planner Board', to: '/operations/planning', icon: 'Columns3' })
+  if (canAccessMyAdvances(profile)) more.push({ label: 'My advances', to: '/operations/my-advances', icon: 'Wallet' })
+  if (canAccessCrm(profile)) more.push({ label: 'Customers', to: '/operations/crm', icon: 'Contact' })
   return more
 }
 
@@ -972,6 +1021,7 @@ export function getSalesDock(profile) {
     { label: 'Detailing Board', to: '/operations/bookings', icon: 'Kanban', primary: true, end: true },
     { label: 'Carwash Board', to: '/operations/queue', icon: 'ClipboardList', end: true },
     { label: 'CRM', to: '/operations/crm', icon: 'Contact' },
+    { label: 'Planner', to: '/operations/planning', icon: 'Columns3' },
     { label: 'History', to: '/operations/history', icon: 'History' },
   ]
 }
@@ -987,6 +1037,7 @@ export function getStaffDock(profile) {
     { label: 'Attendance', to: '/operations/attendance', icon: 'Clock', primary: true, end: true },
     { label: 'Tasks', to: '/operations/my-tasks', icon: 'ListChecks' },
     { label: 'Forms', to: '/operations/planning?tab=forms', icon: 'Columns3' },
+    { label: 'Advances', to: '/operations/my-advances', icon: 'Wallet' },
   ]
 }
 
@@ -994,7 +1045,6 @@ export function getStaffMore(profile) {
   if (profile?.role !== ROLES.STAFF) return []
   return [
     { label: 'Floor', to: '/operations/dashboard', icon: 'Gauge' },
-    { label: 'KPI', to: '/operations/kpi', icon: 'BarChart3' },
   ]
 }
 
@@ -1036,6 +1086,7 @@ export function getDetailerDock(profile) {
     { label: 'Detailing Board', to: '/operations/bookings', icon: 'Kanban', primary: true },
     { label: 'Attendance', to: '/operations/attendance', icon: 'Clock' },
     { label: 'Tasks', to: '/operations/my-tasks', icon: 'ListChecks' },
+    { label: 'Advances', to: '/operations/my-advances', icon: 'Wallet' },
   ]
 }
 
@@ -1044,10 +1095,8 @@ export function getDetailerMore() {
 }
 
 export function redirectForRole(role) {
-  if (role === ROLES.SUPER_ADMIN || role === ROLES.ASSISTANT_SUPER_ADMIN) {
-    // Console is off the nav — the Floor Board is the landing surface.
-    return '/operations/dashboard'
-  }
+  if (role === ROLES.SUPER_ADMIN) return '/operations/dashboard'
+  if (role === ROLES.ASSISTANT_SUPER_ADMIN) return '/operations/queue'
   if (role === ROLES.ADMIN) return '/operations/pos'
   if (role === ROLES.STAFF) return '/operations/attendance'
   if (role === ROLES.TEAM_LEAD || role === ROLES.OPERATIONS_LEAD) return '/operations/queue'
@@ -1063,11 +1112,14 @@ export function redirectForRole(role) {
 
 /** Branch Admin Command chrome — gate URLs to the same list. */
 export const BRANCH_ADMIN_ROUTE_KEYS = Object.freeze([
-  'dashboard',
+  'queue',
   'vehicle-transfer',
   'bookings',
   'attendance',
+  'my-advances',
   'pos',
+  'finance',
+  'crm',
   'inventory',
   'reviews',
   'planning',
@@ -1075,8 +1127,8 @@ export const BRANCH_ADMIN_ROUTE_KEYS = Object.freeze([
   'audit',
 ])
 
-/** Investor chrome: read-only surfaces only. Writes are refused by RLS / RPC role checks too. */
-export const INVESTOR_ROUTE_KEYS = Object.freeze(['dashboard', 'pos', 'finance', 'reports'])
+/** Investor chrome: read-only queue, detailing, POS, vouchers, finance. No Floor Board. */
+export const INVESTOR_ROUTE_KEYS = Object.freeze(['queue', 'bookings', 'pos', 'vouchers', 'finance', 'reports'])
 
 /** Route allow helpers for App.jsx */
 export function allowRoute(profile, key) {
@@ -1096,16 +1148,19 @@ export function allowRoute(profile, key) {
     'queue-new': canEditQueueOperations,
     crew: () => false,
     attendance: canAccessAttendance,
-    kpi: canViewQueueOperations,
+    'my-advances': canAccessMyAdvances,
+    kpi: canAccessKpi,
     'my-tasks': canViewAssignedTasks,
     pos: canAccessPos,
     inventory: canAccessInventory,
     finance: canOpenFinanceHub,
+    'monthly-payroll': canEditFinanceBooks,
     crm: canAccessCrm,
     bookings: canAccessBookingBoard,
     reviews: canAccessReviews,
     reports: canAccessReports,
     memberships: canAccessMemberships,
+    vouchers: canViewVouchers,
     settings: canAccessSettings,
     content: canManageSiteContent,
     notifications: canAccessNotifications,

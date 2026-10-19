@@ -42,7 +42,7 @@ export default function TintFinderSettingsPage() {
     try {
       const {data,error:err}=await supabase.from('tint_finder_settings').update({config,updated_at:new Date().toISOString()}).eq('id',1).select('id').single()
       if(err || !data) throw new Error('Unable to save settings. Check your permissions and try again.')
-      setNotice('Saved. New customer visits will use these prices, specs and rules.')
+      setNotice('Saved. New visits use this title, these prices, specs, and rules.')
     } catch(err) {setError(err.message)} finally {setSaving(false)}
   }
   async function setStatus(id,status) {
@@ -50,11 +50,17 @@ export default function TintFinderSettingsPage() {
     if(err || !data) return setError('Unable to update this request. Please try again.')
     setLeads(rows=>rows.map(r=>r.id===id?{...r,status}:r))
   }
-  return <OpsPageShell eyebrow="Settings" title="Tint Finder" description="Edit the customer recommendations and review tint booking requests. Super Admin access only." actions={<Button asChild variant="outline"><Link to="/services/tint">View customer page</Link></Button>}>
+  return <OpsPageShell eyebrow="Settings" title="Tint Finder" description="Set the page title, film specs, prices, and recommendation rules. Super Admin access only." actions={<Button asChild variant="outline"><Link to="/tint-finder">View Tint Finder</Link></Button>}>
     {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
     {notice && <p role="status" className="text-sm text-primary">{notice}</p>}
     {!config && !error && <p>Loading Tint Finder…</p>}
     {config && <form onSubmit={save} className="grid gap-6">
+      <Card><CardHeader><CardTitle>Page title</CardTitle></CardHeader><CardContent>
+        <label className={fieldClass}>What customers see at the top of Tint Finder
+          <Input maxLength={80} value={config.pageTitle || ''} placeholder="Tint Finder" onChange={e=>update(c=>{c.pageTitle=e.target.value})}/>
+        </label>
+        <p className="mt-2 text-sm text-muted-foreground">Leave this blank to keep the title Tint Finder.</p>
+      </CardContent></Card>
       <Card><CardHeader><CardTitle>Packages and prices</CardTitle></CardHeader><CardContent className="grid gap-6 sm:grid-cols-2">{Object.entries(config.packages).map(([id,p])=><fieldset key={id} className="grid gap-3"><legend className="font-semibold mb-3">{p.name}</legend><label className={fieldClass}>Package name<Input required value={p.name} onChange={e=>update(c=>{c.packages[id].name=e.target.value})}/></label><label className={fieldClass}>Warranty<Input required value={p.warranty} onChange={e=>update(c=>{c.packages[id].warranty=e.target.value})}/></label>{TINT_VEHICLES.map(v=><label key={v.id} className={fieldClass}>{v.label} (₱)<Input type="number" min="1" max="1000000" required value={p.prices[v.id]} onChange={e=>update(c=>{c.packages[id].prices[v.id]=Number(e.target.value)})}/></label>)}</fieldset>)}</CardContent></Card>
       <Card><CardHeader><CardTitle>Film specifications</CardTitle></CardHeader><CardContent className="overflow-x-auto"><table className="w-full text-sm"><thead><tr>{['Film','VLT %','TSER %','IRR %','UVR %'].map(v=><th key={v} className="text-left p-2">{v}</th>)}</tr></thead><tbody>{Object.entries(config.films).map(([id,f])=><tr key={id}><th scope="row" className="text-left p-2 min-w-40"><Input aria-label={`${id} name`} value={f.name} required onChange={e=>update(c=>{c.films[id].name=e.target.value})}/></th>{['vlt','tser','irr','uvr'].map(k=><td key={k} className="p-2 min-w-24"><Input aria-label={`${id} ${k}`} required type={k==='uvr'?'text':'number'} min="0" max="100" value={f[k]} onChange={e=>update(c=>{c.films[id][k]=k==='uvr'?e.target.value:Number(e.target.value)})}/></td>)}</tr>)}</tbody></table></CardContent></Card>
       <Card><CardHeader><CardTitle>Option combinations</CardTitle></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2">{Object.entries(config.options).map(([id,o])=><fieldset key={id} className="grid gap-3 rounded-lg border p-4"><legend className="px-2">{id}</legend><label className={fieldClass}>Package<select className={selectClass} value={o.package} onChange={e=>update(c=>{c.options[id].package=e.target.value})}>{Object.entries(config.packages).map(([key,p])=><option key={key} value={key}>{p.name}</option>)}</select></label>{['front','rear'].map(zone=><label key={zone} className={fieldClass}>{zone==='front'?'Front zone':'Rear zone'}<select className={selectClass} value={o[zone]} onChange={e=>update(c=>{c.options[id][zone]=e.target.value})}>{Object.entries(config.films).map(([key,f])=><option key={key} value={key}>{f.name}</option>)}</select></label>)}</fieldset>)}</CardContent></Card>

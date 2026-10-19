@@ -8,7 +8,7 @@ import { NOTIFY_EVENTS, branchLabel } from '../src/lib/notifyRouting.js'
 import { hydrateBookingForNotify } from './notifyBooking.mjs'
 import { notifyRecipients, resolveStaffRecipients } from './webPush.mjs'
 
-export const OPS_EVENTS = ['crew_assigned', 'sheet_submitted', 'sheet_reviewed', 'cash_advance_submitted', 'attendance_location_alert']
+export const OPS_EVENTS = ['crew_assigned', 'sheet_submitted', 'sheet_reviewed', 'cash_advance_submitted', 'cash_advance_approved', 'attendance_location_alert']
 
 /** Replayed calls for old records are ignored. */
 const FRESH_MS = 10 * 60_000
@@ -46,8 +46,15 @@ export function buildOpsEventCopy(event, c = {}) {
       return {
         kind: 'cash_advance_submitted',
         title: 'Cash advance request',
-        body: `${c.employee || 'Employee'} · ${pesos(c.amountMinor)} @ ${c.branchName || 'branch'}. Release it on today's Daily Sheet.`,
+        body: `${c.employee || 'Employee'} · ${pesos(c.amountMinor)} @ ${c.branchName || 'branch'}. Waiting for approval before any cash leaves the drawer.`,
         tag: `ca-req-${c.submissionId}`,
+      }
+    case 'cash_advance_approved':
+      return {
+        kind: 'cash_advance_approved',
+        title: 'Cash advance approved',
+        body: `${c.employee || 'Employee'} · ${pesos(c.amountMinor)} @ ${c.branchName || 'branch'}. Code ${c.code}. Type it on the Daily Sheet to give the cash.`,
+        tag: `ca-ok-${c.submissionId}`,
       }
     case 'attendance_location_alert':
       return {
@@ -66,6 +73,13 @@ export function buildOpsEventCopy(event, c = {}) {
           ? `${c.name || 'Customer'} · ${c.category || 'complaint'}${c.branch ? ` @ ${c.branch}` : ''}`
           : `${c.name || 'Someone'} · ${c.city || 'site'}`,
         tag: `inquiry-${c.id}`,
+      }
+    case 'booking_reschedule':
+      return {
+        kind: 'booking_reschedule',
+        title: 'Customer wants a new date',
+        body: `${c.name || 'A customer'} · ${c.plate || 'vehicle'} asked to reschedule. Call them to confirm a new time.`,
+        tag: `reschedule-${c.bookingId}`,
       }
     case 'review': {
       const note = String(c.comment || '').trim()
@@ -159,6 +173,24 @@ const LOADERS = {
     return {
       rule: { ...NOTIFY_EVENTS.cash_advance_submitted, branch, excludeId: actor.id },
       ctx: { submissionId: id, employee: p.employee_name || actor.full_name, amountMinor: Math.round(Number(p.amount || 0) * 100), branchName: await branchName(db, branch) },
+    }
+  },
+
+  async cash_advance_approved(db, id, actor) {
+    const { data: sub } = await db.from('ops_form_submissions').select('id, payload, status, ops_forms!inner(kind)').eq('id', id).maybeSingle()
+    if (!sub || sub.ops_forms?.kind !== 'cash_advance') return gone
+    const p = sub.payload || {}
+    if (sub.status !== 'resolved' || p.approved_by !== actor.id || !fresh(p.approved_at)) return deny
+    const branch = String(p.branch || '').toLowerCase() || null
+    return {
+      rule: { ...NOTIFY_EVENTS.cash_advance_approved, branch, excludeId: actor.id },
+      ctx: {
+        submissionId: id,
+        employee: p.employee_name,
+        amountMinor: Math.round(Number(p.amount || 0) * 100),
+        code: p.approval_code,
+        branchName: await branchName(db, branch),
+      },
     }
   },
 

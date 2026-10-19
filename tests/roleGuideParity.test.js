@@ -102,10 +102,8 @@ test('Crew/Staff guide documents every dock label', () => {
 test('SA/ASA guide documents every nav label', () => {
   const md = guide('super-admin-asa.md')
   const known = words(md)
-  for (const group of getOperationsNav(profile(ROLES.BOSS))) {
-    for (const item of group.items) {
-      assert.ok(known.includes(item.label), `super-admin-asa.md is missing nav item "${item.label}"`)
-    }
+  for (const item of getOperationsNav(profile(ROLES.SUPER_ADMIN))) {
+    assert.ok(known.includes(item.label), `super-admin-asa.md is missing nav item "${item.label}"`)
   }
 })
 

@@ -73,7 +73,7 @@ describe('closeOfDaySlip', () => {
 
   it('every expense, salary and cash advance line is listed with its detail', () => {
     assert.equal(row('Expenses', 'Soap').amount_minor, 30000)
-    assert.equal(row('Expenses', 'Soap').detail, '18 Online Expenses and Others')
+    assert.equal(row('Expenses', 'Soap').detail, '18 Online Expenses and Others · Cash')
     assert.equal(row('Salaries', 'Ana Cruz').amount_minor, 90000)
     assert.match(row('Salaries', 'Ana Cruz').detail, /Overtime/)
     assert.equal(row('Cash advances', 'Given out · Ben Reyes').amount_minor, 20000)

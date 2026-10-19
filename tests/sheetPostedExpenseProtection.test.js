@@ -89,7 +89,7 @@ describe('an expense posted by an approved Daily Sheet cannot be undone behind i
     // BUG-054 made the route the control. A permissive policy leaves the UI as
     // the only thing between a Branch Admin and the books, and a direct
     // PostgREST call skips the UI entirely.
-    assert.equal(allowRoute({ role: 'admin' }, 'finance'), false, 'premise: BA cannot reach the Books')
+    assert.equal(allowRoute({ role: 'admin' }, 'finance'), true, 'premise: BA reaches Books; DELETE policy still must not use is_admin()')
     const p = effectivePolicy('expenses_delete')
     assert.ok(
       !/is_admin\(\)/.test(p.text),

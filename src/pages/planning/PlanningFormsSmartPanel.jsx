@@ -12,6 +12,7 @@ import BrandedOpsForm from '@/components/BrandedOpsForm'
 import FormQrCard from '@/components/FormQrCard'
 import { useAuth } from '@/auth/AuthProvider'
 import {
+  canApproveCashAdvance,
   canManageOpsFormTemplates,
   canSubmitOpsFormKind,
 } from '@/auth/permissions'
@@ -234,6 +235,7 @@ function emptyEditorFromForm(form, branchSlugs = []) {
 export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateKind, resultsId }) {
   const { profile } = useAuth()
   const manageTemplates = canEdit && canManageOpsFormTemplates(profile)
+  const approveCash = canApproveCashAdvance(profile)
   const [forms, setForms] = useState([])
   const [events, setEvents] = useState([])
   const [branchSlugs, setBranchSlugs] = useState([])
@@ -523,6 +525,19 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
       if (activeForm.kind === 'cash_advance') notifyOpsEvent('cash_advance_submitted', inserted?.id)
       toast.success(planCardId ? 'Submitted and added to Tasks' : 'Submission saved')
       setPayload({})
+      load()
+    }
+  }
+
+  async function decideCashAdvance(id, action) {
+    const { data, error } = await supabase.rpc('approve_cash_advance', { payload: { id, action } })
+    if (error) toast.error(error.message)
+    else if (action === 'approve') {
+      notifyOpsEvent('cash_advance_approved', id)
+      toast.success(`Approved. Code ${data?.approval_code}. The branch admin types it on the Daily Sheet.`)
+      load()
+    } else {
+      toast.success('Declined. No cash leaves the drawer.')
       load()
     }
   }
@@ -949,6 +964,15 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
                     {SUBMISSION_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
                   </SelectContent>
                 </Select>
+                {resultsForm?.kind === 'cash_advance' && row.payload?.approval_code ? (
+                  <p className="font-medium">Code {row.payload.approval_code}</p>
+                ) : null}
+                {resultsForm?.kind === 'cash_advance' && approveCash && !row.payload?.approval_code ? (
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" className="min-h-11" onClick={() => decideCashAdvance(row.id, 'approve')}>Approve</Button>
+                    <Button type="button" variant="outline" className="min-h-11" onClick={() => decideCashAdvance(row.id, 'decline')}>Decline</Button>
+                  </div>
+                ) : null}
                 <p className="whitespace-pre-wrap">{formatFormPayloadDescription(row.payload || {})}</p>
               </article>
             ))}
@@ -988,6 +1012,15 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
                     </Select>
                   </TableCell>
                   <TableCell className="max-w-[16rem] whitespace-pre-wrap text-xs text-muted-foreground">
+                    {resultsForm?.kind === 'cash_advance' && row.payload?.approval_code ? (
+                      <p className="mb-1 font-medium text-foreground">Code {row.payload.approval_code}</p>
+                    ) : null}
+                    {resultsForm?.kind === 'cash_advance' && approveCash && !row.payload?.approval_code ? (
+                      <div className="mb-2 flex flex-wrap gap-2">
+                        <Button type="button" size="sm" className="min-h-11" onClick={() => decideCashAdvance(row.id, 'approve')}>Approve</Button>
+                        <Button type="button" size="sm" variant="outline" className="min-h-11" onClick={() => decideCashAdvance(row.id, 'decline')}>Decline</Button>
+                      </div>
+                    ) : null}
                     {formatFormPayloadDescription(row.payload || {})}
                   </TableCell>
                   <TableCell>{row.plan_card_id ? <Badge variant="secondary">Card</Badge> : null}</TableCell>

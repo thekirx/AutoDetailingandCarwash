@@ -34,20 +34,20 @@ import { QUEUE_PROVISION_ROLES } from '../server/provisionCustomer.mjs'
 describe('Team Lead capability matrix', () => {
   const p = { role: ROLES.TEAM_LEAD, branch_slug: 'bacoor', branch_slugs: ['bacoor'] }
 
-  it('allows queue kpi attendance my-tasks queue-new; denies Floor Board, console, POS, finance, CRM, people, cars, reports', () => {
+  it('allows queue attendance my-tasks queue-new and CRM read; denies Floor Board, month KPI, console, POS, finance, people, cars, reports', () => {
     assert.equal(allowRoute(p, 'dashboard'), false)
     assert.equal(allowRoute(p, 'queue'), true)
     assert.equal(allowRoute(p, 'queue-new'), true)
     assert.equal(allowRoute(p, 'crew'), false)
     assert.equal(allowRoute(p, 'attendance'), true)
-    assert.equal(allowRoute(p, 'kpi'), true)
+    assert.equal(allowRoute(p, 'kpi'), false)
     assert.equal(allowRoute(p, 'bookings'), true)
     assert.equal(allowRoute(p, 'my-tasks'), true)
     assert.equal(canEditQueueOperations(p), true)
     assert.equal(allowRoute(p, 'console'), false)
     assert.equal(allowRoute(p, 'pos'), false)
     assert.equal(allowRoute(p, 'finance'), false)
-    assert.equal(allowRoute(p, 'crm'), false)
+    assert.equal(allowRoute(p, 'crm'), true)
     assert.equal(allowRoute(p, 'people'), false)
     assert.equal(allowRoute(p, 'branches'), false)
     assert.equal(allowRoute(p, 'cars'), false)

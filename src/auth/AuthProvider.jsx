@@ -36,7 +36,7 @@ export function AuthProvider({ children }) {
 
     const { data: staffProfile, error: staffError } = await supabase
       .from('staff_profiles')
-      .select('id, full_name, role, branch_slug, phone, is_active, permission_grants, attendance_enabled, geofence_enabled, employment_type, custom_role_key, role_definitions(role_key, label, baseline_template, grants, is_active)')
+      .select('id, full_name, role, branch_slug, phone, is_active, permission_grants, attendance_enabled, geofence_enabled, employment_type, custom_role_key, date_of_birth, date_of_birth_locked_at, role_definitions(role_key, label, baseline_template, grants, is_active)')
       .eq('id', user.id)
       .eq('is_active', true)
       .maybeSingle()

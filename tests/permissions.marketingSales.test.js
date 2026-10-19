@@ -24,9 +24,10 @@ const mNav = getOperationsNav(marketing)
 assert.deepEqual(
   mNav.map((i) => i.to),
   [
-    '/operations/crm',
+    '/operations/queue',
     '/operations/bookings',
     '/operations/planning',
+    '/operations/crm',
     '/operations/notifications',
     '/operations/history',
   ],
@@ -34,6 +35,6 @@ assert.deepEqual(
 
 assert.equal(redirectForRole(ROLES.MARKETING), '/operations/crm')
 assert.equal(redirectForRole(ROLES.SALES), '/operations/bookings')
-assert.equal(redirectForRole(ROLES.ASSISTANT_SUPER_ADMIN), '/operations/dashboard')
+assert.equal(redirectForRole(ROLES.ASSISTANT_SUPER_ADMIN), '/operations/queue')
 
 console.log('permissions.marketingSalesNav: ok')

@@ -20,7 +20,7 @@ import { STATUS_LABELS } from '@/queue/queueLogic'
 
 const BOOKING_SELECT =
   'id, status, branch, scheduled_start, completed_at, created_at, vehicle_plate, vehicle_make, vehicle_model, queue_number, final_price_minor, price_minor, visit_group_id, cancellation_reason, notes, team_lead_id, services(name)'
-const EMPTY = { bookings: [], sales: [], vehicles: [], loyalty: [], membership: null }
+const EMPTY = { bookings: [], sales: [], vehicles: [], loyalty: [], membership: null, vouchers: [], birthdayPerks: [] }
 
 const fmtDate = (iso) => (iso ? new Date(iso).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : '-')
 const fmtDateTime = (iso) => (iso ? new Date(iso).toLocaleString('en-PH', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' }) : '-')
@@ -48,7 +48,7 @@ async function loadHistory(customerId) {
     if (error) throw error
     return data || []
   }).then(withTeamLeadNames)
-  const [bookings, sales, vehicles, loyalty, membership] = await Promise.allSettled([
+  const [bookings, sales, vehicles, loyalty, membership, vouchers, birthdayPerks] = await Promise.allSettled([
     bookingsP,
     supabase
       .from('sales')
@@ -70,6 +70,18 @@ async function loadHistory(customerId) {
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle(),
+    supabase
+      .from('promo_voucher_redemptions')
+      .select('id, discount_minor, consumed_at, created_at, promo_vouchers(code, title, discount_kind)')
+      .eq('customer_id', customerId)
+      .order('created_at', { ascending: false })
+      .limit(100),
+    supabase
+      .from('customer_birthday_perks')
+      .select('id, perk_year, claimed_at, expires_at, created_at, status')
+      .eq('customer_id', customerId)
+      .order('perk_year', { ascending: false })
+      .limit(20),
   ])
   const pick = (r, label) => {
     const error = r.status === 'rejected' ? r.reason : r.value?.error
@@ -82,6 +94,8 @@ async function loadHistory(customerId) {
     vehicles: pick(vehicles, 'Vehicles') || [],
     loyalty: pick(loyalty, 'Loyalty') || [],
     membership: pick(membership, 'Membership'),
+    vouchers: pick(vouchers, 'Vouchers') || [],
+    birthdayPerks: pick(birthdayPerks, 'Birthday perks') || [],
   }
 }
 
@@ -138,6 +152,7 @@ export default function CustomerProfileDialog({ customer, onOpenChange, profile,
                 <span className="inline-flex items-center gap-1.5"><Phone className="size-3.5" aria-hidden />{customer.phone || 'No phone'}</span>
                 <span className="inline-flex min-w-0 items-center gap-1.5"><Mail className="size-3.5" aria-hidden /><span className="truncate">{customer.email || 'No email'}</span></span>
                 <span>Customer since {fmtDate(customer.created_at)}</span>
+                {customer.date_of_birth ? <span>Birthday {fmtDate(customer.date_of_birth)}</span> : null}
               </DialogDescription>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 <Badge variant={smsOk ? 'secondary' : 'outline'}>{smsOk ? 'SMS reachable' : 'No SMS'}</Badge>
@@ -190,6 +205,7 @@ export default function CustomerProfileDialog({ customer, onOpenChange, profile,
                 <TabsTrigger value="purchases">Purchases ({data.sales.length})</TabsTrigger>
                 <TabsTrigger value="vehicles">Vehicles ({data.vehicles.length})</TabsTrigger>
                 <TabsTrigger value="loyalty">Loyalty</TabsTrigger>
+                <TabsTrigger value="vouchers">Vouchers ({data.vouchers.length + data.birthdayPerks.length})</TabsTrigger>
                 <TabsTrigger value="notes">Notes</TabsTrigger>
               </TabsList>
 
@@ -288,6 +304,10 @@ export default function CustomerProfileDialog({ customer, onOpenChange, profile,
               </TabsContent>
 
               <TabsContent value="loyalty" className="flex flex-col gap-2">
+                <p className="text-sm text-muted-foreground">
+                  Balance <strong className="text-foreground tabular-nums">{customer.loyalty_points ?? 0}</strong> points ·{' '}
+                  <strong className="text-foreground tabular-nums">{customer.loyalty_stamps ?? 0}</strong> stamps
+                </p>
                 {data.loyalty.map((row) => (
                   <div key={row.id} className="flex justify-between gap-3 rounded-xl border border-border p-3 text-sm">
                     <div>
@@ -298,6 +318,43 @@ export default function CustomerProfileDialog({ customer, onOpenChange, profile,
                   </div>
                 ))}
                 {!data.loyalty.length ? <p className="text-sm text-muted-foreground">No loyalty activity.</p> : null}
+              </TabsContent>
+
+              <TabsContent value="vouchers" className="flex flex-col gap-4">
+                <section aria-label="Promo vouchers used" className="flex flex-col gap-2">
+                  <p className="text-sm font-medium">Promo vouchers used</p>
+                  {data.vouchers.map((row) => (
+                    <div key={row.id} className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-border p-3 text-sm">
+                      <div>
+                        <p className="font-medium">{row.promo_vouchers?.code || 'Voucher'}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {row.promo_vouchers?.title || row.promo_vouchers?.discount_kind || 'Promo'}
+                          {row.consumed_at ? ` · used ${fmtDateTime(row.consumed_at)}` : ` · held ${fmtDateTime(row.created_at)}`}
+                        </p>
+                      </div>
+                      <span className="font-semibold tabular-nums">{formatMoney(row.discount_minor)}</span>
+                    </div>
+                  ))}
+                  {!data.vouchers.length ? <p className="text-sm text-muted-foreground">No promo voucher uses on file.</p> : null}
+                </section>
+                <section aria-label="Birthday perks" className="flex flex-col gap-2">
+                  <p className="text-sm font-medium">Birthday perks</p>
+                  {data.birthdayPerks.map((row) => (
+                    <div key={row.id} className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-border p-3 text-sm">
+                      <div>
+                        <p className="font-medium">Birthday {row.perk_year}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {row.claimed_at ? `Claimed ${fmtDateTime(row.claimed_at)}` : 'Not claimed'}
+                          {row.expires_at ? ` · expires ${fmtDate(row.expires_at)}` : ''}
+                        </p>
+                      </div>
+                      <Badge variant={row.claimed_at || row.status === 'claimed' ? 'secondary' : 'outline'}>
+                        {row.claimed_at || row.status === 'claimed' ? 'Used' : row.status || 'Open'}
+                      </Badge>
+                    </div>
+                  ))}
+                  {!data.birthdayPerks.length ? <p className="text-sm text-muted-foreground">No birthday perk rows yet.</p> : null}
+                </section>
               </TabsContent>
 
               <TabsContent value="notes" className="flex flex-col gap-6">

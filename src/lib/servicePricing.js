@@ -6,10 +6,10 @@
 export const PRICING_SIZE_SLUGS = ['small', 'medium', 'large', 'extra_large']
 
 export const PRICING_SIZES = [
-  { slug: 'small', label: 'Small' },
-  { slug: 'medium', label: 'Medium' },
-  { slug: 'large', label: 'Large' },
-  { slug: 'extra_large', label: 'Extra Large' },
+  { slug: 'small', label: 'Small', short: 'S' },
+  { slug: 'medium', label: 'Medium', short: 'M' },
+  { slug: 'large', label: 'Large', short: 'L' },
+  { slug: 'extra_large', label: 'Extra Large', short: 'XL' },
 ]
 
 /**

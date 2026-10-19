@@ -9,19 +9,21 @@
 
 | Item | Route | What they see |
 |------|-------|---------------|
-| Floor Board | `/operations/dashboard` | Status cards (waiting, in progress, checking, for payment), paid sales, cash / online split, payment handoffs, activity log. No crew panel, no links into Queue or Bookings |
-| POS | `/operations/pos` | **Today** (sales, cars waiting to pay) and **Sheet history** (Weekly / Monthly / Daily). Opening a sheet shows it in review mode with no Approve / Return |
-| Finance | `/operations/finance` | Home, Sales, Bills, P&L, Reports and the other finance tabs, badge "View only". Quotes are hidden. "Open sheets" links to POS Sheet history |
+| Carwash Queue | `/operations/queue` | Read only |
+| Detailing Schedule | `/operations/bookings` | Read only |
+| POS | `/operations/pos` | Read only. **Today** and **Sheet history**. No checkout |
+| Vouchers | `/operations/vouchers` | Read only. No create |
+| Finance | `/operations/finance` | Home, Sales, Bills, P&L, Reports. View only |
 
 Branch picker appears only when more than one branch is assigned.
 
 ## Must never see or do
 
-Queue / Bookings / People / Settings / Inventory / Attendance (access denied), checkout, Daily Sheet edit / submit / approve, any finance write, payroll run.
+Floor Board, Team Planner, People, Settings, Inventory, Attendance, checkout, Daily Sheet edit, any finance write.
 
 ## How read-only is enforced
 
-- **UI:** `allowRoute` allows only `dashboard`, `pos`, `finance`, `reports` (`INVESTOR_ROUTE_KEYS`). POS renders `PosReadOnlyView` instead of the counter.
+- **UI:** `allowRoute` allows `queue`, `bookings`, `pos`, `vouchers`, `finance`, `reports` (`INVESTOR_ROUTE_KEYS`). POS renders `PosReadOnlyView`. Contract: `docs/OPS/RBAC-MATRIX.md`.
 - **Database:** RLS returns only assigned-branch rows; every write RPC (`complete_pos_sale`, `send_queue_ticket_to_payment`, `save/submit/review_daily_sheet`, `transition_expense`, ...) rejects the role, and direct updates on bookings, sales, expenses, staff and branches affect 0 rows. Staff names on sheets come from `staff_display_names` (assigned branch only).
 - **Server:** no `/api/*` endpoint allows the investor role.
 

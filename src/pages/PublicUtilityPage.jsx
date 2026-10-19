@@ -15,6 +15,9 @@ import { usePageMeta } from '../lib/pageMeta'
 import { formatStartingPrice, useStartingPrices } from '../lib/serviceStartingPrices'
 import './BookingWizard.css'
 import { plateValidationError, PLATE_FIELD_HINT } from '../lib/customerAuth'
+import { earliestBookableDay, isCustomerBookable } from '../lib/bookingLead'
+import ReferralSourceFields, { useReferralStaff } from '../components/bookings/ReferralSourceFields'
+import { friendCodeAccountError, referralRequiredError, referralSourceLabel } from '../lib/referralSource'
 
 export function QueuePage() {
   const { user, profile, loading: authLoading } = useAuth()
@@ -110,9 +113,8 @@ function timeLabel(hhmm) {
   return `${((h + 11) % 12) + 1}:${String(m).padStart(2, '0')} ${suffix}`
 }
 
-function todayKey() {
-  const d = new Date()
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+function earliestKey() {
+  return earliestBookableDay()
 }
 
 function niceDate(key) {
@@ -136,6 +138,7 @@ function WizardOption({ checked, onSelect, title, sub, right }) {
 
 export function BookingPage() {
   const location = useLocation()
+  const { user, profile } = useAuth()
   const { branches, loading: branchesLoading, error: branchesError } = usePublicBranches()
   const [catalog, setCatalog] = useState([])
   const [status, setStatus] = useState('idle')
@@ -166,7 +169,11 @@ export function BookingPage() {
     service_id: '',
     package_id: '',
     branch: '',
+    referral_source: '',
+    referred_by_name: '',
+    referred_by_staff_id: '',
   })
+  const referralStaff = useReferralStaff()
   const services = useMemo(
     () => filterFloorDetailingServices(catalog.filter((row) => !row.parent_service_id)),
     [catalog],
@@ -267,9 +274,9 @@ export function BookingPage() {
   const stepReady = [
     Boolean(bookedDetailingServiceId(form.service_id, form.package_id, packages)),
     Boolean(form.branch),
-    Boolean(form.visit_date && form.visit_time),
+    Boolean(form.visit_date && form.visit_time && isCustomerBookable(`${form.visit_date}T12:00:00+08:00`)),
     !plateValidationError(form.vehicle_plate) && Boolean(form.vehicle_make.trim() && form.vehicle_model.trim()),
-    Boolean(form.customer_first_name.trim() && form.customer_last_name.trim() && phoneDigits.length >= 10),
+    Boolean(form.customer_first_name.trim() && form.customer_last_name.trim() && phoneDigits.length >= 10) && !referralRequiredError(form) && !friendCodeAccountError(form, profile?.role === 'customer' ? user?.id : null),
     true,
   ][step]
   const lastStep = step === WIZARD_STEPS.length - 1
@@ -311,6 +318,9 @@ export function BookingPage() {
           scheduled_start: `${form.visit_date}T${form.visit_time}:00+08:00`,
           service_id,
           branch: form.branch,
+          referral_source: form.referral_source,
+          referred_by_name: form.referred_by_name,
+          referred_by_staff_id: form.referred_by_staff_id || null,
         }),
       })
       const body = await res.json().catch(() => ({}))
@@ -398,10 +408,10 @@ export function BookingPage() {
         return (
           <>
             <h2 className="bk-title" ref={stepHeadingRef} tabIndex={-1}>When would you like to come?</h2>
-            <p className="bk-sub">We’ll confirm the exact time by SMS.</p>
+            <p className="bk-sub">Today and tomorrow are closed so the branch can check the bay. The day you pick is tentative until they call.</p>
             <label className="bk-field">
               <span>Date</span>
-              <input type="date" min={todayKey()} value={form.visit_date} onChange={update('visit_date')} />
+              <input type="date" min={earliestKey()} value={form.visit_date} onChange={update('visit_date')} />
             </label>
             <div className="bk-field">
               <span id="bk-time-label">Time</span>
@@ -484,6 +494,15 @@ export function BookingPage() {
               />
               <small>Starts with 09, 11 digits</small>
             </label>
+            <ReferralSourceFields
+              variant="public"
+              source={form.referral_source}
+              name={form.referred_by_name}
+              staffId={form.referred_by_staff_id}
+              staff={referralStaff}
+              accountError={friendCodeAccountError(form, profile?.role === 'customer' ? user?.id : null)}
+              onChange={(patch) => setForm((current) => ({ ...current, ...patch }))}
+            />
           </>
         )
       default:
@@ -498,6 +517,7 @@ export function BookingPage() {
                 ['When', `${niceDate(form.visit_date)} · ${form.visit_time ? timeLabel(form.visit_time) : ''}`, 2],
                 ['Car', [form.vehicle_plate, form.vehicle_make, form.vehicle_model].filter(Boolean).join(' '), 3],
                 ['You', `${form.customer_first_name} ${form.customer_last_name} · ${form.customer_phone}`, 4],
+                ['Heard about us', [referralSourceLabel(form.referral_source), form.referred_by_name].filter(Boolean).join(' · '), 4],
               ].map(([label, value, target]) => (
                 <div key={label}>
                   <dt>{label}</dt>

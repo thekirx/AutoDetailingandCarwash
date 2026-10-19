@@ -35,7 +35,7 @@ Paid POS (services / packages / detailing / merch)
 | A2 | Queue App Sales = Car Wash Sales (same forever). |
 | A3 | Merch only via POS merch tab. |
 | A4 | Downpayments are full POS sales when taken (not typed-only). |
-| A5 | Expense lines on a draft or submitted sheet count in the sheet's totals and expected cash; they reach the books only when the sheet is **approved**. |
+| A5 | Expense lines on a draft or submitted sheet count in the sheet's P&L totals; they reach the books only when the sheet is **approved**. Each expense picks **cash** or **GCash** (`paid_from`). Only **cash** expenses reduce expected drawer cash; GCash expenses do not. |
 
 ### Cash advances
 
@@ -43,7 +43,7 @@ Paid POS (services / packages / detailing / merch)
 |----|----------|
 | B1 | Cash advances are **not costs**. A *Given out* line (`ca_release`) lowers expected cash; it never changes total expenses or profit. |
 | B2 | A *Paid back* line (`ca_repay`) raises expected cash, **not** total sales. One line per person. |
-| B3 | Crew request an advance in **Planner → Forms → Cash advance**; it shows on the branch's sheet as a one-tap chip that adds the *Given out* line. |
+| B3 | Crew request an advance in **Planner → Forms → Cash advance**. Super Admin or Assistant Super Admin approves it and a code is minted. The sheet chip appears only after that. *Given out* is saved only when the Branch Admin types that code and the amount matches. |
 | B4 | **Retired** — payroll-wizard CA deduct. Advances and repayments are sheet lines only; there is no auto-deduct from pay. |
 | B5 | Prefer settling a prior advance before a new one (BA judgement; not enforced). |
 

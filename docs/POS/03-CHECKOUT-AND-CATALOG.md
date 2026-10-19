@@ -45,7 +45,7 @@ Packages and detailing cards set `item_type: 'service'` and `catalog_kind` for d
 ## Membership / loyalty on cart
 
 - `priceCartForMembership` reprices catalog service lines (not handoff floor prices).
-- Loyalty awards / birthday lines can force zero unit price; RPC honors flags.
+- Loyalty awards can force a zero unit price. A birthday line also zeros the price, and only after `birthday_code_matches` accepts the typed code. `claim_birthday_perk` then marks that year’s perk used.
 - Handoff lines keep floor amount.
 
 ## Ceramic compensation toggles

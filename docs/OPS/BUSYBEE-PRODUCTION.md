@@ -34,6 +34,7 @@ Never use `VITE_*` for BusyBee keys.
 | Paint-maintenance arrival (→ Vehicle intake status) | `server/maintenanceSchedulesApi.mjs` `action: 'arrive'` → `notifyBookingStatus` |
 | CRM / marketing broadcast | `server/notificationBroadcastApi.mjs` |
 | Birthday greetings | `server/birthdayGreetings.mjs` |
+| Rate-your-visit (15m after finish) | `server/rateVisitReminders.mjs` via booking-reminders cron |
 | Daily Sheet submit / approve | `server/notifyOpsEvent.mjs` (`sheet_submitted`, `sheet_reviewed`) → **web push only** |
 | Spoofed-location time-in blocked | `geo_clock_in` RPC inbox + `server/notifyOpsEvent.mjs` (`attendance_location_alert`) → **web push only** to SA / ASA / branch BA |
 

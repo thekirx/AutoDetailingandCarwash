@@ -32,6 +32,8 @@ const CustomerAccountPage = lazy(() => import('./pages/CustomerAccountPage'))
 const CustomerQueuePage = lazy(() => import('./pages/CustomerQueuePage'))
 const CustomerBookPage = lazy(() => import('./pages/CustomerBookPage'))
 const CustomerLoyaltyPage = lazy(() => import('./pages/CustomerLoyaltyPage'))
+const CustomerReferralPage = lazy(() => import('./pages/CustomerReferralPage'))
+const CustomerVouchersPage = lazy(() => import('./pages/CustomerVouchersPage'))
 const CustomerVisitPage = lazy(() => import('./pages/CustomerVisitPage'))
 const CustomerMorePage = lazy(() => import('./pages/CustomerMorePage'))
 const ContentAdminPage = lazy(() => import('./pages/ContentAdminPage'))
@@ -56,11 +58,13 @@ const TintFinderSettingsPage = lazy(() => import('./pages/settings/TintFinderSet
 const DailySheetRulesPage = lazy(() => import('./pages/settings/DailySheetRulesPage'))
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
 const AttendancePage = lazy(() => import('./pages/AttendancePage'))
+const MyCashAdvancesPage = lazy(() => import('./pages/MyCashAdvancesPage'))
 const HistoryPage = lazy(() => import('./pages/HistoryPage'))
 const BroadcastPage = lazy(() => import('./pages/BroadcastPage'))
 const ReportsPage = lazy(() => import('./pages/ReportsPage'))
 const MembershipsPage = lazy(() => import('./pages/MembershipsPage'))
-const ReviewsPage = lazy(() => import('./pages/ReviewsPage'))
+const VouchersPage = lazy(() => import('./pages/VouchersPage'))
+const MonthlyPayrollPage = lazy(() => import('./pages/MonthlyPayrollPage'))
 const KpiPage = lazy(() => import('./pages/KpiPage'))
 
 const BookingPage = lazy(() =>
@@ -157,6 +161,8 @@ export default function App() {
             <Route path="/account/queue" element={<CustomerQueuePage />} />
             <Route path="/account/book" element={<CustomerBookPage />} />
             <Route path="/account/loyalty" element={<CustomerLoyaltyPage />} />
+            <Route path="/account/referral" element={<CustomerReferralPage />} />
+            <Route path="/account/vouchers" element={<CustomerVouchersPage />} />
             <Route path="/account/more" element={<CustomerMorePage />} />
             <Route path="/account/visit" element={<CustomerVisitPage />} />
             <Route path="/account/visit/:id" element={<CustomerVisitPage />} />
@@ -197,12 +203,14 @@ export default function App() {
             <Route path="queue/:id" element={gate('queue', <QueueTicketPage />)} />
             <Route path="crew" element={<Navigate to="/operations/attendance" replace />} />
             <Route path="attendance" element={gate('attendance', <AttendancePage />)} />
+            <Route path="my-advances" element={gate('my-advances', <MyCashAdvancesPage />)} />
             <Route path="kpi" element={gate('kpi', <KpiPage />)} />
             <Route path="my-tasks" element={gate('my-tasks', <MyTasksPage />)} />
             <Route path="pos" element={gate('pos', <PosPage />)} />
             <Route path="inventory" element={gate('inventory', <InventoryPage />)} />
             <Route path="finance" element={gate('finance', <FinancePage />)} />
-            <Route path="payroll" element={<Navigate to="/operations/finance?tab=sheets" replace />} />
+            <Route path="monthly-payroll" element={gate('monthly-payroll', <MonthlyPayrollPage />)} />
+            <Route path="payroll" element={<Navigate to="/operations/monthly-payroll" replace />} />
             <Route path="my-pay" element={<Navigate to="/operations" replace />} />
             <Route path="crm" element={gate('crm', <CrmPage />)} />
             <Route path="services" element={gate('inventory', <Navigate to="/operations/inventory" replace />)} />
@@ -222,7 +230,8 @@ export default function App() {
             <Route path="broadcast" element={gate('notifications', <BroadcastPage />)} />
             <Route path="reports" element={gate('reports', <ReportsPage />)} />
             <Route path="memberships" element={gate('memberships', <MembershipsPage />)} />
-            <Route path="reviews" element={gate('reviews', <ReviewsPage />)} />
+            <Route path="vouchers" element={gate('vouchers', <VouchersPage />)} />
+            <Route path="reviews" element={gate('reviews', <Navigate to="/operations/planning?tab=forms" replace />)} />
           </Route>
         </Route>
 

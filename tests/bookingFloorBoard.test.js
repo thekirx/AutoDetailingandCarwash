@@ -119,7 +119,7 @@ describe('Bookings floor board wiring', () => {
     const client = read('src/lib/maintenanceSchedulesClient.js')
     assert.match(page, /const floorLayout = isTeamLead \|\| isBranchAdmin\(profile\)/)
     assert.match(page, /<BookingFloorBoard/)
-    assert.match(page, /queue_number, services\(name, slug, pay_category\)/)
+    assert.match(page, /queue_number,\s*(?:promo_voucher_id,\s*)?services\(name, slug, pay_category\)/)
     assert.match(board, /qmgr-status-card/)
     assert.match(board, /MAINTENANCE_STAGE = 'maintenance'/)
     assert.match(board, /Car arrived · Start intake/)

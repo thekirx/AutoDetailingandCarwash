@@ -35,7 +35,7 @@ export function hasActiveVisit() {
   }
 }
 
-/** POST /api/customer-portal — add-vehicle | update-vehicle | archive-vehicle | sync-email | update-phone | update-birthday | submit-review */
+/** POST /api/customer-portal — add-vehicle | update-vehicle | archive-vehicle | sync-email | update-phone | update-birthday | submit-review | request-reschedule */
 export async function portalAction(action, payload = {}) {
   const token = await getAccessTokenFresh()
   if (!token) throw new Error('Sign in again.')

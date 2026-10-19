@@ -49,7 +49,7 @@ describe('client ops fixes batch', () => {
     assert.equal(canAccessBookingBoard({ role: ROLES.MARKETING }), true)
     assert.equal(canAccessBookingBoard({ role: ROLES.TEAM_LEAD, branch_slug: 'bacoor' }), true)
     assert.equal(canAccessBookingBoard({ role: ROLES.ADMIN, branch_slug: 'bacoor' }), true)
-    assert.equal(canCreateBookings({ role: ROLES.SALES }), true)
+    assert.equal(canCreateBookings({ role: ROLES.SALES }), false)
     assert.equal(canCreateBookings({ role: ROLES.TEAM_LEAD, branch_slug: 'bacoor' }), true)
     assert.equal(canCreateBookings({ role: ROLES.ADMIN, branch_slug: 'bacoor' }), false)
     assert.equal(canEditBookings({ role: ROLES.TEAM_LEAD }), false)

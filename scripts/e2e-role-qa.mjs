@@ -252,16 +252,15 @@ async function ensurePreview() {
 /** persona checks: demo id, home path, extra allow paths, deny path */
 const PERSONAS = [
   { id: 'tl', wave: 'B', home: '/operations/queue', allow: ['/operations/attendance', '/operations/bookings'], deny: '/operations/pos' },
-  { id: 'admin', wave: 'B', home: '/operations/pos', allow: ['/operations/inventory', '/operations/bookings'], deny: '/operations/finance' },
+  { id: 'admin', wave: 'B', home: '/operations/pos', allow: ['/operations/inventory', '/operations/bookings'], deny: '/operations/dashboard' },
   { id: 'crew1', wave: 'B', home: '/operations/attendance', allow: ['/operations/my-tasks'], deny: '/operations/pos' },
-  // BossMich and the ASA land on the Floor Board; /operations/console was
-  // removed from the router, so pinning these two personas there made them fail
-  // every run (BUG-053). See scripts/e2e-role-qa-wave.mjs for the maintained pack.
+  // BossMich lands on the Floor Board; General Admin lands on the queue.
+  // /operations/console was removed from the router (BUG-053).
   { id: 'boss', wave: 'C', home: '/operations/dashboard', allow: ['/operations/finance', '/operations/settings/daily-sheet'], deny: null },
-  { id: 'asa', wave: 'C', home: '/operations/dashboard', allow: ['/operations/queue'], deny: null },
-  { id: 'opslead', wave: 'C', home: '/operations/dashboard', allow: ['/operations/queue', '/operations/pos'], deny: '/operations/people' },
-  { id: 'investor', wave: 'C', home: '/operations/finance', allow: [], deny: '/operations/pos' },
-  { id: 'sales', wave: 'D', home: '/operations/bookings', allow: ['/operations/history'], deny: '/operations/queue' },
+  { id: 'asa', wave: 'C', home: '/operations/queue', allow: ['/operations/queue'], deny: null },
+  { id: 'opslead', wave: 'C', home: '/operations/queue', allow: ['/operations/queue', '/operations/pos'], deny: '/operations/people' },
+  { id: 'investor', wave: 'C', home: '/operations/finance', allow: [], deny: '/operations/dashboard' },
+  { id: 'sales', wave: 'D', home: '/operations/bookings', allow: ['/operations/history'], deny: '/operations/pos' },
   { id: 'detailer', wave: 'D', home: '/operations/bookings', allow: ['/operations/attendance'], deny: '/operations/queue' },
   { id: 'marketing', wave: 'D', home: '/operations/crm', allow: ['/operations/planning'], deny: '/operations/pos' },
   { id: 'video', wave: 'D', home: '/operations/planning?tab=calendar', allow: ['/operations/my-tasks'], deny: '/operations/queue' },

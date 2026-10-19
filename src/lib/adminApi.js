@@ -6,6 +6,8 @@ import { DEFAULT_ASSISTANT_GRANTS, getBranchScopeList } from '../auth/permission
 import { applyBranchScope, collectInChunks } from './crmInsights'
 import { writeAudit } from './audit'
 import { smsNotificationsEnabledFromSetting } from './smsNotificationsToggle'
+import { INVENTORY_CRUD_LOCK_KEY, inventoryCrudLockedFromSetting } from './inventoryLock'
+import { normalizeProductSizeOptions } from './productSizes'
 import {
   validateBranchInput,
   validateLoyaltyMilestoneInput,
@@ -231,12 +233,12 @@ export async function saveBranchOperatingHours(branchSlug, week) {
 }
 
 const STAFF_LIST_COLS =
-  'id, full_name, role, branch_slug, phone, is_active, is_archived, permission_grants, attendance_enabled, geofence_enabled, employment_type, is_supervisor, reports_to, created_at, updated_at'
+  'id, full_name, role, branch_slug, phone, is_active, is_archived, permission_grants, attendance_enabled, geofence_enabled, employment_type, is_supervisor, reports_to, date_of_birth, date_of_birth_locked_at, created_at, updated_at'
 const STAFF_LIST_COLS_LEGACY =
   'id, full_name, role, branch_slug, phone, is_active, is_archived, permission_grants, attendance_enabled, geofence_enabled, employment_type, created_at, updated_at'
 
 function isMissingStaffColumn(error) {
-  return /is_supervisor|reports_to|42703|column .* does not exist/i.test(error?.message || '')
+  return /is_supervisor|reports_to|date_of_birth|42703|column .* does not exist/i.test(error?.message || '')
 }
 
 export async function listStaffPeople({ includeInactive = false } = {}) {
@@ -1031,7 +1033,7 @@ function normalizeProductTags(raw) {
 export async function listProducts({ includeArchived = false } = {}) {
   let q = supabase
     .from('products')
-    .select('id, name, sku, category, price_minor, stock_qty, stock_group, branch_slug, tags, usage_kind, is_active, is_archived, updated_at')
+    .select('id, name, sku, category, price_minor, points_price, stock_qty, stock_group, branch_slug, tags, usage_kind, size_options, is_active, is_archived, updated_at')
     .order('name')
   if (!includeArchived) q = q.eq('is_archived', false)
   const { data, error } = await q
@@ -1055,6 +1057,7 @@ export async function createProduct(payload) {
     branch_slug: payload.branch_slug || null,
     tags: tags.length ? tags : ['sellable', 'merch'],
     usage_kind: payload.usage_kind === 'internal' ? 'internal' : 'resellable',
+    size_options: normalizeProductSizeOptions(payload.sizes),
     is_active: payload.is_active !== false,
     is_archived: false,
   }
@@ -1085,9 +1088,19 @@ export async function updateProduct(id, payload) {
     stock_group: stockGroupFromName(payload.stock_group || name),
     branch_slug: payload.branch_slug || null,
     tags: normalizeProductTags(payload.tags),
-    usage_kind: payload.usage_kind === 'internal' ? 'internal' : 'resellable',
     is_active: payload.is_active !== false,
     updated_at: new Date().toISOString(),
+  }
+  if (payload.usage_kind !== undefined) {
+    patch.usage_kind = payload.usage_kind === 'internal' ? 'internal' : 'resellable'
+  }
+  if (payload.sizes !== undefined) {
+    patch.size_options = normalizeProductSizeOptions(payload.sizes)
+  }
+  if (payload.points_price !== undefined) {
+    patch.points_price = payload.points_price === '' || payload.points_price == null
+      ? null
+      : Math.max(0, Math.floor(Number(payload.points_price) || 0))
   }
   const { data, error } = await supabase.from('products').update(patch).eq('id', id).select().maybeSingle()
   if (error) throw mapDbError(error)
@@ -1146,6 +1159,73 @@ export async function setSmsNotificationsEnabled(enabled) {
     summary: `SMS notifications ${enabled ? 'enabled' : 'disabled'}`,
     meta: { enabled: Boolean(enabled) },
   })
+  return data
+}
+
+export async function getInventoryCrudLocked() {
+  const { data, error } = await supabase
+    .from('app_settings')
+    .select('value')
+    .eq('key', INVENTORY_CRUD_LOCK_KEY)
+    .maybeSingle()
+  if (error) throw mapDbError(error)
+  return inventoryCrudLockedFromSetting(data?.value)
+}
+
+/** Super Admin lock/unlock. Writes audit + inbox for every active Super Admin. */
+export async function setInventoryCrudLocked(locked, { actorName } = {}) {
+  const next = Boolean(locked)
+  const { data, error } = await supabase
+    .from('app_settings')
+    .upsert(
+      {
+        key: INVENTORY_CRUD_LOCK_KEY,
+        value: {
+          locked: next,
+          updated_at: new Date().toISOString(),
+          by: actorName || null,
+        },
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'key' },
+    )
+    .select()
+    .maybeSingle()
+  if (error) throw mapDbError(error)
+
+  await writeAudit({
+    action: 'update',
+    entityType: 'app_settings',
+    entityId: INVENTORY_CRUD_LOCK_KEY,
+    summary: next ? 'Inventory CRUD locked' : 'Inventory CRUD unlocked',
+    meta: { locked: next },
+  })
+
+  const { data: supers, error: saErr } = await supabase
+    .from('staff_profiles')
+    .select('id')
+    .eq('role', 'BossMich')
+    .eq('is_active', true)
+  if (saErr) throw mapDbError(saErr)
+
+  const who = actorName || 'Super Admin'
+  const title = next ? 'Inventory locked' : 'Inventory unlocked'
+  const body = next
+    ? `${who} locked catalog and branch-stock edits. Only Super Admin can change them until unlock.`
+    : `${who} unlocked inventory. Branch Admins and assistants can restock and edit again.`
+  const rows = (supers || []).map((row) => ({
+    user_id: row.id,
+    title,
+    body,
+    url: '/operations/inventory?tab=merch',
+    tag: `inventory-lock-${next ? 'on' : 'off'}-${Date.now()}`,
+    kind: 'ops',
+  }))
+  if (rows.length) {
+    const { error: nErr } = await supabase.from('user_notifications').insert(rows)
+    if (nErr) throw mapDbError(nErr)
+  }
+
   return data
 }
 

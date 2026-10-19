@@ -3,6 +3,7 @@
  * notification_templates. Senders always fall back to these strings.
  */
 import { renderNotificationMessage } from './notificationCopy.js'
+import { smsCustomerName } from './queueStatusSms.js'
 
 export const TEMPLATE_CATEGORIES = [
   { id: 'booking_status', label: 'Service status', hint: 'Customer texts when a visit moves' },
@@ -58,7 +59,7 @@ export const SYSTEM_TEMPLATES = [
     key: 'booking.waiting.customer',
     category: 'booking_status',
     label: 'In the queue',
-    description: 'Customer when the car is waiting on the floor',
+    description: 'Customer when the car is waiting. SMS rotates 20 lines unless this SMS text is edited.',
     kind: 'booking_status',
     title: 'In the queue',
     body: '{plate} is checked in for {service} at {branch}.',
@@ -69,7 +70,7 @@ export const SYSTEM_TEMPLATES = [
     key: 'booking.in_progress.customer',
     category: 'booking_status',
     label: 'Service in progress',
-    description: 'Customer when detailing / wash / package starts',
+    description: 'Customer when service starts. SMS rotates 20 lines unless this SMS text is edited.',
     kind: 'booking_status',
     title: 'Service in progress',
     body: 'Our team is working on your {service} for {plate}.',
@@ -80,7 +81,7 @@ export const SYSTEM_TEMPLATES = [
     key: 'booking.final_checking.customer',
     category: 'booking_status',
     label: 'Final checking',
-    description: 'Customer when the car is on final check',
+    description: 'Customer on final check. SMS rotates 20 lines unless this SMS text is edited.',
     kind: 'booking_status',
     title: 'Final checking',
     body: '{plate} ({service}) is on final QC.',
@@ -91,7 +92,7 @@ export const SYSTEM_TEMPLATES = [
     key: 'booking.for_payment.customer',
     category: 'booking_status',
     label: 'Ready for payment',
-    description: 'Customer when the visit is ready at POS',
+    description: 'Customer ready to pay. SMS rotates 20 lines and adds the name when we have one, unless this SMS text is edited.',
     kind: 'booking_status',
     title: 'Ready for payment',
     body: 'Your {service} visit is ready for payment at the counter.',
@@ -102,7 +103,7 @@ export const SYSTEM_TEMPLATES = [
     key: 'booking.completed.customer',
     category: 'booking_status',
     label: 'Service complete',
-    description: 'Customer when the visit is released',
+    description: 'Customer when the visit is released. SMS rotates 20 lines unless this SMS text is edited.',
     kind: 'booking_status',
     title: 'Service complete',
     body: 'Your {service} is complete. Thank you!',
@@ -227,11 +228,11 @@ export const SYSTEM_TEMPLATES = [
     label: 'Birthday greeting',
     description: 'Push + SMS on the customer birthday. Mentions the free service perk.',
     kind: 'birthday_greeting',
-    tokens: NAME_TOKENS,
+    tokens: ['name', 'code'],
     title: 'Happy birthday from Hakum',
-    body: 'Happy birthday {name}! Enjoy a free service on us this year. Show this at any Hakum branch.',
+    body: 'Happy birthday {name}! Your code is {code}. Show it at any Hakum branch. It lasts 7 days.',
     sms_body:
-      'Hakum Auto Care: Happy birthday {name}! Your free birthday service is ready. Visit any branch to claim it.',
+      'Hakum Auto Care: Happy birthday {name}! Your birthday code is {code}. Show it at the branch. It lasts 7 days.',
     display_order: 200,
   }),
 
@@ -282,6 +283,18 @@ export const SYSTEM_TEMPLATES = [
     sms_body:
       'Hakum Auto Care: 10 visits, amazing! Your loyalty card is back to zero. Claim your free premium wax on your next visit. Thank you!',
     display_order: 240,
+  }),
+  row({
+    key: 'lifecycle.rate_visit',
+    category: 'lifecycle',
+    channel: 'sms',
+    label: 'Rate your visit',
+    description: 'SMS ~15 minutes after a completed wash or detailing visit',
+    kind: 'rate_visit',
+    tokens: [...NAME_TOKENS, 'appUrl'],
+    sms_body:
+      'Hakum Auto Care: How was your visit? Open your account ({appUrl}/account) to rate it — thumbs up or tell us what went wrong.',
+    display_order: 245,
   }),
 
   row({
@@ -362,7 +375,7 @@ export function bookingNotifyVars(booking = {}) {
   const service =
     String(serviceRaw).length > 28 ? `${String(serviceRaw).slice(0, 25)}…` : String(serviceRaw)
   return {
-    name: booking.customer_name || 'Customer',
+    name: smsCustomerName(booking) || 'Customer',
     plate: booking.vehicle_plate || 'your vehicle',
     service,
     branch: booking.branch_name || booking.branch || 'Hakum',

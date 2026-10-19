@@ -101,7 +101,7 @@ describe('plannerBoard', () => {
     )
     assert.deepEqual(
       plannerTabsForAccess({ canEdit: false, role: 'staff' }).map((t) => t.id),
-      ['board', 'calendar', 'forms', 'events'],
+      ['forms', 'board'],
     )
   })
 

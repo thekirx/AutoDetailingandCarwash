@@ -28,10 +28,11 @@ assert.equal(guest.url, '/book')
 assert.equal(guest.kind, 'booking_confirm')
 assert.match(guest.sms, /Ceramic Coating/)
 
-const checking = buildBookingNotifyPayload(booking, 'final_checking')
+const checking = buildBookingNotifyPayload(booking, 'final_checking', null, { random: () => 0 })
 assert.equal(checking.kind, 'booking_status')
 assert.equal(checking.url, '/account/queue')
-assert.match(checking.sms, /final QC|final checking/i)
+assert.match(checking.sms, /final|inspection|check/i)
+assert.doesNotMatch(checking.sms, /\bAna\b/)
 
 // For releasing is retired: no copy, nothing sent.
 assert.equal(buildBookingNotifyPayload(booking, 'for_releasing'), null)
@@ -71,15 +72,31 @@ const custom = buildBookingNotifyPayload(booking, 'pending', {
 assert.equal(custom.title, 'Got it Ana')
 assert.equal(custom.sms, 'SMS ABC1234')
 
+const editedWaiting = buildBookingNotifyPayload(booking, 'waiting', {
+  'booking.waiting.customer': { enabled: true, sms_body: 'Fixed line {plate}' },
+}, { random: () => 0 })
+assert.equal(editedWaiting.sms, 'Fixed line ABC1234')
+
 const opsRule = buildOpsNotifyRule(booking, 'waiting')
 assert.equal(opsRule.branch, 'bacoor')
 assert.deepEqual(opsRule.roles, ['admin', 'team_lead', 'operations_lead', 'BossMich', 'assistant_super_admin'])
 const detailRule = buildOpsNotifyRule({ ...booking, services: { slug: 'ceramic-coating', pay_category: 'detailing' } }, 'confirmed')
 assert.ok(detailRule.roles.includes('detailer'))
 
-const named = buildBookingNotifyPayload({ ...booking, branch_name: 'Bacoor' }, 'waiting')
+const named = buildBookingNotifyPayload({ ...booking, branch_name: 'Bacoor' }, 'waiting', null, { random: () => 0 })
 assert.match(named.body, /at Bacoor\./)
-assert.match(named.sms, /at Bacoor\./)
+assert.match(named.sms, /Hi Ana!/)
+assert.match(named.sms, /ABC1234/)
+assert.doesNotMatch(named.sms, /Walk-in/)
+
+const walkIn = buildBookingNotifyPayload(
+  { ...booking, customer_name: 'Walk-in · ABC1234', customers: { full_name: 'Ben Santos' } },
+  'for_payment',
+  null,
+  { random: () => 0 },
+)
+assert.match(walkIn.sms, /^Hi Ben! /)
+assert.doesNotMatch(walkIn.sms, /Walk-in/)
 
 const opsCopy = buildOpsNotifyCopy(booking, 'waiting')
 assert.equal(opsCopy.url, '/operations/queue')

@@ -14,6 +14,10 @@ export const GLOBAL_NOTIFY_ROLES = [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.OP
 
 export const NOTIFY_EVENTS = {
   booking_new: { roles: BOOKING_ROLES, urls: ['/operations/bookings', '/operations/queue', '/operations/dashboard'] },
+  booking_reschedule: {
+    roles: [R.ADMIN, R.TEAM_LEAD, R.SALES, R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN],
+    urls: ['/operations/bookings'],
+  },
   booking_floor: { roles: BOOKING_ROLES, urls: ['/operations/queue', '/operations/bookings', '/operations/dashboard'] },
   booking_payment: { roles: BOOKING_ROLES, urls: ['/operations/pos', '/operations/queue', '/operations/bookings', '/operations/dashboard'] },
   crew_assigned: { roles: [R.STAFF, R.DETAILER, R.TEAM_LEAD, R.ADMIN], urls: ['/operations/my-tasks', '/operations/queue', '/operations/dashboard'] },
@@ -21,10 +25,11 @@ export const NOTIFY_EVENTS = {
   sheet_reviewed: { roles: [R.ADMIN, R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN], urls: ['/operations/pos?tab=sheet'] },
   // The Branch Admin releases the cash on the Daily Sheet; SA / ASA approve it with the sheet.
   cash_advance_submitted: { roles: [R.ADMIN], urls: ['/operations/pos?tab=sheet'] },
+  cash_advance_approved: { roles: [R.ADMIN], urls: ['/operations/pos?tab=sheet'] },
   // Must match the inbox recipients written by the geo_clock_in SQL function.
   attendance_location_alert: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.ADMIN], urls: ['/operations/attendance'] },
   inquiry: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN], urls: ['/operations/inquiries'] },
-  review: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.OPERATIONS_LEAD, R.ADMIN], urls: ['/operations/reviews'] },
+  review: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.OPERATIONS_LEAD, R.ADMIN], urls: ['/operations/planning?tab=forms'] },
   complaint: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.ADMIN], urls: ['/operations/planning?tab=forms'] },
   pos: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.ADMIN], urls: ['/operations/pos'] },
   planner_task: {

@@ -29,19 +29,22 @@ describe('Branch Admin simplified shell', () => {
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
       [
-        '/operations/dashboard',
+        '/operations/queue',
         '/operations/bookings',
-        '/operations/attendance',
-        '/operations/pos',
-        '/operations/inventory',
-        '/operations/reviews',
         '/operations/planning',
+        '/operations/pos',
+        '/operations/finance',
+        '/operations/inventory',
+        '/operations/attendance',
+        '/operations/crm',
+        '/operations/my-advances',
         '/operations/history',
         '/operations/audit',
         '/operations/vehicle-transfer',
       ],
     )
-    assert.ok(getOperationsNav(p).some((i) => i.label === 'Floor'))
+    assert.equal(getOperationsNav(p).some((i) => i.label === 'Floor Board'), false)
+    assert.ok(getOperationsNav(p).some((i) => i.label === 'Carwash Queue'))
     assert.equal(getOperationsNav(p).some((i) => i.label === 'Queue'), false)
     assert.equal(getOperationsNav(p).some((i) => i.label === 'Ops Lab'), false)
     assert.equal(getOperationsNav(p).some((i) => i.label === 'Detailing Queue'), false)
@@ -51,8 +54,8 @@ describe('Branch Admin simplified shell', () => {
   it('dock contract matches Command nav (BA uses Command shell, not thumb dock)', () => {
     const nav = getOperationsNav(p)
     const navPaths = nav.map((i) => i.to)
-    assert.ok(navPaths.includes('/operations/dashboard'))
-    assert.equal(navPaths.includes('/operations/queue'), false)
+    assert.equal(navPaths.includes('/operations/dashboard'), false)
+    assert.ok(navPaths.includes('/operations/queue'))
     assert.ok(navPaths.includes('/operations/attendance'))
     assert.ok(navPaths.includes('/operations/pos'))
   })
