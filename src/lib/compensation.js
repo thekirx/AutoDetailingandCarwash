@@ -354,12 +354,22 @@ function stampedLineKind(line = {}) {
   return ''
 }
 
+function isPpfCompensationLine(line = {}) {
+  const cat = String(line?.pay_category || line?.services?.pay_category || '').toLowerCase()
+  const slug = String(line?.slug || line?.services?.slug || '').toLowerCase()
+  const name = String(line?.name || line?.services?.name || '').toLowerCase()
+  if (cat === 'ppf') return true
+  if (slug.includes('ppf') || slug.includes('paint-protection')) return true
+  if (name.includes('ppf') || name.includes('paint protection')) return true
+  return false
+}
+
 export function isCeramicCompensationLine(line = {}) {
+  if (isPpfCompensationLine(line)) return false
   const stamped = stampedLineKind(line)
   if (stamped === 'detailing') return true
   if (stamped) return false
   const cat = String(line?.pay_category || line?.services?.pay_category || '').toLowerCase()
-  if (cat === 'ppf') return false
   if (cat === 'detailing') return true
   if (String(line?.catalog_kind || '').toLowerCase() === 'detailing') {
     const slug = String(line?.slug || line?.services?.slug || '').toLowerCase()
@@ -371,8 +381,7 @@ export function isCeramicCompensationLine(line = {}) {
   if (
     slug.includes('ceramic-coating') ||
     slug.includes('paint-maintenance') ||
-    slug.includes('nano-ceramic') ||
-    slug.includes('detailing')
+    slug.includes('nano-ceramic')
   ) {
     return true
   }
@@ -380,8 +389,7 @@ export function isCeramicCompensationLine(line = {}) {
   if (
     name.includes('ceramic coating') ||
     name.includes('nano ceramic') ||
-    name.includes('paint maintenance') ||
-    name.includes('detailing')
+    name.includes('paint maintenance')
   ) {
     return true
   }

@@ -50,6 +50,22 @@ describe('plannerBoard', () => {
       ).name,
       'Planner',
     )
+    const withCash = [
+      { id: 'a', name: 'Employee Cash Advance' },
+      { id: 'b', name: 'Equipment Repairs' },
+      { id: 'c', name: 'Planner' },
+    ]
+    const tl = { role: 'team_lead' }
+    assert.equal(pickPlannerBoard(withCash, 'a', tl)?.name, 'Planner', 'deep-link to cash advance refuses for TL')
+    assert.deepEqual(visiblePlannerBoards(withCash, tl).map((b) => b.name), ['Equipment Repairs', 'Planner'])
+    assert.equal(pickPlannerBoard(withCash, 'a', { role: 'BossMich' })?.name, 'Employee Cash Advance')
+    const allowlisted = [
+      { id: 'a', name: 'Employee Cash Advance', visible_roles: ['BossMich', 'assistant_super_admin'] },
+      { id: 'c', name: 'Planner', visible_roles: [] },
+    ]
+    assert.deepEqual(visiblePlannerBoards(allowlisted, tl).map((b) => b.name), ['Planner'])
+    assert.equal(pickPlannerBoard(allowlisted, 'a', { role: 'BossMich' })?.name, 'Employee Cash Advance')
+    assert.match(PLAN_BOARDS_LIST_SELECT, /visible_roles/)
     assert.equal(plannerTabFromSearch('forms'), 'forms')
     assert.equal(plannerTabFromSearch('nope'), 'board')
     assert.equal(plannerTabFromSearch(new URLSearchParams('tab=review')), 'review')
@@ -78,7 +94,7 @@ describe('plannerBoard', () => {
   })
 
   it('selects live plan_boards columns (name, not title/kind/position)', () => {
-    assert.equal(PLAN_BOARDS_LIST_SELECT, 'id, name')
+    assert.equal(PLAN_BOARDS_LIST_SELECT, 'id, name, visible_roles')
     assert.match(PLAN_BOARD_DETAIL_SELECT, /id, name/)
     assert.match(PLAN_BOARD_DETAIL_SELECT, /proof_required/)
     assert.doesNotMatch(PLAN_BOARD_DETAIL_SELECT, /\bkind\b/)

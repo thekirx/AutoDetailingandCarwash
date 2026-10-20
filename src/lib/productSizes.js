@@ -1,6 +1,13 @@
-/** Optional sellable sizes. Empty means one catalog price. Labels are free text (12 oz, M, XL). */
+/** Optional sellable sizes. Empty means one catalog price. Labels are free text (12 oz, M, XL).
+ * Stock is relational: product_branch_stock.size_key (lowercased label, or '' when unsized).
+ */
 
 const MAX_SIZES = 12
+
+/** Stable stock key for a size label. Unsized products use ''. */
+export function productSizeKey(label) {
+  return String(label || '').trim().toLowerCase()
+}
 
 export function productSizeRows(product) {
   const raw = product?.size_options
@@ -9,8 +16,27 @@ export function productSizeRows(product) {
     .map((row) => ({
       label: String(row?.label || '').trim(),
       price_minor: Math.floor(Number(row?.price_minor) || 0),
+      size_key: productSizeKey(row?.label),
     }))
     .filter((row) => row.label)
+}
+
+/** Stock keys to manage for a product at a branch: [''] or ['m','xl',…]. */
+export function productStockSizeKeys(product) {
+  const rows = productSizeRows(product)
+  if (!rows.length) return ['']
+  return rows.map((row) => row.size_key)
+}
+
+export function findBranchSizeStock(stockRows, branchSlug, sizeKey = '') {
+  const key = productSizeKey(sizeKey)
+  return (stockRows || []).find(
+    (row) => row?.branch_slug === branchSlug && productSizeKey(row?.size_key) === key,
+  ) || null
+}
+
+export function branchAssignedForProduct(stockRows, branchSlug) {
+  return (stockRows || []).some((row) => row?.branch_slug === branchSlug)
 }
 
 /** Form rows { label, price } in pesos. Blank rows are dropped. Half-filled rows throw. */

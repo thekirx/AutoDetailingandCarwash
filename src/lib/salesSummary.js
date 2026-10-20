@@ -12,13 +12,26 @@ const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', '
 
 /**
  * BUG-081: this was a third private map, and it never lowercased — 'CASH' landed
- * in `other` here while the Daily Sheet counted it as cash. `bank` is projected
- * onto `card` because this surface has no bank row and "online" already landed
- * there; `other` stays `other` rather than being folded into cash or card.
+ * in `other` here while the Daily Sheet counted it as cash. Credit, debit, and
+ * bank transfer stay separate (FOrmulas.md). `other` is not folded into cash.
  */
-const METHOD_BUCKET = { cash: 'cash', gcash: 'gcash', card: 'card', bank: 'card', other: 'other' }
-const summaryBucket = (raw) => METHOD_BUCKET[paymentBucket(raw)]
-const PAYMENT_LABELS = { cash: 'Cash', gcash: 'GCash', card: 'Card', other: 'Other' }
+const METHOD_BUCKET = {
+  cash: 'cash',
+  gcash: 'gcash',
+  card: 'card',
+  debit: 'debit',
+  bank: 'bank',
+  other: 'other',
+}
+const summaryBucket = (raw) => METHOD_BUCKET[paymentBucket(raw)] || 'other'
+const PAYMENT_LABELS = {
+  cash: 'Cash',
+  gcash: 'GCash',
+  card: 'Credit card',
+  debit: 'Debit card',
+  bank: 'Bank transfer',
+  other: 'Other',
+}
 
 /** Gross / net / discounts / refunds / count / average + paid payment buckets. */
 export function rollupSales(rows = []) {
@@ -29,7 +42,7 @@ export function rollupSales(rows = []) {
     netMinor: 0,
     count: 0,
     avgMinor: 0,
-    byMethod: { cash: 0, gcash: 0, card: 0, other: 0 },
+    byMethod: { cash: 0, gcash: 0, card: 0, debit: 0, bank: 0, other: 0 },
     collectedMinor: 0,
   }
   for (const r of rows || []) {
@@ -51,7 +64,7 @@ export function rollupSales(rows = []) {
   return out
 }
 
-/** Cash / GCash / Card (+ Other only when non-zero) with % of total collected. */
+/** Cash, GCash, credit, debit, bank transfer (+ Other only when non-zero). */
 export function paymentTypes(summary) {
   const collected = summary?.collectedMinor || 0
   return Object.entries(summary?.byMethod || {})

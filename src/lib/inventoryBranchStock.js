@@ -41,11 +41,19 @@ export function applyOwnerSetQty(nextQty) {
   return Math.max(0, Number(nextQty) || 0)
 }
 
-/** On-hand at one branch. Null means the sellable is not assigned there. */
-export function branchOnHand(stockRows, branchSlug) {
-  const row = (stockRows || []).find((item) => item?.branch_slug === branchSlug)
+/** On-hand at one branch (+ optional size_key). Null means no stock row for that key. */
+export function branchOnHand(stockRows, branchSlug, sizeKey = '') {
+  const key = String(sizeKey || '').trim().toLowerCase()
+  const row = (stockRows || []).find(
+    (item) => item?.branch_slug === branchSlug && String(item?.size_key || '').trim().toLowerCase() === key,
+  )
   if (!row) return null
   return Math.max(0, Number(row.qty) || 0)
+}
+
+/** True when any size (or unsized) row exists for the branch. */
+export function branchHasStockRow(stockRows, branchSlug) {
+  return (stockRows || []).some((item) => item?.branch_slug === branchSlug)
 }
 
 /** A sellable is at a branch only when product_branch_stock has a row, including qty 0. */

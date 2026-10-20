@@ -223,7 +223,8 @@
   display: flex; align-items: center; gap: 8px; margin: 0; padding: 12px 14px;
   border-radius: 12px; font-size: 14px; line-height: 1.4; color: var(--ink, #0B1233);
 }
-.daylight-bday-banner { background: #FBEFD9; border: 1px solid #E8D4A8; }
+.daylight-bday-banner { background: #FBEFD9; border: 1px solid #E8D4A8; flex-wrap: wrap; }
+.daylight-bday-banner-note { font-weight: 500; color: var(--ink-2, #41486B); }
 .daylight-bday-nudge { background: #E9EDFC; border: 1px solid #C9D0F0; color: var(--ink-2, #41486B); }
 .daylight-bday-board {
   display: grid; gap: 12px; padding: 16px 18px; background: #fff;

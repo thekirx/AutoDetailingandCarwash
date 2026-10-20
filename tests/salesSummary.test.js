@@ -54,7 +54,7 @@ describe('rollupSales', () => {
 })
 
 describe('paymentTypes', () => {
-  it('buckets cash / gcash / card (online counts as card) and shares add to 100', () => {
+  it('buckets cash, GCash, credit, debit, and bank transfer and shares add to 100', () => {
     const s = rollupSales([
       sale({ total_minor: 60000 }),
       sale({ total_minor: 25000, payment_method: 'gcash' }),
@@ -62,9 +62,10 @@ describe('paymentTypes', () => {
       sale({ total_minor: 5000, payment_method: 'online' }),
     ])
     const types = paymentTypes(s)
-    assert.deepEqual(types.map((t) => t.id), ['cash', 'gcash', 'card'])
+    assert.deepEqual(types.map((t) => t.id), ['cash', 'gcash', 'card', 'debit', 'bank'])
     assert.equal(types.reduce((a, t) => a + t.minor, 0), s.collectedMinor)
-    assert.equal(types.find((t) => t.id === 'card').minor, 15000)
+    assert.equal(types.find((t) => t.id === 'card').minor, 10000)
+    assert.equal(types.find((t) => t.id === 'bank').minor, 5000)
     assert.equal(types.find((t) => t.id === 'cash').share, 60)
     assert.equal(Math.round(types.reduce((a, t) => a + t.share, 0)), 100)
   })

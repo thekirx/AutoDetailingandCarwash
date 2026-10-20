@@ -104,15 +104,21 @@ Paid POS (services / packages / detailing / merch)
 
 ## Drawer formula (locked)
 
+Sir’s sheet (`FOrmulas.md`, written up in [docs/daily-sheet/FORMULAS.md](../daily-sheet/FORMULAS.md)):
+
 ```
-expected_cash = opening_float + cash_sales + ca_repaid − cash_expenses − salaries − ca_released
-over_short    = counted_cash − expected_cash      (note required when not zero)
+cash_left   = pos_cash + ca_repaid_cash − expenses_cash − salaries_cash − ca_released_cash
+gcash_left  = pos_gcash + ca_repaid_gcash − expenses_gcash − salaries_gcash − ca_released_gcash
+expected_cash = opening_float + cash_left
+over_short    = counted_cash − expected_cash
 total_expenses = daily_expenses + salaries        (cash advances excluded)
 net_profit    = net_sales − total_expenses
 ```
 
-- GCash / card are in total sales but not in expected cash.
-- Source: `src/lib/dailySheet.js` — POS and Finance read the same function.
+- Credit card, debit card, and bank transfer are in total sales and in the payment rows. They are not in cash left or GCash left.
+- A salary or cash-advance line with Paid from GCash moves that channel, not the till.
+- When every salary and cash advance is cash (the old default), expected cash matches the previous float formula.
+- Source: `src/lib/sheetFormulas.js` via `computeSheetTotals`. Server twin `daily_sheet_server_totals` is applied on `lybxhpzzqqyqswvuwpxv` (20 Oct 2026).
 
 ---
 

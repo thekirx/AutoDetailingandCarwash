@@ -83,10 +83,12 @@ export function catalogLineKind({ itemType, payCategory, slug } = {}) {
   const cat = String(payCategory || '').toLowerCase()
   const s = String(slug || '').toLowerCase()
   if (type === 'product') return 'merch'
+  // Live PPF rows use pay_category detailing. Check the slug before that category
+  // or film installs get the ceramic/detailing crew split.
+  if (cat === 'ppf' || s === 'paint-protection-film' || s.includes('ppf')) return 'ppf'
   if (s === 'ceramic-coating' || s === 'paint-maintenance' || s === 'nano-ceramic-tint' || cat === 'detailing') {
     return 'detailing'
   }
-  if (cat === 'ppf' || s === 'paint-protection-film' || s.includes('ppf')) return 'ppf'
   if (cat === 'package') return 'package'
   return 'service'
 }

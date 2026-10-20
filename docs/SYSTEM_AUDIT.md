@@ -199,3 +199,23 @@ No new P0/P1 this campaign. Responsive not re-matrixed this hour (prior CONDITIO
 2. Enable alerts on SA/ASA/BA/TL phones.  
 3. Auth SMTP Gate 10.1 inbox proof.  
 4. Optional: deepen VehicleOwnership.
+
+## Daily sheet formulas (2026-10-20)
+
+Scoped to the money path in `FOrmulas.md`. This is not a new click of every route. The 16 Oct stamps above were not re-run.
+
+| Check | Result |
+|---|---|
+| Live `daily_sheet_server_totals` | **PASS** — `cashLeftMinor` / `gcashLeftMinor` on `lybxhpzzqqyqswvuwpxv`. Bacoor draft `a87dbc89…` cash expense 1000000 → cash left −1000000, GCash left 0. |
+| Approve posts expenses and salaries, not cash advances | **PASS** — `review_daily_sheet(jsonb)` contains `expense` and `salary`; `ca_release` is absent. |
+| POS payment list | **PASS** (settings row) — live `ops_pos_settings` is Cash, GCash, Credit Cards, Debit card, Bank transfer. A live debit or bank sale was **NOT VERIFIED** by click. Floor tiles now keep credit, debit, and bank transfer apart (20 Oct afternoon). |
+| Ceramic vs same-day vs PPF | **FIXED** — live catalog: ceramic, tint, PPF, paint maintenance are `pay_category` detailing. Interior / exterior / mobile / glass are same-day. PPF `line_kind` is `ppf` even when the category says detailing, so film is not ceramic crew pay. Paint maintenance has its own sheet row. |
+| Stock per size | **APPLIED** — `product_branch_stock.size_key` and POS deduct by `size_label`. Existing qty remains on `size_key ''`. |
+| Cash Advance board | **APPLIED** — Employee Cash Advance `visible_roles` excludes Team Lead, Branch Admin, marketing, and Customer Rep. |
+| Unit tests for this path | **PASS** — 98/98 on sheet, payment, and finance summary tests (20 Oct). Full `npm test`, lint, and build **NOT RE-RUN**. |
+| Browser money click / responsive | **NOT VERIFIED** this pass. |
+| Soft-launch | **Still blocked** — BusyBee IP and Auth SMTP unchanged. |
+
+### Ask Sir
+
+See `docs/daily-sheet/FORMULAS.md` (card and debit stay out of the drawers, opening float, cash-advance deduction, GCash salary, detailing vs coating, split tender).

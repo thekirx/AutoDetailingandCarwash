@@ -52,7 +52,8 @@
       "title": "One sheet per branch per day",
       "items": [
         "Net profit = net sales − expenses − salaries",
-        "Cash advances move cash, never profit"
+        "Cash left and GCash left follow FOrmulas.md; advances are not expenses",
+        "Credit, debit, and bank transfer stay in sales, not in either drawer"
       ]
     },
     {

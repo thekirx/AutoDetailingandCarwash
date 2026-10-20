@@ -159,7 +159,7 @@ export default function PlanningBoardPage() {
     setStaff(staffRows || [])
     setTemplates(tplRows || [])
     setReviewItems(reviewItemsFromAssigneeRows(reviewRows))
-    const next = pickPlannerBoard(boardRows, requested)
+    const next = pickPlannerBoard(boardRows, requested, profile)
     if (!next) {
       setBoard(null)
       setLoading(false)

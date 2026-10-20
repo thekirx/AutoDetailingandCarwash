@@ -20,12 +20,12 @@ import { getCrewAttendanceModel } from '../src/queue/queueLogic.js'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 describe('payment methods + SA financials', () => {
-  it('POS methods are Cash, GCash, Credit/Debit', () => {
+  it('POS methods are cash, GCash, credit, debit, and bank transfer', () => {
     assert.deepEqual(
       PAYMENT_METHODS.map((m) => m.value),
-      ['cash', 'gcash', 'card'],
+      ['cash', 'gcash', 'card', 'debit', 'bank'],
     )
-    assert.equal(paymentMethodLabel('card'), 'Credit Cards')
+    assert.equal(paymentMethodLabel('card'), 'Credit card')
     assert.equal(normalizePaymentMethod('online'), 'card')
     assert.equal(normalizePaymentMethod('gcash'), 'gcash')
   })
@@ -43,7 +43,9 @@ describe('payment methods + SA financials', () => {
     assert.equal(fin.pos_sales_minor, 25000)
     assert.equal(fin.cash_sales_minor, 10000)
     assert.equal(fin.gcash_sales_minor, 20000)
-    assert.equal(fin.card_sales_minor, 35000)
+    assert.equal(fin.card_sales_minor, 30000)
+    assert.equal(fin.bank_sales_minor, 5000)
+    assert.equal(fin.debit_sales_minor, 0)
     assert.equal(fin.paid_count, 4)
   })
 })

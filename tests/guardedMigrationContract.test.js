@@ -42,6 +42,7 @@ const GUARDED = [
   '20261011090000_reconcile_live_admin_policies.sql',
   '20261013090000_queue_start_requires_present_crew.sql',
   '20261015090000_revoke_legacy_checkout_rpcs.sql',
+  '20261019210000_daily_sheet_expected_cash_paid_from.sql',
 ]
 
 /** Post-2026-10-10 migrations that do not narrow live RLS (schema/RPC/feature work). */
@@ -68,6 +69,9 @@ const EXEMPTED = [
   '20261019180000_rbac_sheet_write_locks.sql',
   '20261019190000_plan_card_form_link.sql',
   '20261019200000_product_size_options.sql',
+  '20261019220000_product_branch_stock_size_key.sql',
+  '20261019221000_plan_boards_visible_roles.sql',
+  '20261019230000_sheet_money_left_channels.sql',
 ]
 
 const read = (name) => readFileSync(join(migrationsDir, name), 'utf8')

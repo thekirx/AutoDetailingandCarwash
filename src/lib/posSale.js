@@ -400,7 +400,7 @@ export function priceCartForMembership(cart = [], membershipContext = {}) {
 }
 
 /** True when payment_method is in the configured POS list.
- * Empty config falls back to platform PAYMENT_METHODS (cash/gcash/card) — never open-ended.
+ * Empty config falls back to cash, GCash, credit, debit, and bank transfer — never open-ended.
  */
 export function isAllowedPosPaymentMethod(method, paymentMethods = []) {
   const key = String(method || '').trim().toLowerCase()
@@ -408,7 +408,13 @@ export function isAllowedPosPaymentMethod(method, paymentMethods = []) {
   const list = Array.isArray(paymentMethods) ? paymentMethods : []
   const effective = list.length
     ? list
-    : [{ value: 'cash' }, { value: 'gcash' }, { value: 'card' }]
+    : [
+        { value: 'cash' },
+        { value: 'gcash' },
+        { value: 'card' },
+        { value: 'debit' },
+        { value: 'bank' },
+      ]
   return effective.some((m) => String(m?.value || m || '').trim().toLowerCase() === key)
 }
 

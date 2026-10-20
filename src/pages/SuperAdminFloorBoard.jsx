@@ -652,11 +652,25 @@ export default function SuperAdminFloorBoard() {
               breakdown={`GCash tender share of paid sales in this timeline (${branchLabel}).\nAmount: ${formatMoney(financials.gcash_sales_minor)}`}
             />
             <StatTile
-              label="Credit / Debit"
+              label="Credit card"
               value={formatMoney(financials.card_sales_minor)}
-              hint={paymentMethodLabel('card') || 'Card'}
+              hint={paymentMethodLabel('card') || 'Credit card'}
               onNavigate={() => navigate('/operations/finance')}
-              breakdown={`Credit / debit card tender share of paid sales in this timeline (${branchLabel}).\nAmount: ${formatMoney(financials.card_sales_minor)}`}
+              breakdown={`Credit card share of paid sales in this timeline (${branchLabel}).\nAmount: ${formatMoney(financials.card_sales_minor)}`}
+            />
+            <StatTile
+              label="Debit card"
+              value={formatMoney(financials.debit_sales_minor)}
+              hint={paymentMethodLabel('debit') || 'Debit card'}
+              onNavigate={() => navigate('/operations/finance')}
+              breakdown={`Debit card share of paid sales in this timeline (${branchLabel}).\nAmount: ${formatMoney(financials.debit_sales_minor || 0)}`}
+            />
+            <StatTile
+              label="Bank transfer"
+              value={formatMoney(financials.bank_sales_minor)}
+              hint={paymentMethodLabel('bank') || 'Bank transfer'}
+              onNavigate={() => navigate('/operations/finance')}
+              breakdown={`Bank transfer share of paid sales in this timeline (${branchLabel}). Bank transfer is not cash and not the card terminal.\nAmount: ${formatMoney(financials.bank_sales_minor || 0)}`}
             />
             <StatTile
               label="Cancel loss"

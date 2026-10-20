@@ -40,7 +40,7 @@ describe('C5 POS / C6 finance contracts', () => {
   it('payment methods Cash/GCash/Card', () => {
     assert.deepEqual(
       PAYMENT_METHODS.map((m) => m.value),
-      ['cash', 'gcash', 'card'],
+      ['cash', 'gcash', 'card', 'debit', 'bank'],
     )
   })
 

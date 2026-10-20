@@ -54,6 +54,7 @@ function body(name, file) {
 
 const ORIG = 'supabase/migrations/20261001090000_daily_sheet.sql'
 const FIX = 'supabase/migrations/20261010170000_daily_sheet_cash_blank_is_cash.sql'
+const PAID_FROM = 'supabase/migrations/20261019210000_daily_sheet_expected_cash_paid_from.sql'
 
 /** The function as originally shipped — history, and the shape the bug lived in. */
 const totals = body('daily_sheet_server_totals', ORIG)
@@ -208,28 +209,20 @@ describe('the sheet totals computed in SQL match the ones computed in JS', () =>
     assert.match(jsDaily, /netProfitMinor: s\.netMinor - totalExpensesMinor/)
   })
 
-  it('expected cash uses the same six terms in the same order', () => {
-    const sqlExpect = fixed.match(/v_expected := ([^\n]+)/)
-    const jsExpect = jsDaily.match(/const expectedCashMinor =\s*\n?\s*([^\n]+)\n?\s*([^\n]+)/)
-    assert.ok(sqlExpect, 'SQL no longer computes expected cash')
-    assert.ok(jsExpect, 'JS no longer computes expected cash')
-    const norm = (s) => s.replace(/\s+/g, ' ').trim()
-    assert.match(
-      norm(sqlExpect[1]),
-      /opening_float_minor.*\+\s*v_cash.*\+\s*v_rep\s*-\s*v_exp\s*-\s*v_sal\s*-\s*v_rel/,
-      `SQL expected-cash terms drifted: ${norm(sqlExpect[1])}`,
-    )
-    const jsBoth = norm(jsExpect[1] + ' ' + jsExpect[2])
-    assert.match(
-      jsBoth,
-      /openingFloatMinor.*\+\s*s\.cashMinor.*\+\s*caRepaidMinor\s*-\s*cashExpensesMinor\s*-\s*salariesMinor\s*-\s*caReleasedMinor/,
-      `JS expected-cash terms drifted: ${jsBoth}`,
-    )
+  it('expected cash is opening float plus cash left on both sides', () => {
+    const channels = readFileSync(join(root, 'supabase/migrations/20261019230000_sheet_money_left_channels.sql'), 'utf8')
+    assert.match(channels, /v_cash_left := v_cash \+ v_rep_cash - v_cash_exp - v_sal_cash - v_rel_cash/)
+    assert.match(channels, /v_gcash_left := v_gcash \+ v_rep_gcash - v_gcash_exp - v_sal_gcash - v_rel_gcash/)
+    assert.match(channels, /v_expected := coalesce\(s\.opening_float_minor, 0\) \+ v_cash_left/)
+    assert.match(jsDaily, /moneyLeft\(/)
+    assert.match(jsDaily, /expectedCashMinor: left\.expectedCashMinor/)
+    const formulas = readFileSync(join(root, 'src/lib/sheetFormulas.js'), 'utf8')
+    assert.match(formulas, /opening \+ cashLeftMinor/)
   })
 
   it('over/short is null until counted, on both sides', () => {
     assert.match(fixed, /case when s\.counted_cash_minor is null then null else s\.counted_cash_minor - v_expected end/)
-    assert.match(jsDaily, /overShortMinor: counted == null \? null : counted - expectedCashMinor/)
+    assert.match(jsDaily, /overShortMinor: counted == null \? null : counted - left\.expectedCashMinor/)
   })
 
   it('an uncounted sheet reports null, not zero — a zero would read as "balanced"', () => {

@@ -51,6 +51,7 @@ App gates are not enough: the browser writes `bookings` with the signed-in user.
 
 - Branch Admin cannot insert or update bookings, queue assignments, or queue events. Attendance and POS stay on `can_manage_branch`.
 - Customer Rep cannot write bookings. They can insert and update customer rows, and `QUEUE_PROVISION_ROLES` includes `sales` so CRM register works.
+- Planner boards use `plan_boards.visible_roles` (empty = everyone). Cash Advance boards are seeded so Team Lead, Branch Admin, Marketing, and Customer Rep do not see them. Configure → Save board edits the allowlist. Legacy name match still applies only when `visible_roles` is empty.
 - Marketing cannot update customers, write vehicles, insert customer notes, or write `sms_events`.
 - Campaign SMS (`canSendCustomerSms`) is Owner / Super Admin, General Admin with CRM, and Branch Admin. Customer Rep edits the customer file and does not open the SMS tab.
 

@@ -67,7 +67,9 @@ function hydrateLine(row) {
     amountText: toText(row.amount_minor),
     reason: row.reason || '',
     receipt_path: row.receipt_path || null,
-    paid_from: row.kind === 'expense' ? (row.paid_from === 'gcash' ? 'gcash' : 'cash') : null,
+    paid_from: ['expense', 'salary', 'ca_release', 'ca_repay'].includes(row.kind)
+      ? (row.paid_from === 'gcash' ? 'gcash' : 'cash')
+      : null,
     parts: row.parts || null,
   }
 }
@@ -326,7 +328,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
     const line = hydrateLine({
       kind,
       amount_minor: 0,
-      ...(kind === 'expense' ? { paid_from: 'cash' } : {}),
+      ...(['expense', 'salary', 'ca_release', 'ca_repay'].includes(kind) ? { paid_from: 'cash' } : {}),
       ...extra,
     })
     setLines((cur) => [...cur, line.amount_minor ? line : { ...line, amountText: '' }])
@@ -610,7 +612,22 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
                       </p>
                     </div>
                     {editable ? (
-                      <AmountInput id={`ds-sal-${l.id}`} label="Pay (₱)" value={l.amountText} onChange={(v) => setAmount(l.id, v)} />
+                      <>
+                        <AmountInput id={`ds-sal-${l.id}`} label="Pay (₱)" value={l.amountText} onChange={(v) => setAmount(l.id, v)} />
+                        <div className="flex flex-col gap-1">
+                          <Label htmlFor={`ds-sal-p-${l.id}`} className="text-xs text-muted-foreground">Paid from</Label>
+                          <NamedSelect
+                            id={`ds-sal-p-${l.id}`}
+                            className="min-h-11"
+                            value={l.paid_from === 'gcash' ? 'gcash' : 'cash'}
+                            onChange={(v) => patchLine(l.id, { paid_from: v })}
+                            options={[
+                              { value: 'cash', label: 'Cash' },
+                              { value: 'gcash', label: 'GCash' },
+                            ]}
+                          />
+                        </div>
+                      </>
                     ) : (
                       <div className="text-right">
                         {changed ? <s className="ds-num block text-xs text-muted-foreground">{formatAccounting(l.suggested_minor)}</s> : null}
@@ -642,7 +659,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
           </section>
 
           <section className="ds-card" aria-label="Cash advances">
-            <SectionHead step={4} title="Cash advances" hint="Optional. Not a cost — it only moves drawer cash. Given out needs the approval code from Planner. Paid back does not." done={check.sections.cashAdvances} />
+            <SectionHead step={4} title="Cash advances" hint="Not an expense. Given out lowers cash or GCash left. Paid back raises that same channel. Given out still needs the Planner approval code." done={check.sections.cashAdvances} />
             {editable && (ctx?.caRequests || []).length ? (
               <div className="mb-3 flex flex-wrap gap-2">
                 {ctx.caRequests.map((r) => (
@@ -698,6 +715,19 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
                         />
                       </div>
                     ) : null}
+                    <div className="flex flex-col gap-1">
+                      <Label htmlFor={`ds-ca-p-${l.id}`} className="text-xs text-muted-foreground">Paid from</Label>
+                      <NamedSelect
+                        id={`ds-ca-p-${l.id}`}
+                        className="min-h-11"
+                        value={l.paid_from === 'gcash' ? 'gcash' : 'cash'}
+                        onChange={(v) => patchLine(l.id, { paid_from: v })}
+                        options={[
+                          { value: 'cash', label: 'Cash' },
+                          { value: 'gcash', label: 'GCash' },
+                        ]}
+                      />
+                    </div>
                     <AmountInput id={`ds-ca-m-${l.id}`} value={l.amountText} onChange={(v) => setAmount(l.id, v)} />
                     <div className="flex items-end">
                       <Button type="button" variant="ghost" className="min-h-11 min-w-11" aria-label={`Remove cash advance ${i + 1}`} onClick={() => removeLine(l.id)}>
@@ -735,6 +765,8 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
               <AmountInput id="ds-count" label="Cash counted (₱)" value={countText} disabled={!editable} onChange={(v) => { setCountText(v); setDirty(true) }} />
             </div>
             <div className="mt-3">
+              <Row label="Cash left"><Money minor={totals.cashLeftMinor} /></Row>
+              <Row label="GCash left"><Money minor={totals.gcashLeftMinor} /></Row>
               <Row label="Expected cash"><Money minor={totals.expectedCashMinor} /></Row>
               <Row label="Over / short" bold rule>
                 {totals.overShortMinor == null ? <span className="text-muted-foreground">Count the drawer</span> : <Money minor={totals.overShortMinor} bold className={totals.overShortMinor ? 'ds-alert' : 'ds-ok'} />}
@@ -760,6 +792,8 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
           <Row label="Cash sales"><Money minor={totals.cashMinor} /></Row>
           <Row label="CA paid back"><Money minor={totals.caRepaidMinor} /></Row>
           <Row label="CA given out"><Money minor={-totals.caReleasedMinor} /></Row>
+          <Row label="Cash left"><Money minor={totals.cashLeftMinor} /></Row>
+          <Row label="GCash left"><Money minor={totals.gcashLeftMinor} /></Row>
           <Row label="Expected cash" bold rule><Money minor={totals.expectedCashMinor} bold /></Row>
           <Row label="Over / short">
             {totals.overShortMinor == null ? <span>—</span> : <Money minor={totals.overShortMinor} bold className={totals.overShortMinor ? 'ds-alert' : 'ds-ok'} />}

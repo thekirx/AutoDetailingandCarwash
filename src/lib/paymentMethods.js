@@ -8,6 +8,8 @@ export const PAYMENT_METHODS = [
   { value: 'cash', label: 'Cash' },
   { value: 'gcash', label: 'GCash' },
   { value: 'card', label: 'Credit Cards' },
+  { value: 'debit', label: 'Debit card' },
+  { value: 'bank', label: 'Bank transfer' },
 ]
 
 /** @deprecated alias — prefer PAYMENT_METHODS */
@@ -29,7 +31,7 @@ export const PAYMENT_OPTIONS = PAYMENT_METHODS
  * cash-first, and some money demonstrably came in. That is a different
  * question from a method that was recorded and is not recognised.
  */
-export const PAYMENT_BUCKETS = Object.freeze(['cash', 'gcash', 'card', 'bank', 'other'])
+export const PAYMENT_BUCKETS = Object.freeze(['cash', 'gcash', 'card', 'debit', 'bank', 'other'])
 
 const ALIASES = Object.freeze({
   cash: 'cash',
@@ -37,7 +39,9 @@ const ALIASES = Object.freeze({
   'g-cash': 'gcash',
   card: 'card',
   credit: 'card',
-  debit: 'card',
+  credit_card: 'card',
+  debit: 'debit',
+  debit_card: 'debit',
   credit_debit: 'card',
   'credit/debit': 'card',
   // Legacy bank transfer / "online" settlement. Not a drawer method and not a
@@ -83,15 +87,19 @@ export function drawerPaymentBucket(raw) {
 export function normalizePaymentMethod(raw) {
   if (raw == null || String(raw).trim() === '') return 'cash'
   const bucket = paymentBucket(raw)
-  return bucket === 'cash' ? 'cash' : bucket === 'gcash' ? 'gcash' : 'card'
+  if (bucket === 'cash') return 'cash'
+  if (bucket === 'gcash') return 'gcash'
+  // Debit stays off the drawer; the 3-bucket floor report still groups it with card.
+  return 'card'
 }
 
 export function paymentMethodLabel(raw) {
   const bucket = paymentBucket(raw)
   if (bucket === 'cash') return 'Cash'
   if (bucket === 'gcash') return 'GCash'
-  if (bucket === 'card') return PAYMENT_METHODS.find((m) => m.value === 'card')?.label || 'Credit Cards'
-  if (bucket === 'bank') return 'Bank'
+  if (bucket === 'card') return 'Credit card'
+  if (bucket === 'debit') return 'Debit card'
+  if (bucket === 'bank') return 'Bank transfer'
   return 'Other'
 }
 
@@ -146,6 +154,8 @@ export function aggregateSalesFinancials(rows = []) {
     cash_sales_minor: 0,
     gcash_sales_minor: 0,
     card_sales_minor: 0,
+    debit_sales_minor: 0,
+    bank_sales_minor: 0,
     paid_count: 0,
   }
   for (const row of rows) {
@@ -163,10 +173,12 @@ export function aggregateSalesFinancials(rows = []) {
       else if (bucket === 'clothing') out.clothing_sales_minor += amount
       else out.merch_sales_minor += amount
     }
-    const method = normalizePaymentMethod(row.payment_method)
+    const method = drawerPaymentBucket(row.payment_method)
     if (method === 'gcash') out.gcash_sales_minor += amount
+    else if (method === 'debit') out.debit_sales_minor += amount
+    else if (method === 'bank') out.bank_sales_minor += amount
     else if (method === 'card') out.card_sales_minor += amount
-    else out.cash_sales_minor += amount
+    else if (method === 'cash') out.cash_sales_minor += amount
   }
   return out
 }

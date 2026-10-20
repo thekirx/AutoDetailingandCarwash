@@ -2,7 +2,7 @@
 
 Checked 18 Oct 2026 against the live app (not against the notes alone).
 Source notes: `my notes.md`.
-Last checklist pass: **19 Oct 2026** (C25 title is the heading and the browser tab).
+Last checklist pass: **20 Oct 2026** — daily sheet formulas applied on `lybxhpzzqqyqswvuwpxv`. Checklist: `docs/daily-sheet/FORMULAS.md`. **Not soft-launch ready.**
 
 Status key: **Done** · **Partial** · **Missing**
 
@@ -81,7 +81,7 @@ Command sidebar groups shipped 18 Oct (`permissions.js`). Reviews off menus. Aud
 ## C. Earlier notes in the same file — still open
 
 - [x] **C1 Done** — Request + SA/ASA approve + Daily Sheet code path already shipped. **My advances** at `/operations/my-advances` lists the signed-in user’s `cash_advance` submissions (waiting / approved / declined). Dock/nav for staff, detailer, BA, TL More, Ops Lead. Not a P&L expense.
-- [x] **C2 Done** — Daily Sheet expense lines have **Paid from** Cash (drawer) or GCash (`paid_from`). GCash still counts in expense totals / P&L on approve; only cash-paid expenses reduce expected drawer cash. Migration `20261019140000_expense_paid_from`.
+- [x] **C2 Done** — Daily Sheet expense lines have **Paid from** Cash (drawer) or GCash (`paid_from`). GCash still counts in expense totals / P&L on approve; only cash-paid expenses reduce expected drawer cash. Migrations `20261019140000_expense_paid_from` + `20261019210000_daily_sheet_expected_cash_paid_from` (JS and `daily_sheet_server_totals` both use cash-only for expected cash).
 - [x] **C3 Done** — Settings → Daily sheet rules already label Detailing splits; `compensation.js` documents ceramic_* keys as legacy DB names. Product service names (Ceramic Coating SKU) stay.
 - [x] **C4 Done** — Detailing board no longer has a List tab. Board, Table, Calendar, and Maintenance stay. Search and filters stay on Table.
 - [x] **C5 Done** — POS size buttons use S / M / L / XL so four sizes fit the tile. The price line still says Small, Medium, Large, or Extra Large. Each button’s accessible name is the full size.
@@ -142,3 +142,29 @@ Each step needs one failing test before the change, then the same test green. Do
 - Changing the saved friend discount. Sir sets it on Settings → Friend referral (default 3% until he saves another number).
 - Per-branch point prices (already decided catalog-wide).
 - Owner daily SMS (policy: no).
+
+---
+
+## F. Honesty — checklist Done, but not “fully finished shop”
+
+**Verdict (strict):** B/C rows are **visible in FE + backed in BE** for the checklist scope, and the main flows make sense when you know the sheet. They are **not** “ready for unsupervised shop use” until BusyBee IP + Auth SMTP are proven and a full role FLOPS / money-path click passes. UI/UX is usable for trained staff; customizability is Settings / Memberships / People / Tint pageTitle / referral % — not a free CMS. Section E stays Sir-gated.
+
+These are not open checklist rebuild rows. They are limits and ops gaps so nobody pretends soft-launch is closed.
+
+| Gap | Status | Notes |
+|---|---|---|
+| Soft-launch / production ready | **No** | Checklist Done ≠ host-proven outbound SMS or staff FLOPS re-click. |
+| Sellable stock per size | **Live 20 Oct** | `product_branch_stock.size_key` is on `lybxhpzzqqyqswvuwpxv`. POS deducts by `size_label`. Old quantities sit on `size_key ''`. A sized product needs its on-hand set per size or the sale will miss that row. |
+| Points redeem per size | Intentional | One `points_price` per product. |
+| Spend-points rate as a free number | Not a setting | Memberships can turn points on/off; earn stays ₱1 ≈ 1 point × tier multiplier. Sir does not type a custom peso-per-point. |
+| Planner Cash Advance board hide | **Live 20 Oct** | `plan_boards.visible_roles` is on the live project. Employee Cash Advance is limited to Owner, General Admin, operations lead, staff, detailer, video editor, and investor. Branch Admin still records advances on the daily sheet. |
+| Tint Finder browser tab title | Dual adapter | H1 + `usePageMeta` use `config.pageTitle`; `PublicPageMeta` still defaults to “Tint Finder” until the page overrides — crawlers may see the static default. |
+| Customer Rep “bookings” language | Prose vs CRM | Matrix: no booking write. CRM register / queue provision still create customer rows — not Finance reports, not detailing writes. |
+| Staff birthday push/inbox | **Shipped 19 Oct night** | Cron `runStaffBirthdayGreetings` (wired into birthday greetings API): inbox + web push, tag `staff-birthday-{id}-{year}`. **No SMS.** Attendance banner notes the channel. |
+| Archify perceptual review | Pending human | Rate-visit / voucher diagrams: deliver + visual-check pass; human look still open. |
+| BusyBee / Auth SMTP production | Ops blocker | Outbound customer reminders need BrandTxt IP allowlist proof. Not a checklist UI row. See `docs/qa/REMAINING-WORK-2026-10.md`. |
+| Staff UI click-through | Test-covered only | Unit matrices + Tint Finder browser check. Full role FLOPS / money-path click not re-run this pass. |
+| Named sheet accounts | Not invented | Live DB has demo investor rows only. People labels match the sheet; no fake Michihiko/Lucy accounts. |
+| Architecture deepening | Report in TEMP | `architecture-review-*.html` — Strong: cash-advance pick seam (partially fixed), permissions matrix collapse. Ask which candidate to grill next. |
+
+18. **C2 SQL expected cash** — Closed 19 Oct evening. `daily_sheet_server_totals` now subtracts cash-paid expenses only (live applied). Tests: `moneyLeftovers`, `dailySheetCashBucketParity`.

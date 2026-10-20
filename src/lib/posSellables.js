@@ -70,14 +70,9 @@ export function classifySaleBucket({
     return 'nano_tint'
   if (slug.includes('paint-protection') || slug.includes('ppf') || name.includes('ppf') || cat === 'ppf') return 'ppf'
   if (slug.includes('paint-maintenance') || name.includes('paint maintenance')) return 'paint_maintenance'
-  // Generic detailing (interior/exterior/etc.) — not ceramic coating
-  if (
-    cat === 'detailing' ||
-    slug.includes('detailing') ||
-    name.includes('detailing')
-  ) {
-    return 'detailing'
-  }
+  // Multi-day detailing is the catalog category, not the word in a same-day name.
+  // Interior / exterior / glass / mobile detailing stay with car wash.
+  if (cat === 'detailing') return 'detailing'
   if (itemType === 'product') {
     return merchFamily({
       tags: productTags,

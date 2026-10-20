@@ -1,4 +1,5 @@
 /** Planner board visibility + tab IA. Complaints boards stay out of the task board. */
+import { categoryVisibleToRole } from './planCategoryRoles.js'
 
 export const PLANNER_TABS = [
   { id: 'board', label: 'Tasks', hint: 'Filter, create, and assign work', icon: 'tasks' },
@@ -11,11 +12,11 @@ export const PLANNER_TABS = [
 
 export const PLANNER_TAB_IDS = PLANNER_TABS.map((t) => t.id)
 
-/** Live `plan_boards` columns — name is the workspace label; there is no title/kind/position. */
-export const PLAN_BOARDS_LIST_SELECT = 'id, name'
+/** Live `plan_boards` columns — name is the workspace label; visible_roles empty = everyone. */
+export const PLAN_BOARDS_LIST_SELECT = 'id, name, visible_roles'
 
 export const PLAN_BOARD_DETAIL_SELECT = `
-  id, name,
+  id, name, visible_roles,
   plan_lists (
     id, title, position,
     plan_cards (
@@ -64,16 +65,23 @@ export function hidesCashAdvancePlannerBoard(profile) {
   return CASH_ADVANCE_BOARD_HIDDEN_ROLES.has(profile?.role)
 }
 
+/** Prefer plan_boards.visible_roles; legacy name+role hide until the board is seeded. */
+export function boardVisibleToProfile(board, profile) {
+  const roles = board?.visible_roles
+  if (Array.isArray(roles) && roles.length > 0) return categoryVisibleToRole(board, profile?.role)
+  if (hidesCashAdvancePlannerBoard(profile) && isCashAdvancePlannerBoard(board)) return false
+  return true
+}
+
 export function visiblePlannerBoards(boards, profile) {
   return (Array.isArray(boards) ? boards : []).filter((board) => {
     if (!isPlannerBoardVisible(board)) return false
-    if (hidesCashAdvancePlannerBoard(profile) && isCashAdvancePlannerBoard(board)) return false
-    return true
+    return boardVisibleToProfile(board, profile)
   })
 }
 
-export function pickPlannerBoard(boards, wantedIdOrName) {
-  const rows = visiblePlannerBoards(boards)
+export function pickPlannerBoard(boards, wantedIdOrName, profile) {
+  const rows = visiblePlannerBoards(boards, profile)
   if (!rows.length) return null
   const key = String(wantedIdOrName || '')
   const exact = rows.find((b) => b.id === key || b.name === key)

@@ -17,7 +17,14 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { MERCH_FAMILIES, productMatchesMerchFamily } from '@/lib/posSellables'
-import { productSizeRows, sizeDraftFromOptions } from '@/lib/productSizes'
+import {
+  branchAssignedForProduct,
+  findBranchSizeStock,
+  productSizeKey,
+  productSizeRows,
+  productStockSizeKeys,
+  sizeDraftFromOptions,
+} from '@/lib/productSizes'
 import { toast } from 'sonner'
 
 const empty = { name: '', sku: '', category: 'merch', price: '', stock_qty: '0', branch_slug: '', tags: 'sellable,merch', usage_kind: 'resellable', sizes: [] }
@@ -31,7 +38,7 @@ function SizeFields({ rows, onChange, disabled }) {
           Add size
         </Button>
       </div>
-      <p className="text-xs text-muted-foreground">Optional. Leave this empty for one price. Each size has its own name and price, such as 12 oz or XL.</p>
+      <p className="text-xs text-muted-foreground">Optional. Leave empty for one price. Each size has its own name, price, and branch on-hand (12 oz, M, XL).</p>
       {(rows || []).map((row, index) => (
         <div key={index} className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_7rem_auto]">
           <Input
@@ -197,14 +204,22 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
     }
   }
 
+  function stockDraftKey(branchSlug, sizeKey = '') {
+    return sizeKey ? `${branchSlug}::${sizeKey}` : branchSlug
+  }
+
   function openEdit(row) {
     const rows = stockByProduct[row.id] || []
+    const keys = productStockSizeKeys(row)
     const qtyDraft = {}
     const addDraft = {}
     for (const b of branches) {
-      const hit = rows.find((r) => r.branch_slug === b.slug)
-      qtyDraft[b.slug] = hit != null ? String(hit.qty) : ''
-      addDraft[b.slug] = ''
+      for (const sizeKey of keys) {
+        const hit = findBranchSizeStock(rows, b.slug, sizeKey)
+        const dk = stockDraftKey(b.slug, sizeKey)
+        qtyDraft[dk] = hit != null ? String(hit.qty) : ''
+        addDraft[dk] = ''
+      }
     }
     setBranchQtyDraft(qtyDraft)
     setRestockDraft(addDraft)
@@ -221,22 +236,32 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
       is_active: row.is_active,
       points_price: row.points_price == null ? '' : String(row.points_price),
       sizes: sizeDraftFromOptions(row.size_options),
+      size_options: row.size_options,
     })
   }
 
   async function assignBranch(productId, branchSlug) {
     if (!assertCanMutate()) return
+    const product = products.find((p) => p.id === productId) || editing
+    const keys = productStockSizeKeys(product)
     setSaving(true)
     try {
-      const { error } = await supabase.from('product_branch_stock').insert({
-        product_id: productId,
-        branch_slug: branchSlug,
-        qty: 0,
-      })
+      const { error } = await supabase.from('product_branch_stock').insert(
+        keys.map((size_key) => ({
+          product_id: productId,
+          branch_slug: branchSlug,
+          size_key,
+          qty: 0,
+        })),
+      )
       if (error) throw error
       toast.success(`Assigned to ${branchNames[branchSlug] || branchSlug}`)
       await load()
-      setBranchQtyDraft((s) => ({ ...s, [branchSlug]: '0' }))
+      setBranchQtyDraft((s) => {
+        const next = { ...s }
+        for (const sizeKey of keys) next[stockDraftKey(branchSlug, sizeKey)] = '0'
+        return next
+      })
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -244,17 +269,20 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
     }
   }
 
-  async function setBranchQty(productId, branchSlug) {
+  async function setBranchQty(productId, branchSlug, sizeKey = '') {
     if (!assertCanMutate()) return
-    const next = applyOwnerSetQty(branchQtyDraft[branchSlug])
+    const dk = stockDraftKey(branchSlug, sizeKey)
+    const next = applyOwnerSetQty(branchQtyDraft[dk])
+    const key = productSizeKey(sizeKey)
     setSaving(true)
     try {
-      const existing = (stockByProduct[productId] || []).find((r) => r.branch_slug === branchSlug)
+      const existing = findBranchSizeStock(stockByProduct[productId] || [], branchSlug, key)
       const prev = existing ? Number(existing.qty) || 0 : 0
       if (!existing) {
         const { error } = await supabase.from('product_branch_stock').insert({
           product_id: productId,
           branch_slug: branchSlug,
+          size_key: key,
           qty: next,
         })
         if (error) throw error
@@ -264,18 +292,20 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
           .update({ qty: next })
           .eq('product_id', productId)
           .eq('branch_slug', branchSlug)
+          .eq('size_key', key)
         if (error) throw error
       }
       const { error: movErr } = await supabase.from('product_stock_movements').insert({
         product_id: productId,
         branch_slug: branchSlug,
+        size_key: key,
         delta: next - prev,
         reason: 'owner_set',
         movement_type: 'owner_set',
         created_by: user?.id || profile?.id,
       })
       if (movErr) throw movErr
-      toast.success(`On-hand set to ${next}`)
+      toast.success(key ? `On-hand ${key} set to ${next}` : `On-hand set to ${next}`)
       await load()
     } catch (err) {
       toast.error(err.message)
@@ -284,22 +314,25 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
     }
   }
 
-  async function restockBranch(productId, branchSlug) {
+  async function restockBranch(productId, branchSlug, sizeKey = '') {
     if (!assertCanMutate()) return
-    const add = Math.max(0, Math.floor(Number(restockDraft[branchSlug]) || 0))
+    const dk = stockDraftKey(branchSlug, sizeKey)
+    const key = productSizeKey(sizeKey)
+    const add = Math.max(0, Math.floor(Number(restockDraft[dk]) || 0))
     if (add < 1) {
       toast.error('Enter a restock quantity')
       return
     }
     setSaving(true)
     try {
-      const existing = (stockByProduct[productId] || []).find((r) => r.branch_slug === branchSlug)
+      const existing = findBranchSizeStock(stockByProduct[productId] || [], branchSlug, key)
       const current = existing ? Number(existing.qty) || 0 : null
       const next = applyRestockQty(current ?? 0, add)
       if (current == null) {
         const { error } = await supabase.from('product_branch_stock').insert({
           product_id: productId,
           branch_slug: branchSlug,
+          size_key: key,
           qty: next,
         })
         if (error) throw error
@@ -309,20 +342,22 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
           .update({ qty: next })
           .eq('product_id', productId)
           .eq('branch_slug', branchSlug)
+          .eq('size_key', key)
         if (error) throw error
       }
       const { error: movErr } = await supabase.from('product_stock_movements').insert({
         product_id: productId,
         branch_slug: branchSlug,
+        size_key: key,
         delta: add,
         reason: 'restock',
         movement_type: 'restock',
         created_by: user?.id || profile?.id,
       })
       if (movErr) throw movErr
-      toast.success(`Restocked +${add}`)
-      setRestockDraft((s) => ({ ...s, [branchSlug]: '' }))
-      setBranchQtyDraft((s) => ({ ...s, [branchSlug]: String(next) }))
+      toast.success(key ? `Restocked ${key} +${add}` : `Restocked +${add}`)
+      setRestockDraft((s) => ({ ...s, [dk]: '' }))
+      setBranchQtyDraft((s) => ({ ...s, [dk]: String(next) }))
       await load()
     } catch (err) {
       toast.error(err.message)
@@ -339,7 +374,7 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
             <p className="mb-2 text-xs font-bold tracking-[0.22em] text-primary uppercase">Inventory</p>
             <h1 className="text-3xl font-semibold tracking-tight">Merch & products</h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Branch on-hand lives on each product. Same name shares stock automatically (stock group).
+              Branch on-hand is per size when a product has sizes. Same name still shares a stock group.
             </p>
           </div>
           <Link to="/operations/pos" className="inline-flex h-9 items-center rounded-lg border border-border px-4 text-sm font-medium hover:bg-muted">
@@ -540,9 +575,17 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
 
               <div className="flex flex-col gap-3 rounded-lg border border-border p-3">
                 <p className="text-sm font-medium">Branch on-hand</p>
-                <p className="text-xs text-muted-foreground">POS sells only at branches with a stock row. Restock adds; Set writes absolute qty.</p>
+                <p className="text-xs text-muted-foreground">
+                  POS sells only when that branch has stock for the picked size. Restock adds; Set writes absolute qty.
+                  Save sizes first, then assign — each size gets its own count.
+                </p>
                 {branches.map((b) => {
-                  const assigned = (stockByProduct[editing.id] || []).some((r) => r.branch_slug === b.slug)
+                  const stockRows = stockByProduct[editing.id] || []
+                  const assigned = branchAssignedForProduct(stockRows, b.slug)
+                  const draftSized = (editing.sizes || []).filter((s) => String(s.label || '').trim())
+                  const sizeKeys = draftSized.length
+                    ? draftSized.map((s) => productSizeKey(s.label))
+                    : productStockSizeKeys({ size_options: editing.size_options })
                   return (
                     <div key={b.slug} className="flex flex-col gap-2 border-t border-border pt-2 first:border-t-0 first:pt-0">
                       <div className="flex items-center justify-between gap-2">
@@ -555,39 +598,46 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
                           <span className="text-xs text-muted-foreground">Assigned</span>
                         )}
                       </div>
-                      {assigned ? (
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          <div className="flex gap-2">
-                            <Input
-                              type="number"
-                              min="0"
-                              className="min-h-11"
-                              aria-label={`${b.name} on-hand`}
-                              value={branchQtyDraft[b.slug] ?? ''}
-                              onChange={(e) => setBranchQtyDraft((s) => ({ ...s, [b.slug]: e.target.value }))}
-                              disabled={!canMutate}
-                            />
-                            <Button type="button" variant="outline" className="min-h-11 shrink-0" disabled={saving || !canMutate} onClick={() => setBranchQty(editing.id, b.slug)}>
-                              Set
-                            </Button>
-                          </div>
-                          <div className="flex gap-2">
-                            <Input
-                              type="number"
-                              min="1"
-                              className="min-h-11"
-                              aria-label={`${b.name} restock`}
-                              placeholder="+ qty"
-                              value={restockDraft[b.slug] ?? ''}
-                              onChange={(e) => setRestockDraft((s) => ({ ...s, [b.slug]: e.target.value }))}
-                              disabled={!canMutate}
-                            />
-                            <Button type="button" className="min-h-11 shrink-0" disabled={saving || !canMutate} onClick={() => restockBranch(editing.id, b.slug)}>
-                              Restock
-                            </Button>
-                          </div>
-                        </div>
-                      ) : null}
+                      {assigned
+                        ? sizeKeys.map((sizeKey) => {
+                            const dk = stockDraftKey(b.slug, sizeKey)
+                            const sizeLabel = sizeKey || 'Default'
+                            return (
+                              <div key={dk} className="grid gap-2 rounded-md bg-muted/40 p-2 sm:grid-cols-[4.5rem_minmax(0,1fr)_minmax(0,1fr)] sm:items-center">
+                                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{sizeLabel}</span>
+                                <div className="flex gap-2">
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    className="min-h-11"
+                                    aria-label={`${b.name} ${sizeLabel} on-hand`}
+                                    value={branchQtyDraft[dk] ?? ''}
+                                    onChange={(e) => setBranchQtyDraft((s) => ({ ...s, [dk]: e.target.value }))}
+                                    disabled={!canMutate}
+                                  />
+                                  <Button type="button" variant="outline" className="min-h-11 shrink-0" disabled={saving || !canMutate} onClick={() => setBranchQty(editing.id, b.slug, sizeKey)}>
+                                    Set
+                                  </Button>
+                                </div>
+                                <div className="flex gap-2">
+                                  <Input
+                                    type="number"
+                                    min="1"
+                                    className="min-h-11"
+                                    aria-label={`${b.name} ${sizeLabel} restock`}
+                                    placeholder="+ qty"
+                                    value={restockDraft[dk] ?? ''}
+                                    onChange={(e) => setRestockDraft((s) => ({ ...s, [dk]: e.target.value }))}
+                                    disabled={!canMutate}
+                                  />
+                                  <Button type="button" className="min-h-11 shrink-0" disabled={saving || !canMutate} onClick={() => restockBranch(editing.id, b.slug, sizeKey)}>
+                                    Restock
+                                  </Button>
+                                </div>
+                              </div>
+                            )
+                          })
+                        : null}
                     </div>
                   )
                 })}

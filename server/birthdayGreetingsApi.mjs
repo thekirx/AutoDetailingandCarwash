@@ -2,6 +2,7 @@ import { createClient } from '@supabase/supabase-js'
 import { json, readJsonBody, setCors } from './httpUtil.mjs'
 import { runBirthdayGreetings } from './birthdayGreetings.mjs'
 import { scheduledRunGate } from './scheduledRun.mjs'
+import { runStaffBirthdayGreetings } from './staffBirthdayGreetings.mjs'
 
 function admin() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
@@ -26,8 +27,11 @@ export async function handleBirthdayGreetingsRequest(req, res) {
 
   if (req.method === 'POST') await readJsonBody(req).catch(() => ({}))
   try {
-    const result = await runBirthdayGreetings(db)
-    return json(res, 200, result)
+    const [customers, staff] = await Promise.all([
+      runBirthdayGreetings(db),
+      runStaffBirthdayGreetings(db),
+    ])
+    return json(res, 200, { customers, staff })
   } catch (err) {
     return json(res, 500, { error: err.message || String(err) })
   }

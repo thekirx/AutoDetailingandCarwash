@@ -84,6 +84,8 @@ describe('ops money + attendance seam (live role strings)', () => {
     assert.equal(classifySaleBucket({ booking_id: 'b2', service_slug: 'ceramic-coating', total_minor: 1 }), 'coating')
     assert.equal(classifySaleBucket({ booking_id: 'b3', service_slug: 'paint-maintenance', total_minor: 1 }), 'paint_maint')
     assert.equal(classifySaleBucket({ pos_handoff_id: 'h1', pay_category: 'wash', total_minor: 1 }), 'carwash')
+    assert.equal(classifySaleBucket({ service_name: 'Interior Detailing', pay_category: 'general' }), 'carwash')
+    assert.equal(classifySaleBucket({ service_slug: 'ppf-basic', pay_category: 'detailing', service_name: 'Basic PPF Protection' }), 'ppf')
     assert.equal(classifySaleBucket({ name: 'Iced coffee', item_type: 'product', total_minor: 1 }), 'refreshment')
     const closeRows = paidSalesToBacoorRows([
       {

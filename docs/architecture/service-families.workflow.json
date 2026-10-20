@@ -1,0 +1,50 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Hakum jobs and the daily sheet",
+    "quality_profile": "showcase",
+    "output": "docs/architecture/service-families.workflow.html"
+  },
+  "lanes": [
+    { "id": "sameday", "label": "Same day" },
+    { "id": "detail", "label": "Detailing board" }
+  ],
+  "phases": [
+    { "id": "book", "label": "Where the job lives", "fromCol": 0, "toCol": 1 },
+    { "id": "count", "label": "Daily sheet", "fromCol": 2, "toCol": 2, "variant": "emphasis" }
+  ],
+  "mainPath": ["wash", "queue", "sheet"],
+  "nodes": [
+    { "id": "wash", "lane": "sameday", "col": 0, "type": "frontend", "label": "Wash and packages", "sublabel": "same-day queue", "tag": "Bay", "width": 150 },
+    { "id": "queue", "lane": "sameday", "col": 1, "type": "backend", "label": "Today's queue", "sublabel": "resets each morning", "tag": "TL", "width": 148 },
+    { "id": "sheet", "lane": "sameday", "col": 2, "type": "database", "label": "Car wash sales", "sublabel": "not coffee or accessories", "tag": "Sheet", "width": 160 },
+    { "id": "ceramic", "lane": "detail", "col": 0, "type": "frontend", "label": "Ceramic, tint, PPF", "sublabel": "plus paint maintenance", "tag": "Detail", "width": 160 },
+    { "id": "board", "lane": "detail", "col": 1, "type": "backend", "label": "Detailing bookings", "sublabel": "multi-day list", "tag": "Board", "width": 150 },
+    { "id": "rows", "lane": "detail", "col": 2, "type": "database", "label": "Own sales rows", "sublabel": "coating, tint, and PPF", "tag": "Sheet", "width": 156 }
+  ],
+  "edges": [
+    { "id": "e1", "from": "wash", "to": "queue", "label": "today" },
+    { "id": "e2", "from": "queue", "to": "sheet", "label": "paid", "variant": "emphasis" },
+    { "id": "e3", "from": "ceramic", "to": "board", "label": "booked" },
+    { "id": "e4", "from": "board", "to": "rows", "label": "paid", "variant": "emphasis" }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Already true",
+      "items": [
+        "Ceramic is a detailing job and its own sales number",
+        "Coffee and accessories stay off the service rows"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Still asking Sir",
+      "items": [
+        "Interior and glass say detailing but live on today's queue",
+        "Paint maintenance sits in the leftover Detailing number"
+      ]
+    }
+  ]
+}

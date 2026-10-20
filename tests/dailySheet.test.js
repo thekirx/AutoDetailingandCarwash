@@ -39,7 +39,7 @@ test('sales: gross before discounts, net = gross − discounts − refunds, avg 
   // unrecognised payment method lands. Without a real bucket for it the money
   // would either be written to an undefined key or dropped, and dropping it would
   // make the method rows stop summing to net sales.
-  assert.deepEqual(s.byMethod, { cash: 50000, gcash: 20000, card: 0, bank: 30000, other: 0 })
+    assert.deepEqual(s.byMethod, { cash: 50000, gcash: 20000, card: 0, debit: 0, bank: 30000, other: 0 })
   assert.equal(
     Object.values(s.byMethod).reduce((a, b) => a + b, 0),
     s.netMinor,

@@ -8,6 +8,7 @@ import { buildPayrollPreview } from './payroll.js'
 import { normalizeCompensationSettings } from './compensation.js'
 import { normalizeAssistantGrants } from '../auth/permissions.js'
 import { drawerPaymentBucket } from './paymentMethods.js'
+import { channelPaidFrom, moneyLeft, sumChannel } from './sheetFormulas.js'
 
 export const SHEET_STATUSES = Object.freeze(['draft', 'submitted', 'approved', 'returned'])
 export const LINE_KINDS = Object.freeze(['expense', 'salary', 'ca_release', 'ca_repay'])
@@ -75,7 +76,7 @@ export function canApproveSheet(profile, sheet, currentUserId) {
 const FAMILY_OF_BUCKET = {
   carwash: 'car_wash',
   coating: 'coating',
-  paint_maint: 'detailing',
+  paint_maint: 'paint_maint',
   detailing: 'detailing',
   ppf: 'ppf',
   tint: 'tint',
@@ -85,11 +86,12 @@ const FAMILY_OF_BUCKET = {
 }
 
 export const FAMILY_LABELS = Object.freeze({
-  car_wash: 'Car wash',
-  coating: 'Coating',
+  car_wash: 'Car wash sales',
+  coating: 'Ceramic coating sales',
+  paint_maint: 'Paint maintenance sales',
   detailing: 'Detailing',
-  ppf: 'PPF',
-  tint: 'Tint',
+  ppf: 'Paint protection film sales',
+  tint: 'Ceramic tint sales',
   coffee: 'Coffee',
   merch: 'Merch',
 })
@@ -101,7 +103,14 @@ export const FAMILY_LABELS = Object.freeze({
  * told a Branch Admin their correct drawer was short by exactly that amount.
  * paymentBucket() resolves unknown to 'other', which is not a drawer method.
  */
-export const METHOD_LABELS = Object.freeze({ cash: 'Cash', gcash: 'GCash', card: 'Card', bank: 'Bank', other: 'Other' })
+export const METHOD_LABELS = Object.freeze({
+  cash: 'Cash',
+  gcash: 'GCash',
+  card: 'Credit card',
+  debit: 'Debit card',
+  bank: 'Bank transfer',
+  other: 'Other',
+})
 
 const amount = (v) => {
   const n = Math.round(Number(v))
@@ -114,7 +123,7 @@ const sumOf = (rows) => rows.reduce((s, l) => s + amount(l.amount_minor), 0)
 /** Gross / discounts / refunds / net / count / average + payment methods + service families. */
 export function summarizeSheetSales(sales = []) {
   const r = rollupSales(sales)
-  const byMethod = { cash: 0, gcash: 0, card: 0, bank: 0, other: 0 }
+  const byMethod = { cash: 0, gcash: 0, card: 0, debit: 0, bank: 0, other: 0 }
   const paid = (sales || []).filter((s) => s?.status === 'paid')
   for (const s of paid) {
     byMethod[drawerPaymentBucket(s.payment_method)] += amount(s.total_minor)
@@ -196,28 +205,45 @@ export function suggestSalaries({
   })
 }
 
-/** Expense paid_from: cash (drawer) or gcash. Default cash for legacy rows. */
+/** Expense / salary / cash-advance channel: cash (drawer) or gcash. Default cash for legacy rows. */
 export function expensePaidFrom(line = {}) {
-  const v = String(line?.paid_from || 'cash').toLowerCase()
-  return v === 'gcash' ? 'gcash' : 'cash'
+  return channelPaidFrom(line)
 }
 
 /**
- * Summary panel. Salaries and cash-paid expenses reduce expected drawer cash.
- * GCash-paid expenses still count in P&L totals but leave the cash drawer alone.
+ * FOrmulas.md money left.
+ * Cash left and GCash left exclude opening float.
+ * Expected drawer cash = opening float + cash left (till count).
+ * GCash expenses and GCash salaries stay in P&L and in GCash left, not in the till.
  */
 export function computeSheetTotals({ sales = [], lines = [], openingFloatMinor = 0, countedCashMinor = null } = {}) {
   const s = summarizeSheetSales(sales)
   const expenseLines = linesOf(lines, 'expense')
+  const salaryLines = linesOf(lines, 'salary')
+  const releaseLines = linesOf(lines, 'ca_release')
+  const repayLines = linesOf(lines, 'ca_repay')
   const expensesMinor = sumOf(expenseLines)
-  const cashExpensesMinor = sumOf(expenseLines.filter((l) => expensePaidFrom(l) === 'cash'))
-  const gcashExpensesMinor = sumOf(expenseLines.filter((l) => expensePaidFrom(l) === 'gcash'))
-  const salariesMinor = sumOf(linesOf(lines, 'salary'))
-  const caReleasedMinor = sumOf(linesOf(lines, 'ca_release'))
-  const caRepaidMinor = sumOf(linesOf(lines, 'ca_repay'))
+  const cashExpensesMinor = sumChannel(expenseLines, 'cash')
+  const gcashExpensesMinor = sumChannel(expenseLines, 'gcash')
+  const salariesMinor = sumOf(salaryLines)
+  const salaryCashMinor = sumChannel(salaryLines, 'cash')
+  const salaryGcashMinor = sumChannel(salaryLines, 'gcash')
+  const caReleasedMinor = sumOf(releaseLines)
+  const caRepaidMinor = sumOf(repayLines)
   const totalExpensesMinor = expensesMinor + salariesMinor
-  const expectedCashMinor =
-    amount(openingFloatMinor) + s.cashMinor + caRepaidMinor - cashExpensesMinor - salariesMinor - caReleasedMinor
+  const left = moneyLeft({
+    posCashMinor: s.cashMinor,
+    posGcashMinor: s.byMethod.gcash,
+    caRepayCashMinor: sumChannel(repayLines, 'cash'),
+    caRepayGcashMinor: sumChannel(repayLines, 'gcash'),
+    expenseCashMinor: cashExpensesMinor,
+    expenseGcashMinor: gcashExpensesMinor,
+    salaryCashMinor,
+    salaryGcashMinor,
+    caReleaseCashMinor: sumChannel(releaseLines, 'cash'),
+    caReleaseGcashMinor: sumChannel(releaseLines, 'gcash'),
+    openingFloatMinor,
+  })
   const counted = countedCashMinor == null || countedCashMinor === '' ? null : amount(countedCashMinor)
   return {
     ...s,
@@ -225,14 +251,18 @@ export function computeSheetTotals({ sales = [], lines = [], openingFloatMinor =
     cashExpensesMinor,
     gcashExpensesMinor,
     salariesMinor,
+    salaryCashMinor,
+    salaryGcashMinor,
     totalExpensesMinor,
     netProfitMinor: s.netMinor - totalExpensesMinor,
     caReleasedMinor,
     caRepaidMinor,
     openingFloatMinor: amount(openingFloatMinor),
-    expectedCashMinor,
+    cashLeftMinor: left.cashLeftMinor,
+    gcashLeftMinor: left.gcashLeftMinor,
+    expectedCashMinor: left.expectedCashMinor,
     countedCashMinor: counted,
-    overShortMinor: counted == null ? null : counted - expectedCashMinor,
+    overShortMinor: counted == null ? null : counted - left.expectedCashMinor,
   }
 }
 
@@ -419,7 +449,7 @@ export function toSheetPayloadLines(lines = []) {
       amount_minor: amount(l.amount_minor),
       reason: String(l.reason || '').trim() || null,
       receipt_path: l.receipt_path || null,
-      paid_from: l.kind === 'expense' ? expensePaidFrom(l) : null,
+      paid_from: ['expense', 'salary', 'ca_release', 'ca_repay'].includes(l.kind) ? expensePaidFrom(l) : null,
     }))
 }
 

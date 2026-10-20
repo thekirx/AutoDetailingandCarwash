@@ -406,6 +406,7 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
           Today&apos;s birthday
           {todayStaffBirthdays.length === 1 ? '' : 's'}:{' '}
           {todayStaffBirthdays.map((row) => row.full_name).filter(Boolean).join(', ')}
+          <span className="daylight-bday-banner-note"> — they also get an inbox notice and push (no SMS).</span>
         </p>
       ) : null}
       {needsOwnBirthday && showClock ? (

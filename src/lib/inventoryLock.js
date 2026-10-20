@@ -25,13 +25,15 @@ export function stockRowsByProductId(rows = []) {
   return map
 }
 
-/** Compact on-hand cell for the merch product table. */
+/** Compact on-hand cell for the merch product table (includes size when size_key set). */
 export function formatBranchOnHandSummary(rows = [], branchNames = {}) {
   if (!rows?.length) return 'Not at a branch'
   return rows
     .map((r) => {
-      const label = branchNames[r.branch_slug] || r.branch_slug
-      return `${label} ${Math.max(0, Number(r.qty) || 0)}`
+      const branch = branchNames[r.branch_slug] || r.branch_slug
+      const size = String(r.size_key || '').trim()
+      const qty = Math.max(0, Number(r.qty) || 0)
+      return size ? `${branch} ${size} ${qty}` : `${branch} ${qty}`
     })
     .join(' · ')
 }

@@ -165,7 +165,7 @@ describe('request.md money + POS + Bacoor', () => {
   it('payment methods and merch families', () => {
     assert.deepEqual(
       PAYMENT_METHODS.map((m) => m.value),
-      ['cash', 'gcash', 'card'],
+      ['cash', 'gcash', 'card', 'debit', 'bank'],
     )
     assert.ok(MERCH_FAMILIES.some((f) => f.id === 'coffee'))
     assert.ok(MERCH_FAMILIES.some((f) => f.id === 'accessories'))

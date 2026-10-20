@@ -9,10 +9,13 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 describe('money leftovers (C2/C3/C6)', () => {
   it('wires expense paid_from cash|gcash through sheet save UI and SQL', () => {
     const mig = readFileSync(join(root, 'supabase/migrations/20261019140000_expense_paid_from.sql'), 'utf8')
+    const totals = readFileSync(join(root, 'supabase/migrations/20261019210000_daily_sheet_expected_cash_paid_from.sql'), 'utf8')
     const sheet = readFileSync(join(root, 'src/lib/dailySheet.js'), 'utf8')
     const panel = readFileSync(join(root, 'src/pages/pos/DailySheetPanel.jsx'), 'utf8')
     assert.match(mig, /paid_from/)
     assert.match(mig, /assert_cash_advance_release/)
+    assert.match(totals, /v_cash_exp/)
+    assert.match(totals, /v_expected := coalesce\(s\.opening_float_minor, 0\) \+ v_cash \+ v_rep - v_cash_exp - v_sal - v_rel/)
     assert.match(sheet, /expensePaidFrom/)
     assert.match(sheet, /cashExpensesMinor/)
     assert.match(panel, /Paid from/)

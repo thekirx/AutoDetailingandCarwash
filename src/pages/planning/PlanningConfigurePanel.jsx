@@ -74,12 +74,14 @@ export default function PlanningConfigurePanel({
   const [editingTmplId, setEditingTmplId] = useState(null)
   const [editTmplName, setEditTmplName] = useState('')
   const [editTmplItems, setEditTmplItems] = useState('')
+  const [boardRoles, setBoardRoles] = useState([])
 
   useEffect(() => {
     setBoardName('')
     setListTitle('')
     setEditingListId(null)
-  }, [board?.id])
+    setBoardRoles([...(board?.visible_roles || [])])
+  }, [board?.id, board?.visible_roles])
 
   if (!canEdit) {
     return (
@@ -96,7 +98,14 @@ export default function PlanningConfigurePanel({
     const err = plannerBoardNameError(name)
     if (err) return toast.error(err)
     if (!board?.id) return
-    const { error } = await supabase.from('plan_boards').update({ name, updated_at: new Date().toISOString() }).eq('id', board.id)
+    const { error } = await supabase
+      .from('plan_boards')
+      .update({
+        name,
+        visible_roles: normalizeVisibleRoles(boardRoles),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', board.id)
     if (error) return toast.error(error.message)
     toast.success('Board saved')
     setBoardName('')
@@ -220,10 +229,12 @@ export default function PlanningConfigurePanel({
     onChanged()
   }
 
-  function RoleChecks({ value, onChange }) {
+  function RoleChecks({ value, onChange, hint }) {
     return (
       <div className="grid gap-1 sm:grid-cols-2">
-        <p className="sm:col-span-2 text-xs text-muted-foreground">Leave all unchecked so every role sees this category.</p>
+        <p className="sm:col-span-2 text-xs text-muted-foreground">
+          {hint || 'Leave all unchecked so every role sees this category.'}
+        </p>
         {PLAN_CATEGORY_ROLE_OPTIONS.map((opt) => (
           <label key={opt.id} className="flex min-h-11 items-center gap-2 text-sm">
             <input
@@ -300,7 +311,7 @@ export default function PlanningConfigurePanel({
       <Section
         eyebrow="This board"
         title={board?.name || 'No board'}
-        hint="A board is a workspace (Planner, Equipment, Cash Advance). Lists are the columns on it."
+        hint="A board is a workspace (Planner, Equipment, Cash Advance). Lists are the columns on it. Who sees the board is set below — Cash Advance usually excludes Team Lead, Branch Admin, Marketing, and Customer Rep."
       >
         <div className="grid gap-3">
           <label className="planner-configure-field">
@@ -311,14 +322,28 @@ export default function PlanningConfigurePanel({
               ))}
             </select>
           </label>
-          <form onSubmit={renameBoard} className="flex flex-col gap-2 sm:flex-row">
-            <Input
-              value={boardName}
-              onChange={(e) => setBoardName(e.target.value)}
-              placeholder={board?.name || 'Board name'}
-              aria-label="Board name"
+          <form onSubmit={renameBoard} className="grid gap-3">
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Input
+                value={boardName}
+                onChange={(e) => setBoardName(e.target.value)}
+                placeholder={board?.name || 'Board name'}
+                aria-label="Board name"
+              />
+              <Button type="submit" className="min-h-11" disabled={!board?.id}>Save board</Button>
+            </div>
+            <RoleChecks
+              value={boardRoles}
+              onChange={setBoardRoles}
+              hint="Leave all unchecked so every planner role sees this board. Checked roles are an allowlist."
             />
-            <Button type="submit" className="min-h-11" disabled={!board?.id}>Save name</Button>
+            {(board?.visible_roles || []).length ? (
+              <p className="text-xs text-muted-foreground">
+                Saved allowlist: {(board.visible_roles || []).join(', ')}
+              </p>
+            ) : (
+              <p className="text-xs text-muted-foreground">Saved: visible to every planner role (or legacy Cash Advance hide by name until you save an allowlist).</p>
+            )}
           </form>
           <div>
             <Button type="button" variant="ghost" className="min-h-11 text-destructive" onClick={removeBoard} disabled={!board?.id}>
