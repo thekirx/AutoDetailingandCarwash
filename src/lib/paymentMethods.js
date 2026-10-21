@@ -77,6 +77,28 @@ export function drawerPaymentBucket(raw) {
 }
 
 /**
+ * How one paid ticket lands in the payment rows.
+ * A split ticket is cash + GCash only. The ticket total is still one sale;
+ * each portion is what that channel took. Any other method takes the whole ticket.
+ */
+export function saleTenderPortions(sale = {}) {
+  const total = Math.round(Number(sale.total_minor) || 0)
+  const safe = Number.isFinite(total) ? total : 0
+  const method = String(sale.payment_method || '').trim().toLowerCase()
+  const empty = { cash: 0, gcash: 0, card: 0, debit: 0, bank: 0, other: 0 }
+  if (method === 'split') {
+    const cash = Math.max(0, Math.round(Number(sale.cash_minor) || 0))
+    const gcash = Math.max(0, Math.round(Number(sale.gcash_minor) || 0))
+    empty.cash = cash
+    empty.gcash = gcash
+    empty.other = Math.max(0, safe - cash - gcash)
+    return empty
+  }
+  empty[drawerPaymentBucket(sale.payment_method)] = safe
+  return empty
+}
+
+/**
  * Normalize stored sale.payment_method into cash | gcash | card.
  *
  * Historical 3-bucket projection, kept because floor financials report exactly
@@ -173,12 +195,12 @@ export function aggregateSalesFinancials(rows = []) {
       else if (bucket === 'clothing') out.clothing_sales_minor += amount
       else out.merch_sales_minor += amount
     }
-    const method = drawerPaymentBucket(row.payment_method)
-    if (method === 'gcash') out.gcash_sales_minor += amount
-    else if (method === 'debit') out.debit_sales_minor += amount
-    else if (method === 'bank') out.bank_sales_minor += amount
-    else if (method === 'card') out.card_sales_minor += amount
-    else if (method === 'cash') out.cash_sales_minor += amount
+    const portions = saleTenderPortions(row)
+    out.cash_sales_minor += portions.cash
+    out.gcash_sales_minor += portions.gcash
+    out.card_sales_minor += portions.card
+    out.debit_sales_minor += portions.debit
+    out.bank_sales_minor += portions.bank
   }
   return out
 }

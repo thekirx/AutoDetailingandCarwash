@@ -218,4 +218,18 @@ Scoped to the money path in `FOrmulas.md`. This is not a new click of every rout
 
 ### Ask Sir
 
-See `docs/daily-sheet/FORMULAS.md` (card and debit stay out of the drawers, opening float, cash-advance deduction, GCash salary, detailing vs coating, split tender).
+Answered 21 Oct 2026. See the checklist in `docs/daily-sheet/FORMULAS.md`.
+
+## Daily sheet collection (2026-10-21)
+
+Sir’s five answers are the contract. They replace the morning-float reading.
+
+| Answer | Result |
+|---|---|
+| Total credit/debit transaction = credit card + debit card + bank transfer | On the sheet, the close slip, and `creditDebitMinor`. Still out of cash left and GCash left. |
+| No morning float | The sheet no longer asks for one. Cash left is the collection. Over/short compares the count to cash left. |
+| Cash advance comes off total sales and is not an expense | `totalSalesMinor` = paid POS − advances given. Expense total is still expenses + salaries. The channel that paid the advance still drops, so the drawer matches. |
+| Salary comes out of the cash or GCash transaction, not again from what is left | `moneyLeft` and `daily_sheet_server_totals` both do this. |
+| Split cash + GCash on one ticket | POS control, `sales.cash_minor` / `gcash_minor`, and the sheet attributes each portion. The ticket counts once. |
+
+Live apply of `20261021120000_sheet_collection_no_float.sql` is on `lybxhpzzqqyqswvuwpxv`. Checked 21 Oct 2026: salary is subtracted once inside the channel transaction, submit no longer requires a float, and a split ticket can be stored. A live click of a split sale on the register is still **NOT VERIFIED**.

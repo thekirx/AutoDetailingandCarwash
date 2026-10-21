@@ -119,7 +119,9 @@ try {
     .maybeSingle()
   assert(!detErr && detailer?.id, `need an active bacoor detailer: ${detErr?.message}`)
 
-  // Float 2000 + repay 50 − expense 500 − salary 900 − release 200 = 450 expected in the drawer.
+  // No sales on this sandbox day. Salary comes out of the cash transaction.
+  // Cash left = 0 − 90000 salary + 5000 repaid − 50000 expense − 20000 advance = −155000.
+  // The count cannot be negative, so the drawer is short and the note explains it.
   const lines = [
     { kind: 'expense', account_id: generalAccount, description: 'QA e2e load', amount_minor: 50000 },
     { kind: 'salary', staff_id: detailer.id, suggested_minor: 80000, amount_minor: 90000, reason: '' },
@@ -129,9 +131,9 @@ try {
   const sheetPayload = (overrides = {}) => ({
     branch: QA_BRANCH,
     business_date: QA_DATE,
-    opening_float_minor: 200000,
-    counted_cash_minor: 45000,
-    notes: null,
+    opening_float_minor: null,
+    counted_cash_minor: 0,
+    notes: 'QA collection',
     totals: {},
     lines: toSheetPayloadLines(lines),
     ...overrides,
@@ -168,7 +170,7 @@ try {
   // ── Server-side submit checks ─────────────────────────────────────────────
   await refused('sheet.submit_needs_salary_reason', rpc(ba.client, 'submit_daily_sheet', { id: sheetId }), /Finish 1 line/)
   lines[1].reason = 'QA overtime'
-  await rpc(ba.client, 'save_daily_sheet', sheetPayload({ counted_cash_minor: 44000 }))
+  await rpc(ba.client, 'save_daily_sheet', sheetPayload({ counted_cash_minor: 0, notes: null }))
   await refused('sheet.submit_needs_over_short_note', rpc(ba.client, 'submit_daily_sheet', { id: sheetId }), /over or short/)
   const { error: resaveErr } = await rpc(ba.client, 'save_daily_sheet', sheetPayload())
   assert(!resaveErr, `resave: ${resaveErr?.message}`)
@@ -176,10 +178,11 @@ try {
   const { data: submitted, error: submitErr } = await rpc(ba.client, 'submit_daily_sheet', { id: sheetId })
   assert(!submitErr, `submit_daily_sheet: ${submitErr?.message}`)
   assert(submitted.status === 'submitted', `expected submitted, got ${submitted.status}`)
-  assert(Number(submitted.totals.expectedCashMinor) === 45000, `expected cash ${submitted.totals.expectedCashMinor}`)
-  assert(Number(submitted.totals.overShortMinor) === 0, `over/short ${submitted.totals.overShortMinor}`)
+  assert(Number(submitted.totals.expectedCashMinor) === -155000, `expected cash ${submitted.totals.expectedCashMinor}`)
+  assert(Number(submitted.totals.overShortMinor) === 155000, `over/short ${submitted.totals.overShortMinor}`)
+  assert(Number(submitted.totals.totalSalesMinor) === -20000, `total sales ${submitted.totals.totalSalesMinor}`)
   assert(Number(submitted.totals.salariesMinor) === 90000, `salaries ${submitted.totals.salariesMinor}`)
-  pass('sheet.ba_submit', 'expected ₱450, over/short 0')
+  pass('sheet.ba_submit', 'cash left −₱1,550, total sales −₱200 after the advance')
 
   await refused('sheet.edit_after_submit_refused', rpc(ba.client, 'save_daily_sheet', sheetPayload()), /no longer be edited/)
   await refused('sheet.double_submit_refused', rpc(ba.client, 'submit_daily_sheet', { id: sheetId }), /Only draft or returned/)

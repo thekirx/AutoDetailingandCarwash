@@ -66,24 +66,28 @@ test('totals: profit excludes cash advances; expected cash and over/short', () =
     { kind: 'ca_release', staff_id: 'c1', amount_minor: 10000 },
     { kind: 'ca_repay', staff_id: 'c2', amount_minor: 3000 },
   ]
-  const t = computeSheetTotals({ sales: SALES, lines, openingFloatMinor: 100000, countedCashMinor: 58000 })
+  const t = computeSheetTotals({ sales: SALES, lines, countedCashMinor: -42000 })
   assert.equal(t.expensesMinor, 5000)
   assert.equal(t.salariesMinor, 80000)
   assert.equal(t.totalExpensesMinor, 85000)
-  assert.equal(t.netProfitMinor, 100000 - 85000)
+  assert.equal(t.netProfitMinor, 100000 - 10000 - 85000)
   assert.equal(t.caReleasedMinor, 10000)
   assert.equal(t.caRepaidMinor, 3000)
-  // float 1000 + cash sales 500 + CA repaid 30 − expenses 50 − salaries 800 − CA released 100
-  assert.equal(t.expectedCashMinor, 100000 + 50000 + 3000 - 5000 - 80000 - 10000)
-  assert.equal(t.expectedCashMinor, 58000)
+  // cash transaction 500 − salary 800 + CA repaid 30 − expense 50 − CA given 100
+  assert.equal(t.expectedCashMinor, 50000 - 80000 + 3000 - 5000 - 10000)
+  assert.equal(t.expectedCashMinor, -42000)
   assert.equal(t.overShortMinor, 0)
 })
 
-test('totals: over/short sign — counted below expected is short (negative)', () => {
-  const t = computeSheetTotals({ sales: [], lines: [], openingFloatMinor: 50000, countedCashMinor: 49000 })
+test('totals: over/short sign — counted below cash left is short (negative)', () => {
+  const t = computeSheetTotals({
+    sales: [{ status: 'paid', total_minor: 50000, payment_method: 'cash' }],
+    lines: [],
+    countedCashMinor: 49000,
+  })
   assert.equal(t.expectedCashMinor, 50000)
   assert.equal(t.overShortMinor, -1000)
-  const missing = computeSheetTotals({ sales: [], lines: [], openingFloatMinor: 50000, countedCashMinor: null })
+  const missing = computeSheetTotals({ sales: [], lines: [], countedCashMinor: null })
   assert.equal(missing.overShortMinor, null)
 })
 
@@ -92,11 +96,12 @@ test('totals: GCash expenses hit P&L but not expected drawer cash', () => {
     { kind: 'expense', description: 'Soap', account_id: 'a12', amount_minor: 5000, paid_from: 'cash' },
     { kind: 'expense', description: 'Ads', account_id: 'a17', amount_minor: 2000, paid_from: 'gcash' },
   ]
-  const t = computeSheetTotals({ sales: SALES, lines, openingFloatMinor: 100000, countedCashMinor: null })
+  const t = computeSheetTotals({ sales: SALES, lines, countedCashMinor: null })
   assert.equal(t.expensesMinor, 7000)
   assert.equal(t.cashExpensesMinor, 5000)
   assert.equal(t.gcashExpensesMinor, 2000)
-  assert.equal(t.expectedCashMinor, 100000 + 50000 - 5000)
+  assert.equal(t.expectedCashMinor, 50000 - 5000)
+  assert.equal(t.gcashLeftMinor, 20000 - 2000)
 })
 
 test('salary reason: required only when amount differs from suggestion', () => {
@@ -155,7 +160,7 @@ test('checklist: blocks submit with a plain "what is missing" list', () => {
   ]
   const c = sheetChecklist({ sheet, lines, sales: [] })
   assert.equal(c.canSubmit, false)
-  assert.ok(c.missing.some((m) => /opening float/i.test(m)))
+  assert.equal(c.missing.some((m) => /opening float/i.test(m)), false)
   assert.ok(c.missing.some((m) => /count the cash/i.test(m)))
   assert.ok(c.missing.some((m) => /expense/i.test(m)))
   assert.ok(c.missing.some((m) => /reason/i.test(m)))
@@ -165,13 +170,14 @@ test('checklist: blocks submit with a plain "what is missing" list', () => {
 
 test('checklist: over/short needs a note; complete sheet can submit', () => {
   const lines = [{ kind: 'expense', description: 'Soap', account_id: 'a', amount_minor: 1000 }]
-  const short = sheetChecklist({ sheet: { opening_float_minor: 5000, counted_cash_minor: 3000, notes: '' }, lines, sales: [] })
+  const sales = [{ status: 'paid', total_minor: 5000, payment_method: 'cash' }]
+  const short = sheetChecklist({ sheet: { counted_cash_minor: 3000, notes: '' }, lines, sales })
   assert.equal(short.canSubmit, false)
   assert.ok(short.missing.some((m) => /note/i.test(m)))
-  const ok = sheetChecklist({ sheet: { opening_float_minor: 5000, counted_cash_minor: 4000, notes: '' }, lines, sales: [] })
+  const ok = sheetChecklist({ sheet: { counted_cash_minor: 4000, notes: '' }, lines, sales })
   assert.deepEqual(ok.missing, [])
   assert.equal(ok.canSubmit, true)
-  const explained = sheetChecklist({ sheet: { opening_float_minor: 5000, counted_cash_minor: 3000, notes: 'Paid tip' }, lines, sales: [] })
+  const explained = sheetChecklist({ sheet: { counted_cash_minor: 3000, notes: 'Paid tip' }, lines, sales })
   assert.equal(explained.canSubmit, true)
 })
 

@@ -1,17 +1,25 @@
 /**
- * Daily sheet money formulas (FOrmulas.md, 19 Oct 2026).
- * One module so the sheet, the slip, and the server totals stay on the same rules.
+ * Daily sheet collection (Sir, 21 Oct 2026). These rules replace the morning-float
+ * reading of FOrmulas.md. The sheet, the close slip, and the server totals share them.
  *
- * Total sales = every paid POS ticket.
- * Car wash / ceramic coating / ceramic tint / PPF = those service lines only (not coffee, merch, accessories).
- * Expenses = manual expense lines + crew salaries. Category and cash|GCash are required on expenses.
- * Cash advance given out is deducted from money left and is not an expense.
- * Cash advance paid back is added to money left and is not an expense.
+ * Total sales = paid POS − cash advances given out (every channel).
+ * A cash advance is not an expense. It already came off total sales, and it also
+ * leaves the channel that paid it so cash left / GCash left match the drawer.
+ * Expenses = manual expenses + salaries. Profit = total sales − those expenses.
+ * That means a cash advance lowers profit by lowering the sales figure, not by
+ * sitting on the expense list. Salary is an expense, so it lowers profit once.
  *
- * Cash left  = POS cash + CA paid back (cash) − expenses cash − salaries cash − CA given out (cash)
- * GCash left = POS GCash + CA paid back (GCash) − expenses GCash − salaries GCash − CA given out (GCash)
- * Expected drawer cash = opening float + cash left
- *   (float is the till at open; FOrmulas.md names cash left without float. Over/short still compares the count to the till.)
+ * Total cash transaction  = POS cash − salaries paid cash
+ * Total GCash transaction = POS GCash − salaries paid GCash
+ * Salary is not subtracted again when cash left / GCash left are built.
+ *
+ * Cash left  = total cash transaction + CA paid back (cash) − expenses cash − CA given (cash)
+ * GCash left = total GCash transaction + CA paid back (GCash) − expenses GCash − CA given (GCash)
+ * There is no morning float. Cash left is what gets collected.
+ * Over / short = cash counted − cash left.
+ *
+ * Total credit/debit transaction = credit card + debit card + bank transfer.
+ * Those stay in total sales and out of both drawers.
  */
 
 export const REPORT_FAMILIES = Object.freeze([
@@ -42,22 +50,23 @@ export function moneyLeft(input = {}) {
     const x = Math.round(Number(v) || 0)
     return Number.isFinite(x) ? x : 0
   }
+  const cashTransactionMinor = n(input.posCashMinor) - n(input.salaryCashMinor)
+  const gcashTransactionMinor = n(input.posGcashMinor) - n(input.salaryGcashMinor)
   const cashLeftMinor =
-    n(input.posCashMinor) +
+    cashTransactionMinor +
     n(input.caRepayCashMinor) -
     n(input.expenseCashMinor) -
-    n(input.salaryCashMinor) -
     n(input.caReleaseCashMinor)
   const gcashLeftMinor =
-    n(input.posGcashMinor) +
+    gcashTransactionMinor +
     n(input.caRepayGcashMinor) -
     n(input.expenseGcashMinor) -
-    n(input.salaryGcashMinor) -
     n(input.caReleaseGcashMinor)
-  const opening = n(input.openingFloatMinor)
   return {
+    cashTransactionMinor,
+    gcashTransactionMinor,
     cashLeftMinor,
     gcashLeftMinor,
-    expectedCashMinor: opening + cashLeftMinor,
+    expectedCashMinor: cashLeftMinor,
   }
 }

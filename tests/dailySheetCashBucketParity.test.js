@@ -166,11 +166,11 @@ describe('BUG-086: the sheet’s SQL cash test matches the JS drawer bucket', ()
  *                                 overrides rollupSales' count (which counts
  *                                 refunds too) — that override is exactly what
  *                                 keeps the sheet off BUG-082's definition
- *   netProfit                    net - expenses - salaries, both sides
- *   expectedCash                 float + cash + caRepaid - expenses - salaries
- *                                 - caReleased, both sides
- *   overShort                    counted - expected, and null when uncounted,
- *                                 both sides
+ *   netProfit                    (paid POS − cash advances given) − expenses − salaries
+ *   cash left                    (POS cash − cash salaries) + cash CA repaid
+ *                                 − cash expenses − cash CA given
+ *   expectedCash                 cash left. There is no morning float.
+ *   overShort                    counted − cash left, and null when uncounted
  *
  * Pinned at expression level, not by key name: an earlier version of this file
  * matched `'overShortMinor'` and a mutation that replaced the VALUE with null
@@ -203,21 +203,26 @@ describe('the sheet totals computed in SQL match the ones computed in JS', () =>
     assert.match(jsDaily, /avgMinor: paid\.length \? Math\.round\(r\.netMinor \/ paid\.length\) : 0/)
   })
 
-  it('net profit subtracts expenses and salaries on both sides', () => {
-    assert.match(fixed, /'netProfitMinor',\s*v_net - v_exp - v_sal/)
+  it('net profit takes cash advances off sales, then subtracts expenses and salaries', () => {
+    const channels = readFileSync(join(root, 'supabase/migrations/20261021120000_sheet_collection_no_float.sql'), 'utf8')
+    assert.match(channels, /'netProfitMinor',\s*v_net - v_rel - v_exp - v_sal/)
     assert.match(jsDaily, /totalExpensesMinor = expensesMinor \+ salariesMinor/)
-    assert.match(jsDaily, /netProfitMinor: s\.netMinor - totalExpensesMinor/)
+    assert.match(jsDaily, /totalSalesMinor = s\.netMinor - caReleasedMinor/)
+    assert.match(jsDaily, /netProfitMinor: totalSalesMinor - totalExpensesMinor/)
   })
 
-  it('expected cash is opening float plus cash left on both sides', () => {
-    const channels = readFileSync(join(root, 'supabase/migrations/20261019230000_sheet_money_left_channels.sql'), 'utf8')
-    assert.match(channels, /v_cash_left := v_cash \+ v_rep_cash - v_cash_exp - v_sal_cash - v_rel_cash/)
-    assert.match(channels, /v_gcash_left := v_gcash \+ v_rep_gcash - v_gcash_exp - v_sal_gcash - v_rel_gcash/)
-    assert.match(channels, /v_expected := coalesce\(s\.opening_float_minor, 0\) \+ v_cash_left/)
+  it('cash left is the collection — salary is already out of the channel transaction, and there is no float', () => {
+    const channels = readFileSync(join(root, 'supabase/migrations/20261021120000_sheet_collection_no_float.sql'), 'utf8')
+    assert.match(channels, /v_cash_txn := v_cash - v_sal_cash/)
+    assert.match(channels, /v_cash_left := v_cash_txn \+ v_rep_cash - v_cash_exp - v_rel_cash/)
+    assert.match(channels, /v_gcash_left := v_gcash_txn \+ v_rep_gcash - v_gcash_exp - v_rel_gcash/)
+    assert.match(channels, /v_expected := v_cash_left/)
+    assert.doesNotMatch(channels, /opening_float_minor, 0\) \+ v_cash_left/)
     assert.match(jsDaily, /moneyLeft\(/)
     assert.match(jsDaily, /expectedCashMinor: left\.expectedCashMinor/)
     const formulas = readFileSync(join(root, 'src/lib/sheetFormulas.js'), 'utf8')
-    assert.match(formulas, /opening \+ cashLeftMinor/)
+    assert.match(formulas, /expectedCashMinor: cashLeftMinor/)
+    assert.doesNotMatch(formulas, /opening \+ cashLeftMinor/)
   })
 
   it('over/short is null until counted, on both sides', () => {
@@ -248,16 +253,16 @@ describe('the sheet totals computed in SQL match the ones computed in JS', () =>
       { kind: 'ca_release', amount_minor: 1000 },
       { kind: 'ca_repay', amount_minor: 3000 },
     ]
-    const t = computeSheetTotals({ sales, lines, openingFloatMinor: 10000, countedCashMinor: 100000 })
+    const t = computeSheetTotals({ sales, lines, countedCashMinor: 100000 })
     assert.equal(t.grossMinor, 180000, 'gross = paid+refunded totals plus their discounts')
     assert.equal(t.discountsMinor, 10000)
     assert.equal(t.refundsMinor, 20000)
     assert.equal(t.netMinor, 150000, 'net is paid only')
     assert.equal(t.count, 2, 'a refund is not a transaction on this sheet')
     assert.equal(t.cashMinor, 100000, 'only the cash sale is drawer cash')
-    // 10000 float + 100000 cash + 3000 repaid - 5000 - 25000 - 1000 released
-    assert.equal(t.expectedCashMinor, 82000)
-    assert.equal(t.overShortMinor, 18000)
-    assert.equal(t.netProfitMinor, 150000 - 30000)
+    // cash transaction 100000 − salary 25000 + repaid 3000 − expense 5000 − released 1000
+    assert.equal(t.expectedCashMinor, 72000)
+    assert.equal(t.overShortMinor, 28000)
+    assert.equal(t.netProfitMinor, 150000 - 1000 - 30000)
   })
 })

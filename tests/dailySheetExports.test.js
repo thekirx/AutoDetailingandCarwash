@@ -41,7 +41,7 @@ describe('filterSheets', () => {
 describe('closeOfDaySlip', () => {
   const slip = closeOfDaySlip({
     branchLabel: 'Bacoor',
-    sheet: { business_date: '2026-10-02', status: 'approved', opening_float_minor: 100000, counted_cash_minor: 114000, notes: 'Short 10 pesos', staff_profiles: { full_name: 'Ana Cruz' } },
+    sheet: { business_date: '2026-10-02', status: 'approved', counted_cash_minor: 14000, notes: 'Short 10 pesos', staff_profiles: { full_name: 'Ana Cruz' } },
     sales: [
       { status: 'paid', total_minor: 150000, payment_method: 'cash' },
       { status: 'paid', total_minor: 50000, payment_method: 'gcash' },
@@ -62,10 +62,12 @@ describe('closeOfDaySlip', () => {
     assert.match(slip.subtitle, /Ana Cruz/)
   })
 
-  it('sales and payments: net ₱2,000 = cash ₱1,500 + GCash ₱500, unused methods left out', () => {
+  it('sales and payments: net ₱2,000, total sales ₱1,800 after the ₱200 advance, credit/debit line is zero', () => {
     assert.equal(row('Sales', 'Net sales').amount_minor, 200000)
+    assert.equal(row('Sales', 'Total sales').amount_minor, 180000)
     assert.equal(row('Payments', 'Cash').amount_minor, 150000)
     assert.equal(row('Payments', 'GCash').amount_minor, 50000)
+    assert.equal(row('Payments', 'Total credit/debit transaction').amount_minor, 0)
     assert.equal(row('Payments', 'Card'), undefined)
     assert.equal(row('Sales', 'Transactions').amount_minor, null)
     assert.match(row('Sales', 'Transactions').detail, /^2 /)
@@ -80,16 +82,17 @@ describe('closeOfDaySlip', () => {
     assert.equal(row('Cash advances', 'Paid back · Ben Reyes').amount_minor, 5000)
   })
 
-  it('drawer: ₱1,000 + 1,500 + 50 − 300 − 900 − 200 = ₱1,150 expected; counted ₱1,140 is ₱10 short', () => {
-    assert.equal(row('Drawer', 'Expected cash').amount_minor, 115000)
-    assert.equal(row('Drawer', 'Counted cash').amount_minor, 114000)
+  it('drawer: cash transaction ₱600 + repaid ₱50 − expenses ₱300 − advance ₱200 = ₱150 left; counted ₱140 is ₱10 short', () => {
+    assert.equal(row('Drawer', 'Cash left').amount_minor, 15000)
+    assert.equal(row('Drawer', 'Counted cash').amount_minor, 14000)
     assert.equal(row('Drawer', 'Over/short').amount_minor, -1000)
     assert.equal(row('Drawer', 'Over/short').detail, 'Short 10 pesos')
-    assert.equal(row('Drawer', 'Expenses paid').amount_minor, -30000)
+    assert.equal(row('Drawer', 'Cash expenses').amount_minor, -30000)
+    assert.equal(row('Drawer', 'Opening float'), undefined)
   })
 
-  it('net profit ₱800 = net sales ₱2,000 − expenses ₱300 − salaries ₱900', () => {
-    assert.equal(row('Result', 'Net profit').amount_minor, 80000)
+  it('net profit ₱600 = total sales ₱1,800 − expenses ₱300 − salaries ₱900', () => {
+    assert.equal(row('Result', 'Net profit').amount_minor, 60000)
   })
 })
 

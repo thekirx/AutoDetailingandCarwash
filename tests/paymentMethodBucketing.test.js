@@ -104,10 +104,10 @@ describe('an unrecognised payment method is never counted as cash in the drawer'
       sales: [sale('cash'), sale('CASH'), sale('Cash')],
       lines: [],
       openingFloatMinor: 50000,
-      countedCashMinor: 350000,
+      countedCashMinor: 300000,
     })
     assert.equal(t.byMethod.cash, 300000, 'three ₱1,000.00 cash sales are ₱3,000.00 of drawer cash')
-    assert.equal(t.expectedCashMinor, 350000, '₱500.00 float + ₱3,000.00 cash')
+    assert.equal(t.expectedCashMinor, 300000, 'three ₱1,000.00 cash sales are the cash to collect — no morning float')
     assert.equal(t.overShortMinor, 0, 'a correctly counted drawer must reconcile to zero')
   })
 

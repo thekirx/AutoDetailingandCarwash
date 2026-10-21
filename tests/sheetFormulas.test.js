@@ -19,9 +19,10 @@ describe('sheet formulas', () => {
       caReleaseGcashMinor: 0,
       openingFloatMinor: 100000,
     })
-    assert.equal(left.cashLeftMinor, 50000 - 5000 - 80000 - 10000)
+    assert.equal(left.cashLeftMinor, 50000 - 80000 - 5000 - 10000)
     assert.equal(left.gcashLeftMinor, 20000 + 3000 - 1000)
-    assert.equal(left.expectedCashMinor, 100000 + left.cashLeftMinor)
+    assert.equal(left.cashTransactionMinor, 50000 - 80000)
+    assert.equal(left.expectedCashMinor, left.cashLeftMinor)
 
     const sales = [
       { status: 'paid', total_minor: 50000, payment_method: 'cash', sale_line_items: [{ item_type: 'service', line_total_minor: 50000, services: { pay_category: 'car_wash', name: 'Wash' } }] },
@@ -39,7 +40,7 @@ describe('sheet formulas', () => {
       openingFloatMinor: 100000,
       countedCashMinor: left.expectedCashMinor,
     })
-    assert.equal(t.netProfitMinor, 70000 - 6000 - 80000)
+    assert.equal(t.netProfitMinor, 70000 - 10000 - 6000 - 80000)
     assert.equal(t.cashLeftMinor, left.cashLeftMinor)
     assert.equal(t.gcashLeftMinor, left.gcashLeftMinor)
     assert.equal(t.overShortMinor, 0)
@@ -56,8 +57,7 @@ describe('sheet formulas', () => {
     // Expense cash ₱50, expense GCash ₱10, salary cash ₱80.
     // Advance given cash ₱30. Advance paid back GCash ₱15.
     const t = computeSheetTotals({
-      openingFloatMinor: 100000,
-      countedCashMinor: 138000,
+      countedCashMinor: 38000,
       sales: [
         {
           status: 'paid',
@@ -103,20 +103,24 @@ describe('sheet formulas', () => {
       ],
     })
     assert.equal(t.netMinor, 121000)
+    assert.equal(t.totalSalesMinor, 121000 - 3000)
     assert.equal(t.byMethod.cash, 54000)
     assert.equal(t.byMethod.gcash, 22000)
     assert.equal(t.byMethod.card, 15000)
     assert.equal(t.byMethod.bank, 30000)
+    assert.equal(t.creditDebitMinor, 15000 + 30000)
     assert.equal(t.byFamily.find((f) => f.id === 'car_wash').minor, 50000)
     assert.equal(t.byFamily.find((f) => f.id === 'coating').minor, 20000)
     assert.equal(t.byFamily.find((f) => f.id === 'tint').minor, 15000)
     assert.equal(t.byFamily.find((f) => f.id === 'ppf').minor, 30000)
     assert.equal(t.byFamily.find((f) => f.id === 'coffee').minor, 2000)
     assert.equal(t.totalExpensesMinor, 14000)
-    assert.equal(t.netProfitMinor, 107000)
-    assert.equal(t.cashLeftMinor, 38000)
-    assert.equal(t.gcashLeftMinor, 22500)
-    assert.equal(t.expectedCashMinor, 138000)
+    assert.equal(t.netProfitMinor, 118000 - 14000)
+    assert.equal(t.cashTransactionMinor, 54000 - 8000)
+    assert.equal(t.gcashTransactionMinor, 22000)
+    assert.equal(t.cashLeftMinor, 46000 - 5000 - 3000)
+    assert.equal(t.gcashLeftMinor, 22000 + 1500 - 1000)
+    assert.equal(t.expectedCashMinor, 38000)
     assert.equal(t.overShortMinor, 0)
 
     const blocked = sheetChecklist({
@@ -125,6 +129,34 @@ describe('sheet formulas', () => {
       sales: [],
     })
     assert.equal(blocked.canSubmit, false)
+  })
+
+  it('splits one ticket between cash and GCash without counting it twice', () => {
+    const t = computeSheetTotals({
+      countedCashMinor: 4000,
+      sales: [
+        {
+          status: 'paid',
+          total_minor: 10000,
+          payment_method: 'split',
+          cash_minor: 4000,
+          gcash_minor: 6000,
+          sale_line_items: [
+            { item_type: 'service', line_total_minor: 10000, name: 'Carwash', services: { slug: 'premium-car-wash', name: 'Carwash', pay_category: 'wash' } },
+          ],
+        },
+      ],
+      lines: [],
+    })
+    assert.equal(t.netMinor, 10000)
+    assert.equal(t.count, 1)
+    assert.equal(t.byMethod.cash, 4000)
+    assert.equal(t.byMethod.gcash, 6000)
+    assert.equal(t.creditDebitMinor, 0)
+    assert.equal(t.byFamily.find((f) => f.id === 'car_wash').minor, 10000)
+    assert.equal(t.cashLeftMinor, 4000)
+    assert.equal(t.gcashLeftMinor, 6000)
+    assert.equal(t.overShortMinor, 0)
   })
 
   it('names credit, debit, and bank on the report', () => {

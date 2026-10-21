@@ -5,7 +5,7 @@
  * `finance_sales_summary` view once migrations can be applied again.
  */
 import { financeCompareRange, pctChange } from './financeData.js'
-import { paymentBucket } from './paymentMethods.js'
+import { paymentBucket, saleTenderPortions } from './paymentMethods.js'
 
 const COUNTED = new Set(['paid', 'refunded'])
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
@@ -57,7 +57,12 @@ export function rollupSales(rows = []) {
       continue
     }
     out.netMinor += total
-    out.byMethod[summaryBucket(r.payment_method)] += total
+    if (String(r.payment_method || '').trim().toLowerCase() === 'split') {
+      const portions = saleTenderPortions(r)
+      for (const key of Object.keys(out.byMethod)) out.byMethod[key] += portions[key] || 0
+    } else {
+      out.byMethod[summaryBucket(r.payment_method)] += total
+    }
   }
   out.collectedMinor = out.netMinor
   out.avgMinor = out.count ? Math.round(out.grossMinor / out.count) : 0

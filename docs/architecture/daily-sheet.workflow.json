@@ -10,7 +10,7 @@
         "id": "branch",
         "label": "Branch Admin",
         "focus": ["ba_pos", "ba_sheet"],
-        "note": "POS Sell → POS Daily sheet (expenses, salaries, cash advances, cash count) → Submit."
+        "note": "POS Sell, including a cash and GCash split, then the daily sheet. Count cash left. There is no morning float."
       },
       {
         "id": "approval",
@@ -51,9 +51,9 @@
       "dot": "emerald",
       "title": "One sheet per branch per day",
       "items": [
-        "Net profit = net sales − expenses − salaries",
-        "Cash left and GCash left follow FOrmulas.md; advances are not expenses",
-        "Credit, debit, and bank transfer stay in sales, not in either drawer"
+        "Total sales = paid POS − cash advances given. Advances are not expenses.",
+        "No morning float. Cash left and GCash left are what is collected.",
+        "Total credit/debit transaction = credit card + debit card + bank transfer"
       ]
     },
     {

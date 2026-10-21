@@ -135,6 +135,9 @@ function SalesSection({ sales }) {
             {Object.entries(s.byMethod).map(([id, minor]) => (
               <Row key={id} label={METHOD_LABELS[id]}><Money minor={minor} tone={minor ? undefined : 'muted'} /></Row>
             ))}
+            <Row label="Total credit/debit transaction" bold rule>
+              <Money minor={s.byMethod.card + s.byMethod.debit + s.byMethod.bank} bold />
+            </Row>
           </div>
           <div>
             <p className="ds-mini-head">By service</p>
@@ -230,7 +233,6 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
   const [ctx, setCtx] = useState(null)
   const [sheet, setSheet] = useState(null)
   const [lines, setLines] = useState([])
-  const [floatText, setFloatText] = useState('')
   const [countText, setCountText] = useState('')
   const [notes, setNotes] = useState('')
   const [dirty, setDirty] = useState(false)
@@ -262,7 +264,6 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
         setCtx({ sales, accounts: [], staff: [], suggestions: [], caRequests: [] })
         setSheet(row)
         setLines((row.daily_sheet_lines || []).sort((a, b) => a.sort - b.sort).map(hydrateLine))
-        setFloatText(toText(row.opening_float_minor))
         setCountText(toText(row.counted_cash_minor))
         setNotes(row.notes || '')
       } else {
@@ -272,7 +273,6 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
         const saved = (next.sheet?.daily_sheet_lines || []).sort((a, b) => a.sort - b.sort).map(hydrateLine)
         const editableNow = !next.sheet || ['draft', 'returned'].includes(next.sheet.status)
         setLines(editableNow ? mergeSalarySuggestions(saved, next.suggestions).map(hydrateLine) : saved)
-        setFloatText(toText(next.sheet?.opening_float_minor))
         setCountText(toText(next.sheet?.counted_cash_minor))
         setNotes(next.sheet?.notes || '')
       }
@@ -295,7 +295,6 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
 
   const editable = !review && (!sheet || ['draft', 'returned'].includes(sheet.status))
   const sheetValues = {
-    opening_float_minor: parsePesosToMinor(floatText),
     counted_cash_minor: parsePesosToMinor(countText),
     notes,
   }
@@ -349,11 +348,11 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
       const codeError = cashAdvanceReleaseError(line, ctx?.caRequests || [], { branch, lines })
       if (codeError) throw new Error(codeError)
     }
-    const t = computeSheetTotals({ sales, lines, openingFloatMinor: sheetValues.opening_float_minor, countedCashMinor: sheetValues.counted_cash_minor })
+    const t = computeSheetTotals({ sales, lines, countedCashMinor: sheetValues.counted_cash_minor })
     const res = await saveSheet({
       branch,
       date,
-      openingFloatMinor: sheetValues.opening_float_minor,
+      openingFloatMinor: null,
       countedCashMinor: sheetValues.counted_cash_minor,
       notes,
       totals: t,
@@ -361,7 +360,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
     })
     setDirty(false)
     return res
-  }, [sales, lines, sheetValues.opening_float_minor, sheetValues.counted_cash_minor, notes, branch, date, ctx])
+  }, [sales, lines, sheetValues.counted_cash_minor, notes, branch, date, ctx])
 
   useEffect(() => {
     if (!editable || !dirty) return undefined
@@ -521,7 +520,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
           <SalesSection sales={sales} />
 
           <section className="ds-card" aria-label="Money out">
-            <SectionHead step={2} title="Money out" hint="Every expense paid from the drawer today." done={check.sections.expenses} />
+            <SectionHead step={2} title="Money out" hint="What the shop paid out today. Say whether it left as cash or GCash." done={check.sections.expenses} />
             {expenseLines.length === 0 ? <p className="text-sm text-muted-foreground">No expenses yet.</p> : null}
             <div className="flex flex-col gap-3">
               {expenseLines.map((l, i) =>
@@ -594,7 +593,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
           </section>
 
           <section className="ds-card" aria-label="Pay crew">
-            <SectionHead step={3} title="Pay crew" hint="Everyone who clocked in. The amount is suggested — change it if needed and say why." done={check.sections.salaries} />
+            <SectionHead step={3} title="Pay crew" hint="Comes out of that day's cash or GCash transactions. Change a suggested amount only with a reason." done={check.sections.salaries} />
             {salaryLines.length === 0 ? <p className="text-sm text-muted-foreground">Nobody clocked in on this day.</p> : null}
             <div className="flex flex-col gap-3">
               {salaryLines.map((l) => {
@@ -659,7 +658,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
           </section>
 
           <section className="ds-card" aria-label="Cash advances">
-            <SectionHead step={4} title="Cash advances" hint="Not an expense. Given out lowers cash or GCash left. Paid back raises that same channel. Given out still needs the Planner approval code." done={check.sections.cashAdvances} />
+            <SectionHead step={4} title="Cash advances" hint="Not an expense. Given out comes off total sales and off the cash or GCash that paid it. Paid back returns to that same channel. Given out still needs the Planner approval code." done={check.sections.cashAdvances} />
             {editable && (ctx?.caRequests || []).length ? (
               <div className="mb-3 flex flex-wrap gap-2">
                 {ctx.caRequests.map((r) => (
@@ -759,15 +758,15 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
           </section>
 
           <section className="ds-card" aria-label="Cash in drawer">
-            <SectionHead step={5} title="Cash in drawer" hint="Opening float this morning, then count the drawer at closing." done={check.sections.cash} />
+            <SectionHead step={5} title="Cash to collect" hint="Count the cash still in the drawer. That count is compared with cash left. There is no morning float." done={check.sections.cash} />
             <div className="grid gap-4 sm:grid-cols-2">
-              <AmountInput id="ds-float" label="Opening float (₱)" value={floatText} disabled={!editable} onChange={(v) => { setFloatText(v); setDirty(true) }} />
               <AmountInput id="ds-count" label="Cash counted (₱)" value={countText} disabled={!editable} onChange={(v) => { setCountText(v); setDirty(true) }} />
             </div>
             <div className="mt-3">
+              <Row label="Total cash transaction"><Money minor={totals.cashTransactionMinor} /></Row>
+              <Row label="Total GCash transaction"><Money minor={totals.gcashTransactionMinor} /></Row>
               <Row label="Cash left"><Money minor={totals.cashLeftMinor} /></Row>
               <Row label="GCash left"><Money minor={totals.gcashLeftMinor} /></Row>
-              <Row label="Expected cash"><Money minor={totals.expectedCashMinor} /></Row>
               <Row label="Over / short" bold rule>
                 {totals.overShortMinor == null ? <span className="text-muted-foreground">Count the drawer</span> : <Money minor={totals.overShortMinor} bold className={totals.overShortMinor ? 'ds-alert' : 'ds-ok'} />}
               </Row>
@@ -783,18 +782,18 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
 
         <aside className="ds-summary" aria-label="Summary">
           <p className="ds-summary-head">Summary</p>
-          <Row label="Net sales"><Money minor={totals.netMinor} /></Row>
+          <Row label="POS sales"><Money minor={totals.netMinor} /></Row>
+          {totals.caReleasedMinor ? <Row label="Cash advances given"><Money minor={-totals.caReleasedMinor} /></Row> : null}
+          <Row label="Total sales"><Money minor={totals.totalSalesMinor} /></Row>
           <Row label="Expenses"><Money minor={-totals.expensesMinor} /></Row>
           <Row label="Salaries"><Money minor={-totals.salariesMinor} /></Row>
           <Row label="Net profit" bold rule><Money minor={totals.netProfitMinor} bold /></Row>
           <div className="ds-summary-gap" />
-          <Row label="Opening float"><Money minor={totals.openingFloatMinor} /></Row>
-          <Row label="Cash sales"><Money minor={totals.cashMinor} /></Row>
-          <Row label="CA paid back"><Money minor={totals.caRepaidMinor} /></Row>
-          <Row label="CA given out"><Money minor={-totals.caReleasedMinor} /></Row>
-          <Row label="Cash left"><Money minor={totals.cashLeftMinor} /></Row>
+          <Row label="Total cash transaction"><Money minor={totals.cashTransactionMinor} /></Row>
+          <Row label="Total GCash transaction"><Money minor={totals.gcashTransactionMinor} /></Row>
+          <Row label="Total credit/debit transaction"><Money minor={totals.creditDebitMinor} /></Row>
+          <Row label="Cash left" bold rule><Money minor={totals.cashLeftMinor} bold /></Row>
           <Row label="GCash left"><Money minor={totals.gcashLeftMinor} /></Row>
-          <Row label="Expected cash" bold rule><Money minor={totals.expectedCashMinor} bold /></Row>
           <Row label="Over / short">
             {totals.overShortMinor == null ? <span>—</span> : <Money minor={totals.overShortMinor} bold className={totals.overShortMinor ? 'ds-alert' : 'ds-ok'} />}
           </Row>

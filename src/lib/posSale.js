@@ -115,6 +115,23 @@ export function cashTenderCoversTotal(paymentMethod, tenderedMinor, totalMinor) 
   )
 }
 
+/**
+ * One ticket, two tenders: cash and GCash only. Both must be used and they must
+ * add up to the ticket. Card, debit, and bank transfer stay one method for the whole ticket.
+ */
+export function splitCashGcash({ totalMinor = 0, cashMinor = 0, gcashMinor = 0 } = {}) {
+  const total = Math.round(Number(totalMinor) || 0)
+  const cash = Math.round(Number(cashMinor) || 0)
+  const gcash = Math.round(Number(gcashMinor) || 0)
+  if (!Number.isFinite(total) || total <= 0) return { ok: false, error: 'Add an item before splitting the payment.' }
+  if (cash < 0 || gcash < 0 || !Number.isFinite(cash) || !Number.isFinite(gcash)) {
+    return { ok: false, error: 'Enter the cash amount and the GCash amount.' }
+  }
+  if (cash === 0 || gcash === 0) return { ok: false, error: 'Use one payment method when the other amount is zero.' }
+  if (cash + gcash !== total) return { ok: false, error: 'Cash and GCash must add up to the ticket.' }
+  return { ok: true, paymentMethod: 'split', cashMinor: cash, gcashMinor: gcash }
+}
+
 /** Queue handoff wash/detailing lines stay locked — TL edits the booking. */
 export function canRemovePosCartLine(line) {
   return !(line?.from_handoff)
@@ -432,7 +449,8 @@ export function canRedeemLoyaltyAward({ customerId, stamps = 0, milestones = [],
 }
 
 export function paymentRefRequired(method) {
-  return String(method || '').trim().toLowerCase() !== 'cash' && Boolean(String(method || '').trim())
+  const key = String(method || '').trim().toLowerCase()
+  return key !== 'cash' && key !== '' 
 }
 
 export function isValidPaymentRef(method, ref) {
@@ -529,6 +547,9 @@ export function serializePosDraft(branch, state = {}) {
     paymentMethod: state.paymentMethod || 'cash',
     cashTendered: state.cashTendered || '',
     paymentRef: state.paymentRef || '',
+    splitOn: Boolean(state.splitOn),
+    splitCash: state.splitCash || '',
+    splitGcash: state.splitGcash || '',
     discountPercent: state.discountPercent || '',
     discountAmountPesos: state.discountAmountPesos || '',
     discountReason: state.discountReason || '',
@@ -585,17 +606,22 @@ export function buildPosSalePayload({
   paymentRef,
   discountReason,
   discountMinor,
+  cashMinor,
+  gcashMinor,
 }) {
   const note = typeof notes === 'string' ? notes.trim() : ''
   const reason = typeof discountReason === 'string' ? discountReason.trim() : ''
   const ref = typeof paymentRef === 'string' ? paymentRef.trim() : ''
+  const split = String(paymentMethod || '').trim().toLowerCase() === 'split'
   return {
     branch,
     customer_id: customerId || activeHandoff?.bookings?.customer_id || null,
     booking_id: activeHandoff?.booking_id || null,
     pos_handoff_id: activeHandoff?.id || null,
-    payment_method: paymentMethod,
-    payment_ref: paymentRefRequired(paymentMethod) ? ref || null : null,
+    payment_method: split ? 'split' : paymentMethod,
+    cash_minor: split ? Math.round(Number(cashMinor) || 0) : null,
+    gcash_minor: split ? Math.round(Number(gcashMinor) || 0) : null,
+    payment_ref: paymentRefRequired(split ? 'split' : paymentMethod) ? ref || null : null,
     discount_reason: reason || null,
     discount_minor: Math.max(Math.floor(Number(discountMinor) || 0), 0),
     status: 'paid',

@@ -7,7 +7,7 @@ import { paidSalesToBacoorRows } from './posSellables.js'
 import { buildPayrollPreview } from './payroll.js'
 import { normalizeCompensationSettings } from './compensation.js'
 import { normalizeAssistantGrants } from '../auth/permissions.js'
-import { drawerPaymentBucket } from './paymentMethods.js'
+import { saleTenderPortions } from './paymentMethods.js'
 import { channelPaidFrom, moneyLeft, sumChannel } from './sheetFormulas.js'
 
 export const SHEET_STATUSES = Object.freeze(['draft', 'submitted', 'approved', 'returned'])
@@ -126,7 +126,8 @@ export function summarizeSheetSales(sales = []) {
   const byMethod = { cash: 0, gcash: 0, card: 0, debit: 0, bank: 0, other: 0 }
   const paid = (sales || []).filter((s) => s?.status === 'paid')
   for (const s of paid) {
-    byMethod[drawerPaymentBucket(s.payment_method)] += amount(s.total_minor)
+    const portions = saleTenderPortions(s)
+    for (const key of Object.keys(byMethod)) byMethod[key] += portions[key] || 0
   }
   const families = new Map()
   for (const row of paidSalesToBacoorRows(paid)) {
@@ -211,12 +212,11 @@ export function expensePaidFrom(line = {}) {
 }
 
 /**
- * FOrmulas.md money left.
- * Cash left and GCash left exclude opening float.
- * Expected drawer cash = opening float + cash left (till count).
- * GCash expenses and GCash salaries stay in P&L and in GCash left, not in the till.
+ * Collection for the day. No morning float.
+ * Salary comes out of the channel transaction. Cash left and GCash left are what is left to collect.
+ * Cash advances given out come off total sales and off the channel that paid them. They are not expenses.
  */
-export function computeSheetTotals({ sales = [], lines = [], openingFloatMinor = 0, countedCashMinor = null } = {}) {
+export function computeSheetTotals({ sales = [], lines = [], countedCashMinor = null } = {}) {
   const s = summarizeSheetSales(sales)
   const expenseLines = linesOf(lines, 'expense')
   const salaryLines = linesOf(lines, 'salary')
@@ -229,20 +229,25 @@ export function computeSheetTotals({ sales = [], lines = [], openingFloatMinor =
   const salaryCashMinor = sumChannel(salaryLines, 'cash')
   const salaryGcashMinor = sumChannel(salaryLines, 'gcash')
   const caReleasedMinor = sumOf(releaseLines)
+  const caReleaseCashMinor = sumChannel(releaseLines, 'cash')
+  const caReleaseGcashMinor = sumChannel(releaseLines, 'gcash')
   const caRepaidMinor = sumOf(repayLines)
+  const caRepayCashMinor = sumChannel(repayLines, 'cash')
+  const caRepayGcashMinor = sumChannel(repayLines, 'gcash')
   const totalExpensesMinor = expensesMinor + salariesMinor
+  const totalSalesMinor = s.netMinor - caReleasedMinor
+  const creditDebitMinor = s.byMethod.card + s.byMethod.debit + s.byMethod.bank
   const left = moneyLeft({
     posCashMinor: s.cashMinor,
     posGcashMinor: s.byMethod.gcash,
-    caRepayCashMinor: sumChannel(repayLines, 'cash'),
-    caRepayGcashMinor: sumChannel(repayLines, 'gcash'),
+    caRepayCashMinor,
+    caRepayGcashMinor,
     expenseCashMinor: cashExpensesMinor,
     expenseGcashMinor: gcashExpensesMinor,
     salaryCashMinor,
     salaryGcashMinor,
-    caReleaseCashMinor: sumChannel(releaseLines, 'cash'),
-    caReleaseGcashMinor: sumChannel(releaseLines, 'gcash'),
-    openingFloatMinor,
+    caReleaseCashMinor,
+    caReleaseGcashMinor,
   })
   const counted = countedCashMinor == null || countedCashMinor === '' ? null : amount(countedCashMinor)
   return {
@@ -254,10 +259,18 @@ export function computeSheetTotals({ sales = [], lines = [], openingFloatMinor =
     salaryCashMinor,
     salaryGcashMinor,
     totalExpensesMinor,
-    netProfitMinor: s.netMinor - totalExpensesMinor,
+    totalSalesMinor,
+    creditDebitMinor,
+    netProfitMinor: totalSalesMinor - totalExpensesMinor,
     caReleasedMinor,
+    caReleaseCashMinor,
+    caReleaseGcashMinor,
     caRepaidMinor,
-    openingFloatMinor: amount(openingFloatMinor),
+    caRepayCashMinor,
+    caRepayGcashMinor,
+    openingFloatMinor: 0,
+    cashTransactionMinor: left.cashTransactionMinor,
+    gcashTransactionMinor: left.gcashTransactionMinor,
     cashLeftMinor: left.cashLeftMinor,
     gcashLeftMinor: left.gcashLeftMinor,
     expectedCashMinor: left.expectedCashMinor,
@@ -291,14 +304,11 @@ export function sheetChecklist({ sheet = {}, lines = [], sales = [] } = {}) {
   const ca = [...linesOf(lines, 'ca_release'), ...linesOf(lines, 'ca_repay')]
   const badCa = ca.filter((l) => !l.staff_id || amount(l.amount_minor) <= 0)
   if (badCa.length) missing.push(`Pick the staff member and amount on ${badCa.length} cash advance line(s)`)
-  const floatSet = sheet.opening_float_minor != null && sheet.opening_float_minor !== ''
   const countSet = sheet.counted_cash_minor != null && sheet.counted_cash_minor !== ''
-  if (!floatSet) missing.push('Enter the opening float')
   if (!countSet) missing.push('Count the cash in the drawer')
   const totals = computeSheetTotals({
     sales,
     lines,
-    openingFloatMinor: sheet.opening_float_minor,
     countedCashMinor: countSet ? sheet.counted_cash_minor : null,
   })
   const offBy = totals.overShortMinor
@@ -314,7 +324,7 @@ export function sheetChecklist({ sheet = {}, lines = [], sales = [] } = {}) {
       expenses: badExpense.length === 0,
       salaries: noReason.length === 0 && badSalary.length === 0,
       cashAdvances: badCa.length === 0,
-      cash: floatSet && countSet && !(offBy && !String(sheet.notes || '').trim()),
+      cash: countSet && !(offBy && !String(sheet.notes || '').trim()),
     },
   }
 }
@@ -505,7 +515,7 @@ export function filterSheets(rows = [], { search = '', submitter = '', minNet = 
  * Print / Save as PDF, CSV and Excel. Figures come from computeSheetTotals, same as the sheet itself.
  */
 export function closeOfDaySlip({ sheet = {}, lines = [], sales = [], branchLabel = '' } = {}) {
-  const t = computeSheetTotals({ sales, lines, openingFloatMinor: sheet.opening_float_minor, countedCashMinor: sheet.counted_cash_minor })
+  const t = computeSheetTotals({ sales, lines, countedCashMinor: sheet.counted_cash_minor })
   const rows = []
   const add = (section, item, amountMinor, detail = '') => rows.push({ section, item, detail, amount_minor: amountMinor })
   const who = (l) => l.staff_name || 'Staff'
@@ -514,8 +524,13 @@ export function closeOfDaySlip({ sheet = {}, lines = [], sales = [], branchLabel
   if (t.discountsMinor) add('Sales', 'Discounts', -t.discountsMinor)
   if (t.refundsMinor) add('Sales', 'Refunds', -t.refundsMinor)
   add('Sales', 'Net sales', t.netMinor)
+  if (t.caReleasedMinor) add('Sales', 'Cash advances given (off sales)', -t.caReleasedMinor)
+  add('Sales', 'Total sales', t.totalSalesMinor)
   add('Sales', 'Transactions', null, `${t.count} sale(s) · average ${formatAccounting(t.avgMinor)}`)
   for (const [id, label] of Object.entries(METHOD_LABELS)) if (t.byMethod[id]) add('Payments', label, t.byMethod[id])
+  add('Payments', 'Total cash transaction', t.cashTransactionMinor)
+  add('Payments', 'Total GCash transaction', t.gcashTransactionMinor)
+  add('Payments', 'Total credit/debit transaction', t.creditDebitMinor)
   for (const f of t.byFamily) add('Services', f.label, f.minor)
 
   for (const l of linesOf(lines, 'expense')) {
@@ -532,17 +547,17 @@ export function closeOfDaySlip({ sheet = {}, lines = [], sales = [], branchLabel
   for (const l of linesOf(lines, 'ca_release')) add('Cash advances', `Given out · ${who(l)}`, amount(l.amount_minor))
   for (const l of linesOf(lines, 'ca_repay')) add('Cash advances', `Paid back · ${who(l)}`, amount(l.amount_minor))
 
-  add('Drawer', 'Opening float', t.openingFloatMinor)
-  add('Drawer', 'Cash sales', t.cashMinor)
-  if (t.caRepaidMinor) add('Drawer', 'Cash advances paid back', t.caRepaidMinor)
-  add('Drawer', 'Expenses paid', -t.expensesMinor)
-  add('Drawer', 'Salaries paid', -t.salariesMinor)
-  if (t.caReleasedMinor) add('Drawer', 'Cash advances given out', -t.caReleasedMinor)
-  add('Drawer', 'Expected cash', t.expectedCashMinor)
+  add('Drawer', 'Total cash transaction', t.cashTransactionMinor)
+  if (t.caRepayCashMinor) add('Drawer', 'Cash advances paid back (cash)', t.caRepayCashMinor)
+  add('Drawer', 'Cash expenses', -t.cashExpensesMinor)
+  if (t.caReleaseCashMinor) add('Drawer', 'Cash advances given (cash)', -t.caReleaseCashMinor)
+  add('Drawer', 'Cash left', t.cashLeftMinor)
   add('Drawer', 'Counted cash', t.countedCashMinor)
   add('Drawer', 'Over/short', t.overShortMinor, t.overShortMinor ? sheet.notes || '' : '')
+  add('Drawer', 'Total GCash transaction', t.gcashTransactionMinor)
+  add('Drawer', 'GCash left', t.gcashLeftMinor)
 
-  add('Result', 'Net profit', t.netProfitMinor, 'Net sales − expenses − salaries')
+  add('Result', 'Net profit', t.netProfitMinor, 'Total sales − expenses − salaries. Cash advances already came off total sales.')
 
   const date = String(sheet.business_date || '').slice(0, 10)
   const by = sheet.staff_profiles?.full_name

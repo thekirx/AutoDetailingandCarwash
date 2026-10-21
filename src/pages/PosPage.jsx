@@ -7,7 +7,7 @@ import { listBranches, getLoyaltyProgramSettings } from '@/lib/adminApi'
 import { writeAudit } from '@/lib/audit'
 import { createCoalescedReload } from '@/lib/coalesceReload'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
-import { applyAdHocDiscount, assertBranchAdminCart, buildPosSalePayload, buildVisitHandoffCartLines, canChangePosCartLineQuantity, canRedeemLoyaltyAward, canRemovePosCartLine, cashTenderCoversTotal, clearPosDraft, detachHandoffFromCart, isAllowedPosPaymentMethod, isValidPaymentRef, keepQueueHandoffWhenAdding, normalizePosLineItemType, openHandoffInCart, posCartBlocksCheckout, priceCartForMembership, readPosDraft, sanitizeBranchAdminCart, stepPosCartLineQuantity, summarizePosCart, validatePosSaleCart, writePosDraft, POS_MAX_LINE_QUANTITY } from '@/lib/posSale'
+import { applyAdHocDiscount, assertBranchAdminCart, buildPosSalePayload, buildVisitHandoffCartLines, canChangePosCartLineQuantity, canRedeemLoyaltyAward, canRemovePosCartLine, cashTenderCoversTotal, clearPosDraft, detachHandoffFromCart, isAllowedPosPaymentMethod, isValidPaymentRef, keepQueueHandoffWhenAdding, normalizePosLineItemType, openHandoffInCart, posCartBlocksCheckout, priceCartForMembership, readPosDraft, sanitizeBranchAdminCart, splitCashGcash, stepPosCartLineQuantity, summarizePosCart, validatePosSaleCart, writePosDraft, POS_MAX_LINE_QUANTITY } from '@/lib/posSale'
 import { PRICING_SIZES, resolveServicePriceMinor, formatSizePriceRange, availablePricingSizes, serviceHasSizePricing } from '@/lib/servicePricing'
 import { productSizeRows } from '@/lib/productSizes'
 import { filterPosBayCatalog, filterPosDetailingCatalog, serviceKindFromPayCategory } from '@/lib/serviceKinds'
@@ -115,6 +115,9 @@ function PosCounterPage() {
   const [branches, setBranches] = useState([])
   const [handoffVehicleSize, setHandoffVehicleSize] = useState('medium')
   const [paymentMethod, setPaymentMethod] = useState('cash')
+  const [splitOn, setSplitOn] = useState(false)
+  const [splitCashText, setSplitCashText] = useState('')
+  const [splitGcashText, setSplitGcashText] = useState('')
   const [customerId, setCustomerId] = useState('')
   const [linkedCustomer, setLinkedCustomer] = useState(null)
   const [guestName, setGuestName] = useState('')
@@ -302,7 +305,10 @@ function PosCounterPage() {
       setCart(next)
       setCustomerId(draft.customerId || '')
       setLinkedCustomer(draft.linkedCustomer || null)
-      if (draft.paymentMethod) setPaymentMethod(draft.paymentMethod)
+      if (draft.paymentMethod && draft.paymentMethod !== 'split') setPaymentMethod(draft.paymentMethod)
+      setSplitOn(Boolean(draft.splitOn))
+      setSplitCashText(draft.splitCash || '')
+      setSplitGcashText(draft.splitGcash || '')
       setCashTendered(draft.cashTendered || '')
       setPaymentRef(draft.paymentRef || '')
       if (branchAdmin) {
@@ -327,6 +333,9 @@ function PosCounterPage() {
       linkedCustomer,
       activeHandoff,
       paymentMethod,
+      splitOn,
+      splitCash: splitCashText,
+      splitGcash: splitGcashText,
       cashTendered,
       paymentRef,
       discountPercent,
@@ -341,6 +350,9 @@ function PosCounterPage() {
     linkedCustomer,
     activeHandoff,
     paymentMethod,
+    splitOn,
+    splitCashText,
+    splitGcashText,
     cashTendered,
     paymentRef,
     discountPercent,
@@ -533,6 +545,12 @@ function PosCounterPage() {
   // Cash tendered → change due, and the quick-cash chips a cashier reaches for.
   const cashTenderedMinor = parsePesosToMinor(cashTendered)
   const changeMinor = (Number.isFinite(cashTenderedMinor) ? cashTenderedMinor : 0) - cartTotal
+  const splitCashMinor = parsePesosToMinor(splitCashText)
+  const splitGcashMinor = parsePesosToMinor(splitGcashText)
+  const splitCheck = splitOn
+    ? splitCashGcash({ totalMinor: cartTotal, cashMinor: splitCashMinor ?? 0, gcashMinor: splitGcashMinor ?? 0 })
+    : null
+  const tenderMethod = splitOn ? 'split' : paymentMethod
   const quickCashAmounts = useMemo(() => {
     if (cartTotal <= 0) return []
     const notes = [20000, 50000, 100000, 200000, 500000, 1000000]
@@ -540,15 +558,17 @@ function PosCounterPage() {
   }, [cartTotal])
 
   const chargeBlocked = posCartBlocksCheckout(cart)
-  const cashCovered = cashTenderCoversTotal(paymentMethod, cashTenderedMinor, cartTotal)
-  const refReady = isValidPaymentRef(paymentMethod, paymentRef)
+  const cashCovered = splitOn
+    ? Boolean(splitCheck?.ok)
+    : cashTenderCoversTotal(paymentMethod, cashTenderedMinor, cartTotal)
+  const refReady = isValidPaymentRef(tenderMethod, paymentRef)
   const chargeDisabled = !cart.length || !branch || saving || chargeBlocked || !cashCovered || !refReady
   const chargeHint = !cart.length
     ? 'Add an item to charge'
     : chargeBlocked
       ? 'This queue ticket has no linked service'
       : !cashCovered
-        ? 'Enter cash received that covers the total'
+        ? (splitOn ? splitCheck?.error || 'Cash and GCash must add up to the ticket.' : 'Enter cash received that covers the total')
         : !refReady
           ? 'Enter the GCash / card reference'
           : ''
@@ -686,6 +706,9 @@ function PosCounterPage() {
     setDiscountAmountPesos('')
     setDiscountReason('')
     setPaymentMethod('cash')
+    setSplitOn(false)
+    setSplitCashText('')
+    setSplitGcashText('')
   }
 
   function applyCartDiscount() {
@@ -1017,14 +1040,14 @@ function PosCounterPage() {
   async function checkout() {
     if (!cart.length || !branch) return
     if (!cashCovered) {
-      toast.error('Enter cash received that covers the order total.')
+      toast.error(splitOn ? (splitCheck?.error || 'Cash and GCash must add up to the ticket.') : 'Enter cash received that covers the order total.')
       return
     }
     if (posCartBlocksCheckout(cart)) {
       toast.error('This queue ticket has no linked service. Ask a Team Lead to set the service on the booking, then send it to payment again.')
       return
     }
-    if (!isAllowedPosPaymentMethod(paymentMethod, paymentOptions)) {
+    if (!splitOn && !isAllowedPosPaymentMethod(paymentMethod, paymentOptions)) {
       toast.error('Choose a payment method from the list.')
       return
     }
@@ -1039,7 +1062,7 @@ function PosCounterPage() {
       birthdayPerk,
       stamps: loyaltyStamps,
       milestones: loyaltyMilestones,
-      paymentMethod,
+      paymentMethod: tenderMethod,
       paymentRef,
       catalog: { services, products },
       isHandoff: Boolean(activeHandoff),
@@ -1104,7 +1127,9 @@ function PosCounterPage() {
       payload: buildPosSalePayload({
         branch,
         customerId: resolvedCustomerId,
-        paymentMethod,
+        paymentMethod: tenderMethod,
+        cashMinor: splitCheck?.cashMinor,
+        gcashMinor: splitCheck?.gcashMinor,
         paymentRef,
         discountReason: cart.some((l) => l.adhoc_discount_applied) ? discountReason : '',
         discountMinor: cart.reduce((sum, line) => {
@@ -1595,17 +1620,75 @@ function PosCounterPage() {
                 <Button
                   key={opt.value}
                   type="button"
-                  variant={paymentMethod === opt.value ? 'default' : 'outline'}
-                  aria-pressed={paymentMethod === opt.value}
+                  variant={!splitOn && paymentMethod === opt.value ? 'default' : 'outline'}
+                  aria-pressed={!splitOn && paymentMethod === opt.value}
                   className="min-h-12"
-                  onClick={() => setPaymentMethod(opt.value)}
+                  onClick={() => { setSplitOn(false); setPaymentMethod(opt.value) }}
                 >
                   {opt.label}
                 </Button>
               ))}
+              <Button
+                type="button"
+                variant={splitOn ? 'default' : 'outline'}
+                aria-pressed={splitOn}
+                className="min-h-12"
+                onClick={() => setSplitOn(true)}
+              >
+                Cash + GCash
+              </Button>
             </div>
 
-            {paymentMethod === 'cash' ? (
+            {splitOn ? (
+              <div className="space-y-2 rounded-xl border border-border bg-muted/20 p-3">
+                <p className="text-xs text-muted-foreground">Split this ticket. Cash and GCash must add up to {formatMoney(cartTotal)}.</p>
+                <Label htmlFor="pos-split-cash" className="text-xs text-muted-foreground">Cash amount</Label>
+                <Input
+                  id="pos-split-cash"
+                  className="min-h-11"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  value={splitCashText}
+                  onChange={(e) => setSplitCashText(e.target.value)}
+                />
+                <div className="flex items-end justify-between gap-2">
+                  <Label htmlFor="pos-split-gcash" className="text-xs text-muted-foreground">GCash amount</Label>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="min-h-10"
+                    onClick={() => {
+                      const cash = splitCashMinor ?? 0
+                      const rest = Math.max(cartTotal - cash, 0)
+                      setSplitGcashText((rest / 100).toFixed(2))
+                    }}
+                  >
+                    Rest is GCash
+                  </Button>
+                </div>
+                <Input
+                  id="pos-split-gcash"
+                  className="min-h-11"
+                  inputMode="decimal"
+                  placeholder="0.00"
+                  value={splitGcashText}
+                  onChange={(e) => setSplitGcashText(e.target.value)}
+                />
+                <Label htmlFor="pos-payment-ref" className="text-xs text-muted-foreground">GCash reference</Label>
+                <Input
+                  id="pos-payment-ref"
+                  className="min-h-11"
+                  placeholder="GCash reference"
+                  autoComplete="off"
+                  value={paymentRef}
+                  onChange={(e) => setPaymentRef(e.target.value)}
+                />
+                {splitCheck && !splitCheck.ok ? (
+                  <p className="text-sm text-rose-600">{splitCheck.error}</p>
+                ) : null}
+              </div>
+            ) : paymentMethod === 'cash' ? (
               <div className="space-y-2 rounded-xl border border-border bg-muted/20 p-3">
                 <div className="flex flex-wrap gap-2">
                   {quickCashAmounts.map((amount) => (

@@ -1,6 +1,6 @@
 # Daily sheet formulas
 
-Source: `FOrmulas.md` (Sir). Code: `src/lib/sheetFormulas.js` and `computeSheetTotals` in `src/lib/dailySheet.js`. Server: `daily_sheet_server_totals` in migration `20261019230000_sheet_money_left_channels.sql`.
+Source: Sir’s answers on 21 Oct 2026. They replace the morning-float reading of `FOrmulas.md`. Code: `src/lib/sheetFormulas.js` and `computeSheetTotals` in `src/lib/dailySheet.js`. Server: `daily_sheet_server_totals` in migration `20261021120000_sheet_collection_no_float.sql`.
 
 Amounts are minor units (centavos) in code. The sheet shows pesos.
 
@@ -8,83 +8,67 @@ Amounts are minor units (centavos) in code. The sheet shows pesos.
 
 | Name | Rule |
 |---|---|
-| Total sales | Every **paid POS** ticket that Manila day (cash, GCash, credit card, debit card, bank transfer). |
-| Car wash sales | Car-wash **service lines** only. Coffee, merch, and accessories on the same ticket are not car wash. |
-| Ceramic coating sales | Ceramic coating service lines only. |
-| Ceramic tint sales | Tint service lines only. |
-| Paint protection film sales | PPF service lines only. |
+| POS sales | Every **paid POS** ticket that Manila day. |
+| Total sales | POS sales − cash advances given out (cash and GCash). |
+| Total credit/debit transaction | Credit card + debit card + bank transfer. In total sales. Not in cash left or GCash left. |
+| Car wash / ceramic coating / ceramic tint / PPF | Those service lines only. Coffee, merch, and accessories stay on their own rows. A split tender does not change which service was sold. |
 
-The sheet lists those under **By service**. Coffee and merch stay on their own rows so they are not mixed into the service totals.
+Payment rows: Cash, GCash, Credit card, Debit card, Bank transfer, Other. A blank method still counts as cash. An unknown method counts as Other and does not inflate the drawer.
 
-Payment rows: Cash, GCash, Credit card, Debit card, Bank transfer, Other. A blank method still counts as cash (POS default). An unknown method counts as Other and does **not** inflate the drawer.
+One ticket may be paid partly cash and partly GCash. The ticket counts once in total sales. The cash portion joins cash. The GCash portion joins GCash. Card, debit, and bank transfer stay one method for the whole ticket.
 
-## Expenses
+## Expenses and profit
 
-Manual expense lines need a category, an amount, and **Paid from** Cash or GCash.
-
-Crew pay (car wash, tinter, detailer) is a salary line. It is part of **total expenses** and of profit. On approve, expense and salary lines post to Finance as paid expenses for that branch. Salary lines also pick Cash or GCash (default Cash).
+Manual expenses need a category, an amount, and **Paid from** Cash or GCash.
 
 ```
 total expenses = manual expenses + salaries
-net profit     = total sales (net) − total expenses
+total sales    = POS sales − cash advances given out
+net profit     = total sales − total expenses
 ```
 
-Cash advances are **not** expenses and do not change profit.
+A cash advance is not an expense and is not posted to Finance. It lowers the sales figure, so profit is lower by that amount without calling it an expense. Salary is an expense, so it lowers profit once.
 
-## Money left
+## What is left to collect
+
+Salary is taken out of the channel it was paid from. It is not taken out a second time from what is left.
 
 ```
-Cash left  = POS cash
+total cash transaction  = POS cash − salaries paid cash
+total GCash transaction = POS GCash − salaries paid GCash
+
+cash left  = total cash transaction
            + cash-advance paid back (cash)
            − expenses paid cash
-           − salaries paid cash
            − cash advances given out (cash)
 
-GCash left = POS GCash
+GCash left = total GCash transaction
            + cash-advance paid back (GCash)
            − expenses paid GCash
-           − salaries paid GCash
            − cash advances given out (GCash)
 ```
 
-Given out lowers money left. Paid back raises it. Neither is an expense.
+There is no morning float. All cash is collected as it is. Cash left is the collection. Over / short = cash counted − cash left.
 
-Opening float is the till at the start of the day. It is not inside “cash left”. The drawer count uses:
+## Checklist — frontend and backend
 
-```
-expected cash = opening float + cash left
-over / short  = cash counted − expected cash
-```
+Live project: `https://lybxhpzzqqyqswvuwpxv.supabase.co`. Applied 21 Oct 2026. `submit_daily_sheet` no longer asks for a morning float. `complete_pos_sale_impl` stores a cash + GCash split. `daily_sheet_server_totals` subtracts salary once inside the channel transaction. Execute on that function stays with `postgres` and `service_role` only.
 
-## Apply on the database
-
-Applied on project `lybxhpzzqqyqswvuwpxv` on 20 Oct 2026: `save_daily_sheet` keeps `paid_from` for salary and cash-advance lines, and `daily_sheet_server_totals` returns `cashLeftMinor` and `gcashLeftMinor`.
-
-Checked on draft sheet `a87dbc89-8682-4930-a9d4-75422be98723` (Bacoor, 9 Oct 2026): one cash expense of 1000000 centavos, no paid POS. Server totals returned cash left −1000000, GCash left 0, expected cash −1000000.
-
-## Checklist
-
-Live project: `https://lybxhpzzqqyqswvuwpxv.supabase.co`. Checked 20 Oct 2026.
-
-| Formula | Status | Evidence |
-|---|---|---|
-| Reports separate cash, GCash, credit card, debit card, and bank transfer | Fixed in code and in live POS settings | Daily sheet `METHOD_LABELS` and finance `paymentTypes` keep five buckets. `ops_pos_settings` id 1 now lists Cash, GCash, Credit Cards, Debit card, Bank transfer. Past paid sales are only cash (696), GCash (445), and card (154). Debit and bank rows stay zero until a sale is taken that way. |
-| Total sales = all paid POS | Correct | `netMinor` is paid tickets for that branch and Manila day. Refunds are separate. |
-| Car wash / ceramic coating / ceramic tint / PPF exclude refreshments and accessories | Correct on the sheet | Line items are classified in `paidSalesToBacoorRows`. Coffee and merch stay on their own rows. The database totals function does not recompute these four; the sheet does when it loads the day's sales. |
-| Expenses need a category and cash or GCash | Correct before submit | The sheet will not submit an expense without a description, account, amount, and cash or GCash. The database allows a draft line with a blank category. |
-| Salaries for car wash, tinter, and detailer are expenses | Correct | Salary lines are inside total expenses and profit. `review_daily_sheet` posts `expense` and `salary` only. |
-| On approve, those expenses go to Finance for the branch | Correct | Same review function. Cash advances are not in that post (`ca_release` does not appear in the function). |
-| Cash advance given out lowers money left and is not an expense | Correct | Subtracted in cash left / GCash left. Omitted from `totalExpensesMinor` and from profit. |
-| Cash advance payment raises money left and is not an expense | Correct | Added by channel. Omitted from expenses. |
-| Total GCash left = POS GCash + GCash cash-advance payments − GCash expenses | Correct, with salaries and GCash cash advances given out included | Prose in `FOrmulas.md` says salaries are expenses and cash advances given out are deducted. Both are in the live function. |
-| Total cash left = POS cash + cash cash-advance payments − cash expenses | Correct, same inclusion | Opening float is not inside cash left. Expected drawer cash = opening float + cash left, so the count can be checked against the till. |
-| One payment method per ticket | Still true | A ticket paid partly cash and partly GCash is not split. |
+| Sir’s answer | Sheet (frontend) | Totals (JavaScript) | Database |
+|---|---|---|---|
+| Credit, debit, and bank stay in sales and out of both drawers. The report has Total credit/debit transaction. | Payment rows plus that total on the sheet and the close slip | `creditDebitMinor` = card + debit + bank | `daily_sheet_server_totals` returns `creditDebitMinor`. Those methods are not added to cash or GCash. |
+| No morning float. The day’s cash is collected as it is. | No opening-float field. Count is compared with cash left. | `expectedCashMinor` = cash left. Submit does not ask for a float. | `submit_daily_sheet` no longer requires a float. Expected cash is cash left. |
+| Cash advance leaves the drawer, comes off total sales, and is not an expense. | Total sales shows POS minus advances. Expenses do not include them. | `totalSalesMinor` = net POS − advances given. `totalExpensesMinor` = expenses + salaries. Profit uses total sales. | Same expression: `v_net - v_rel - v_exp - v_sal`. Approve still posts only expense and salary. |
+| GCash salary comes out of the GCash transaction. Cash salary comes out of the cash transaction. Left is what remains to collect. | Total cash transaction and Total GCash transaction sit above cash left and GCash left. | `moneyLeft` subtracts salary once, inside the transaction, then builds left from that. | `v_cash_txn := v_cash - v_sal_cash`, then left does not subtract salary again. |
+| A ticket can be split between cash and GCash. | POS tender has Cash + GCash. The two amounts must add up to the ticket. GCash reference still required. | `saleTenderPortions` puts each portion in its channel. The sale still counts once. | `sales.cash_minor` and `sales.gcash_minor`. `complete_pos_sale_impl` rejects a split that does not add up. |
 
 ## Honest limits
 
-- The old Bacoor text close is read-only history. It still folds an approved cash advance into its own expense total. New days use the daily sheet, not that text.
-- The Super Admin floor tile still groups debit and bank transfer with credit card. The daily sheet and the finance sales summary do not.
-- This pass did not click a new debit or bank-transfer sale on the live site.
+- Sheets saved before this change keep their old stored totals until they are saved again. The new arithmetic is what the screen and `daily_sheet_server_totals` compute now.
+- The old Bacoor text close is read-only history. It still folds an approved cash advance into its own expense total. New days use the daily sheet.
+- A draft expense can still be saved without a category. Submit blocks it.
+- Sized products whose on-hand count is still on the blank size key need that count set per size before POS will deduct it.
+- This pass did not click a live split sale or a live debit/bank sale on the register.
 
 ## How jobs are grouped
 
@@ -99,13 +83,3 @@ Settled from the live catalog. Not a question for Sir.
 | PPF and its levels (Basic, High Impact, Platinum, Ultimate) | Detailing booking list. Crew pay is not the ceramic split. | Paint protection film sales |
 | Paint maintenance | Detailing booking list. Return visit after ceramic or PPF. | Paint maintenance sales |
 | Coffee, drinks, accessories | Counter add-ons | Their own rows |
-
-## Ask Sir Michi
-
-Plain-language copy: `docs/plans/2026-10-20-sir-michi-questions.pdf`.
-
-1. Credit card, debit card, and bank transfer count in total sales and stay out of Cash left and GCash left.
-2. Cash left does not include the opening float. Expected cash is opening float plus cash left.
-3. Cash advances given out are deducted from money left and are not expenses.
-4. A salary paid from GCash reduces GCash left, not the cash drawer.
-5. One ticket has one payment method.

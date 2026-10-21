@@ -72,6 +72,7 @@ const EXEMPTED = [
   '20261019220000_product_branch_stock_size_key.sql',
   '20261019221000_plan_boards_visible_roles.sql',
   '20261019230000_sheet_money_left_channels.sql',
+  '20261021120000_sheet_collection_no_float.sql',
 ]
 
 const read = (name) => readFileSync(join(migrationsDir, name), 'utf8')

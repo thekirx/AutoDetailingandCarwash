@@ -9,6 +9,7 @@ import {
   priceCartForMembership,
   removePosCartLine,
   setPosCartLineQuantity,
+  splitCashGcash,
   stepPosCartLineQuantity,
   POS_MAX_LINE_QUANTITY,
   resolveMembershipUnitPrice,
@@ -247,5 +248,24 @@ assert.equal(cashTenderCoversTotal('cash', 10000, 10000), true)
 assert.equal(cashTenderCoversTotal('cash', 12000, 10000), true)
 assert.equal(cashTenderCoversTotal('cash', Number.NaN, 10000), false)
 assert.equal(cashTenderCoversTotal('gcash', 0, 10000), true)
+
+const split = splitCashGcash({ totalMinor: 10000, cashMinor: 4000, gcashMinor: 6000 })
+assert.equal(split.ok, true)
+assert.equal(splitCashGcash({ totalMinor: 10000, cashMinor: 10000, gcashMinor: 0 }).ok, false)
+assert.equal(splitCashGcash({ totalMinor: 10000, cashMinor: 3000, gcashMinor: 3000 }).ok, false)
+const splitPayload = buildPosSalePayload({
+  branch: 'bacoor',
+  paymentMethod: 'split',
+  cashMinor: 4000,
+  gcashMinor: 6000,
+  paymentRef: 'GC-9911',
+  cart: [{ item_type: 'service', id: 'svc-1', name: 'Wash', quantity: 1, unit_price_minor: 10000 }],
+})
+assert.equal(splitPayload.payment_method, 'split')
+assert.equal(splitPayload.cash_minor, 4000)
+assert.equal(splitPayload.gcash_minor, 6000)
+assert.equal(splitPayload.payment_ref, 'GC-9911')
+assert.equal(walkIn.cash_minor, null)
+assert.equal(walkIn.payment_method, 'cash')
 
 console.log('posSale.buildPosSalePayload + handoff cart: ok')

@@ -720,8 +720,8 @@
     "semantic_hash": "d790531bf08927f6d41a5136e3e86d37"
   },
   "server/notifyBooking.mjs": {
-    "mtime": 1792467895.6316397,
-    "seen": 1792468240.630905,
+    "mtime": 1792585264.1291797,
+    "seen": 1792586929.389495,
     "ast_hash": "c31b223a46bc169f409041282d3dd875",
     "semantic_hash": ""
   },
@@ -1716,8 +1716,8 @@
     "semantic_hash": "bf98e1cdf606e21b11a24fc2d08ce588"
   },
   "src/lib/notificationTemplates.js": {
-    "mtime": 1792467896.472337,
-    "seen": 1792468240.6319296,
+    "mtime": 1792585264.1291797,
+    "seen": 1792586929.3904083,
     "ast_hash": "f317967dc9ac1f81aa57e8581e65c5d3",
     "semantic_hash": ""
   },
@@ -1764,9 +1764,9 @@
     "semantic_hash": "76edd0990be26ba82e696390afc01bec"
   },
   "src/lib/paymentMethods.js": {
-    "mtime": 1792468078.6999137,
-    "seen": 1792468240.6319842,
-    "ast_hash": "f2210e2ab21d475fb1a28a815e17ab56",
+    "mtime": 1792586018.7882776,
+    "seen": 1792586929.3904583,
+    "ast_hash": "d76ddbee1afa2f7df1aff317666bab34",
     "semantic_hash": ""
   },
   "src/lib/payroll.js": {
@@ -1842,9 +1842,9 @@
     "semantic_hash": ""
   },
   "src/lib/posSale.js": {
-    "mtime": 1792467895.5477853,
-    "seen": 1792468240.6320481,
-    "ast_hash": "b70ae78fd64529877a8a46bc477ffd7f",
+    "mtime": 1792586084.0560484,
+    "seen": 1792586929.3905175,
+    "ast_hash": "e1f1f452dbafcd020691299abc593503",
     "semantic_hash": ""
   },
   "src/lib/posSellables.js": {
@@ -2286,9 +2286,9 @@
     "semantic_hash": ""
   },
   "src/pages/PosPage.jsx": {
-    "mtime": 1792394799.1993673,
-    "seen": 1792394947.9879348,
-    "ast_hash": "386dcb7a88e73fcce4ea301762147272",
+    "mtime": 1792586367.8907337,
+    "seen": 1792586929.390912,
+    "ast_hash": "dc819bbade74a10f6bda1f2a27b95b26",
     "semantic_hash": ""
   },
   "src/pages/ProductsManagePage.jsx": {
@@ -4296,8 +4296,8 @@
     "semantic_hash": ""
   },
   "tests/notifyBooking.test.js": {
-    "mtime": 1792456269.09542,
-    "seen": 1792456938.76475,
+    "mtime": 1792585264.1218581,
+    "seen": 1792586929.3934796,
     "ast_hash": "a76ef5f2bdd9120920fdd9613bdb3cf8",
     "semantic_hash": ""
   },
@@ -4542,10 +4542,10 @@
     "semantic_hash": ""
   },
   "tests/posSale.test.js": {
-    "mtime": 1789313993.5761163,
-    "seen": 1789446852.7417905,
-    "ast_hash": "db8c140b61477c3ed9f5be95b994e9bb",
-    "semantic_hash": "db8c140b61477c3ed9f5be95b994e9bb"
+    "mtime": 1792586121.777487,
+    "seen": 1792586929.39372,
+    "ast_hash": "3ba78d1dc482d7bfe2491fdcc1b4b09d",
+    "semantic_hash": ""
   },
   "tests/posWorkflowSeam.test.js": {
     "mtime": 1791515960.8991575,
@@ -5478,9 +5478,9 @@
     "semantic_hash": "dfc046b7e4fe6b112ed5cd2b2f5b89bf"
   },
   "docs/OPS/MONEY-CONTRACT.md": {
-    "mtime": 1792467896.926969,
-    "seen": 1792468240.6354423,
-    "ast_hash": "83c4a7247674b77bb48a40b67518eb02",
+    "mtime": 1792586404.798674,
+    "seen": 1792586929.3947766,
+    "ast_hash": "e208c60bf69e142b3e44491cbb8b484d",
     "semantic_hash": ""
   },
   "docs/OPS/NEW-REVISIONS-CHECKLIST.md": {
@@ -5652,9 +5652,9 @@
     "semantic_hash": ""
   },
   "docs/SYSTEM_AUDIT.md": {
-    "mtime": 1792468167.2210934,
-    "seen": 1792468240.635568,
-    "ast_hash": "8f96d3a6492a3c4cc81e253275d525b7",
+    "mtime": 1792586818.6832924,
+    "seen": 1792586929.3949428,
+    "ast_hash": "eaa6f6ffb0b05d45931ccef4297fe313",
     "semantic_hash": ""
   },
   "docs/audits/2026-08-31/OWNER-REVISIONS.md": {
@@ -7272,9 +7272,9 @@
     "semantic_hash": ""
   },
   "src/lib/salesSummary.js": {
-    "mtime": 1792467897.3421955,
-    "seen": 1792468240.6321425,
-    "ast_hash": "bccb25ad5df983720bf3bd761a1854d3",
+    "mtime": 1792586021.241123,
+    "seen": 1792586929.3906,
+    "ast_hash": "c830d24ddf7b2f10d1a42f17f2d919a3",
     "semantic_hash": ""
   },
   "src/pages/finance/FinanceSalesBlocks.jsx": {
@@ -7440,15 +7440,15 @@
     "semantic_hash": ""
   },
   "docs/architecture/daily-sheet.workflow.json": {
-    "mtime": 1792467897.497707,
-    "seen": 1792468240.630154,
-    "ast_hash": "fa18d0307e9254579feb32057391e0f3",
+    "mtime": 1792586586.0481496,
+    "seen": 1792586929.3886542,
+    "ast_hash": "bfd9a93da22132da2399f3c99a750761",
     "semantic_hash": ""
   },
   "docs/architecture/daily-sheet.workflow.visual-check.json": {
-    "mtime": 1792465937.4414606,
-    "seen": 1792467608.3799734,
-    "ast_hash": "ff7b5440c0d2bf522c2ff856145159b7",
+    "mtime": 1792586630.4192939,
+    "seen": 1792586929.3886578,
+    "ast_hash": "a957da33af57476ec604df2c39222645",
     "semantic_hash": ""
   },
   "scripts/_daily-sheet-sql-check.mjs": {
@@ -7464,9 +7464,9 @@
     "semantic_hash": ""
   },
   "src/lib/dailySheet.js": {
-    "mtime": 1792468077.2400956,
-    "seen": 1792468240.6317823,
-    "ast_hash": "a0e46df9e0dca1c5a18e48410aa3874f",
+    "mtime": 1792586063.0594685,
+    "seen": 1792586929.3902752,
+    "ast_hash": "48c9bef688f0702f8ff80868a0c66e9c",
     "semantic_hash": ""
   },
   "src/lib/dailySheetApi.js": {
@@ -7512,9 +7512,9 @@
     "semantic_hash": ""
   },
   "src/pages/pos/DailySheetPanel.jsx": {
-    "mtime": 1792467897.823529,
-    "seen": 1792468240.6327217,
-    "ast_hash": "17e039e4055aad0cca4d534d42a4ea12",
+    "mtime": 1792586281.044338,
+    "seen": 1792586929.391253,
+    "ast_hash": "10982136bea76ae4b79c2117f8bea801",
     "semantic_hash": ""
   },
   "src/pages/pos/PosTodayPanel.jsx": {
@@ -7536,9 +7536,9 @@
     "semantic_hash": ""
   },
   "tests/dailySheet.test.js": {
-    "mtime": 1792467897.593825,
-    "seen": 1792468240.6339684,
-    "ast_hash": "c4f6ff647a5fb983690011add4c49cf0",
+    "mtime": 1792586162.756112,
+    "seen": 1792586929.393068,
+    "ast_hash": "eb4d53b6c607fbc8a4ef0999738bc1df",
     "semantic_hash": ""
   },
   "tests/dailySheetMigration.test.js": {
@@ -7566,14 +7566,14 @@
     "semantic_hash": ""
   },
   "docs/architecture/daily-sheet.workflow.html": {
-    "mtime": 1792465923.5387175,
-    "seen": 1792467608.385959,
-    "ast_hash": "20881fffd288bc9ef70f65e7a09e5832",
+    "mtime": 1792586597.483401,
+    "seen": 1792586929.3949897,
+    "ast_hash": "1f049296d7854a25f6db0a6e508001ee",
     "semantic_hash": ""
   },
   "docs/architecture/daily-sheet.workflow.visual-check.html": {
-    "mtime": 1792465937.4336548,
-    "seen": 1792467608.3859622,
+    "mtime": 1792586630.4153285,
+    "seen": 1792586929.3949945,
     "ast_hash": "f69304b53f8978d95c3c9fc935cbd694",
     "semantic_hash": ""
   },
@@ -7590,9 +7590,9 @@
     "semantic_hash": ""
   },
   "scripts/e2e-daily-sheet-money.mjs": {
-    "mtime": 1791705864.0909746,
-    "seen": 1791706427.6914825,
-    "ast_hash": "59154e7aab1e95582dfb4d63bb8ad17c",
+    "mtime": 1792586738.456829,
+    "seen": 1792586929.3889463,
+    "ast_hash": "22a0807378689a52ba948778c1752782",
     "semantic_hash": ""
   },
   "tests/e2eDailySheetMoneyContract.test.js": {
@@ -7614,9 +7614,9 @@
     "semantic_hash": ""
   },
   "tests/dailySheetExports.test.js": {
-    "mtime": 1792395550.5815327,
-    "seen": 1792395841.5266635,
-    "ast_hash": "b01c4b2b30a3c07bf8f4a9fa20e23448",
+    "mtime": 1792586191.3450913,
+    "seen": 1792586929.3930824,
+    "ast_hash": "f4bbb795ad4400ef3db68d62aa2ab51f",
     "semantic_hash": ""
   },
   "tests/financeExports.test.js": {
@@ -8070,9 +8070,9 @@
     "semantic_hash": ""
   },
   "tests/dailySheetHistory.test.js": {
-    "mtime": 1791523283.6280448,
-    "seen": 1791524198.3386378,
-    "ast_hash": "f9d29f52c1fb24ecc03048a1ab3a13a6",
+    "mtime": 1792586148.5661478,
+    "seen": 1792586929.393087,
+    "ast_hash": "e62ea57ed4604e015a5bdd6a2d2ac3b6",
     "semantic_hash": ""
   },
   "scripts/check-investor-readonly.mjs": {
@@ -8550,15 +8550,15 @@
     "semantic_hash": ""
   },
   "tests/guardedMigrationContract.test.js": {
-    "mtime": 1792467897.9071665,
-    "seen": 1792468240.6340945,
-    "ast_hash": "1dc121d600e607abcd0b47758e3f0ee1",
+    "mtime": 1792586183.0668652,
+    "seen": 1792586929.393263,
+    "ast_hash": "654955ef7e86b7fc5b60dc6f149eb061",
     "semantic_hash": ""
   },
   "tests/paymentMethodBucketing.test.js": {
-    "mtime": 1791635145.9910116,
-    "seen": 1791635636.3048668,
-    "ast_hash": "39f10ddc3a47a51af4e6c47ec04e8be2",
+    "mtime": 1792586154.2460332,
+    "seen": 1792586929.3935792,
+    "ast_hash": "32c633b1a8ee3aac793ae8606f0af359",
     "semantic_hash": ""
   },
   "tests/teamLeadCustomerHistoryAuth.test.js": {
@@ -8616,9 +8616,9 @@
     "semantic_hash": ""
   },
   "tests/dailySheetCashBucketParity.test.js": {
-    "mtime": 1792467898.8779268,
-    "seen": 1792468240.6339743,
-    "ast_hash": "1b32776e698d3a4ca1f53e5ad9378e2c",
+    "mtime": 1792586186.01939,
+    "seen": 1792586929.393078,
+    "ast_hash": "56de113eafe842ac4930f2708b4c51d1",
     "semantic_hash": ""
   },
   "tests/salarySuggestionTrustBoundary.test.js": {
@@ -9510,9 +9510,9 @@
     "semantic_hash": ""
   },
   ".impeccable/live/config.json": {
-    "mtime": 1792467898.2922316,
-    "seen": 1792468240.630072,
-    "ast_hash": "db3f47aa64932b4c922bce752e0e6e0c",
+    "mtime": 1792585264.1291797,
+    "seen": 1792586929.3885562,
+    "ast_hash": "402c7f39b4d63837ef9ef9da7ce208af",
     "semantic_hash": ""
   },
   "src/pages/MonthlyPayrollPage.jsx": {
@@ -9756,9 +9756,9 @@
     "semantic_hash": ""
   },
   "src/lib/sheetFormulas.js": {
-    "mtime": 1792467899.5195737,
-    "seen": 1792468240.6321745,
-    "ast_hash": "181cbf939ff2d63040988a66aacfcc37",
+    "mtime": 1792586530.4747026,
+    "seen": 1792586929.3906274,
+    "ast_hash": "5489c13fd6c6e7cfad1498d7f9d41695",
     "semantic_hash": ""
   },
   "supabase/migrations/20261019230000_sheet_money_left_channels.sql": {
@@ -9768,9 +9768,9 @@
     "semantic_hash": ""
   },
   "tests/sheetFormulas.test.js": {
-    "mtime": 1792467899.8116846,
-    "seen": 1792468240.6347759,
-    "ast_hash": "2b30921ff3466578dd4ade7d35792fef",
+    "mtime": 1792586148.5368848,
+    "seen": 1792586929.394079,
+    "ast_hash": "2181bf190ff83d77dab9aa4a482feb86",
     "semantic_hash": ""
   },
   "FOrmulas.md": {
@@ -9780,9 +9780,9 @@
     "semantic_hash": ""
   },
   "docs/daily-sheet/FORMULAS.md": {
-    "mtime": 1792468147.1345692,
-    "seen": 1792468240.635766,
-    "ast_hash": "6374f339472bef2aa48dfb5d58e70819",
+    "mtime": 1792586817.6807184,
+    "seen": 1792586929.39519,
+    "ast_hash": "1af24af30158f9eae77baafd987f34cc",
     "semantic_hash": ""
   },
   "docs/architecture/service-families.workflow.json": {
@@ -9825,6 +9825,12 @@
     "mtime": 1792468167.1658523,
     "seen": 1792468240.6303074,
     "ast_hash": "5ac770ee0b558a39a5e2cc378e912082",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20261021120000_sheet_collection_no_float.sql": {
+    "mtime": 1792586231.8727188,
+    "seen": 1792586929.3926241,
+    "ast_hash": "93d78a52707f24ca79d47b27583e3bca",
     "semantic_hash": ""
   }
 }

@@ -65,11 +65,11 @@ describe('Daily Sheet history', () => {
     assert.equal(filterSheets(rows, { search: 'nope' }).length, 0)
   })
 
-  it('cash advances are optional: a sheet with none can submit once float and count are in', () => {
-    const c = sheetChecklist({ sheet: { opening_float_minor: 100000, counted_cash_minor: 100000 }, lines: [], sales: [] })
+  it('cash advances are optional: a sheet with none can submit once the drawer is counted', () => {
+    const c = sheetChecklist({ sheet: { counted_cash_minor: 0 }, lines: [], sales: [] })
     assert.equal(c.canSubmit, true)
     assert.deepEqual(c.missing, [])
-    const half = sheetChecklist({ sheet: { opening_float_minor: 100000, counted_cash_minor: 100000 }, lines: [{ kind: 'ca_release', amount_minor: 5000 }], sales: [] })
+    const half = sheetChecklist({ sheet: { counted_cash_minor: 0 }, lines: [{ kind: 'ca_release', amount_minor: 5000 }], sales: [] })
     assert.equal(half.canSubmit, false, 'a started cash advance still needs its staff member')
   })
 
