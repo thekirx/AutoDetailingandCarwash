@@ -14,6 +14,7 @@ import {
   topServices,
 } from '../src/lib/dailySheet.js'
 import { salesCompareWindow } from '../src/lib/salesSummary.js'
+import { saleMoneySelect } from '../src/lib/paymentMethods.js'
 
 const washLine = (total) => ({ item_type: 'service', line_total_minor: total, services: { name: 'Basic wash', slug: 'basic-wash', pay_category: 'carwash' } })
 const coffeeLine = (total) => ({ item_type: 'product', line_total_minor: total, products: { name: 'Latte', tags: ['coffee'], category: 'coffee' } })
@@ -293,4 +294,22 @@ test('POS Today shows discounts, refunds, top services and money spent so far', 
   assert.match(src, /refundsMinor/)
   assert.match(src, /topServices\(/)
   assert.match(src, /computeSheetTotals\(/)
+})
+
+test('sheet and finance sale reads keep the cash and GCash portions of a split ticket', () => {
+  const select = saleMoneySelect('booking_id')
+  assert.match(select, /payment_method, cash_minor, gcash_minor/)
+  assert.match(select, /booking_id/)
+  assert.equal(saleMoneySelect('booking_id'), saleMoneySelect(', booking_id'))
+  const readers = [
+    '../src/lib/dailySheetApi.js',
+    '../src/pages/FinancePage.jsx',
+    '../src/pages/FloorMoneyPanel.jsx',
+    '../src/queue/queueApi.js',
+  ]
+  for (const file of readers) {
+    const src = readFileSync(new URL(file, import.meta.url), 'utf8')
+    assert.match(src, /saleMoneySelect\(/, file)
+    assert.doesNotMatch(src, /cash_minor, gcash_minor/, file)
+  }
 })

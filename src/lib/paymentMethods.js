@@ -98,6 +98,19 @@ export function saleTenderPortions(sale = {}) {
   return empty
 }
 
+/** Tender columns every money read must load. A split ticket is these two portions. */
+export const SALE_TENDER_COLUMNS = 'payment_method, cash_minor, gcash_minor'
+
+/**
+ * PostgREST select for a read that buckets a ticket by tender.
+ * Extra columns and joins are appended. The tender columns stay on every read.
+ */
+export function saleMoneySelect(extra = '') {
+  const more = String(extra || '').replace(/^,+/, '').trim()
+  const base = `id, branch, status, total_minor, discount_minor, ${SALE_TENDER_COLUMNS}, occurred_at`
+  return more ? `${base}, ${more}` : base
+}
+
 /**
  * Normalize stored sale.payment_method into cash | gcash | card.
  *

@@ -30,6 +30,7 @@ import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { computeSheetTotals } from '../src/lib/dailySheet.js'
+import { saleMoneySelect } from '../src/lib/paymentMethods.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 for (const line of readFileSync(join(root, '.env'), 'utf8').split(/\r?\n/)) {
@@ -63,8 +64,8 @@ const peso = (m) => Number(m || 0) / 100
 const n = (v) => Number(v || 0)
 
 const sheets = await fetchAll('daily_sheets', 'id, branch, business_date, status, opening_float_minor, counted_cash_minor, totals')
-const lines = await fetchAll('daily_sheet_lines', 'id, sheet_id, kind, amount_minor')
-const sales = await fetchAll('sales', 'id, branch, status, payment_method, total_minor, discount_minor, occurred_at')
+const lines = await fetchAll('daily_sheet_lines', 'id, sheet_id, kind, amount_minor, paid_from')
+const sales = await fetchAll('sales', saleMoneySelect())
 
 console.log(`sheets=${sheets.length}  lines=${lines.length}  sales=${sales.length}\n`)
 
@@ -104,6 +105,7 @@ for (const sh of sheets) {
     countedCashMinor: sh.counted_cash_minor,
   })
   const stored = sh.totals || {}
+  if (stored.cashTransactionMinor === undefined) continue
 
   for (const field of COMPARE) {
     if (recomputed[field] === undefined) continue

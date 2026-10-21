@@ -183,6 +183,9 @@ test('the audit reads the columns the sheet reconciliation needs', () => {
   assert.match(sel[1], /totals/, 'the sheet comparison needs the stored totals block')
   assert.match(sel[1], /opening_float_minor/, 'computeSheetTotals needs the opening float')
   assert.match(sel[1], /counted_cash_minor/, 'over/short cannot be recomputed without the counted cash')
+  assert.match(CODE, /saleMoneySelect\(\)/, 'sheet reconciliation must load tender portions through saleMoneySelect')
+  assert.match(CODE, /paid_from/, 'channel leftovers need the line paid_from')
+  assert.match(CODE, /cashTransactionMinor === undefined/, 'sheets saved under the old float rule must not be called drift')
 })
 
 test('the audit flags that no sheet exists for real trading', () => {

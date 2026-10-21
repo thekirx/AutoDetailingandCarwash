@@ -17,6 +17,7 @@ import { fileURLToPath } from 'node:url'
 // The app's own sheet arithmetic, imported so it cannot drift from what runs in
 // the browser. See the dailysheet section for why this is imported, not restated.
 import { computeSheetTotals } from '../src/lib/dailySheet.js'
+import { saleMoneySelect } from '../src/lib/paymentMethods.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const outDir = join(root, 'e2e-evidence', 'db-audit')
@@ -571,9 +572,9 @@ if (want('dailysheet')) {
   // cannot. See BUG-065.
   const { rows: allSales } = await fetchAll(
     'sales',
-    'id, branch, status, payment_method, total_minor, discount_minor, occurred_at',
+    saleMoneySelect(),
   )
-  const { rows: allLines } = await fetchAll('daily_sheet_lines', 'id, sheet_id, kind, amount_minor')
+  const { rows: allLines } = await fetchAll('daily_sheet_lines', 'id, sheet_id, kind, amount_minor, paid_from')
 
   const salesByDay = new Map()
   for (const s of allSales || []) {
@@ -591,9 +592,16 @@ if (want('dailysheet')) {
   const COMPARE = ['grossMinor', 'discountsMinor', 'refundsMinor', 'netMinor', 'cashMinor', 'count', 'totalExpensesMinor', 'netProfitMinor', 'expectedCashMinor', 'overShortMinor']
   const drift = []
   let compared = 0
+  let legacy = 0
   for (const sh of sheets || []) {
     const stored = sh.totals || {}
     if (stored.grossMinor === undefined) continue
+    // Saved before 21 Oct 2026: no cashTransactionMinor, and expected cash
+    // included the morning float. Leave those approvals as they were.
+    if (stored.cashTransactionMinor === undefined) {
+      legacy++
+      continue
+    }
     const recomputed = computeSheetTotals({
       sales: salesByDay.get(`${sh.branch}|${sh.business_date}`) || [],
       lines: linesBySheet.get(sh.id) || [],
@@ -610,6 +618,11 @@ if (want('dailysheet')) {
         })
       }
     }
+  }
+  if (legacy) {
+    note('Info', 'dailysheet', 'sheets saved before the 21 Oct collection rules are left as they were approved', {
+      sheets: legacy,
+    })
   }
   if (drift.length) {
     note('High', 'dailysheet', 'a stored sheet does not match what the app computes from its own sales and lines', {

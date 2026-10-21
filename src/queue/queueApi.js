@@ -40,7 +40,7 @@ import { resolveServicePriceMinor } from '../lib/servicePricing'
 import { createTtlCache } from '../lib/coalesceReload'
 import { getLocalCalendarDate } from '../lib/localCalendarDate'
 import { isBookingBoardService, isSameDayQueueKind, isTicketOnTodayFloor } from '../lib/serviceKinds'
-import { aggregateSalesFinancials } from '../lib/paymentMethods'
+import { aggregateSalesFinancials, saleMoneySelect } from '../lib/paymentMethods'
 import { buildAdminRoster } from '../lib/floorBoardRoster'
 import {
   aggregateByService,
@@ -359,7 +359,7 @@ export async function fetchBranchSalesBoard(profile, { branchFilter = 'all', sta
   let recentQuery = supabase
     .from('sales')
     .select(
-      'id, branch, total_minor, payment_method, status, occurred_at, booking_id, notes, customers(full_name, phone), bookings(customer_name, vehicle_plate, queue_number, services(name))',
+      saleMoneySelect('booking_id, notes, customers(full_name, phone), bookings(customer_name, vehicle_plate, queue_number, services(name))'),
     )
     .eq('status', 'paid')
     .gte('occurred_at', startIso)
@@ -421,7 +421,7 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
     'id, branch, status, queue_number, customer_name, vehicle_plate, vehicle_make, vehicle_model, service_id, visit_group_id, final_price_minor, price_minor, waiting_at, in_progress_at, final_checking_at, for_payment_at, completed_at, cancelled_at, redo_at, created_at, notes, services(name, pay_category)'
 
   const salesSelect =
-    'id, branch, total_minor, payment_method, status, occurred_at, booking_id, notes, customers(full_name, phone), bookings(customer_name, vehicle_plate, vehicle_type, queue_number, services(name, pay_category))'
+    saleMoneySelect('booking_id, notes, customers(full_name, phone), bookings(customer_name, vehicle_plate, vehicle_type, queue_number, services(name, pay_category))')
 
   let adminStaffQuery = supabase
     .from('staff_profiles')

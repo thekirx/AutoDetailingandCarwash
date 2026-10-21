@@ -60,6 +60,7 @@ import {
 } from '@/lib/financeCorporate'
 import { collectPaged } from '@/lib/crmInsights'
 import { salesCompareWindow } from '@/lib/salesSummary'
+import { saleMoneySelect } from '@/lib/paymentMethods'
 import { formatMoney } from '@/queue/queueApi'
 import FinanceFilters from './finance/FinanceFilters'
 import FinanceHomeTab from './finance/FinanceHomeTab'
@@ -309,7 +310,7 @@ export default function FinancePage() {
         collectPaged(async (from, to) => {
           let q = supabase
             .from('sales')
-            .select('id, branch, occurred_at, status, total_minor, discount_minor, payment_method')
+            .select(saleMoneySelect())
             .in('status', ['paid', 'refunded'])
             .gte('occurred_at', fromIso)
             .lte('occurred_at', toIso)

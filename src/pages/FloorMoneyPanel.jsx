@@ -11,8 +11,9 @@ import { scopeBranch } from '@/lib/financeData'
 import { salesPeriodLabel } from '@/lib/salesSummary'
 import { floorCompareWindow, floorMoneyBreakdown, formatAccounting } from '@/lib/dailySheet'
 import { listSheets, loadSalesBetween } from '@/lib/dailySheetApi'
+import { saleMoneySelect } from '@/lib/paymentMethods'
 
-const LIGHT_SALE = 'id, branch, status, total_minor, discount_minor, payment_method, occurred_at'
+const LIGHT_SALE = saleMoneySelect()
 const CARD = 'rounded-2xl border border-border bg-card p-4'
 const EYEBROW = 'text-xs font-medium uppercase tracking-wide text-muted-foreground'
 

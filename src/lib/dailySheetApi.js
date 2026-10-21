@@ -3,9 +3,11 @@ import { supabase } from '@/lib/supabase'
 import { collectPaged } from '@/lib/crmInsights'
 import { normalizeCompensationSettings } from '@/lib/compensation'
 import { suggestSalaries, toSheetPayloadLines } from '@/lib/dailySheet'
+import { saleMoneySelect } from '@/lib/paymentMethods'
 
-const SALE_SELECT =
-  'id, branch, status, total_minor, discount_minor, payment_method, occurred_at, booking_id, bookings(services(name, pay_category)), sale_line_items(item_type, line_total_minor, name, quantity, service_id, product_id, services(name, slug, pay_category, salary_pct), products(name, tags, category))'
+const SALE_SELECT = saleMoneySelect(
+  'booking_id, bookings(services(name, pay_category)), sale_line_items(item_type, line_total_minor, name, quantity, service_id, product_id, services(name, slug, pay_category, salary_pct), products(name, tags, category))',
+)
 
 export const dayRange = (date) => ({ start: `${date}T00:00:00+08:00`, end: `${date}T23:59:59.999+08:00` })
 
