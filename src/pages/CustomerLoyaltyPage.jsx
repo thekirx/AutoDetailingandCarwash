@@ -160,7 +160,6 @@ export default function CustomerLoyaltyPage() {
               title="Birthday carwash"
               sub={
                 birthday?.perk
-                birthday?.perk
                   ? `Your ${BIRTHDAY_GIFT_LABEL} is ready. Show the pass at any branch.`
                   : birthday?.is_today
                     ? 'Today is your birthday. Claim it on Vouchers.'
