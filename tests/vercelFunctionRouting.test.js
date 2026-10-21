@@ -37,6 +37,7 @@ const expected = {
   '/api/referral-staff': '/api/bookings?operation=referral-staff',
   '/api/accessory-points': '/api/bookings?operation=accessory-points',
   '/api/push-subscribe': '/api/notifications?operation=push-subscribe',
+  '/api/referral': '/api/customer?operation=referral',
   '/api/send-finance-quote': '/api/finance?operation=send-finance-quote',
   '/api/send-push': '/api/notifications?operation=send-push',
   '/api/update-staff': '/api/staff?operation=update-staff',

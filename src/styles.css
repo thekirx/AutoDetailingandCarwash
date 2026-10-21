@@ -5399,6 +5399,40 @@ body:has(.account-app) {
   text-decoration: underline;
 }
 
+/* Step-by-step forms — approved wizard template. */
+:root { --color-form-custom: #94a3b8; }
+.hakum-form-shell .wz-prog { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 8px; }
+.hakum-form-shell .wz-prog b { color: #052699; }
+.hakum-form-shell .wz-bar { display: grid; grid-template-columns: repeat(var(--n), 1fr); gap: 5px; margin-bottom: 18px; }
+.hakum-form-shell .wz-bar i { height: 5px; border-radius: 999px; background: #e3e7f2; }
+.hakum-form-shell .wz-bar i.on { background: #052699; }
+.hakum-form-shell .wz-num { font-family: var(--font-display), 'Benzin', sans-serif; font-size: 13px; color: #ff850b; letter-spacing: .04em; }
+.hakum-form-shell .wz-h { margin: 2px 0; font-size: 20px; font-weight: 700; letter-spacing: -.01em; }
+.hakum-form-shell .wz-hint { margin: 0 0 16px; font-size: 13px; color: #64748b; }
+.hakum-form-shell .wz-act { display: grid; grid-template-columns: auto 1fr; gap: 10px; margin-top: 6px; }
+.hakum-form-shell .wz-act .hakum-form-submit { margin: 0; }
+.hakum-form-shell .wz-back { min-height: 48px; padding: 0 16px; border-radius: 14px; border: 1px solid #d5dbe8; background: white; display: grid; place-items: center; font-weight: 700; color: #334155; font-size: 14px; cursor: pointer; }
+.hakum-form-shell .wz-sum { margin: 0 0 14px; border: 1px solid #e3e7f2; border-radius: 14px; overflow: hidden; }
+.hakum-form-shell .wz-sum section { padding: 12px 14px; border-top: 1px solid #e3e7f2; }
+.hakum-form-shell .wz-sum section:first-child { border-top: 0; }
+.hakum-form-shell .wz-sum header { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #052699; margin-bottom: 6px; }
+.hakum-form-shell .wz-sum header button { min-width: 44px; min-height: 44px; background: none; border: 0; text-transform: none; letter-spacing: 0; font-weight: 700; font-size: 12px; color: #052699; cursor: pointer; }
+.hakum-form-shell .wz-sum dl { margin: 0; display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 4px 10px; font-size: 13px; }
+.hakum-form-shell .wz-sum dt { color: #64748b; }
+.hakum-form-shell .wz-sum dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; white-space: pre-wrap; }
+.hakum-form-shell .wz-done { text-align: center; padding: 18px 6px 8px; }
+.hakum-form-shell .wz-done .ok { width: 56px; height: 56px; border-radius: 50%; background: #e7f5ee; color: #168354; display: grid; place-items: center; margin: 0 auto 12px; font-size: 28px; font-weight: 800; }
+.hakum-form-shell .wz-done h2 { margin: 0 0 6px; font-size: 20px; color: #052699; }
+.hakum-form-shell .wz-done p { margin: 0 0 16px; color: #334155; font-size: 14px; line-height: 1.5; }
+.hakum-form-shell .wz-ref { display: inline-block; font-family: ui-monospace, Menlo, monospace; font-size: 12px; background: #f3f5fa; padding: 6px 10px; border-radius: 8px; color: #334155; }
+.hakum-form-shell .hakum-form-field .is-invalid { border-color: #c9353b; box-shadow: 0 0 0 3px rgba(201,53,59,.12); }
+.hakum-form-shell .hakum-form-field-error { color: #c9353b; font-size: 12px; font-weight: 500; }
+.hakum-form-shell .wz-h:focus, .hakum-form-shell .wz-done h2:focus { outline: none; }
+@media (max-width: 380px) {
+  .hakum-form-shell .wz-sum dl { grid-template-columns: minmax(0, 1fr); }
+  .hakum-form-shell .wz-sum dd { margin-bottom: 6px; }
+}
+
 /* —— Planning nav tabs + calendar filters —— */
 .planning-hero {
   display: flex;

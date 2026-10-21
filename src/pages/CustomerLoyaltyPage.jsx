@@ -2,6 +2,9 @@ import { useEffect, useState } from 'react'
 import { Cake, Check, Gift, Percent, Star, Ticket } from 'lucide-react'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
 import StampTrack from '@/components/customer/StampTrack'
+import { BirthdayPass } from '@/components/customer/BirthdayGreeting'
+import ReferralCard from '@/components/customer/ReferralCard'
+import { BIRTHDAY_GIFT_LABEL, BIRTHDAY_PERK_DAYS } from '@/lib/birthdayPerk'
 import { Row, SectionHead, Skeleton, Stat } from '@/components/customer/CustomerUi'
 import { fetchPortal } from '@/lib/customerPortalClient'
 import { CUSTOMER_LOYALTY_PATH, CUSTOMER_REFERRAL_PATH, CUSTOMER_VOUCHERS_PATH } from '@/lib/customerAccountNav'
@@ -17,6 +20,12 @@ export default function CustomerLoyaltyPage() {
   useEffect(() => {
     fetchPortal().then(setData).catch((err) => setError(err.message))
   }, [])
+
+  // /refer "Get my link" lands on #refer once the card has rendered.
+  useEffect(() => {
+    if (!data?.referral || window.location.hash !== '#refer') return
+    document.getElementById('refer')?.scrollIntoView({ block: 'start', behavior: 'smooth' })
+  }, [data])
 
   const loyalty = data?.loyalty
   const birthday = data?.birthday
@@ -39,6 +48,15 @@ export default function CustomerLoyaltyPage() {
         <div className="capp-span">
           <Skeleton n={2} />
         </div>
+      ) : null}
+
+      {birthday?.perk ? (
+        <BirthdayPass
+          name={name}
+          plate={data?.vehicles?.[0]?.plate_number}
+          dateOfBirth={birthday.date_of_birth}
+          perk={birthday.perk}
+        />
       ) : null}
 
       {loyalty && loyalty.stampsEnabled !== false ? (
@@ -103,6 +121,8 @@ export default function CustomerLoyaltyPage() {
         </div>
       ) : null}
 
+      {data?.referral ? <ReferralCard referral={data.referral} /> : null}
+
       {loyalty ? (
         <section className="capp-section" aria-label="Member benefits">
           <SectionHead title="Member benefits" />
@@ -140,11 +160,12 @@ export default function CustomerLoyaltyPage() {
               title="Birthday carwash"
               sub={
                 birthday?.perk
-                  ? 'Your free service is ready. Show this at any branch.'
+                birthday?.perk
+                  ? `Your ${BIRTHDAY_GIFT_LABEL} is ready. Show the pass at any branch.`
                   : birthday?.is_today
                     ? 'Today is your birthday. Claim it on Vouchers.'
                     : birthday?.date_of_birth
-                      ? 'One free service on your birthday.'
+                      ? `One ${BIRTHDAY_GIFT_LABEL}, good for ${BIRTHDAY_PERK_DAYS} days from your birthday.`
                       : 'Add your birthday in Settings to unlock.'
               }
               to={CUSTOMER_VOUCHERS_PATH}

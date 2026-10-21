@@ -13,6 +13,7 @@ import shotHome from '../../../assets/app-guide/home.webp'
 import shotQueue from '../../../assets/app-guide/queue.webp'
 import shotSignup from '../../../assets/app-guide/signup.webp'
 import shotStamps from '../../../assets/app-guide/stamps.webp'
+import { BIRTHDAY_GIFT_LABEL } from '@/lib/birthdayPerk'
 
 /* The screens are real captures of the customer app with sample data (Alex,
    ticket D-004), so the walkthrough shows exactly what the customer will see. */
@@ -35,7 +36,7 @@ const STEPS = [
     title: 'Create your',
     accent: 'account.',
     body: 'Sign up with your mobile number. We ask for your name, your plate and your birthday — that is it.',
-    points: ['You stay signed in on this phone until you log out', 'Your birthday unlocks a free service every year'],
+    points: ['You stay signed in on this phone until you log out', `Your birthday unlocks a ${BIRTHDAY_GIFT_LABEL} every year`],
     shot: shotSignup,
   },
   {

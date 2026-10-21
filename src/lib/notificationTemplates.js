@@ -4,6 +4,7 @@
  */
 import { renderNotificationMessage } from './notificationCopy.js'
 import { smsCustomerName } from './queueStatusSms.js'
+import { BIRTHDAY_GIFT_LABEL } from './birthdayPerk.js'
 
 export const TEMPLATE_CATEGORIES = [
   { id: 'booking_status', label: 'Service status', hint: 'Customer texts when a visit moves' },
@@ -226,13 +227,13 @@ export const SYSTEM_TEMPLATES = [
     key: 'birthday.greeting',
     category: 'birthday',
     label: 'Birthday greeting',
-    description: 'Push + SMS on the customer birthday. Mentions the free service perk.',
+    description: `Push + SMS on the customer birthday. Mentions the ${BIRTHDAY_GIFT_LABEL} perk.`,
     kind: 'birthday_greeting',
     tokens: ['name', 'code'],
     title: 'Happy birthday from Hakum',
-    body: 'Happy birthday {name}! Your code is {code}. Show it at any Hakum branch. It lasts 7 days.',
+    body: `Happy birthday {name}! Enjoy a ${BIRTHDAY_GIFT_LABEL} on us. Your code is {code}. Show it at any Hakum branch. It lasts 7 days.`,
     sms_body:
-      'Hakum Auto Care: Happy birthday {name}! Your birthday code is {code}. Show it at the branch. It lasts 7 days.',
+      `Hakum Auto Care: Happy birthday {name}! Your ${BIRTHDAY_GIFT_LABEL} is ready. Your birthday code is {code}. Show it at the branch. It lasts 7 days.`,
     display_order: 200,
   }),
 

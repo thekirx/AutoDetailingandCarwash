@@ -42,6 +42,7 @@ const GUARDED = [
   '20261011090000_reconcile_live_admin_policies.sql',
   '20261013090000_queue_start_requires_present_crew.sql',
   '20261015090000_revoke_legacy_checkout_rpcs.sql',
+  '20261018120000_refer_a_friend.sql',
   '20261019210000_daily_sheet_expected_cash_paid_from.sql',
 ]
 
@@ -57,6 +58,7 @@ const EXEMPTED = [
   '20261017180000_redeem_branch_stock.sql',
   '20261017190000_friend_referral_on_update.sql',
   '20261017191000_booking_payable_minor.sql',
+  '20261018150000_ops_forms_custom_kind.sql',
   '20261019090000_cash_advance_approval_code.sql',
   '20261019100000_birthday_perk_code.sql',
   '20261019110000_promo_vouchers.sql',

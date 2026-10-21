@@ -7,7 +7,7 @@ import { listBranches, getLoyaltyProgramSettings } from '@/lib/adminApi'
 import { writeAudit } from '@/lib/audit'
 import { createCoalescedReload } from '@/lib/coalesceReload'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
-import { applyAdHocDiscount, assertBranchAdminCart, buildPosSalePayload, buildVisitHandoffCartLines, canChangePosCartLineQuantity, canRedeemLoyaltyAward, canRemovePosCartLine, cashTenderCoversTotal, clearPosDraft, detachHandoffFromCart, isAllowedPosPaymentMethod, isValidPaymentRef, keepQueueHandoffWhenAdding, normalizePosLineItemType, openHandoffInCart, posCartBlocksCheckout, priceCartForMembership, readPosDraft, sanitizeBranchAdminCart, splitCashGcash, stepPosCartLineQuantity, summarizePosCart, validatePosSaleCart, writePosDraft, POS_MAX_LINE_QUANTITY } from '@/lib/posSale'
+import { applyAdHocDiscount, applyReferralRewardToCart, assertBranchAdminCart, buildPosSalePayload, buildVisitHandoffCartLines, canChangePosCartLineQuantity, canRedeemLoyaltyAward, canRemovePosCartLine, cashTenderCoversTotal, clearPosDraft, detachHandoffFromCart, isAllowedPosPaymentMethod, isValidPaymentRef, keepQueueHandoffWhenAdding, normalizePosLineItemType, openHandoffInCart, posCartBlocksCheckout, priceCartForMembership, readPosDraft, referralRewardLineError, sanitizeBranchAdminCart, splitCashGcash, stepPosCartLineQuantity, summarizePosCart, validatePosSaleCart, writePosDraft, POS_MAX_LINE_QUANTITY, REFERRAL_DISCOUNT_REASON } from '@/lib/posSale'
 import { PRICING_SIZES, resolveServicePriceMinor, formatSizePriceRange, availablePricingSizes, serviceHasSizePricing } from '@/lib/servicePricing'
 import { productSizeRows } from '@/lib/productSizes'
 import { filterPosBayCatalog, filterPosDetailingCatalog, serviceKindFromPayCategory } from '@/lib/serviceKinds'
@@ -28,8 +28,9 @@ import { normalizePosSettings } from '@/lib/posSettings'
 import { MERCH_FAMILIES, productIsPosSellable, productMatchesMerchFamily } from '@/lib/posSellables'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { announcePayment, announceTest, readAnnouncerOn, unlockAudio, useAnnouncerDevice, writeAnnouncerOn } from '@/lib/posAnnouncer'
-import { BIRTHDAY_CODE_MISMATCH, birthdayCodeShapeError, normalizeBirthdayCode } from '@/lib/birthdayPerk'
+import { BIRTHDAY_CODE_MISMATCH, BIRTHDAY_GIFT_LABEL, birthdayCodeShapeError, formatPerkDate, normalizeBirthdayCode } from '@/lib/birthdayPerk'
 import { parsePesosToMinor } from '@/lib/shiftClose'
+import { normalizeReferralSettings } from '@/lib/referral'
 import {
   DEFAULT_COMPENSATION_RULES,
   normalizeCompensationSettings,
@@ -162,6 +163,9 @@ function PosCounterPage() {
   const [activeMembership, setActiveMembership] = useState(null)
   const [birthdayPerk, setBirthdayPerk] = useState(null)
   const [birthdayCode, setBirthdayCode] = useState('')
+  const [referralRewards, setReferralRewards] = useState([])
+  const [referralSettings, setReferralSettings] = useState(null)
+  const [referralEligibleIds, setReferralEligibleIds] = useState(() => new Set())
   const [membershipsEnabled, setMembershipsEnabled] = useState(true)
 
   const membershipContext = useMemo(
@@ -658,7 +662,56 @@ function PosCounterPage() {
     setLoyaltyMilestones(miles.data || [])
   }
 
+  useEffect(() => {
+    let live = true
+    Promise.all([
+      supabase.from('referral_program_settings').select('*').eq('id', 1).maybeSingle(),
+      supabase.from('services').select('id').eq('referral_eligible', true),
+    ]).then(([cfg, ids]) => {
+      if (!live) return
+      setReferralSettings(cfg.error || !cfg.data ? null : normalizeReferralSettings(cfg.data))
+      setReferralEligibleIds(new Set(ids.error ? [] : (ids.data || []).map((row) => row.id)))
+    })
+    return () => {
+      live = false
+    }
+  }, [])
+
+  function applyReferralReward(lineKey) {
+    const result = applyReferralRewardToCart(cart, lineKey, {
+      reward: referralRewards[0],
+      settings: referralSettings,
+      eligibleServiceIds: referralEligibleIds,
+    })
+    if (!result.ok) {
+      toast.error(result.error)
+      return
+    }
+    setCart(result.cart)
+    toast.success(`${formatMoney(result.offMinor)} refer-a-friend reward applied`)
+  }
+
+  function removeReferralReward() {
+    setCart((current) => priceCartForMembership(current, membershipContext))
+  }
+
+  async function refreshReferralRewards(customerIdValue) {
+    if (!customerIdValue) {
+      setReferralRewards([])
+      return
+    }
+    const { data, error } = await supabase
+      .from('customer_referral_rewards')
+      .select('id, role, expires_at')
+      .eq('customer_id', customerIdValue)
+      .eq('status', 'available')
+      .gt('expires_at', new Date().toISOString())
+      .order('expires_at', { ascending: true })
+    setReferralRewards(error ? [] : data || [])
+  }
+
   async function refreshBirthdayPerk(customerIdValue) {
+    refreshReferralRewards(customerIdValue)
     if (!customerIdValue) {
       setBirthdayPerk(null)
       setBirthdayCode('')
@@ -684,6 +737,7 @@ function PosCounterPage() {
     setActiveMembership(null)
     setBirthdayPerk(null)
     setBirthdayCode('')
+    setReferralRewards([])
     setLoyaltyStamps(0)
     setLoyaltyMilestones([])
     setCart((current) =>
@@ -1001,6 +1055,7 @@ function PosCounterPage() {
       setActiveMembership(null)
       setBirthdayPerk(null)
       setBirthdayCode('')
+      setReferralRewards([])
       setLoyaltyStamps(0)
       setLoyaltyMilestones([])
     }
@@ -1131,7 +1186,12 @@ function PosCounterPage() {
         cashMinor: splitCheck?.cashMinor,
         gcashMinor: splitCheck?.gcashMinor,
         paymentRef,
-        discountReason: cart.some((l) => l.adhoc_discount_applied) ? discountReason : '',
+        discountReason: [
+          cart.some((l) => l.adhoc_discount_applied && !l.referral_reward_id) ? discountReason : '',
+          cart.some((l) => l.referral_reward_id) ? REFERRAL_DISCOUNT_REASON : '',
+        ]
+          .filter((part) => String(part || '').trim())
+          .join(' · '),
         discountMinor: cart.reduce((sum, line) => {
           const list = Math.max(Math.floor(Number(line.list_price_minor ?? line.unit_price_minor) || 0), 0)
           const unit = Math.max(Math.floor(Number(line.unit_price_minor) || 0), 0)
@@ -1175,6 +1235,31 @@ function PosCounterPage() {
           toast.warning(promoData.error || 'Voucher use not counted')
         }
       })
+    }
+    const referralLine = cart.find((l) => l.referral_reward_id)
+    if (resolvedCustomerId && referralLine && data?.sale_id) {
+      supabase
+        .rpc('claim_referral_reward', {
+          p_customer_id: resolvedCustomerId,
+          p_reward_id: referralLine.referral_reward_id,
+          p_sale_id: data.sale_id,
+        })
+        .then(({ data: claim, error: claimErr }) => {
+          if (claimErr || claim?.ok === false) toast.warning(claimErr?.message || claim?.error || 'Refer-a-friend reward not marked used')
+        })
+    }
+    if (resolvedCustomerId && data?.sale_id && referralSettings?.enabled) {
+      getAccessTokenFresh()
+        .then((token) =>
+          token
+            ? fetch('/api/referral', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({ action: 'notify', sale_id: data.sale_id }),
+              })
+            : null,
+        )
+        .catch(() => {})
     }
     // Loyalty claim thank-you SMS — fire and forget, server dedupes per sale.
     if (resolvedCustomerId && cart.some((l) => l.is_birthday_award)) {
@@ -1316,12 +1401,47 @@ function PosCounterPage() {
 
   const ticketLines = cart.filter((line) => line.from_handoff)
   const addOnLines = cart.filter((line) => !line.from_handoff)
+  const referralOn = Boolean(referralSettings?.enabled && referralRewards.length)
+  const referralApplied = cart.find((line) => line.referral_reward_id)
+  const referralTargets = referralOn && !referralApplied
+    ? cart.filter((line) => !referralRewardLineError(line, referralEligibleIds))
+    : []
+  const referralBlocked = referralOn && !referralApplied && !referralTargets.length
+    ? cart.map((line) => referralRewardLineError(line, referralEligibleIds)).find((why) => why && !/not merch/.test(why)) ||
+      'Add a detailing service or higher (not carwash) to use it.'
+    : ''
+  const referralPerk = referralOn ? (
+    <div className="mt-1 text-xs">
+      <p className="font-medium text-primary">
+        <Gift className="mr-1 inline size-3.5" aria-hidden />
+        Refer-a-friend reward: {referralSettings.reward_label} · use by {formatPerkDate(referralRewards[0].expires_at)}
+      </p>
+      {referralApplied ? (
+        <p className="mt-1 text-muted-foreground">
+          Applied to {referralApplied.name}.{' '}
+          <button type="button" className="font-medium text-primary underline" onClick={removeReferralReward}>
+            Remove
+          </button>
+        </p>
+      ) : referralTargets.length ? (
+        <div className="mt-1 flex flex-wrap gap-1.5">
+          {referralTargets.map((line) => (
+            <Button key={line.key} type="button" size="sm" variant="outline" className="min-h-9" onClick={() => applyReferralReward(line.key)}>
+              Use on {line.name}
+            </Button>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-1 text-muted-foreground">{referralBlocked}</p>
+      )}
+    </div>
+  ) : null
   const customerPerks =
-    birthdayPerk || activeMembership ? (
+    birthdayPerk || activeMembership || referralOn ? (
       <>
         {birthdayPerk ? (
           <label className="mt-1 block text-xs font-medium text-primary">
-            Birthday free service available
+            Birthday {BIRTHDAY_GIFT_LABEL} available
             <Input
               value={birthdayCode}
               onChange={(e) => setBirthdayCode(e.target.value.toUpperCase())}
@@ -1333,6 +1453,7 @@ function PosCounterPage() {
             />
           </label>
         ) : null}
+        {referralPerk}
         {activeMembership ? (
           <p className="mt-1 text-xs font-medium text-primary">
             {activeMembership.name}

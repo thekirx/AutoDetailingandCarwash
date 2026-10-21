@@ -552,6 +552,26 @@ export async function createService(payload) {
   return data
 }
 
+/** Refer a friend: { [serviceId]: boolean }, or null while the column doesn't exist yet. */
+export async function listServiceReferralEligibility() {
+  const { data, error } = await supabase.from('services').select('id, referral_eligible')
+  if (error) return null
+  return Object.fromEntries((data || []).map((row) => [row.id, Boolean(row.referral_eligible)]))
+}
+
+export async function setServiceReferralEligible(id, value) {
+  if (!id) throw new Error('Service id is required.')
+  const { error } = await supabase.from('services').update({ referral_eligible: Boolean(value) }).eq('id', id)
+  if (error) throw mapDbError(error)
+  await writeAudit({
+    action: 'update',
+    entityType: 'service',
+    entityId: id,
+    summary: `Refer a friend ${value ? 'counts' : 'does not count'} on this service`,
+    meta: { referral_eligible: Boolean(value) },
+  })
+}
+
 export async function updateService(id, payload) {
   if (!id) throw new Error('Service id is required.')
   const v = validateServiceInput({

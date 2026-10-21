@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { BIRTHDAY_GIFT_LABEL } from '@/lib/birthdayPerk'
 
 async function portalAction(action, payload) {
   const token = await getAccessTokenFresh()
@@ -351,7 +352,7 @@ export default function UserSettingsModal({
                     Birthday
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    On your birthday you get a greeting and one free service at any Hakum branch.
+                    On your birthday you get a greeting and one {BIRTHDAY_GIFT_LABEL} at any Hakum branch.
                   </p>
                   <div className="grid gap-1.5">
                     <Label htmlFor="set-bday">Date of birth</Label>

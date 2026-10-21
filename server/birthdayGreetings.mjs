@@ -3,7 +3,7 @@
  * Idempotent per customer/year via customer_birthday_perks unique key.
  */
 import { createClient } from '@supabase/supabase-js'
-import { birthdayPerkExpiresAt, birthdayQueryDays, isBirthdayToday, mintBirthdayCode } from '../src/lib/birthdayPerk.js'
+import { BIRTHDAY_GIFT_LABEL, birthdayPerkExpiresAt, birthdayQueryDays, isBirthdayToday, mintBirthdayCode } from '../src/lib/birthdayPerk.js'
 import { CUSTOMER_VOUCHERS_PATH } from '../src/lib/customerAccountNav.js'
 import { applyTemplateText } from '../src/lib/notificationTemplates.js'
 import { busybeeSendSms } from './busybee.mjs'
@@ -134,12 +134,12 @@ export async function sendBirthdayGreeting(db, customer, perk, templates = {}) {
   let body = applyTemplateText(
     tpl?.body,
     vars,
-    `Happy birthday ${vars.name}! Your code is ${code}. Show it at any Hakum branch. It lasts 7 days.`,
+    `Happy birthday ${vars.name}! Enjoy a ${BIRTHDAY_GIFT_LABEL} on us. Your code is ${code}. Show it at any Hakum branch. It lasts 7 days.`,
   )
   let sms = applyTemplateText(
     tpl?.sms_body,
     vars,
-    `Hakum Auto Care: Happy birthday ${vars.name}! Your birthday code is ${code}. Show it at the branch. It lasts 7 days.`,
+    `Hakum Auto Care: Happy birthday ${vars.name}! Your ${BIRTHDAY_GIFT_LABEL} is ready. Your birthday code is ${code}. Show it at the branch. It lasts 7 days.`,
   )
   if (code && !body.includes(code)) body = `${body} Code ${code}. Valid 7 days.`
   if (code && !sms.includes(code)) sms = `${sms} Code ${code}. Valid 7 days.`

@@ -72,6 +72,10 @@ function attachHakumApis(server) {
     const { handleCustomerSignupRequest } = await import('./server/customerSignup.mjs')
     return handleCustomerSignupRequest(req, res, helpers)
   })
+  mount('/api/referral', async (req, res) => {
+    const { handleReferralRequest } = await import('./server/referral.mjs')
+    return handleReferralRequest(req, res)
+  })
   mount('/api/customer-auth-lookup', async (req, res, helpers) => {
     const { handleCustomerAuthLookupRequest } = await import('./server/customerAuthLookup.mjs')
     return handleCustomerAuthLookupRequest(req, res, helpers)

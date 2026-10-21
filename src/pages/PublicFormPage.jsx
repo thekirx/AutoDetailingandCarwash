@@ -11,12 +11,16 @@ export default function PublicFormPage() {
   const [error, setError] = useState('')
   const [values, setValues] = useState({})
   const [status, setStatus] = useState('idle')
+  const [submissionId, setSubmissionId] = useState(null)
   const [acceptedLegal, setAcceptedLegal] = useState(false)
 
   useEffect(() => {
     if (!slug) return
     setError('')
     setStatus('idle')
+    setSubmissionId(null)
+    setValues({})
+    setForm(null)
     setAcceptedLegal(false)
     Promise.all([
       supabase.rpc('get_public_ops_form', { p_slug: slug }),
@@ -77,6 +81,7 @@ export default function PublicFormPage() {
         // best-effort push
       }
     }
+    setSubmissionId(data?.id || null)
     setStatus('success')
     setValues({})
     setAcceptedLegal(false)
@@ -95,6 +100,7 @@ export default function PublicFormPage() {
             onSubmit={onSubmit}
             status={form ? status : 'idle'}
             error={error}
+            submissionId={submissionId}
             footerSlot={
               form ? (
                 <label className="form-legal-notice hakum-form-legal" htmlFor="ops-form-legal">

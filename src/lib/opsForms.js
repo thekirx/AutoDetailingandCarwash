@@ -6,6 +6,7 @@ export const FORM_KINDS = [
   { value: 'equipment_repair', label: 'Equipment repairs' },
   { value: 'cash_advance', label: 'Cash advance' },
   { value: 'detailing', label: 'Detailing services' },
+  { value: 'custom', label: 'Custom forms' },
 ]
 
 /** Stable public slugs for the four templates (edit-only; never free-create). */
@@ -79,6 +80,18 @@ export function isDetailingFormKind(kind) {
   return kind === 'detailing'
 }
 
+export function isCustomFormKind(kind) {
+  return kind === 'custom'
+}
+
+export function isCreatableFormKind(kind) {
+  return isDetailingFormKind(kind) || isCustomFormKind(kind)
+}
+
+export function formKindSingular(kind) {
+  return isCustomFormKind(kind) ? 'Custom form' : formKindLabel(kind)
+}
+
 export function formKindLabel(kind) {
   return FORM_KINDS.find((k) => k.value === kind)?.label || String(kind || 'form').replace(/_/g, ' ')
 }
@@ -134,6 +147,7 @@ export function normalizeFields(fields) {
       type,
       required: Boolean(f.required),
       options: type === 'select' ? options : [],
+      ...(String(f.step || '').trim() ? { step: String(f.step).trim() } : {}),
     }
   })
 }
@@ -200,6 +214,7 @@ export function templateFields(kind, { branchSlugs } = {}) {
       { key: 'notes', label: 'Notes', type: 'textarea', required: false },
     ])
   }
+  if (kind === 'custom') return withLiveBranchOptions(WIZARD_FORM_TEMPLATE.fields, branches)
   // Fixed kinds only — unknown kind falls back to complaint shape
   return templateFields('complaint', { branchSlugs: branches })
 }
@@ -216,7 +231,7 @@ export function withLiveBranchOptions(fields = [], branchSlugs = []) {
 export function defaultFormSettings(kind = 'complaint') {
   return {
     push_to_planning: true,
-    show_on_calendar: kind === 'event' || kind === 'detailing',
+    show_on_calendar: kind === 'event' || isCreatableFormKind(kind),
     show_logo: true,
     logo_url: DEFAULT_FORM_LOGO,
     header_title: '',
@@ -227,9 +242,23 @@ export function defaultFormSettings(kind = 'complaint') {
 export function normalizeFormSettings(settings = {}, kind = 'complaint') {
   const base = defaultFormSettings(kind)
   const raw = settings && typeof settings === 'object' ? settings : {}
+  const used = new Set(['__review'])
+  const steps = (Array.isArray(raw.steps) ? raw.steps : []).map((step, index) => {
+    const entry = step && typeof step === 'object' ? step : {}
+    const baseId = String(entry.id || '').trim() || `step_${index + 1}`
+    let id = baseId
+    let suffix = 2
+    while (used.has(id)) id = `${baseId}_${suffix++}`
+    used.add(id)
+    return { id, title: String(entry.title || '').trim() || `Step ${index + 1}`, hint: String(entry.hint || '').trim() }
+  })
   return {
     ...base,
     ...raw,
+    layout: raw.layout === 'wizard' ? 'wizard' : 'page',
+    steps,
+    review: raw.layout === 'wizard' && raw.review !== false,
+    thank_you: { title: String(raw.thank_you?.title || '').trim(), body: String(raw.thank_you?.body || '').trim() },
     show_logo: raw.show_logo !== false,
     logo_url: String(raw.logo_url || base.logo_url).trim() || DEFAULT_FORM_LOGO,
     header_title: String(raw.header_title || '').trim(),
@@ -356,4 +385,51 @@ export function parseCustomFieldsCsv(csv) {
       required: false,
       options: [],
     }))
+}
+
+export const WIZARD_FORM_TEMPLATE = {
+  id: 'wizard',
+  title: 'Step-by-step form',
+  blurb: 'One question group per screen, Back / Continue, a check-and-send screen, then a thank-you. Use it for sign-ups, quotes, surveys, applications.',
+  kind: 'custom',
+  name: 'Step-by-step form',
+  description: 'Answer a few quick questions. It takes about a minute.',
+  settings: {
+    layout: 'wizard',
+    review: true,
+    steps: [
+      { id: 'about', title: 'About you', hint: 'So we know who to reply to' },
+      { id: 'car', title: 'Your car', hint: 'Plate and branch' },
+      { id: 'request', title: 'Your request', hint: 'Tell us what you need' },
+    ],
+    thank_you: {
+      title: 'Thank you',
+      body: 'Thanks! We got your answers and will message you within the day.',
+    },
+  },
+  fields: [
+    { key: 'customer_name', label: 'Full name', type: 'text', required: true, step: 'about' },
+    { key: 'phone', label: 'Mobile number', type: 'phone', required: true, step: 'about' },
+    { key: 'email', label: 'Email', type: 'email', required: false, step: 'about' },
+    { key: 'plate', label: 'Plate / conduction', type: 'text', required: true, step: 'car' },
+    { key: 'car_model', label: 'Car make and model', type: 'text', required: false, step: 'car' },
+    { key: 'branch', label: 'Preferred branch', type: 'select', required: true, options: [], step: 'car' },
+    { key: 'request_type', label: 'What do you need?', type: 'select', required: true, options: ['Option A', 'Option B', 'Option C'], step: 'request' },
+    { key: 'preferred_date', label: 'Preferred date', type: 'date', required: false, step: 'request' },
+    { key: 'notes', label: 'Anything else?', type: 'textarea', required: false, step: 'request' },
+  ],
+}
+
+export const FORM_TEMPLATES = [WIZARD_FORM_TEMPLATE]
+
+/** Independent editor state; a template is never mutated by its copies. */
+export function draftFromTemplate(template, { branchSlugs = [] } = {}) {
+  const copy = structuredClone(template)
+  const kind = copy.kind || 'custom'
+  return {
+    id: null, kind, name: copy.name || 'Untitled form', description: copy.description || '',
+    status: 'draft', public_enabled: true, event_id: '',
+    fields: withLiveBranchOptions(copy.fields || [], branchSlugs),
+    settings: normalizeFormSettings({ ...copy.settings, slug_locked: false }, kind), slug: '',
+  }
 }

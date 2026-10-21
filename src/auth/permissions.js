@@ -546,7 +546,7 @@ export function canEditPlanning(profile) {
 /**
  * Who may submit an ops form kind (staff fill). SA edits templates but does not fill cash advance.
  * Equipment repairs: crew (staff) only. Cash advance: all employees except Super Admin.
- * Complaint / Events RSVP: any planning viewer (plus public share links).
+ * Complaint / Events RSVP / detailing / custom: any planning viewer (plus public share links).
  */
 /** Super Admin, or any Assistant Super Admin. Branch Admin types the code; they do not mint it. */
 export function canApproveCashAdvance(profile) {
@@ -567,7 +567,7 @@ export function canSubmitOpsFormKind(profile, kind) {
       ROLES.ASSISTANT_SUPER_ADMIN,
     ])
   }
-  if (kind === 'complaint' || kind === 'event' || kind === 'detailing') return canViewPlanning(profile)
+  if (kind === 'complaint' || kind === 'event' || kind === 'detailing' || kind === 'custom') return canViewPlanning(profile)
   return false
 }
 

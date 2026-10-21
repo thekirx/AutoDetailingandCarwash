@@ -67,6 +67,8 @@ const DELEGATED = {
   handleBookingRemindersRequest: 'scheduledRunGate -> CRON_SECRET or active BossMich / assistant_super_admin',
   handleMaintenanceRemindersRequest: 'scheduledRunGate -> CRON_SECRET or active BossMich / assistant_super_admin',
   handleBirthdayGreetingsRequest: 'scheduledRunGate -> CRON_SECRET or active BossMich / assistant_super_admin',
+  handleReferralRequest:
+    'GET is public by design and returns no customer data: program settings, or an inviter\'s first name for a valid code (rate limited per IP). POST notify -> requireStaff() -> staff_profiles.is_active -> 403, and only pushes for a referral whose qualifying_sale_id is that sale (idempotent via notified_at)',
 }
 
 /** Known answers. If these change, the detector is wrong and says so. */

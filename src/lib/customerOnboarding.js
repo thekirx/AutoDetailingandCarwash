@@ -3,12 +3,12 @@
  * Interface is the test surface — signup UI and /api/customer-signup both call this.
  */
 import { canonicalPhMobile, phoneDigits, plateValidationError } from './customerAuth.js'
-import { parseDateOnly } from './birthdayPerk.js'
+import { BIRTHDAY_GIFT_TITLE, parseDateOnly } from './birthdayPerk.js'
 
 export const ONBOARDING_STEPS = [
   { id: 'phone', label: 'Phone', hint: 'We use this to sign you in' },
   { id: 'profile', label: 'You & car', hint: 'Name and plate' },
-  { id: 'birthday', label: 'Birthday', hint: 'Free carwash on your day' },
+  { id: 'birthday', label: 'Birthday', hint: `${BIRTHDAY_GIFT_TITLE} on your day` },
   { id: 'security', label: 'Password', hint: 'Lock the account' },
 ]
 

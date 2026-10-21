@@ -24,7 +24,7 @@ import {
 // dark ground — applied to a page still built for paper, it renders white
 // headings on a paper section and they vanish. The remaining marketing routes
 // keep the shipping look until Phase 4 rebuilds them.
-const BREDESIGN_ROUTES = ['/home', '/services', '/tint-finder', '/branches', '/partnerships', '/events', '/blog', '/contact', '/complaints', '/terms', '/privacy', '/cookies']
+const BREDESIGN_ROUTES = ['/home', '/services', '/tint-finder', '/branches', '/partnerships', '/refer', '/events', '/blog', '/contact', '/complaints', '/terms', '/privacy', '/cookies']
 
 function PublicSiteHeader({ open, setOpen, isCustomer, className = '' }) {
   const [settingsOpen, setSettingsOpen] = useState(false)

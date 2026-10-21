@@ -25,7 +25,7 @@ import { NOTIFY_EVENTS, planStaffRecipients } from '../src/lib/notifyRouting.js'
 
 describe('opsForms smart builder', () => {
   it('lists fixed company kinds plus detailing CRUD kind', () => {
-    assert.equal(FORM_KINDS.length, 5)
+    assert.equal(FORM_KINDS.length, 6)
     assert.ok(FORM_KINDS.some((k) => k.value === 'detailing'))
     assert.equal(FIXED_FORM_TEMPLATES.length, 4)
     assert.equal(isFixedFormKind('complaint'), true)
