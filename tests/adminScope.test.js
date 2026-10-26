@@ -64,6 +64,7 @@ describe('Admin capability matrix', () => {
         '/operations/attendance',
         '/operations/crm',
         '/operations/my-advances',
+        '/operations/payslips',
         '/operations/history',
         '/operations/audit',
         '/operations/vehicle-transfer',

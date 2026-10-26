@@ -1,6 +1,6 @@
 /** Finance Profit and Loss — Xero-style: statement, this year by month, compare 1–12 periods, compare branches.
  * Trading income is split by service family with a reconciling discounts row. Layout lives in the URL (by, n). */
-import { useEffect, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import { Download, FileSpreadsheet, Printer } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -193,6 +193,9 @@ export default function FinancePLTab({
     ]
   }, [incomeRows, expenseRows, pl, prior, comparing])
 
+  const [openExpense, setOpenExpense] = useState('')
+  const [expenseLines, setExpenseLines] = useState([])
+  const [expenseNote, setExpenseNote] = useState('')
   const windowLabel = formatFinanceWindow(range.start, range.end)
   const subtitle =
     layout === 'fy'
@@ -220,6 +223,38 @@ export default function FinancePLTab({
   }
 
   if (loading) return <FinanceTabSkeleton metrics={4} />
+
+  async function openExpenseCategory(category) {
+    if (openExpense === category) {
+      setOpenExpense('')
+      return
+    }
+    setOpenExpense(category)
+    setExpenseLines([])
+    setExpenseNote('Loading…')
+    try {
+      const rows = await collectPaged(async (from, to) => {
+        const q = scopeBranch(
+          supabase
+            .from('expenses')
+            .select('id, title, description, total_minor, created_at, expense_categories(name)')
+            .in('status', ['paid', 'posted'])
+            .gte('created_at', `${range.start}T00:00:00+08:00`)
+            .lte('created_at', `${range.end}T23:59:59.999+08:00`),
+          profile,
+          branchFilter,
+        )
+        const { data, error } = await q.order('created_at', { ascending: false }).range(from, to)
+        if (error) throw error
+        return data || []
+      }, 200)
+      const matched = rows.filter((row) => (row.expense_categories?.name || 'Uncategorized') === category)
+      setExpenseLines(matched)
+      setExpenseNote(matched.length ? '' : 'No paid lines for this account in the window.')
+    } catch (err) {
+      setExpenseNote(err.message || 'Could not load the lines')
+    }
+  }
 
   const colSpan = comparing ? 4 : 2
   const emptyBooks = pl.income === 0 && pl.expenses === 0
@@ -333,7 +368,17 @@ export default function FinancePLTab({
                 <tbody>
                   <StatementSection title="Trading income" rows={incomeRows} comparing={comparing} colSpan={colSpan} empty="No income in this window." />
                   <TotalRow label="Total trading income" current={pl.income} prior={prior.income} comparing={comparing} />
-                  <StatementSection title="Operating expenses" rows={expenseRows} comparing={comparing} colSpan={colSpan} empty="No expenses in this window." />
+                  <StatementSection
+                    title="Operating expenses"
+                    rows={expenseRows}
+                    comparing={comparing}
+                    colSpan={colSpan}
+                    empty="No expenses in this window."
+                    onOpen={openExpenseCategory}
+                    openCategory={openExpense}
+                    lines={expenseLines}
+                    note={expenseNote}
+                  />
                   <TotalRow label="Total operating expenses" current={pl.expenses} prior={prior.expenses} comparing={comparing} />
                   <TotalRow
                     label={pl.net >= 0 ? 'Net profit' : 'Net loss'}
@@ -386,7 +431,7 @@ export default function FinancePLTab({
   )
 }
 
-function StatementSection({ title, rows, comparing, colSpan, empty }) {
+function StatementSection({ title, rows, comparing, colSpan, empty, onOpen, openCategory, lines = [], note = '' }) {
   return (
     <>
       <tr className="finance-pl-section">
@@ -401,12 +446,44 @@ function StatementSection({ title, rows, comparing, colSpan, empty }) {
         </tr>
       ) : (
         rows.map((r) => (
-          <tr key={`${title}-${r.category}`}>
-            <td>{r.category}</td>
-            <td className="text-right tabular-nums">{formatAccounting(r.current)}</td>
-            {comparing ? <td className="text-right tabular-nums">{formatAccounting(r.prior)}</td> : null}
-            {comparing ? <td className="text-right tabular-nums">{formatDelta(r.delta, r.deltaPct)}</td> : null}
-          </tr>
+          <Fragment key={`${title}-${r.category}`}>
+            <tr>
+              <td>
+                {onOpen ? (
+                  <button
+                    type="button"
+                    className="min-h-11 text-left font-medium underline-offset-2 hover:underline"
+                    aria-expanded={openCategory === r.category}
+                    onClick={() => onOpen(r.category)}
+                  >
+                    {r.category}
+                  </button>
+                ) : (
+                  r.category
+                )}
+              </td>
+              <td className="text-right tabular-nums">{formatAccounting(r.current)}</td>
+              {comparing ? <td className="text-right tabular-nums">{formatAccounting(r.prior)}</td> : null}
+              {comparing ? <td className="text-right tabular-nums">{formatDelta(r.delta, r.deltaPct)}</td> : null}
+            </tr>
+            {onOpen && openCategory === r.category ? (
+              <tr>
+                <td colSpan={colSpan} className="bg-muted/30">
+                  {note ? <p className="py-2 text-xs text-muted-foreground">{note}</p> : null}
+                  {lines.length ? (
+                    <ul className="flex flex-col gap-1 py-2">
+                      {lines.map((line) => (
+                        <li key={line.id} className="flex items-baseline justify-between gap-3 text-sm">
+                          <span>{line.title || line.description || 'Line'}</span>
+                          <span className="tabular-nums">{formatAccounting(line.total_minor)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </td>
+              </tr>
+            ) : null}
+          </Fragment>
         ))
       )}
     </>

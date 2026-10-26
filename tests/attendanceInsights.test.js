@@ -5,6 +5,7 @@ import {
   registerFloorStats,
   summarizePeriodAttendance,
   summarizeTodayAttendance,
+  attendanceRoleHeadcount,
 } from '../src/lib/attendanceInsights.js'
 import {
   DEFAULT_COMPENSATION_RULES,
@@ -26,6 +27,32 @@ describe('attendanceInsights', () => {
     { staff_id: 'c', attendance_date: '2026-08-27', status: 'absent' },
     { staff_id: 'a', attendance_date: '2026-08-26', status: 'present' },
   ]
+
+  it('attendanceRoleHeadcount reads crew, team lead, and admin as on site out of roster', () => {
+    const rows = attendanceRoleHeadcount(
+      [
+        { id: 'a', role: 'staff' },
+        { id: 'b', role: 'staff' },
+        { id: 'c', role: 'team_lead' },
+        { id: 'd', role: 'team_lead' },
+        { id: 'e', role: 'admin' },
+        { id: 'f', role: 'admin' },
+      ],
+      [
+        { staff_id: 'a', attendance_date: '2026-08-27', status: 'present' },
+        { staff_id: 'b', attendance_date: '2026-08-27', status: 'absent' },
+        { staff_id: 'c', attendance_date: '2026-08-27', status: 'present' },
+        { staff_id: 'd', attendance_date: '2026-08-27', status: 'late' },
+        { staff_id: 'e', attendance_date: '2026-08-27', status: 'present' },
+      ],
+      '2026-08-27',
+    )
+    assert.deepEqual(rows.map((row) => [row.label, row.onSite, row.total]), [
+      ['Crew', 1, 2],
+      ['Team Lead', 2, 2],
+      ['Admin', 1, 2],
+    ])
+  })
 
   it('summarizeTodayAttendance counts on-site and gaps', () => {
     const s = summarizeTodayAttendance(staff, attendance, '2026-08-27')

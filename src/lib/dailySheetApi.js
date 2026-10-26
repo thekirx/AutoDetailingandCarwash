@@ -130,7 +130,17 @@ export async function loadSheetContext(branch, date) {
     const code = String(r.payload?.approval_code || '').trim()
     return (!b || b === branch) && r.status === 'resolved' && code
   })
-  return { sales, sheet, accounts, attendance, suggestions, rules, staff: staffRes.data || [], caRequests }
+  return { sales, sheet, accounts, attendance, suggestions, rules, staff: staffRes.data || [], caRequests, caLedger: await loadCashAdvanceLedger(branch) }
+}
+
+/** Given and paid-back lines. Crew receive only their own; POS and the sheet receive the branch. */
+export async function loadCashAdvanceLedger(branch, staffId = null) {
+  const { data, error } = await supabase.rpc('cash_advance_ledger', {
+    p_branch: branch || null,
+    p_staff: staffId || null,
+  })
+  if (error) throw error
+  return Array.isArray(data?.rows) ? data.rows : []
 }
 
 async function rpc(name, payload) {

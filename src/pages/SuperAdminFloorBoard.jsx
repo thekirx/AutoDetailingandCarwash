@@ -9,6 +9,7 @@ import { canSeeAllBranches, isAssistantSuperAdmin, isSuperAdmin, ROLES } from '@
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { canReviewDailySheet } from '@/lib/dailySheet'
 import FloorMoneyPanel from './FloorMoneyPanel'
+import PosCashAdvancePanel from '@/pages/pos/PosCashAdvancePanel'
 import ReferralRank from '@/components/bookings/ReferralRank'
 import { paymentMethodLabel } from '@/lib/paymentMethods'
 import { createCoalescedReload } from '@/lib/coalesceReload'
@@ -187,6 +188,7 @@ function Section({ id, title, eyebrow, children, action }) {
  */
 export default function SuperAdminFloorBoard() {
   const { profile, canViewQueueOperations } = useAuth()
+  const [pendingApprovals, setPendingApprovals] = useState(0)
   const navigate = useNavigate()
   const seeAll = canSeeAllBranches(profile)
   const showMoney = canReviewDailySheet(profile)
@@ -209,6 +211,21 @@ export default function SuperAdminFloorBoard() {
   const rangeEndDate = useMemo(() => getLocalCalendarDate(range.end), [range.end])
   const branchLabel =
     branchFilter === 'all' ? 'All branches' : branches.find((b) => b.slug === branchFilter)?.name || branchFilter
+
+  useEffect(() => {
+    if (!isSuperAdmin(profile)) return undefined
+    let current = true
+    Promise.all([
+      supabase.from('restock_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+      supabase.from('expenses').select('id', { count: 'exact', head: true }).eq('status', 'pending_approval'),
+    ]).then(([stock, bills]) => {
+      if (!current) return
+      setPendingApprovals((Number(stock.count) || 0) + (Number(bills.count) || 0))
+    })
+    return () => {
+      current = false
+    }
+  }, [profile])
 
   const load = useCallback(async () => {
     setError('')
@@ -369,7 +386,7 @@ export default function SuperAdminFloorBoard() {
               </span>
             ) : null}
           </div>
-          <h1 className="sa-floor-title text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Floor Board</h1>
+          <h1 className="sa-floor-title text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Floor Insight</h1>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">
             Services & Packages and Detailing Services stay separate across {branchLabel.toLowerCase()}. Money and tempo follow the timeline below.
           </p>
@@ -571,30 +588,21 @@ export default function SuperAdminFloorBoard() {
             breakdown={`Total carwash staff in the pool for ${branchLabel} (available + on bay + absent).`}
           />
         </div>
-        {(board?.adminRoster || []).length ? (
-          <div className="mt-4">
-            <p className="mb-2 text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
-              Administrative crew
-            </p>
-            <div className="grid grid-cols-2 gap-3 overflow-visible sm:grid-cols-3 xl:grid-cols-5">
-              {(board.adminRoster || []).map((group) => (
-                <StatTile
-                  key={group.role}
-                  label={group.label}
-                  value={group.count}
-                  hint="On roster"
-                  onNavigate={() => navigate('/operations/people')}
-                  breakdown={
-                    group.names?.length
-                      ? `Active ${group.label} on roster:\n${group.names.join('\n')}`
-                      : `No active ${group.label} on roster.`
-                  }
-                />
-              ))}
-            </div>
-          </div>
-        ) : null}
       </Section>
+
+      {isSuperAdmin(profile) ? (
+        <Section eyebrow="Cash advances" title="Still unpaid">
+          <PosCashAdvancePanel branch={branchFilter || 'all'} branchLabel={branchLabel} />
+        </Section>
+      ) : null}
+
+      {isSuperAdmin(profile) ? (
+        <Section title="Waiting for approval">
+          <Link to="/operations/approvals" className="inline-flex min-h-11 items-center text-sm font-medium">
+            {pendingApprovals} waiting
+          </Link>
+        </Section>
+      ) : null}
 
       {showMoney ? (
         <Section eyebrow="Money" title="Sales and profit">

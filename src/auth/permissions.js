@@ -5,6 +5,7 @@
  */
 
 import { canTransferVehicle } from '../lib/vehicleTransfer.js'
+import { isDayCrewRole } from '../lib/payslip.js'
 
 export const ROLES = {
   SUPER_ADMIN: 'BossMich',
@@ -306,6 +307,13 @@ export function canAccessInventory(profile) {
   return canManageServices(profile) || canRestockInventory(profile)
 }
 
+/** Restock and bill approvals. Floor Insight still stays with the owner. */
+export function canAccessApprovals(profile) {
+  if (isSuperAdmin(profile)) return true
+  if (!isAssistantSuperAdmin(profile)) return false
+  return hasGrant(profile, 'finance_write') || hasGrant(profile, 'services_merch')
+}
+
 export function canManageCrew(profile) {
   return isAdmin(profile) || has(profile, [ROLES.TEAM_LEAD, ROLES.OPERATIONS_LEAD])
 }
@@ -571,6 +579,12 @@ export function canSubmitOpsFormKind(profile, kind) {
   return false
 }
 
+/** Own payslips. Day crew are paid on the Daily Sheet and do not get this page. */
+export function canAccessMyPayslips(profile) {
+  if (!profile?.role || profile.role === ROLES.INVESTOR) return false
+  return !isDayCrewRole(profile.role)
+}
+
 /** Own cash-advance submissions list (drawer cash, not P&L). */
 export function canAccessMyAdvances(profile) {
   return canSubmitOpsFormKind(profile, 'cash_advance')
@@ -803,6 +817,7 @@ export function getOperationsNav(profile) {
     return [
       nav('Calendar', '/operations/planning?tab=calendar', 'Columns3', 'work'),
       nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'work'),
+      nav('Payslips', '/operations/payslips', 'Banknote', 'hr'),
     ]
   }
 
@@ -821,6 +836,7 @@ export function getOperationsNav(profile) {
       nav('Detailing Schedule', '/operations/bookings', 'Kanban', 'insight'),
       nav('Team Planner', '/operations/planning', 'Columns3', 'insight'),
       nav('Customers', '/operations/crm', 'Contact', 'customers'),
+      nav('Payslips', '/operations/payslips', 'Banknote', 'hr'),
       nav('Notifications', '/operations/notifications', 'Bell', 'ops-insight'),
       nav('History', '/operations/history', 'History', 'ops-insight'),
     ]
@@ -832,6 +848,7 @@ export function getOperationsNav(profile) {
       nav('Detailing Schedule', '/operations/bookings', 'Kanban', 'insight'),
       nav('Team Planner', '/operations/planning', 'Columns3', 'insight'),
       nav('Customers', '/operations/crm', 'Contact', 'customers'),
+      nav('Payslips', '/operations/payslips', 'Banknote', 'hr'),
       nav('History', '/operations/history', 'History', 'ops-insight'),
     ]
   }
@@ -848,6 +865,7 @@ export function getOperationsNav(profile) {
       nav('Attendance', '/operations/attendance', 'Clock', 'hr'),
       nav('Customers', '/operations/crm', 'Contact', 'customers'),
       nav('My advances', '/operations/my-advances', 'Wallet', 'hr'),
+      nav('Payslips', '/operations/payslips', 'Banknote', 'hr'),
       nav('History', '/operations/history', 'History', 'ops-insight'),
       nav('Audit', '/operations/audit', 'ScrollText', 'ops-insight'),
       nav('Transfer car', '/operations/vehicle-transfer', 'ArrowLeftRight', 'config'),
@@ -863,6 +881,7 @@ export function getOperationsNav(profile) {
       nav('Financials', '/operations/finance', 'Wallet', 'insight'),
       nav('Customers', '/operations/crm', 'Contact', 'customers'),
       nav('My advances', '/operations/my-advances', 'Wallet', 'hr'),
+      nav('Payslips', '/operations/payslips', 'Banknote', 'hr'),
       nav('Month KPI', '/operations/kpi', 'Gauge', 'ops-insight'),
       nav('History', '/operations/history', 'History', 'ops-insight'),
       nav('Audit', '/operations/audit', 'ScrollText', 'ops-insight'),
@@ -874,7 +893,7 @@ export function getOperationsNav(profile) {
     return [
       nav('Attendance', '/operations/attendance', 'Clock', 'hr'),
       nav('My advances', '/operations/my-advances', 'Wallet', 'hr'),
-      nav('Floor Board', '/operations/dashboard', 'Gauge', 'insight'),
+      nav('Floor Insight', '/operations/dashboard', 'Gauge', 'insight'),
       nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'hr'),
       nav('Team Planner', '/operations/planning', 'Columns3', 'insight'),
     ]
@@ -883,7 +902,7 @@ export function getOperationsNav(profile) {
   const items = []
   const floorBoardLabel =
     isSuperAdmin(profile) || isAssistantSuperAdmin(profile)
-      ? 'Floor Board'
+      ? 'Floor Insight'
       : isAdmin(profile)
         ? 'Queue View'
         : 'Dashboard'
@@ -916,6 +935,12 @@ export function getOperationsNav(profile) {
   }
   if (canEditFinanceBooks(profile)) {
     items.push(nav('Monthly salaries', '/operations/monthly-payroll', 'Banknote', 'insight'))
+  }
+  if (canAccessApprovals(profile)) {
+    items.push(nav('Approvals', '/operations/approvals', 'ClipboardCheck', 'insight'))
+  }
+  if (canAccessMyPayslips(profile) && profile?.role !== ROLES.STAFF) {
+    items.push(nav('Payslips', '/operations/payslips', 'Banknote', 'hr'))
   }
 
   if (canViewQueueOperations(profile) || (canAccessAttendance(profile) && profile?.role !== ROLES.STAFF)) {
@@ -1117,6 +1142,7 @@ export const BRANCH_ADMIN_ROUTE_KEYS = Object.freeze([
   'bookings',
   'attendance',
   'my-advances',
+  'payslips',
   'pos',
   'finance',
   'crm',
@@ -1149,10 +1175,12 @@ export function allowRoute(profile, key) {
     crew: () => false,
     attendance: canAccessAttendance,
     'my-advances': canAccessMyAdvances,
+    payslips: canAccessMyPayslips,
     kpi: canAccessKpi,
     'my-tasks': canViewAssignedTasks,
     pos: canAccessPos,
     inventory: canAccessInventory,
+    approvals: canAccessApprovals,
     finance: canOpenFinanceHub,
     'monthly-payroll': canEditFinanceBooks,
     crm: canAccessCrm,

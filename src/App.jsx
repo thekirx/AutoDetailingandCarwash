@@ -67,6 +67,9 @@ const ReportsPage = lazy(() => import('./pages/ReportsPage'))
 const MembershipsPage = lazy(() => import('./pages/MembershipsPage'))
 const VouchersPage = lazy(() => import('./pages/VouchersPage'))
 const MonthlyPayrollPage = lazy(() => import('./pages/MonthlyPayrollPage'))
+const MonthlyPayrollPage = lazy(() => import('./pages/MonthlyPayrollPage'))
+const MyPayslipsPage = lazy(() => import('./pages/MyPayslipsPage'))
+const ApprovalsPage = lazy(() => import('./pages/ApprovalsPage'))
 const KpiPage = lazy(() => import('./pages/KpiPage'))
 
 const BookingPage = lazy(() =>
@@ -212,10 +215,12 @@ export default function App() {
             <Route path="my-tasks" element={gate('my-tasks', <MyTasksPage />)} />
             <Route path="pos" element={gate('pos', <PosPage />)} />
             <Route path="inventory" element={gate('inventory', <InventoryPage />)} />
+            <Route path="approvals" element={gate('approvals', <ApprovalsPage />)} />
             <Route path="finance" element={gate('finance', <FinancePage />)} />
             <Route path="monthly-payroll" element={gate('monthly-payroll', <MonthlyPayrollPage />)} />
-            <Route path="payroll" element={<Navigate to="/operations/monthly-payroll" replace />} />
             <Route path="my-pay" element={<Navigate to="/operations" replace />} />
+            <Route path="payslips" element={gate('payslips', <MyPayslipsPage />)} />
+            <Route path="payroll" element={<Navigate to="/operations/monthly-payroll" replace />} />
             <Route path="crm" element={gate('crm', <CrmPage />)} />
             <Route path="services" element={gate('inventory', <Navigate to="/operations/inventory" replace />)} />
             <Route path="products" element={gate('inventory', <Navigate to="/operations/inventory?tab=merch" replace />)} />

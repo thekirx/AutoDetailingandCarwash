@@ -74,10 +74,12 @@ export default function FinancePurchasesTab({
     const all = expenses || []
     const total = filtered.reduce((s, r) => s + Number(r.total_minor || 0), 0)
     const draft = all.filter((r) => r.status === 'draft').length
-    const awaiting = all.filter((r) => r.status === 'pending_approval' || r.status === 'pending_payment').length
+    const forApproval = all.filter((r) => r.status === 'pending_approval')
+    const awaitingPay = all.filter((r) => r.status === 'pending_payment')
+    const awaitingPayMinor = awaitingPay.reduce((s, r) => s + Number(r.total_minor || 0), 0)
     const booked = all.filter((r) => r.status === 'paid' || r.status === 'posted')
     const bookedMinor = booked.reduce((s, r) => s + Number(r.total_minor || 0), 0)
-    return { total, draft, awaiting, bookedCount: booked.length, bookedMinor }
+    return { total, draft, forApproval: forApproval.length, awaitingPayMinor, awaitingPayCount: awaitingPay.length, bookedCount: booked.length, bookedMinor }
   }, [expenses, filtered])
 
   const exportColumns = useMemo(
@@ -173,7 +175,8 @@ export default function FinancePurchasesTab({
       <FinanceMetricStrip label="Bills totals">
         <FinanceMetricCell label="Filtered total" value={formatMoney(metrics.total)} hint={subtitle} tone="ink" />
         <FinanceMetricCell label="Drafts" value={String(metrics.draft)} hint="In window" tone="muted" />
-        <FinanceMetricCell label="Awaiting action" value={String(metrics.awaiting)} hint="Approval or payment" tone="muted" />
+        <FinanceMetricCell label="For approval" value={String(metrics.forApproval)} hint="Waiting for the owner" tone="muted" />
+        <FinanceMetricCell label="Awaiting payment" value={formatMoney(metrics.awaitingPayMinor)} hint={`${metrics.awaitingPayCount} bills`} tone="muted" />
         <FinanceMetricCell
           label="Paid + posted"
           value={formatMoney(metrics.bookedMinor)}

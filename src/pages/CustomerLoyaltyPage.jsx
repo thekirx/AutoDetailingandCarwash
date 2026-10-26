@@ -5,6 +5,7 @@ import StampTrack from '@/components/customer/StampTrack'
 import { BirthdayPass } from '@/components/customer/BirthdayGreeting'
 import ReferralCard from '@/components/customer/ReferralCard'
 import { BIRTHDAY_GIFT_LABEL, BIRTHDAY_PERK_DAYS } from '@/lib/birthdayPerk'
+import { memberTier, MERCH_POINTS, nextVisitReward, SERVICE_POINTS } from '@/lib/rewardsCatalog'
 import { Row, SectionHead, Skeleton, Stat } from '@/components/customer/CustomerUi'
 import { fetchPortal } from '@/lib/customerPortalClient'
 import { CUSTOMER_LOYALTY_PATH, CUSTOMER_REFERRAL_PATH, CUSTOMER_VOUCHERS_PATH } from '@/lib/customerAccountNav'
@@ -35,6 +36,9 @@ export default function CustomerLoyaltyPage() {
   const nextAt = Number(next?.threshold_points) || slots
   const nextPct = Math.min(100, Math.round((completed / Math.max(nextAt, 1)) * 100))
   const name = data?.profile?.full_name || ''
+  const visits = Number(loyalty?.visitCount) || 0
+  const tier = memberTier(visits)
+  const upcoming = nextVisitReward(visits)
 
   return (
     <CustomerAppFrame title="Rewards" subtitle="A stamp for every paid visit." cols>
@@ -127,6 +131,12 @@ export default function CustomerLoyaltyPage() {
         <section className="capp-section" aria-label="Member benefits">
           <SectionHead title="Member benefits" />
           <div className="capp-group">
+            <Row icon={Star} title={tier.name} sub={`${visits} completed visits, any car`} />
+            {upcoming ? (
+              <Row icon={Gift} title={upcoming.label} sub={`${upcoming.visitsAway} more ${upcoming.visitsAway === 1 ? 'visit' : 'visits'}`} />
+            ) : (
+              <Row icon={Check} title="Visit rewards are unlocked" sub="Ask the branch which one you want" />
+            )}
             {loyalty.membership?.discount_percent != null ? (
               <Row icon={Percent} title={`${loyalty.membership.discount_percent}% member discount`} sub={loyalty.membership.ends_at ? `Until ${loyalty.membership.ends_at}` : 'Active'} />
             ) : null}
@@ -160,7 +170,6 @@ export default function CustomerLoyaltyPage() {
               title="Birthday carwash"
               sub={
                 birthday?.perk
-                birthday?.perk
                   ? `Your ${BIRTHDAY_GIFT_LABEL} is ready. Show the pass at any branch.`
                   : birthday?.is_today
                     ? 'Today is your birthday. Claim it on Vouchers.'
@@ -172,6 +181,23 @@ export default function CustomerLoyaltyPage() {
               chevron
             />
           </div>
+          <details className="mt-3">
+            <summary className="min-h-11 cursor-pointer text-sm font-medium">Points table</summary>
+            <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
+              {SERVICE_POINTS.map((row) => (
+                <li key={row.name} className="flex justify-between gap-3">
+                  <span>{row.name}</span>
+                  <span className="tabular-nums">{row.points}</span>
+                </li>
+              ))}
+              {MERCH_POINTS.map((row) => (
+                <li key={row.name} className="flex justify-between gap-3">
+                  <span>{row.name}</span>
+                  <span className="tabular-nums">{row.points} to claim</span>
+                </li>
+              ))}
+            </ul>
+          </details>
         </section>
       ) : null}
     </CustomerAppFrame>

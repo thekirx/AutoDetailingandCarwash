@@ -27,7 +27,7 @@ describe('Marketing capability matrix', () => {
     assert.equal(redirectForRole(ROLES.MARKETING), '/operations/crm')
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
-      ['/operations/queue', '/operations/bookings', '/operations/planning', '/operations/crm', '/operations/notifications', '/operations/history'],
+      ['/operations/queue', '/operations/bookings', '/operations/planning', '/operations/crm', '/operations/payslips', '/operations/notifications', '/operations/history'],
     )
     assert.equal(canAccessPos(p), false)
     assert.equal(canAccessFinance(p), false)

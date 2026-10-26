@@ -28,6 +28,7 @@ assert.deepEqual(
     '/operations/bookings',
     '/operations/planning',
     '/operations/crm',
+    '/operations/payslips',
     '/operations/notifications',
     '/operations/history',
   ],

@@ -51,6 +51,7 @@ describe('sales role — detailing bookings board', () => {
       '/operations/bookings',
       '/operations/planning',
       '/operations/crm',
+      '/operations/payslips',
       '/operations/history',
     ]
     assert.deepEqual(getOperationsNav(sales).map((i) => i.to), expected)

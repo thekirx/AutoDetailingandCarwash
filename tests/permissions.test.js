@@ -43,6 +43,8 @@ describe('RBAC Part 1 matrix', () => {
         '/operations/inventory',
         '/operations/finance',
         '/operations/monthly-payroll',
+        '/operations/approvals',
+        '/operations/payslips',
         '/operations/attendance',
         '/operations/crm',
         '/operations/memberships',
@@ -136,6 +138,7 @@ describe('RBAC Part 1 matrix', () => {
         '/operations/attendance',
         '/operations/crm',
         '/operations/my-advances',
+        '/operations/payslips',
         '/operations/history',
         '/operations/audit',
         '/operations/vehicle-transfer',
@@ -152,7 +155,7 @@ describe('RBAC Part 1 matrix', () => {
     assert.ok(!getOperationsNav(staff).some((i) => String(i.to).includes('tab=forms')))
     assert.deepEqual(
       getOperationsNav({ role: ROLES.VIDEO_EDITOR }).map((i) => i.to),
-      ['/operations/planning?tab=calendar', '/operations/my-tasks'],
+      ['/operations/planning?tab=calendar', '/operations/my-tasks', '/operations/payslips'],
     )
   })
 
@@ -168,6 +171,7 @@ describe('RBAC Part 1 matrix', () => {
         '/operations/bookings',
         '/operations/planning',
         '/operations/crm',
+        '/operations/payslips',
         '/operations/notifications',
         '/operations/history',
       ],

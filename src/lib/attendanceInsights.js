@@ -2,6 +2,27 @@ import { attendanceWeight, normalizeCompensationSettings } from './compensation.
 import { getLocalCalendarDate } from './localCalendarDate.js'
 import { getCrewAttendanceModel, isAssignableAttendanceStatus } from '../queue/queueLogic.js'
 
+const ATTENDANCE_HEADCOUNT = Object.freeze([
+  { role: 'staff', label: 'Crew' },
+  { role: 'team_lead', label: 'Team Lead' },
+  { role: 'admin', label: 'Admin' },
+])
+
+/** On site (present or late) out of the roster, split the way the branch reads it. */
+export function attendanceRoleHeadcount(staff = [], attendance = [], today = getLocalCalendarDate()) {
+  const byStaff = new Map(
+    (attendance || []).filter((row) => row.attendance_date === today).map((row) => [row.staff_id, row]),
+  )
+  return ATTENDANCE_HEADCOUNT.map(({ role, label }) => {
+    const members = (staff || []).filter((member) => member?.role === role)
+    const onSite = members.filter((member) => {
+      const status = byStaff.get(member.id)?.status
+      return status === 'present' || status === 'late'
+    }).length
+    return { role, label, onSite, total: members.length }
+  })
+}
+
 /** Count today’s roster by attendance status. */
 export function summarizeTodayAttendance(staff = [], attendance = [], today = getLocalCalendarDate()) {
   const byStaff = new Map(

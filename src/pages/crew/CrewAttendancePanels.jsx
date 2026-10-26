@@ -63,6 +63,7 @@ import {
   registerFloorStats,
   summarizePeriodAttendance,
   summarizeTodayAttendance,
+  attendanceRoleHeadcount,
 } from '@/lib/attendanceInsights'
 import { createCoalescedReload } from '@/lib/coalesceReload'
 import {
@@ -289,6 +290,7 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
   const week = useMemo(() => (showClock ? myWeek(attendance, dates, profile?.id) : []), [showClock, attendance, dates, profile?.id])
   const tableRows = useMemo(() => buildAttendanceTableRows(staff, attendance, dates), [staff, attendance, dates])
   const todaySummary = useMemo(() => summarizeTodayAttendance(staff, attendance, today), [staff, attendance, today])
+  const roleHeadcount = useMemo(() => attendanceRoleHeadcount(staff, attendance, today), [staff, attendance, today])
   const periodSummary = useMemo(() => summarizePeriodAttendance(attendance, dates), [attendance, dates])
   const floorStats = useMemo(() => registerFloorStats(crewFloor, staff.length), [crewFloor, staff.length])
   const payPreview = useMemo(
@@ -561,7 +563,7 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
               <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
                 {branchLabel}
                 {' · '}
-                {staff.length ? `${staff.length} people on roster` : 'No roster for this branch'}
+                {roleHeadcount.map((row) => `${row.label} ${row.onSite} of ${row.total}`).join(' · ')}
                 {canOverride ? ' · tap heatmap or Override to correct a row' : ''}
               </p>
             </div>

@@ -77,7 +77,7 @@ describe('floor board lanes by family', () => {
     const labels = readFileSync(join(root, 'src/lib/floorBoardLanes.js'), 'utf8')
     assert.match(board, /Services & Packages/)
     assert.match(board, /laneCountsByFamily/)
-    assert.match(board, /Floor Board/)
+    assert.match(board, /Floor Insight/)
     assert.match(board, /floorLaneLabel/)
     assert.match(board, /LaneStrip family="wash"/)
     assert.match(board, /LaneStrip family="detailing"/)

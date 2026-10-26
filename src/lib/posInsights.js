@@ -1,7 +1,7 @@
 /** POS dashboard helpers — stats, pending queue, plain-language workflow copy. */
 
 // Pay queue lives on the checkout page; a legacy ?tab=pending link resolves there.
-export const POS_SHELL_TABS = Object.freeze(['checkout', 'sheet', 'history', 'dashboard'])
+export const POS_SHELL_TABS = Object.freeze(['checkout', 'sheet', 'history', 'dashboard', 'advances'])
 export const POS_SETTINGS_TAB = 'settings'
 const LEGACY_POS_TABS = Object.freeze({ expenses: 'sheet' })
 
@@ -101,6 +101,6 @@ export const POS_WORKFLOW_STEPS = Object.freeze([
   {
     id: 'close',
     title: 'Submit for approval',
-    body: 'Count the drawer and submit the sheet. Pay the crew only after the owner approves.',
+    body: 'Count the cash and submit the sheet. Pay the crew only after the owner approves.',
   },
 ])

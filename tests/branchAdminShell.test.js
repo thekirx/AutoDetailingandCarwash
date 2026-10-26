@@ -38,6 +38,7 @@ describe('Branch Admin simplified shell', () => {
         '/operations/attendance',
         '/operations/crm',
         '/operations/my-advances',
+        '/operations/payslips',
         '/operations/history',
         '/operations/audit',
         '/operations/vehicle-transfer',

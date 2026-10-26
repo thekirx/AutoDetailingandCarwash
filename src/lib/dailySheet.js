@@ -305,7 +305,7 @@ export function sheetChecklist({ sheet = {}, lines = [], sales = [] } = {}) {
   const badCa = ca.filter((l) => !l.staff_id || amount(l.amount_minor) <= 0)
   if (badCa.length) missing.push(`Pick the staff member and amount on ${badCa.length} cash advance line(s)`)
   const countSet = sheet.counted_cash_minor != null && sheet.counted_cash_minor !== ''
-  if (!countSet) missing.push('Count the cash in the drawer')
+  if (!countSet) missing.push('Count the cash')
   const totals = computeSheetTotals({
     sales,
     lines,

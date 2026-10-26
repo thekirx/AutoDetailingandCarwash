@@ -3,12 +3,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { ClipboardCheck, Package } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
-import { canManageServices, canRestockInventory, getBranchScopeList } from '@/auth/permissions'
+import { canManageServices, canRestockInventory, getBranchScopeList, isSuperAdmin } from '@/auth/permissions'
 import OpsGuideCard from '@/components/ops/OpsGuideCard'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import OpsTabList from '@/components/ops/OpsTabBar'
 import { BRANCH_STOCK_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
 import { applyOwnerSetQty, applyReconLine, applyRestockQty, branchAssignmentRows, reconUsageQty } from '@/lib/inventoryBranchStock'
+import { stockCategoryLabel } from '@/lib/inventoryCatalog'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { supabase } from '@/lib/supabase'
 import { getAccessTokenFresh } from '@/lib/authToken'
@@ -54,6 +55,7 @@ export default function BranchInventoryPage({
   const [ownerQty, setOwnerQty] = useState({})
   const [leftoverQty, setLeftoverQty] = useState({})
   const [recons, setRecons] = useState([])
+  const [pendingRestocks, setPendingRestocks] = useState([])
   const [saving, setSaving] = useState(false)
 
   const branchOptions = useMemo(() => {
@@ -65,10 +67,10 @@ export default function BranchInventoryPage({
   const load = useCallback(async () => {
     if (!branch) return
     try {
-      const [prodRes, stockRes, reconRes] = await Promise.all([
+      const [prodRes, stockRes, reconRes, restockRes] = await Promise.all([
         supabase
           .from('products')
-          .select('id, name, sku, category, tags, usage_kind, is_active, points_price')
+          .select('id, name, sku, category, tags, usage_kind, stock_category, is_active, points_price')
           .eq('is_active', true)
           .eq('is_archived', false)
           .order('name'),
@@ -79,10 +81,16 @@ export default function BranchInventoryPage({
           .eq('branch_slug', branch)
           .order('submitted_at', { ascending: false })
           .limit(20),
+        supabase
+          .from('restock_requests')
+          .select('id, product_id, add_qty, products(name)')
+          .eq('branch_slug', branch)
+          .eq('status', 'pending'),
       ])
       if (prodRes.error) throw prodRes.error
       if (stockRes.error) throw stockRes.error
       if (reconRes.error) throw reconRes.error
+      if (restockRes.error) throw restockRes.error
       setProducts(prodRes.data || [])
       const points = {}
       for (const row of prodRes.data || []) {
@@ -94,6 +102,7 @@ export default function BranchInventoryPage({
       for (const row of stockRes.data || []) map[row.product_id] = Number(row.qty) || 0
       setStockByProduct(map)
       setRecons(reconRes.data || [])
+      setPendingRestocks(restockRes.data || [])
     } catch (err) {
       toast.error(err.message)
     }
@@ -215,6 +224,25 @@ export default function BranchInventoryPage({
     const add = Math.max(0, Math.floor(Number(restockQty[product.id]) || 0))
     if (add < 1) {
       toast.error('Enter a restock quantity')
+      return
+    }
+    if (!isSuperAdmin(profile)) {
+      setSaving(true)
+      try {
+        const { error } = await supabase.rpc('request_restock', {
+          p_product: product.id,
+          p_branch: branch,
+          p_qty: add,
+        })
+        if (error) throw error
+        toast.success(`Asked Super Admin to add ${add} ${product.name}. The count stays until they approve.`)
+        setRestockQty((s) => ({ ...s, [product.id]: '' }))
+        await load()
+      } catch (err) {
+        toast.error(err.message)
+      } finally {
+        setSaving(false)
+      }
       return
     }
     setSaving(true)
@@ -510,7 +538,7 @@ export default function BranchInventoryPage({
                     <div className="font-medium">{p.name}</div>
                     {p.sku ? <div className="text-xs text-muted-foreground">{p.sku}</div> : null}
                   </TableCell>
-                  <TableCell className="capitalize">{p.category === 'accessories' ? 'Accessory' : (p.usage_kind || 'resellable')}</TableCell>
+                  <TableCell className="capitalize">{stockCategoryLabel(p.stock_category)}</TableCell>
                   <TableCell className="text-right tabular-nums">
                     {p.on_hand == null ? '—' : p.on_hand}
                   </TableCell>
@@ -544,8 +572,8 @@ export default function BranchInventoryPage({
                   <TableCell>
                     <div className="flex flex-wrap gap-2">
                       {p.assigned ? (
-                        <Button type="button" size="sm" disabled={saving} onClick={() => onRestock(p)}>
-                          Restock
+                        <Button type="button" size="sm" className="min-h-11" disabled={saving} onClick={() => onRestock(p)}>
+                          {isSuperAdmin(profile) ? 'Restock' : 'Request'}
                         </Button>
                       ) : (
                         <Button type="button" size="sm" disabled={saving || !branch} onClick={() => assignToBranch(p)}>
@@ -563,6 +591,15 @@ export default function BranchInventoryPage({
               ))}
             </TableBody>
           </Table>
+          {pendingRestocks.length ? (
+            <ul className="mt-4 space-y-1 text-sm text-muted-foreground" aria-label="Restock waiting">
+              {pendingRestocks.map((row) => (
+                <li key={row.id}>
+                  {row.products?.name || 'Item'} · add {row.add_qty} · waiting for Super Admin
+                </li>
+              ))}
+            </ul>
+          ) : null}
           <div className="mt-6 flex flex-col gap-3">
             <h2 className="text-base font-semibold text-foreground">Point prices</h2>
             <p className="text-sm text-muted-foreground">Point price is the same at every branch. Assign the accessory or sellable to this branch first. 0 keeps it out of the voucher shop.</p>

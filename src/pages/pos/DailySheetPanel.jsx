@@ -9,6 +9,7 @@ import { NamedSelect } from '@/components/ui/named-select'
 import { cn } from '@/lib/utils'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { cashAdvanceReleaseError } from '@/lib/cashAdvanceCode'
+import { cashAdvanceBalanceLabel, cashAdvanceBalances, cashAdvanceRowsForBalance } from '@/lib/cashAdvanceBalance'
 import { parsePesosToMinor } from '@/lib/shiftClose'
 import { notifyOpsEvent } from '@/lib/opsEventNotify'
 import { ROLES } from '@/auth/permissions'
@@ -31,6 +32,7 @@ import {
 } from '@/lib/dailySheet'
 import {
   loadDaySales,
+  loadCashAdvanceLedger,
   loadSheetById,
   loadSheetContext,
   receiptUrl,
@@ -261,7 +263,8 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
         const row = await loadSheetById(sheetId)
         if (!row) throw new Error('Sheet not found')
         const sales = await loadDaySales(row.branch, row.business_date)
-        setCtx({ sales, accounts: [], staff: [], suggestions: [], caRequests: [] })
+        const caLedger = await loadCashAdvanceLedger(row.branch)
+        setCtx({ sales, accounts: [], staff: [], suggestions: [], caRequests: [], caLedger })
         setSheet(row)
         setLines((row.daily_sheet_lines || []).sort((a, b) => a.sort - b.sort).map(hydrateLine))
         setCountText(toText(row.counted_cash_minor))
@@ -428,6 +431,10 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
 
   const expenseLines = lines.filter((l) => l.kind === 'expense')
   const salaryLines = lines.filter((l) => l.kind === 'salary')
+  const caBalances = useMemo(
+    () => cashAdvanceBalances(cashAdvanceRowsForBalance(ctx?.caLedger || [], lines, sheet?.id || null)),
+    [ctx?.caLedger, lines, sheet?.id],
+  )
   const caLines = lines.filter((l) => l.kind === 'ca_release' || l.kind === 'ca_repay')
   const isSuperAdmin = profile?.role === ROLES.SUPER_ADMIN
   const sheetBranchSlug = review ? sheet?.branch : branch
@@ -542,7 +549,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
                         value={l.paid_from === 'gcash' ? 'gcash' : 'cash'}
                         onChange={(v) => patchLine(l.id, { paid_from: v })}
                         options={[
-                          { value: 'cash', label: 'Cash (drawer)' },
+                          { value: 'cash', label: 'Cash' },
                           { value: 'gcash', label: 'GCash' },
                         ]}
                       />
@@ -588,7 +595,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
             ) : null}
             <Row label="Total expenses" bold rule><Money minor={totals.expensesMinor} bold /></Row>
             {totals.gcashExpensesMinor ? (
-              <Row label="GCash expenses (not from drawer)"><Money minor={totals.gcashExpensesMinor} /></Row>
+              <Row label="GCash expenses (not from cash)"><Money minor={totals.gcashExpensesMinor} /></Row>
             ) : null}
           </section>
 
@@ -698,6 +705,14 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
                     <div className="flex flex-col gap-1">
                       <Label htmlFor={`ds-ca-s-${l.id}`} className="text-xs text-muted-foreground">Staff</Label>
                       <NamedSelect id={`ds-ca-s-${l.id}`} className="min-h-11" value={l.staff_id} onChange={(v) => patchLine(l.id, { staff_id: v })} options={staffOptions} placeholder="Pick staff" />
+                      {l.staff_id ? (
+                        <p className="text-xs font-medium text-foreground">
+                          {cashAdvanceBalanceLabel(caBalances.find((row) => row.staffId === l.staff_id))}
+                          {(caBalances.find((row) => row.staffId === l.staff_id)?.givenMinor || 0) > 0
+                            ? ` · ${formatAccounting(caBalances.find((row) => row.staffId === l.staff_id)?.remainingMinor || 0)}`
+                            : ''}
+                        </p>
+                      ) : null}
                     </div>
                     {l.kind === 'ca_release' ? (
                       <div className="flex flex-col gap-1">
@@ -757,8 +772,8 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
             ) : null}
           </section>
 
-          <section className="ds-card" aria-label="Cash in drawer">
-            <SectionHead step={5} title="Cash to collect" hint="Count the cash still in the drawer. That count is compared with cash left. There is no morning float." done={check.sections.cash} />
+          <section className="ds-card" aria-label="Cash">
+            <SectionHead step={5} title="Cash to collect" hint="Count the cash. That count is compared with cash left. There is no morning float." done={check.sections.cash} />
             <div className="grid gap-4 sm:grid-cols-2">
               <AmountInput id="ds-count" label="Cash counted (₱)" value={countText} disabled={!editable} onChange={(v) => { setCountText(v); setDirty(true) }} />
             </div>
@@ -768,7 +783,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
               <Row label="Cash left"><Money minor={totals.cashLeftMinor} /></Row>
               <Row label="GCash left"><Money minor={totals.gcashLeftMinor} /></Row>
               <Row label="Over / short" bold rule>
-                {totals.overShortMinor == null ? <span className="text-muted-foreground">Count the drawer</span> : <Money minor={totals.overShortMinor} bold className={totals.overShortMinor ? 'ds-alert' : 'ds-ok'} />}
+                {totals.overShortMinor == null ? <span className="text-muted-foreground">Count the cash</span> : <Money minor={totals.overShortMinor} bold className={totals.overShortMinor ? 'ds-alert' : 'ds-ok'} />}
               </Row>
             </div>
             <div className="mt-3 flex flex-col gap-1">

@@ -90,3 +90,10 @@ describe('auto-filling an existing customer must not erase what the cashier type
     assert.equal(out.firstName, 'Maria')
   })
 })
+
+describe('POS shows the linked customer points', () => {
+  it('loads loyalty_points with the stamp count and prints them on the customer card', () => {
+    assert.match(src, /loyalty_stamps, loyalty_points/)
+    assert.match(src, /\{loyaltyPoints\} points/)
+  })
+})

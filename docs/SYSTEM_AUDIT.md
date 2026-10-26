@@ -233,3 +233,23 @@ Sir’s five answers are the contract. They replace the morning-float reading.
 | Split cash + GCash on one ticket | POS control, `sales.cash_minor` / `gcash_minor`, and the sheet attributes each portion. The ticket counts once. |
 
 Live apply of `20261021120000_sheet_collection_no_float.sql` is on `lybxhpzzqqyqswvuwpxv`. Checked 21 Oct 2026: salary is subtracted once inside the channel transaction, submit no longer requires a float, and a split ticket can be stored. A live click of a split sale on the register is still **NOT VERIFIED**.
+
+## NewChanges (2026-10-25)
+
+Living checklist: `docs/plans/2026-10-25-new-changes-checklist.md`.
+
+This pass shipped only the pieces that already match the database and the 19 Oct access sheet.
+
+| Item | Result |
+|---|---|
+| POS shows the linked customer's points | **FIXED in code** — register loads `loyalty_points` with `loyalty_stamps` and prints them on the customer card. Browser click **NOT VERIFIED**. |
+| Cash labels | **FIXED in code** — staff-facing “drawer” on the Daily Sheet and the close hint now say cash. The money math is unchanged. |
+| Floor Insight | **FIXED in code** — nav and page title. Access is still Owner, Super Admin, and crew watch. |
+| Administrative crew tiles | **REMOVED** from the floor page. Roster helper stays for tests. |
+| Payroll e-sign, visit rewards, point catalog, inventory categories, restock approval | **NOT STARTED** |
+| Cash advance remaining balance | **APPLIED** — `cash_advance_ledger` on the live project. Sheet, POS tab, My advances, and owner Floor Insight read the same lines. Browser click **NOT VERIFIED**. |
+| Bills for-approval count and awaiting-payment amount | **FIXED in code** |
+| P&L expense account opens its paid lines | **FIXED in code**. Browser click **NOT VERIFIED**. |
+| Attendance Crew / Team Lead / Admin out of roster | **FIXED in code** |
+
+No new SQL in this pass. No live migration.

@@ -72,7 +72,7 @@ describe('command category IA', () => {
     const sa = getOperationsNav({ role: 'BossMich' })
     const labels = sa.map((i) => i.label)
     const queueLinks = sa.filter((i) => String(i.to).startsWith('/operations/queue') && !String(i.to).includes('/new'))
-    assert.ok(labels.includes('Floor Board'))
+    assert.ok(labels.includes('Floor Insight'))
     assert.equal(queueLinks.length, 1)
     assert.equal(queueLinks[0].label, 'Carwash Queue')
     assert.equal(queueLinks[0].to, '/operations/queue')
@@ -110,7 +110,7 @@ describe('command category IA', () => {
     assert.deepEqual(ids, ['insight', 'hr', 'customers', 'config', 'ops-insight'])
     assert.equal(groups[0].label, 'Floor Insight')
     assert.deepEqual(groups[0].items.map((item) => item.label), [
-      'Floor Board',
+      'Floor Insight',
       'Carwash Queue',
       'Detailing Schedule',
       'Team Planner',
@@ -119,6 +119,7 @@ describe('command category IA', () => {
       'Inventory',
       'Financials',
       'Monthly salaries',
+      'Approvals',
     ])
     assert.deepEqual(
       groups.find((g) => g.id === 'config').items.map((item) => item.label),

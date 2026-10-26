@@ -74,8 +74,8 @@ describe('Daily Sheet history', () => {
   })
 
   it('History tab shows with the Daily sheet tab and hides with it', () => {
-    assert.deepEqual(posVisibleShellTabs({ canSheet: true }), ['checkout', 'sheet', 'history', 'dashboard'])
-    assert.deepEqual(posVisibleShellTabs({ canSheet: false }), ['checkout', 'dashboard'])
+    assert.deepEqual(posVisibleShellTabs({ canSheet: true }), ['checkout', 'sheet', 'history', 'dashboard', 'advances'])
+    assert.deepEqual(posVisibleShellTabs({ canSheet: false }), ['checkout', 'dashboard', 'advances'])
     assert.equal(resolvePosShellTab('history', { canSheet: true }), 'history')
     assert.equal(resolvePosShellTab('history', { canSheet: false }), 'checkout')
   })

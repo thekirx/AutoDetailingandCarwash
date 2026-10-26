@@ -7,7 +7,7 @@
 
 ## Nav
 
-Floor Board · Carwash Queue · Detailing Schedule · Team Planner · Point of Sales · Vouchers · Inventory · Financials · Monthly salaries · Attendance · Customers · Memberships · Inquiries · Branches · Services and Packages · Detailing Packages · Vehicle List · RBAC Delegation · Transfer car · Content · Settings · History · Notifications · Audit · Data Center
+Floor Insight · Carwash Queue · Detailing Schedule · Team Planner · Point of Sales · Vouchers · Inventory · Financials · Monthly salaries · Approvals · Payslips · Attendance · Customers · Memberships · Inquiries · Branches · Services and Packages · Detailing Packages · Vehicle List · RBAC Delegation · Transfer car · Content · Settings · History · Notifications · Audit · Data Center
 
 Retired from this nav: **Console** (off since the Floor Board became the landing surface) and **Payroll / Crew** (`canAccessConsole()` returns `false`; `crew` is denied).
 

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
-import { Cake, CarFront, ClipboardList, Gift, History, Link2, Lock, MapPin, Minus, Plus, Search, Settings2, ShoppingBag, ShoppingCart, Trash2, Volume2, VolumeX, X } from 'lucide-react'
+import { Cake, CarFront, ClipboardList, Gift, History, Link2, Lock, MapPin, Minus, Plus, Search, Settings2, ShoppingBag, ShoppingCart, Trash2, Volume2, VolumeX, Wallet, X } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessPos, canDiscountPosSale, canSeeAllBranches, canWriteFinance, canWritePosSettings, getBranchScopeList, isAdmin, isBranchAdmin, isInvestor } from '@/auth/permissions'
 import { listBranches, getLoyaltyProgramSettings } from '@/lib/adminApi'
@@ -26,6 +26,8 @@ import { toast } from 'sonner'
 import { PAYMENT_METHODS } from '@/lib/paymentMethods'
 import { normalizePosSettings } from '@/lib/posSettings'
 import { MERCH_FAMILIES, productIsPosSellable, productMatchesMerchFamily } from '@/lib/posSellables'
+import { productShowsOnPos } from '@/lib/inventoryCatalog'
+import { memberTier, nextVisitReward } from '@/lib/rewardsCatalog'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { announcePayment, announceTest, readAnnouncerOn, unlockAudio, useAnnouncerDevice, writeAnnouncerOn } from '@/lib/posAnnouncer'
 import { BIRTHDAY_CODE_MISMATCH, BIRTHDAY_GIFT_LABEL, birthdayCodeShapeError, formatPerkDate, normalizeBirthdayCode } from '@/lib/birthdayPerk'
@@ -49,6 +51,7 @@ import {
 import { canEditDailySheet } from '@/lib/dailySheet'
 import PosSettingsPanel from '@/pages/pos/PosSettingsPanel'
 import DailySheetPanel from '@/pages/pos/DailySheetPanel'
+import PosCashAdvancePanel from '@/pages/pos/PosCashAdvancePanel'
 import PosReadOnlyView from '@/pages/pos/PosReadOnlyView'
 import PosSheetHistory from '@/pages/pos/PosSheetHistory'
 import PosTodayPanel from '@/pages/pos/PosTodayPanel'
@@ -102,6 +105,7 @@ function PosCounterPage() {
 
   const [services, setServices] = useState([])
   const [products, setProducts] = useState([])
+  const [coffeeStock, setCoffeeStock] = useState(null)
   const [query, setQuery] = useState('')
   const [merchFamilyFilter, setMerchFamilyFilter] = useState('all')
   // Branch Admin sells merch + pays queue tickets only — not freeform service catalog.
@@ -138,6 +142,9 @@ function PosCounterPage() {
   const [cashTendered, setCashTendered] = useState('')
   const [paymentRef, setPaymentRef] = useState('')
   const [loyaltyStamps, setLoyaltyStamps] = useState(0)
+  const [loyaltyPoints, setLoyaltyPoints] = useState(0)
+  const [visitCount, setVisitCount] = useState(0)
+  const [voucherCode, setVoucherCode] = useState('')
   const [loyaltyMilestones, setLoyaltyMilestones] = useState([])
   const [catalogReady, setCatalogReady] = useState(false)
   // State, not a ref: the save effect must wait until the restored draft has rendered.
@@ -207,7 +214,7 @@ function PosCounterPage() {
         .eq('is_archived', false),
       supabase
         .from('products')
-        .select('id, name, price_minor, category, stock_qty, sku, tags, usage_kind, size_options')
+        .select('id, name, price_minor, category, stock_qty, sku, tags, usage_kind, size_options, stock_category, show_in_pos, material_role')
         .eq('is_active', true)
         .eq('is_archived', false),
       supabase.from('daily_sales_summary').select('*').eq('sale_date', today).eq('branch', branch).maybeSingle(),
@@ -243,7 +250,7 @@ function PosCounterPage() {
         size_prices: Object.fromEntries((row.service_size_prices || []).map((p) => [p.size_slug, p.price_minor])),
       })),
     )
-    const productRows = (prod.data || []).filter((p) => (branchAdmin ? productIsPosSellable(p) : true))
+    const productRows = (prod.data || []).filter((p) => productShowsOnPos(p) && (branchAdmin ? productIsPosSellable(p) : true))
     let stockMap = {}
     if (branch && productRows.length) {
       const { data: branchStock, error: stockErr } = await supabase
@@ -264,6 +271,12 @@ function PosCounterPage() {
           stock_qty: stockMap[p.id],
         })),
     )
+    const cup = (prod.data || []).find((p) => p.material_role === 'cup')
+    const beans = (prod.data || []).find((p) => p.material_role === 'beans')
+    setCoffeeStock({
+      cups: cup && stockMap[cup.id] != null ? stockMap[cup.id] : null,
+      beans: beans && stockMap[beans.id] != null ? stockMap[beans.id] : null,
+    })
     setTodayStats(stats.data)
     setHandoffs(handoffRes.data || [])
     if (!handoffRes.error) {
@@ -651,14 +664,19 @@ function PosCounterPage() {
   async function refreshLoyaltyReady(customerIdValue) {
     if (!customerIdValue) {
       setLoyaltyStamps(0)
+      setLoyaltyPoints(0)
+      setVisitCount(0)
       setLoyaltyMilestones([])
       return
     }
-    const [cust, miles] = await Promise.all([
-      supabase.from('customers').select('loyalty_stamps').eq('id', customerIdValue).maybeSingle(),
+    const [cust, miles, visits] = await Promise.all([
+      supabase.from('customers').select('loyalty_stamps, loyalty_points').eq('id', customerIdValue).maybeSingle(),
       supabase.from('loyalty_milestones').select('threshold_points, is_active, reward_label'),
+      supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('customer_id', customerIdValue).eq('status', 'completed'),
     ])
     setLoyaltyStamps(Number(cust.data?.loyalty_stamps) || 0)
+    setLoyaltyPoints(Number(cust.data?.loyalty_points) || 0)
+    setVisitCount(visits.error ? 0 : Number(visits.count) || 0)
     setLoyaltyMilestones(miles.data || [])
   }
 
@@ -739,6 +757,8 @@ function PosCounterPage() {
     setBirthdayCode('')
     setReferralRewards([])
     setLoyaltyStamps(0)
+    setLoyaltyPoints(0)
+    setVisitCount(0)
     setLoyaltyMilestones([])
     setCart((current) =>
       priceCartForMembership(current, {
@@ -795,7 +815,7 @@ function PosCounterPage() {
       if (
         normalizePosLineItemType(item?.item_type) !== 'product' ||
         !product ||
-        !productIsPosSellable(product)
+        !productShowsOnPos(product)
       ) {
         toast.error('Branch Admin sells merch and coffee only. Open a waiting ticket for bay jobs.')
         return
@@ -1057,6 +1077,8 @@ function PosCounterPage() {
       setBirthdayCode('')
       setReferralRewards([])
       setLoyaltyStamps(0)
+      setLoyaltyPoints(0)
+      setVisitCount(0)
       setLoyaltyMilestones([])
     }
   }
@@ -1172,6 +1194,38 @@ function PosCounterPage() {
     if (linkedCustomer?.plate) noteParts.push(`Plate ${linkedCustomer.plate}`)
     if (cart.some((l) => l.is_loyalty_award && !l.is_birthday_award)) noteParts.push('Includes loyalty award line')
     if (cart.some((l) => l.is_birthday_award)) noteParts.push('Includes birthday free service')
+    const typedVoucher = voucherCode.trim()
+    let saleCart = cart
+    if (typedVoucher) {
+      if (!handoff?.booking_id) {
+        toast.error('Put the voucher on a queue ticket. This sale has no ticket.')
+        setSaving(false)
+        return
+      }
+      const { data: applied, error: voucherErr } = await supabase.rpc('apply_booking_promo_voucher', {
+        p_booking_id: handoff.booking_id,
+        p_code: typedVoucher,
+      })
+      if (voucherErr || applied?.ok === false) {
+        toast.error(voucherErr?.message || applied?.error || 'Voucher was not accepted')
+        setSaving(false)
+        return
+      }
+      const next = Math.max(0, Math.floor(Number(applied?.final_price_minor) || 0))
+      saleCart = cart.map((line) =>
+        line.from_handoff ? { ...line, unit_price_minor: next, list_price_minor: next, price_minor: next } : line,
+      )
+      if (handoff?.id) {
+        await supabase.from('pos_handoffs').update({ amount_minor: next }).eq('id', handoff.id)
+      }
+      if (splitOn) {
+        setCart(saleCart)
+        setVoucherCode('')
+        toast.success(`Voucher applied. Ticket is now ${formatMoney(next)}. Check the cash and GCash split, then charge.`)
+        setSaving(false)
+        return
+      }
+    }
     if (cart.some((l) => l.is_membership_included)) noteParts.push('Includes membership service')
     if (cart.some((l) => l.membership_discount_applied) && activeMembership?.name) {
       noteParts.push(`Member ${activeMembership.name} ${activeMembership.discount_percent}% off`)
@@ -1192,12 +1246,12 @@ function PosCounterPage() {
         ]
           .filter((part) => String(part || '').trim())
           .join(' · '),
-        discountMinor: cart.reduce((sum, line) => {
+        discountMinor: saleCart.reduce((sum, line) => {
           const list = Math.max(Math.floor(Number(line.list_price_minor ?? line.unit_price_minor) || 0), 0)
           const unit = Math.max(Math.floor(Number(line.unit_price_minor) || 0), 0)
           return sum + Math.max(0, list - unit) * Math.max(1, Number(line.quantity) || 1)
         }, 0),
-        cart,
+        cart: saleCart,
         activeHandoff: handoff,
         notes: noteParts.join(' · '),
       }),
@@ -1497,6 +1551,13 @@ function PosCounterPage() {
                     </>
                   )}
                   {customerLockedToTicket ? customerPerks : null}
+                  {customerId ? (
+                    <p className="text-xs font-medium tabular-nums text-foreground">
+                      {loyaltyPoints} points
+                      {visitCount > 0 ? ` · ${memberTier(visitCount).name}` : ''}
+                      {nextVisitReward(visitCount) ? ` · next: ${nextVisitReward(visitCount).label}` : ''}
+                    </p>
+                  ) : null}
                 </div>
                 <Button
                   type="button"
@@ -1633,6 +1694,11 @@ function PosCounterPage() {
                       {[linkedCustomer.phone, linkedCustomer.plate].filter(Boolean).join(' · ') || 'Account linked'}
                     </p>
                     {customerPerks}
+                    <p className="text-xs font-medium tabular-nums text-foreground">
+                      {loyaltyPoints} points
+                      {visitCount > 0 ? ` · ${memberTier(visitCount).name}` : ''}
+                      {nextVisitReward(visitCount) ? ` · next: ${nextVisitReward(visitCount).label}` : ''}
+                    </p>
                   </div>
                   <Button type="button" variant="ghost" size="icon" className="min-h-10 min-w-10 shrink-0" onClick={clearCustomerLink} aria-label="Unlink customer">
                     <X className="size-4" />
@@ -1703,6 +1769,18 @@ function PosCounterPage() {
           )}
 
           {cart.length ? (
+            <>
+            <label className="block text-xs font-medium">
+              Voucher code
+              <Input
+                value={voucherCode}
+                onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                placeholder="Optional"
+                autoComplete="off"
+                className="mt-1 min-h-11 uppercase"
+                aria-label="Voucher code"
+              />
+            </label>
             <dl className="space-y-1.5 rounded-xl bg-muted/40 px-4 py-3 text-sm">
               {cartSummary.ticketCount ? (
                 <div className="flex items-baseline justify-between gap-3">
@@ -1725,6 +1803,7 @@ function PosCounterPage() {
                 </div>
               ) : null}
             </dl>
+            </>
           ) : null}
 
           <div className="space-y-2">
@@ -1976,6 +2055,14 @@ function PosCounterPage() {
             onSelect={selectCatalogCategory}
           />
 
+          {tab === 'merch' && coffeeStock && (coffeeStock.cups != null || coffeeStock.beans != null) ? (
+            <p className="text-sm text-muted-foreground">
+              {coffeeStock.cups != null ? `${coffeeStock.cups} cups left` : ''}
+              {coffeeStock.cups != null && coffeeStock.beans != null ? ' · ' : ''}
+              {coffeeStock.beans != null ? `${coffeeStock.beans} g beans left` : ''}
+            </p>
+          ) : null}
+
           <PosTileGrid
             items={catalogItems}
             onAdd={addToCart}
@@ -2078,6 +2165,7 @@ function PosCounterPage() {
             { id: 'checkout', label: 'Sell', icon: ShoppingBag, badge: handoffs.length || undefined },
             ...(canSheet ? [{ id: 'sheet', label: 'Daily sheet', icon: ClipboardList }, { id: 'history', label: 'Sheet history', icon: History }] : []),
             { id: 'dashboard', label: 'Today' },
+            { id: 'advances', label: 'Cash advances', icon: Wallet },
             ...(showSettingsTab ? [{ id: POS_SETTINGS_TAB, label: 'Settings', icon: Settings2 }] : []),
           ]}
         />
@@ -2105,6 +2193,9 @@ function PosCounterPage() {
               onOpenSheet={canSheet ? () => setShellTab('sheet') : undefined}
             />
           ) : null}
+        </TabsContent>
+        <TabsContent value="advances" className="mt-0 outline-none">
+          {shellTab === 'advances' && branch ? <PosCashAdvancePanel branch={branch} branchLabel={branchLabel} /> : null}
         </TabsContent>
         {showSettingsTab ? (
           <TabsContent value={POS_SETTINGS_TAB} className="mt-0 outline-none">

@@ -90,7 +90,7 @@ async function requireCustomer(accessToken) {
 export async function loadCustomerPortal({ accessToken, origin = '' }) {
   const { admin, userId, user, customer } = await requireCustomer(accessToken)
 
-  const [branches, history, purchases, active, queue, loyaltySettings, loyaltyMilestones, customerRow, vehicles, membershipRow, maint] =
+  const [branches, history, purchases, active, queue, loyaltySettings, loyaltyMilestones, customerRow, vehicles, membershipRow, maint, visitCountRes] =
     await Promise.all([
       admin.from('branches').select('slug, name, address, is_active, latitude, longitude, google_review_url').eq('is_active', true).eq('is_archived', false).order('name'),
       admin
@@ -150,6 +150,11 @@ export async function loadCustomerPortal({ accessToken, origin = '' }) {
         .select('id, plate_number, next_due_at, status, branch_slug, service_slug, last_notified_at')
         .eq('customer_id', userId)
         .in('status', ['scheduled', 'notified']),
+      admin
+        .from('bookings')
+        .select('id', { count: 'exact', head: true })
+        .eq('customer_id', userId)
+        .eq('status', 'completed'),
     ])
 
   const { data: perkRow } = await admin
@@ -329,6 +334,7 @@ export async function loadCustomerPortal({ accessToken, origin = '' }) {
       pointsEnabled,
       membershipsEnabled,
       loyaltyPoints: pointsEnabled ? (customerRow.data?.loyalty_points ?? 0) : 0,
+      visitCount: Number(visitCountRes?.count) || 0,
       milestones: stampsEnabled ? (loyaltyMilestones.data || []) : [],
       membership,
     },
