@@ -1,6 +1,6 @@
 # NewChanges checklist
 
-Source: `NewChanges.md` (Hakum notes, 25 Oct 2026). Later instructions override two lines: coffee drinks do not deduct cups or grams, and Robert is not an account.
+Source: `NewChanges.md` (Hakum notes, 25 Oct 2026). Later instructions override two lines: coffee drinks do not deduct cups or grams, and Robert is not an account. Co-dev summary: `docs/plans/2026-10-26-new-changes-handoff.md`.
 
 Status key: **Done** means the screen and the database agree. **Kept** means the note and a later rule disagree, and the later rule is what the app does.
 
