@@ -1044,13 +1044,10 @@ function stockCatalogFields(payload) {
   const allowed = ['merchandise', 'coffee_menu', 'coffee_material', 'chemical']
   const stock_category = allowed.includes(payload.stock_category) ? payload.stock_category : 'merchandise'
   const hidden = stock_category === 'coffee_material' || stock_category === 'chemical'
-  const material_role = stock_category === 'coffee_material' && (payload.material_role === 'cup' || payload.material_role === 'beans')
-    ? payload.material_role
-    : null
   return {
     stock_category,
     show_in_pos: hidden ? false : payload.show_in_pos !== false,
-    material_role,
+    material_role: null,
   }
 }
 
@@ -1067,7 +1064,7 @@ function normalizeProductTags(raw) {
 export async function listProducts({ includeArchived = false } = {}) {
   let q = supabase
     .from('products')
-    .select('id, name, sku, category, price_minor, points_price, stock_qty, stock_group, branch_slug, tags, usage_kind, size_options, stock_category, show_in_pos, material_role, is_active, is_archived, updated_at')
+    .select('id, name, sku, category, price_minor, points_price, stock_qty, stock_group, branch_slug, tags, usage_kind, size_options, stock_category, show_in_pos, is_active, is_archived, updated_at')
     .order('name')
   if (!includeArchived) q = q.eq('is_archived', false)
   const { data, error } = await q

@@ -52,6 +52,9 @@ describe('my advances access + route', () => {
   it('page queries own cash_advance submissions', () => {
     const page = read('src/pages/MyCashAdvancesPage.jsx')
     assert.match(page, /ops_form_submissions/)
+    assert.match(page, /ops_forms/)
+    assert.match(page, /Ask for this amount/)
+    assert.doesNotMatch(page, /planning\?tab=forms/)
     assert.match(page, /cash_advance/)
     assert.match(page, /created_by/)
     assert.match(page, /My advances/)

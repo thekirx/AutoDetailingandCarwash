@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { earnedVisitRewards, memberTier, MERCH_POINTS, nextVisitReward, SERVICE_POINTS } from '../src/lib/rewardsCatalog.js'
+import { earnedVisitRewards, latestEarnedVisitReward, memberTier, MERCH_POINTS, nextVisitReward, SERVICE_POINTS } from '../src/lib/rewardsCatalog.js'
 
 describe('visit rewards and member tier', () => {
   it('uses the visit counts from the 25 Oct notes', () => {
@@ -11,6 +11,8 @@ describe('visit rewards and member tier', () => {
     assert.equal(nextVisitReward(18).visit, 24)
     assert.equal(nextVisitReward(18).label, 'Free back-to-zero add-on')
     assert.equal(nextVisitReward(30), null)
+    assert.equal(latestEarnedVisitReward(18).label, 'Free premium car wash')
+    assert.equal(latestEarnedVisitReward(5), null)
     assert.match(nextVisitReward(24).label, /15% off/)
   })
 

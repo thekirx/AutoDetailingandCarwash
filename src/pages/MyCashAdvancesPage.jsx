@@ -1,6 +1,6 @@
 /** Crew / employee list of their own cash-advance requests (Michi C1). */
 import { useCallback, useEffect, useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessMyAdvances } from '@/auth/permissions'
@@ -11,13 +11,20 @@ import { cashAdvanceStatusMeta, formatCashAdvancePesos } from '@/lib/myCashAdvan
 import { cashAdvanceBalanceLabel, cashAdvanceBalances } from '@/lib/cashAdvanceBalance'
 import { formatAccounting } from '@/lib/dailySheet'
 import { loadCashAdvanceLedger } from '@/lib/dailySheetApi'
+import { getLocalCalendarDate } from '@/lib/localCalendarDate'
+import { enrichCashAdvancePayload } from '@/lib/payroll'
 import { supabase } from '@/lib/supabase'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
 
 export default function MyCashAdvancesPage() {
   const { profile, user } = useAuth()
   const [rows, setRows] = useState([])
   const [ledger, setLedger] = useState([])
   const [loading, setLoading] = useState(true)
+  const [amount, setAmount] = useState('')
+  const [reason, setReason] = useState('')
+  const [asking, setAsking] = useState(false)
 
   const load = useCallback(async () => {
     const uid = user?.id || profile?.id
@@ -52,18 +59,57 @@ export default function MyCashAdvancesPage() {
     return <Navigate to="/operations/attendance" replace />
   }
 
+  async function ask(event) {
+    event.preventDefault()
+    const pesos = Number(String(amount).replace(/,/g, ''))
+    if (!Number.isFinite(pesos) || pesos <= 0) return toast.error('Enter the peso amount.')
+    if (!reason.trim()) return toast.error('Say what the advance is for.')
+    setAsking(true)
+    try {
+      const { data: form, error: formError } = await supabase
+        .from('ops_forms')
+        .select('id')
+        .eq('kind', 'cash_advance')
+        .limit(1)
+        .maybeSingle()
+      if (formError) throw formError
+      if (!form?.id) throw new Error('Cash advance requests are not set up yet.')
+      const payload = enrichCashAdvancePayload(
+        {
+          amount: pesos,
+          reason: reason.trim(),
+          branch: profile?.branch_slug || '',
+          needed_by: getLocalCalendarDate(),
+          employee_name: profile?.full_name || '',
+        },
+        profile,
+      )
+      const { error } = await supabase.from('ops_form_submissions').insert({
+        form_id: form.id,
+        payload,
+        respondent_label: profile?.full_name || null,
+        source: 'staff',
+        created_by: profile.id,
+      })
+      if (error) throw error
+      toast.success('Request sent. After approval, the branch records the cash on the Daily Sheet.')
+      setAmount('')
+      setReason('')
+      await load()
+    } catch (err) {
+      toast.error(err.message || 'Could not send the request')
+    } finally {
+      setAsking(false)
+    }
+  }
+
   const balance = cashAdvanceBalances(ledger)[0] || null
 
   return (
     <OpsPageShell
       eyebrow="Pay"
       title="My advances"
-      description="Request an advance here. After it is approved, the branch records the cash on the Daily Sheet. This page shows what you still owe."
-      actions={
-        <Button asChild variant="outline" className="min-h-11">
-          <Link to="/operations/planning?tab=forms">Request advance</Link>
-        </Button>
-      }
+      description="Ask for an amount here. After it is approved, the branch records the cash on the Daily Sheet. This page shows what you still owe."
     >
       {loading ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
@@ -78,6 +124,19 @@ export default function MyCashAdvancesPage() {
               {balance ? cashAdvanceBalanceLabel(balance) : 'No cash has been given yet.'}
             </p>
           </div>
+          <form onSubmit={ask} className="flex flex-col gap-3 rounded-xl border border-border p-4" aria-label="Ask for a cash advance">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="ca-amount">Amount (₱)</Label>
+              <Input id="ca-amount" className="min-h-11" inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="ca-reason">What it is for</Label>
+              <Input id="ca-reason" className="min-h-11" value={reason} onChange={(e) => setReason(e.target.value)} />
+            </div>
+            <Button type="submit" className="min-h-11" disabled={asking}>
+              {asking ? 'Sending…' : 'Ask for this amount'}
+            </Button>
+          </form>
           {!rows.length ? (
             <p className="text-sm text-muted-foreground">No advance requests yet.</p>
           ) : (

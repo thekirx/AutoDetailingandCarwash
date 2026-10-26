@@ -5,7 +5,7 @@ import StampTrack from '@/components/customer/StampTrack'
 import { BirthdayPass } from '@/components/customer/BirthdayGreeting'
 import ReferralCard from '@/components/customer/ReferralCard'
 import { BIRTHDAY_GIFT_LABEL, BIRTHDAY_PERK_DAYS } from '@/lib/birthdayPerk'
-import { memberTier, MERCH_POINTS, nextVisitReward, SERVICE_POINTS } from '@/lib/rewardsCatalog'
+import { memberTier, MERCH_POINTS, nextVisitReward, earnedVisitRewards, SERVICE_POINTS } from '@/lib/rewardsCatalog'
 import { Row, SectionHead, Skeleton, Stat } from '@/components/customer/CustomerUi'
 import { fetchPortal } from '@/lib/customerPortalClient'
 import { CUSTOMER_LOYALTY_PATH, CUSTOMER_REFERRAL_PATH, CUSTOMER_VOUCHERS_PATH } from '@/lib/customerAccountNav'
@@ -39,6 +39,7 @@ export default function CustomerLoyaltyPage() {
   const visits = Number(loyalty?.visitCount) || 0
   const tier = memberTier(visits)
   const upcoming = nextVisitReward(visits)
+  const reached = earnedVisitRewards(visits)
 
   return (
     <CustomerAppFrame title="Rewards" subtitle="A stamp for every paid visit." cols>
@@ -132,6 +133,9 @@ export default function CustomerLoyaltyPage() {
           <SectionHead title="Member benefits" />
           <div className="capp-group">
             <Row icon={Star} title={tier.name} sub={`${visits} completed visits, any car`} />
+            {reached.map((row) => (
+              <Row key={row.visit} icon={Check} title={row.label} sub={`Reached at ${row.visit} visits. Ask the branch.`} />
+            ))}
             {upcoming ? (
               <Row icon={Gift} title={upcoming.label} sub={`${upcoming.visitsAway} more ${upcoming.visitsAway === 1 ? 'visit' : 'visits'}`} />
             ) : (

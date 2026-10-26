@@ -28,7 +28,7 @@ import {
 } from '@/lib/productSizes'
 import { toast } from 'sonner'
 
-const empty = { name: '', sku: '', category: 'merch', price: '', stock_qty: '0', branch_slug: '', tags: 'sellable,merch', usage_kind: 'resellable', stock_category: 'merchandise', show_in_pos: true, material_role: '', sizes: [] }
+const empty = { name: '', sku: '', category: 'merch', price: '', stock_qty: '0', branch_slug: '', tags: 'sellable,merch', usage_kind: 'resellable', stock_category: 'merchandise', show_in_pos: true, sizes: [] }
 
 function SizeFields({ rows, onChange, disabled }) {
   return (
@@ -162,7 +162,6 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
         sizes: editing.sizes,
         stock_category: editing.stock_category,
         show_in_pos: editing.show_in_pos,
-        material_role: editing.material_role,
         is_active: editing.is_active,
         points_price: String(editing.usage_kind || 'resellable').toLowerCase() === 'internal' ? null : editing.points_price,
       })
@@ -238,7 +237,6 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
       usage_kind: row.usage_kind || 'resellable',
       stock_category: row.stock_category || 'merchandise',
       show_in_pos: row.show_in_pos !== false,
-      material_role: row.material_role || '',
       tags: Array.isArray(row.tags) ? row.tags.join(',') : '',
       is_active: row.is_active,
       points_price: row.points_price == null ? '' : String(row.points_price),
@@ -436,7 +434,6 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
                     ...form,
                     stock_category: v,
                     show_in_pos: stockCategoryHidesFromPos(v) ? false : form.show_in_pos,
-                    material_role: v === 'coffee_material' ? form.material_role : '',
                   })}
                   disabled={!canMutate}
                 >
@@ -448,19 +445,6 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
                   </SelectContent>
                 </Select>
               </div>
-              {form.stock_category === 'coffee_material' ? (
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="merch-material">Coffee material</Label>
-                  <Select value={form.material_role || 'none'} onValueChange={(v) => setForm({ ...form, material_role: v === 'none' ? '' : v })} disabled={!canMutate}>
-                    <SelectTrigger id="merch-material"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Not the cup or the beans</SelectItem>
-                      <SelectItem value="cup">Cups (one per coffee)</SelectItem>
-                      <SelectItem value="beans">Beans (20 grams per coffee)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : null}
               <label className="flex min-h-11 items-center gap-2 text-sm">
                 <input
                   type="checkbox"
@@ -620,7 +604,6 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
                     ...editing,
                     stock_category: v,
                     show_in_pos: stockCategoryHidesFromPos(v) ? false : editing.show_in_pos,
-                    material_role: v === 'coffee_material' ? editing.material_role : '',
                   })}
                   disabled={!canMutate}
                 >
@@ -632,19 +615,6 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
                   </SelectContent>
                 </Select>
               </div>
-              {editing.stock_category === 'coffee_material' ? (
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="edit-material">Coffee material</Label>
-                  <Select value={editing.material_role || 'none'} onValueChange={(v) => setEditing({ ...editing, material_role: v === 'none' ? '' : v })} disabled={!canMutate}>
-                    <SelectTrigger id="edit-material"><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Not the cup or the beans</SelectItem>
-                      <SelectItem value="cup">Cups (one per coffee)</SelectItem>
-                      <SelectItem value="beans">Beans (20 grams per coffee)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : null}
               <label className="flex min-h-11 items-center gap-2 text-sm">
                 <input
                   type="checkbox"

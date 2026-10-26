@@ -1,52 +1,57 @@
 # NewChanges checklist
 
-Source: `NewChanges.md` (Hakum notes, 25 Oct 2026).
-Status key: **Done** means the screen and the database already agree. **Partial** means a piece exists and was not rebuilt. **Not started** means it is not in the app yet.
+Source: `NewChanges.md` (Hakum notes, 25 Oct 2026). Later instructions override two lines: coffee drinks do not deduct cups or grams, and Robert is not an account.
 
-This file is the resume point. Update it on every pass. Do not mark a row Done without a file or a test.
+Status key: **Done** means the screen and the database agree. **Kept** means the note and a later rule disagree, and the later rule is what the app does.
 
-## Already true — do not rebuild
+## Shop day
 
-| # | Note | Status | Evidence |
-|---|---|---|---|
-| 2 | Queue number on every wash, package, and detailing ticket | **Done** | `bookings.queue_number`, `formatQueueNumber` |
-| 2b | Next car is the oldest waiting ticket. New tickets go to the bottom | **Done** | `fifoNextTicketId` in `src/queue/queueLogic.js`. The note also says “newest on top.” That reading is LIFO and fights “which car is next.” The app keeps FIFO. |
-| 3 | Existing customer name is on the ticket | **Done** | Queue selects include `customer_name` |
-| 4 | Notes stay on the ticket for crew and Team Lead | **Done** | `QueueTicketEditor` always shows notes, or “No notes” |
-| 4 / 5 / 6 | Branch Admin does not sell detailing, packages, or services. They add sellables only, and only on a ticket the Team Lead already sent to payment. They cannot rewrite a Team Lead ticket | **Done** | `assertBranchAdminCart` in `src/lib/posSale.js`. POS opens Branch Admin on the merch tab. A live click was **not** repeated this pass |
-| 7 / 14 | Optional voucher on the Team Lead ticket. Branch Admin can enter one on that ticket. POS consumes a voucher already on the ticket | **Partial** | `QueueTicketEditor` has a voucher code panel. Checkout still has the birthday code. A second optional voucher box at pay was not added |
-| 8 | Finance bill edit | **Partial** | Edit opens `FinanceBillForm`. Not clicked in the browser this pass. The bills strip now shows a for-approval count and the amount awaiting payment |
-| 9 | Profit and loss lines | **Partial** | An expense account on the statement opens the paid bills that make it up. Browser click **not** verified |
-| 11 | Attendance line | **Done this pass** | Register reads `Crew 8 of 10 · Team Lead 2 of 2 · Admin 1 of 2` from who is present or late |
-| 12 | POS shows the customer’s points | **Done this pass** | `PosPage` loads `loyalty_points` with `loyalty_stamps` and shows “N points” on the linked customer. Browser click **not** verified |
-| 6 | Say cash, not drawer | **Done this pass** | Daily Sheet labels and the close hint. Internal channel names are unchanged |
-| 12 | Rename Floor Board to Floor Insight | **Done this pass** | Nav label and page title. Route is still `/operations/dashboard` |
-| 11 | Remove administrative crew from the floor page | **Done this pass** | The tile row is gone. Marketing, ASA, Branch Admin, and Team Lead counts are no longer on that page |
+| Note | Status | What happens |
+|---|---|---|
+| Queue number on every wash, package, and detailing ticket | **Done** | `bookings.queue_number` |
+| New ticket at the bottom. Oldest waiting car is next | **Done** | FIFO in `fifoNextTicketId`. “Newest on top” would hide the next car |
+| Existing customer name on the ticket | **Done** | Queue selects include `customer_name` |
+| Notes for Team Lead and crew | **Done** | The ticket always shows notes, or “No notes” |
+| Branch Admin sells merch and coffee drinks only, on a ticket the Team Lead already sent to payment | **Done** | `assertBranchAdminCart`. They cannot rewrite the Team Lead ticket |
+| Optional voucher on the ticket and at checkout | **Done** | Team Lead, Branch Admin, and office. A walk-in with no ticket cannot use a code |
+| Say cash, not drawer | **Done** | Daily Sheet labels and the close hint |
+| Floor board renamed Floor Insight | **Done** | Route stays `/operations/dashboard` |
+| Administrative crew removed from the floor page | **Done** | The tile row is gone |
+| Attendance line | **Done** | `Crew 8 of 10 · Team Lead 2 of 2 · Admin 1 of 2`. The register can be filtered by role |
+| POS shows the customer’s points | **Done** | Linked customer shows points, the visit reward already reached, and the next one |
 
-## Access conflict — do not widen silently
+## Money
 
-| Note | Conflict |
-|---|---|
-| SA, BA, and ASA see unpaid cash advances on the floor board | The 19 Oct sheet gives Floor Insight to Owner, Super Admin, and crew watch only. Branch Admin and ASA do not have that page. Unpaid advances for those roles need a surface they already have (POS or Daily Sheet), not a new floor-board grant |
-| Approvals for Lucy, the owner, and Robert | Owner is BossMich. Lucy is whoever holds ASA. Robert is a name in the note, not a role. Do not create an account |
+| Note | Status | What happens |
+|---|---|---|
+| Cash advance ask, history, partial pay, paid up | **Done** | My advances: amount and what it is for. Not the planner form. Approval still writes the code. The Daily Sheet records the cash. Remaining is on My advances, the POS Cash advances tab, and the sheet when the name is chosen |
+| Who sees unpaid advances | **Kept** | Owner sees them on Floor Insight. Branch Admin and ASA use POS or the Daily Sheet. The 19 Oct sheet does not give them Floor Insight |
+| Bills edit, for-approval count, awaiting-payment amount | **Done** | Edit opens the bill form. The strip splits “For approval” and “Awaiting payment” |
+| Profit and loss lines | **Done** | An expense account opens the paid bills that make it up |
+| Crew are not monthly. Office pay is bi-monthly, no tax, incentive, payslip, received, e-sign | **Done** | Crew, team leads, and detailers stay on the Daily Sheet. Monthly salaries sends a half-month slip. Salary plus incentive. The person marks it received and signs. Super Admin and ASA with finance write can add the incentive |
 
-## Still open — continue here
+## Customers
 
-Cash advance balance, bills, profit-and-loss lines, and the attendance headcount are in the table above or in item 1. The rest still need a new table.
+| Note | Status | What happens |
+|---|---|---|
+| Visit rewards at 6, 12, 18, 24, 30, any car | **Done** | Rewards page and POS show the reward reached and the next one. The branch hands the gift. The register does not add a free line |
+| Points table and merch point prices | **Done** | Matching service rows use the note. Premium ceramic is 20, Platinum ceramic is 25, High Impact Partial is 30. The ten merch items are in the catalog at those point prices. A claim deducts that branch’s stock and stays disabled until the branch has some. They stay off the register until a peso price is set |
+| Member tier by total visits | **Done** | 1–29 Basic, 30–69 Deluxe, 70–99 Premium, 100+ Platinum, from completed visits |
+| Customer app and SMS copy | **Done** | Written for review in `docs/notifications/CUSTOMER-TEMPLATE-REVIEW.md`. Outbound customer status and reminders only. No owner daily SMS. The 4th-visit and 10th-visit texts are still the stamp card |
 
-1. **Cash advance remaining balance — done this pass.** `cash_advance_ledger` is live. The Daily Sheet shows what that person still owes when their name is chosen, including the line being typed. POS has a Cash advances tab. Floor Insight shows who still owes, for the owner only. My advances shows remaining, history, and paid up. Giving cash still needs the approval code, so the request stays. It is still not an expense. Branch Admin and ASA do not get Floor Insight; they use the POS tab or the sheet. A live click was **not** done.
-2. **Payslips — done this pass, not clicked.** Office and admin pay is one half of a month. Salary plus an optional incentive. No tax. The slip is on Payslips: Sent, then Received, then signed with their name. Crew, team leads, and detailers stay on the Daily Sheet and are not in the picker. `payslips` is the table. A live sign was **not** done.
-3. **Visit rewards — shown, not auto-added.** 6 free freshener, 12 free coffee, 18 free premium wash, 24 free back-to-zero, 30 choose 15% off tint, ceramic, or PPF. The customer Rewards page and the POS customer line show the next one from completed visits on any car. The register does not add the free line by itself.
-4. **Points table — in the app, partly on the service rows.** The Rewards page lists every point value from the note. Exact name matches updated Glass Detailing (5), Interior Detailing (10), Nano Ceramic Tint (10), and Paint Maintenance (5). Basic / Ultimate / Platinum PPF Protection were set to 40 / 50 / 60. Express Wash Package was already 2. Carwash, Ceramic Coating, and the generic PPF row were left alone because the note names a specific tier. Merch in the note (shirt, mug, bag, coffee kit) is not in the product list yet, so those point prices are on the Rewards page only.
-5. **Member tier — shown.** 1–29 Basic, 30–69 Deluxe, 70–99 Premium, 100+ Platinum, from completed visits. It is not a separate stored column.
-9. **Voucher at checkout — done this pass, not clicked.** The ticket editor still has the code. POS has an optional voucher field. It applies only when the sale is a queue ticket, then charges the new ticket price. A cash and GCash split stops so the amounts can be checked. Team Lead, Branch Admin, and office can apply it. A walk-in with no ticket cannot.
-10. **Notification copy — written for review.** `docs/notifications/CUSTOMER-TEMPLATE-REVIEW.md`. Outbound customer status and reminders only. No owner daily SMS. The old 4th-visit and 10th-visit texts are the stamp card, not the new visit rewards.
-6. **Inventory categories — done this pass, not clicked.** Merchandise and the coffee menu can show on POS. Coffee materials and chemicals stay off it. A coffee sale takes one cup and 20 grams of beans when those materials are marked. Branch Admin requests a restock. Super Admin approves before the count changes. The approval does not create a bill. Super Admin and ASA can still set the count. `docs/inventory/STOCK-CATEGORIES.md`.
-7. **POS visibility — done this pass, not clicked.** Each item has Show in POS. Coffee materials and chemicals stay hidden.
-8. **Approvals — done this pass, not clicked.** `/operations/approvals` lists waiting restocks and the count of bills waiting for approval. Super Admin approves a restock. Floor Insight shows how many are waiting, for the owner only. ASA with finance or catalog can open the page and cannot approve a restock. Robert is not a role.
+## Stock
+
+| Note | Status | What happens |
+|---|---|---|
+| Merchandise and coffee drinks on POS. Coffee stock and chemicals off POS | **Done** | Coffee drinks are their own items. Coffee stock is a count. A drink sale does not deduct cups or grams |
+| Show in POS toggle | **Done** | Coffee stock and chemicals stay hidden. Point-only merch stays hidden until it has a peso price |
+| Branch Admin restocks. Super Admin approves. No cost | **Done** | The count moves on approval. The approval does not create a bill |
+| Owner and Lucy can correct a count | **Done** | Owner is BossMich. Lucy is whoever holds Assistant Super Admin. They can set the count |
+| Robert can correct a count | **Kept** | Robert is a name in the note, not a role. No account was created |
+| Approvals page and a waiting count on Floor Insight | **Done** | `/operations/approvals`. Floor Insight shows the waiting count for the owner. Assistant Super Admin can open the page and cannot approve a restock |
 
 ## Database
 
-`cash_advance_ledger(text, uuid)` is applied on `lybxhpzzqqyqswvuwpxv` (26 Oct 2026). It does not add a table. Crew can read only their own lines. Branch Admin, Operations Lead, and ASA with POS or finance can read one branch. The owner can read all branches.
+Live on `lybxhpzzqqyqswvuwpxv` (26 Oct 2026): `cash_advance_ledger`, `payslips`, points updates, voucher apply for Branch Admin and office, `restock_requests`, and the drop of the coffee cup-and-grams deduction. `20261026230000` adds the ten point-shop merch items when the name is not already in the catalog. `20261026240000` sets Premium ceramic to 20, Platinum ceramic to 25, and High Impact Partial to 30.
 
-`payslips`, the points updates, the wider voucher apply, and `restock_requests` are on `lybxhpzzqqyqswvuwpxv` (26 Oct 2026). Super Admin approves a restock before the count changes. That approval does not create a bill.
+Screens in this list were not clicked in a browser this pass.

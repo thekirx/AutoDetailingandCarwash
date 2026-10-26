@@ -27,7 +27,7 @@ import { PAYMENT_METHODS } from '@/lib/paymentMethods'
 import { normalizePosSettings } from '@/lib/posSettings'
 import { MERCH_FAMILIES, productIsPosSellable, productMatchesMerchFamily } from '@/lib/posSellables'
 import { productShowsOnPos } from '@/lib/inventoryCatalog'
-import { memberTier, nextVisitReward } from '@/lib/rewardsCatalog'
+import { earnedVisitRewards, latestEarnedVisitReward, memberTier, nextVisitReward } from '@/lib/rewardsCatalog'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { announcePayment, announceTest, readAnnouncerOn, unlockAudio, useAnnouncerDevice, writeAnnouncerOn } from '@/lib/posAnnouncer'
 import { BIRTHDAY_CODE_MISMATCH, BIRTHDAY_GIFT_LABEL, birthdayCodeShapeError, formatPerkDate, normalizeBirthdayCode } from '@/lib/birthdayPerk'
@@ -105,7 +105,6 @@ function PosCounterPage() {
 
   const [services, setServices] = useState([])
   const [products, setProducts] = useState([])
-  const [coffeeStock, setCoffeeStock] = useState(null)
   const [query, setQuery] = useState('')
   const [merchFamilyFilter, setMerchFamilyFilter] = useState('all')
   // Branch Admin sells merch + pays queue tickets only — not freeform service catalog.
@@ -214,7 +213,7 @@ function PosCounterPage() {
         .eq('is_archived', false),
       supabase
         .from('products')
-        .select('id, name, price_minor, category, stock_qty, sku, tags, usage_kind, size_options, stock_category, show_in_pos, material_role')
+        .select('id, name, price_minor, category, stock_qty, sku, tags, usage_kind, size_options, stock_category, show_in_pos')
         .eq('is_active', true)
         .eq('is_archived', false),
       supabase.from('daily_sales_summary').select('*').eq('sale_date', today).eq('branch', branch).maybeSingle(),
@@ -271,12 +270,6 @@ function PosCounterPage() {
           stock_qty: stockMap[p.id],
         })),
     )
-    const cup = (prod.data || []).find((p) => p.material_role === 'cup')
-    const beans = (prod.data || []).find((p) => p.material_role === 'beans')
-    setCoffeeStock({
-      cups: cup && stockMap[cup.id] != null ? stockMap[cup.id] : null,
-      beans: beans && stockMap[beans.id] != null ? stockMap[beans.id] : null,
-    })
     setTodayStats(stats.data)
     setHandoffs(handoffRes.data || [])
     if (!handoffRes.error) {
@@ -1555,6 +1548,7 @@ function PosCounterPage() {
                     <p className="text-xs font-medium tabular-nums text-foreground">
                       {loyaltyPoints} points
                       {visitCount > 0 ? ` · ${memberTier(visitCount).name}` : ''}
+                      {latestEarnedVisitReward(visitCount) ? ` · reached: ${latestEarnedVisitReward(visitCount).label}` : ''}
                       {nextVisitReward(visitCount) ? ` · next: ${nextVisitReward(visitCount).label}` : ''}
                     </p>
                   ) : null}
@@ -1697,6 +1691,7 @@ function PosCounterPage() {
                     <p className="text-xs font-medium tabular-nums text-foreground">
                       {loyaltyPoints} points
                       {visitCount > 0 ? ` · ${memberTier(visitCount).name}` : ''}
+                      {latestEarnedVisitReward(visitCount) ? ` · reached: ${latestEarnedVisitReward(visitCount).label}` : ''}
                       {nextVisitReward(visitCount) ? ` · next: ${nextVisitReward(visitCount).label}` : ''}
                     </p>
                   </div>
@@ -2054,14 +2049,6 @@ function PosCounterPage() {
             active={activeCategoryId}
             onSelect={selectCatalogCategory}
           />
-
-          {tab === 'merch' && coffeeStock && (coffeeStock.cups != null || coffeeStock.beans != null) ? (
-            <p className="text-sm text-muted-foreground">
-              {coffeeStock.cups != null ? `${coffeeStock.cups} cups left` : ''}
-              {coffeeStock.cups != null && coffeeStock.beans != null ? ' · ' : ''}
-              {coffeeStock.beans != null ? `${coffeeStock.beans} g beans left` : ''}
-            </p>
-          ) : null}
 
           <PosTileGrid
             items={catalogItems}

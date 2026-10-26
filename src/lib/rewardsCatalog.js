@@ -70,3 +70,8 @@ export function earnedVisitRewards(visits) {
   const n = Math.max(0, Math.floor(Number(visits) || 0))
   return VISIT_REWARDS.filter((row) => n >= row.visit)
 }
+
+export function latestEarnedVisitReward(visits) {
+  const rows = earnedVisitRewards(visits)
+  return rows.length ? rows[rows.length - 1] : null
+}
