@@ -25,28 +25,36 @@ export const SERVICE_DETAIL_CONTENT = {
     bookState: { service: 'Paint Protection Film' },
     faqs: [
       {
-        question: 'What does Paint Protection Film protect against?',
-        answer: 'PPF creates a sacrificial barrier against stone chips, light scratches, road debris, bug residue, and other everyday hazards that would otherwise reach the original paint.',
+        question: 'Why choose ClearPro PPF at Hakum Auto Care?',
+        answer: 'ClearPro combines Polyoptico™ coating for a smooth, glossy finish, Invisiglue™ adhesive designed to prevent visible glue lines, and non-yellowing optical TPU for lasting clarity. Ask the Hakum team which ClearPro film suits your vehicle and the finish you want.',
       },
       {
-        question: 'Will PPF change the color or gloss of my vehicle?',
-        answer: 'Clear film is designed to preserve the appearance of the original finish. The final look still depends on the condition of the paint and the film selected for the installation.',
+        question: 'Will PPF change how my car looks?',
+        answer: 'Clear ClearPro PPF is virtually invisible and designed to preserve the appearance of your original paint. ClearPro lists 95 GU gloss at 60° for selected gloss films; specifications vary by film. Its range also includes UltraSatin, Cosmoblack, and Carbon Fiber Black finishes. Ask Hakum about local availability before choosing a finish.',
       },
       {
-        question: 'Can light scratches in PPF disappear?',
-        answer: 'The ClearPro film used in our listed packages has a heat-activated self-healing top coat for minor swirls and light surface marks. Deep cuts and impact damage may require panel-film replacement.',
+        question: 'What does PPF protect my car from?',
+        answer: 'PPF adds a protective barrier against rock chips, road debris, light scratches, and everyday surface damage. It cannot prevent every impact or deep cut. ClearPro also makes specialty films for headlamps, windshields, and skylights; ask the team about availability and suitability for your vehicle.',
       },
       {
-        question: 'Can PPF be installed over repainted panels?',
-        answer: 'We do not recommend PPF over repainted bodywork because removal can lift an aftermarket finish. Please disclose every repaired or repainted area before inspection.',
+        question: 'Does ClearPro film heal its own scratches?',
+        answer: 'ClearPro PPF has self-healing properties designed to reduce the appearance of light scratches and swirl marks with heat or sunlight. Deep scratches, cuts, and impact damage may require professional assessment or replacement of the affected film.',
       },
       {
-        question: 'How should I care for PPF after installation?',
-        answer: 'Allow the film to settle, follow the aftercare instructions from the team, wash by hand with suitable products, and avoid directing a pressure washer at film edges.',
+        question: 'Will PPF make my car easier to clean?',
+        answer: 'Yes. ClearPro PPF has hydrophobic properties that help water, dirt, and grime release more easily during routine cleaning. ClearPro reports a 105° contact angle for selected films; performance varies by product. Regular gentle washing is still needed.',
       },
       {
-        question: 'What does the PPF warranty cover?',
-        answer: 'Coverage depends on the package selected. The listed Hakum packages cover specified manufacturer defects; road damage, misuse, and external-impact damage are excluded unless the package explicitly states a film-replacement benefit.',
+        question: 'Will PPF damage my paint, and can it be removed later?',
+        answer: 'ClearPro PPF is designed to protect original vehicle paint, with adhesive designed for residue-free removal under appropriate conditions. Have the film professionally removed, and disclose repaired or repainted panels before installation so the team can assess the paint condition and removal risks.',
+      },
+      {
+        question: 'What warranty comes with ClearPro PPF?',
+        answer: 'Warranty duration depends on the film selected; ask Hakum to confirm the applicable manufacturer terms before installation. ClearPro lists cracking, yellowing, discoloration, peeling, delamination, degumming, and bubbling as eligible claim types, subject to its conditions and exclusions. Retain your installation invoice and completed warranty record as proof of purchase.',
+      },
+      {
+        question: 'How do I care for PPF after installation?',
+        answer: 'Wait at least three days before washing, and follow the installer’s product-specific aftercare instructions. Then wash gently by hand with suitable soap, water, and microfiber towels. Avoid automatic car washes and never direct high-pressure water at film edges.',
       },
     ],
     proof: {
@@ -127,28 +135,24 @@ export const SERVICE_DETAIL_CONTENT = {
     bookState: { service: 'Nano Ceramic Tint' },
     faqs: [
       {
-        question: 'What makes nano ceramic tint different from ordinary tint?',
-        answer: 'Nano ceramic tint is engineered to reject heat and ultraviolet energy without relying on a metallic layer, allowing strong performance with clear outward visibility.',
+        question: 'What makes ClearPro ceramic tint better than regular tint?',
+        answer: 'ClearPro uses nano-ceramic technology to reduce heat while maintaining visual clarity. The manufacturer describes a Class 1000 dust-free coating workshop and lists ISO 9001, ISO 14001, and ISO 45001 certifications. Choose a film based on its specifications and your driving needs.',
       },
       {
-        question: 'Does darker tint always mean better heat rejection?',
-        answer: 'No. Shade controls visible light, while film construction determines much of the heat rejection. A lighter high-performance tint can outperform a darker basic film.',
+        question: 'Is ClearPro tint certified by the Skin Cancer Foundation?',
+        answer: 'Specific ClearPro films carry the Skin Cancer Foundation’s Seal of Recommendation, including Nano Ceramic Series HC70 NANO, HC55 NANO, HC45 NANO, HC35 NANO, HC25 NANO, HC15 NANO, and HC05 NANO. This does not cover every ClearPro film. ClearPro reports over 99% UVA and UVB rejection for its window films; confirm the specifications and recommendation status of the exact film you select.',
       },
       {
-        question: 'Will nano ceramic tint interfere with GPS or mobile signal?',
-        answer: 'It does not use the metallic construction associated with signal interference, so GPS, radio, and mobile devices continue to work normally.',
+        question: 'How much cooler will my car be?',
+        answer: 'ClearPro ceramic tint is designed to reduce infrared heat entering the vehicle, helping cabin comfort and reducing cooling demand on the air-conditioning system. Results depend on the film, glass, weather, and driving conditions, so a specific temperature reduction cannot be guaranteed.',
       },
       {
-        question: 'Can I roll the windows down immediately after tinting?',
-        answer: 'The adhesive needs time to settle. Keep the windows closed for the period given by the installer and avoid cleaning the inside surface until the film has cured.',
+        question: 'Will I still see clearly during the day and night?',
+        answer: 'ClearPro offers different visible light transmission levels. Choose a shade that balances privacy, heat rejection, glare reduction, and daytime and nighttime visibility. Darker shades let in less visible light and can reduce nighttime visibility. Ask the team to show available options before installation.',
       },
       {
-        question: 'Why might new tint look hazy or show small bubbles?',
-        answer: 'A light haze or tiny moisture pockets can be part of the normal drying process immediately after installation. They should reduce as the tint cures; contact the team if they remain after the advised period.',
-      },
-      {
-        question: 'How do I choose the right tint shade?',
-        answer: 'We balance cabin comfort, outward visibility, vehicle glass, and current road requirements. The team can show the available shades before installation so you can choose confidently.',
+        question: 'Will ceramic tint interfere with my phone, GPS, or Wi-Fi?',
+        answer: 'ClearPro’s non-metallic ceramic films are designed not to interfere with mobile signals, GPS, Wi-Fi, or Bluetooth. Navigation apps and connected vehicle features should continue functioning normally.',
       },
     ],
     proof: {
