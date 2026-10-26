@@ -37,7 +37,7 @@ Status key: **Done** means the screen and the database agree. **Kept** means the
 | Visit rewards at 6, 12, 18, 24, 30, any car | **Done** | Rewards page and POS show the reward reached and the next one. The branch hands the gift. The register does not add a free line |
 | Points table and merch point prices | **Done** | Matching service rows use the note. Premium ceramic is 20, Platinum ceramic is 25, High Impact Partial is 30. The ten merch items are in the catalog at those point prices. A claim deducts that branch’s stock and stays disabled until the branch has some. They stay off the register until a peso price is set |
 | Member tier by total visits | **Done** | 1–29 Basic, 30–69 Deluxe, 70–99 Premium, 100+ Platinum, from completed visits |
-| Customer app and SMS copy | **Done** | Written for review in `docs/notifications/CUSTOMER-TEMPLATE-REVIEW.md`. Outbound customer status and reminders only. No owner daily SMS. The 4th-visit and 10th-visit texts are still the stamp card |
+| Customer app and SMS copy | **Done** | Outbound customer status and reminders only. No owner daily SMS. A text goes out at visits 6, 12, 18, 24, and 30 with that reward. The old 4th-visit and 10th-visit stamp texts are no longer sent. Copy is in `docs/notifications/CUSTOMER-TEMPLATE-REVIEW.md` |
 
 ## Stock
 

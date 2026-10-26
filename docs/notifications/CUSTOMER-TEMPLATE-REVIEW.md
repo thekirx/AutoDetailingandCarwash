@@ -27,12 +27,15 @@ Queue, in-progress, final check, ready to pay, and complete SMS rotate among 20 
 | Birthday | App and SMS | Happy birthday, plus the birthday code. The perk lasts 7 days. |
 | Welcome | SMS | Download the app at {appUrl} to book, track the car, and earn rewards. |
 | Loyalty claim | SMS | Thank you for claiming your loyalty reward. |
-| 4th visit in a 10-stamp cycle | SMS | That's your 4th completed visit. Two visits away from a free car freshener or coffee. |
-| 10th visit in that cycle | SMS | 10 visits. The stamp card goes back to zero. Claim a free premium wax next visit. |
+| Visit 6 | SMS | Reward ready: free car freshener. Ask the branch. |
+| Visit 12 | SMS | Reward ready: free coffee. Ask the branch. |
+| Visit 18 | SMS | Reward ready: free premium car wash. Ask the branch. |
+| Visit 24 | SMS | Reward ready: free back-to-zero add-on. Ask the branch. |
+| Visit 30 | SMS | Reward ready: 15% off tint, ceramic coating, or PPF. Ask the branch. |
 | Rate the visit | SMS | About 15 minutes after a completed visit. Link to the account. |
 | Paint maintenance | App and SMS | {plate} is due. Book at hakumautocare.com/book. |
 
-The 4th-visit and 10th-visit texts belong to the stamp card. They are not the 6 / 12 / 18 / 24 / 30 visit rewards. Do not send both as if they were the same offer until that copy is rewritten.
+These five texts match the visit rewards. They send once, when completed visits hit that number. The old 4th-visit and 10th-visit stamp texts are no longer sent.
 
 ## Staff push (not a customer text)
 

@@ -5,6 +5,7 @@
 import { renderNotificationMessage } from './notificationCopy.js'
 import { smsCustomerName } from './queueStatusSms.js'
 import { BIRTHDAY_GIFT_LABEL } from './birthdayPerk.js'
+import { VISIT_REWARDS } from './rewardsCatalog.js'
 
 export const TEMPLATE_CATEGORIES = [
   { id: 'booking_status', label: 'Service status', hint: 'Customer texts when a visit moves' },
@@ -261,30 +262,17 @@ export const SYSTEM_TEMPLATES = [
       'Hakum Auto Care: Thank you for claiming your loyalty reward! Keep those visits coming, your next treat is already on the way.',
     display_order: 220,
   }),
-  row({
-    key: 'lifecycle.visit_milestone_4',
+  ...VISIT_REWARDS.map((reward, index) => row({
+    key: `lifecycle.visit_reward_${reward.visit}`,
     category: 'lifecycle',
     channel: 'sms',
-    label: '4th visit milestone',
-    description: 'SMS on the 4th completed visit of each 10-visit cycle',
-    kind: 'visit_milestone_4',
+    label: `Visit ${reward.visit} reward`,
+    description: `SMS when completed visits reach ${reward.visit}, any car`,
+    kind: `visit_reward_${reward.visit}`,
     tokens: NAME_TOKENS,
-    sms_body:
-      "Hakum Auto Care: That's your 4th completed visit! You're only 2 visits away from a free car freshener or coffee on us.",
-    display_order: 230,
-  }),
-  row({
-    key: 'lifecycle.visit_milestone_10',
-    category: 'lifecycle',
-    channel: 'sms',
-    label: '10th visit milestone',
-    description: 'SMS on the 10th completed visit of each cycle',
-    kind: 'visit_milestone_10',
-    tokens: NAME_TOKENS,
-    sms_body:
-      'Hakum Auto Care: 10 visits, amazing! Your loyalty card is back to zero. Claim your free premium wax on your next visit. Thank you!',
-    display_order: 240,
-  }),
+    sms_body: `Hakum Auto Care: That's visit ${reward.visit}. Your reward is ready: ${reward.label}. Ask the branch.`,
+    display_order: 230 + index,
+  })),
   row({
     key: 'lifecycle.rate_visit',
     category: 'lifecycle',

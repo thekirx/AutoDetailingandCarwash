@@ -1,11 +1,11 @@
 /**
- * Customer lifecycle SMS (BusyBee): welcome/download-app, loyalty claim thanks,
- * and visit milestones (4th = "2 away from freshener/coffee", 10th = back to zero
- * / free premium wax). All sends respect the global sms_notifications toggle and
- * per-user sms_opt_in, and are idempotent via sms_events (event_type + customer).
+ * Customer lifecycle SMS (BusyBee): welcome, loyalty thanks, visit rewards
+ * at 6, 12, 18, 24, and 30 completed visits, and a rate-your-visit text.
+ * Sends respect the shop SMS toggle and sms_opt_in, and are idempotent via sms_events.
  */
 import { createClient } from '@supabase/supabase-js'
 import { applyTemplateText } from '../src/lib/notificationTemplates.js'
+import { VISIT_REWARDS } from '../src/lib/rewardsCatalog.js'
 import { busybeeSendSms } from './busybee.mjs'
 import { isSmsNotificationsEnabled } from './notifyBooking.mjs'
 import { loadTemplateMap, templateEnabled } from './notificationTemplatesDb.mjs'
@@ -20,8 +20,7 @@ export function adminDb() {
 export const LIFECYCLE_KINDS = [
   'welcome_app',
   'loyalty_claim',
-  'visit_milestone_4',
-  'visit_milestone_10',
+  ...VISIT_REWARDS.map((row) => `visit_reward_${row.visit}`),
   'rate_visit',
   'self_test',
 ]
@@ -32,6 +31,12 @@ export function buildLifecycleSms(kind, { appUrl = '', name = '', templates = nu
   if (tpl?.sms_body) {
     return applyTemplateText(tpl.sms_body, { appUrl: url || 'hakumautocare.com', name: name || 'there' })
   }
+  const rewardVisit = /^visit_reward_(\d+)$/.exec(kind)
+  if (rewardVisit) {
+    const reward = VISIT_REWARDS.find((row) => row.visit === Number(rewardVisit[1]))
+    if (!reward) return null
+    return `Hakum Auto Care: That's visit ${reward.visit}. Your reward is ready: ${reward.label}. Ask the branch.`
+  }
   switch (kind) {
     case 'welcome_app':
       return (
@@ -41,10 +46,6 @@ export function buildLifecycleSms(kind, { appUrl = '', name = '', templates = nu
       )
     case 'loyalty_claim':
       return 'Hakum Auto Care: Thank you for claiming your loyalty reward! Keep those visits coming, your next treat is already on the way.'
-    case 'visit_milestone_4':
-      return "Hakum Auto Care: That's your 4th completed visit! You're only 2 visits away from a free car freshener or coffee on us."
-    case 'visit_milestone_10':
-      return 'Hakum Auto Care: 10 visits, amazing! Your loyalty card is back to zero. Claim your free premium wax on your next visit. Thank you!'
     case 'rate_visit':
       return (
         'Hakum Auto Care: How was your visit? Open your account'
@@ -59,18 +60,14 @@ export function buildLifecycleSms(kind, { appUrl = '', name = '', templates = nu
 }
 
 /**
- * Visit milestone for a completed-visit count. A visit = one queue trip
- * (multi-service lines share a visit_group_id and count once).
- * Milestones repeat every 10-visit loyalty cycle.
+ * One text per reward visit. Counts are lifetime completed visits, any car.
  */
 export function resolveVisitMilestone(completedVisits) {
   const visits = Number(completedVisits)
   if (!Number.isInteger(visits) || visits <= 0) return null
-  const inCycle = visits % 10
-  const cycle = Math.floor((visits - 1) / 10)
-  if (inCycle === 4) return { kind: 'visit_milestone_4', cycle, dedupeKey: `visit_milestone_4_c${cycle}` }
-  if (inCycle === 0) return { kind: 'visit_milestone_10', cycle, dedupeKey: `visit_milestone_10_c${cycle}` }
-  return null
+  const reward = VISIT_REWARDS.find((row) => row.visit === visits)
+  if (!reward) return null
+  return { kind: `visit_reward_${reward.visit}`, dedupeKey: `visit_reward_${reward.visit}` }
 }
 
 /** Count completed visits (distinct visit groups) for a customer. */
@@ -182,7 +179,7 @@ export async function sendLifecycleSms(db, { kind, eventType = kind, customerId,
   }
 }
 
-/** After a visit completes: fire the 4th / 10th milestone SMS when reached. */
+/** After a visit completes: text the customer when a visit reward is reached. */
 export async function runVisitMilestoneSms(db, booking) {
   const customerId = booking?.customer_id
   if (!customerId) return { skipped: true, reason: 'no_customer' }

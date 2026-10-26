@@ -17,16 +17,17 @@ describe('lifecycle sms', () => {
     assert.doesNotMatch(buildLifecycleSms('welcome_app'), /undefined/)
   })
 
-  it('fires the 4th and 10th visit milestones, repeating each 10-visit cycle', () => {
+  it('texts the visit rewards once, at 6, 12, 18, 24, and 30', () => {
     assert.equal(resolveVisitMilestone(1), null)
-    assert.equal(resolveVisitMilestone(4)?.kind, 'visit_milestone_4')
-    assert.equal(resolveVisitMilestone(9), null)
-    assert.equal(resolveVisitMilestone(10)?.kind, 'visit_milestone_10')
-    // second loyalty cycle re-arms with a distinct dedupe key
-    assert.equal(resolveVisitMilestone(14)?.kind, 'visit_milestone_4')
-    assert.notEqual(resolveVisitMilestone(14)?.dedupeKey, resolveVisitMilestone(4)?.dedupeKey)
-    assert.equal(resolveVisitMilestone(20)?.kind, 'visit_milestone_10')
-    // garbage in, null out
+    assert.equal(resolveVisitMilestone(4), null)
+    assert.equal(resolveVisitMilestone(6)?.kind, 'visit_reward_6')
+    assert.equal(resolveVisitMilestone(12)?.kind, 'visit_reward_12')
+    assert.equal(resolveVisitMilestone(18)?.kind, 'visit_reward_18')
+    assert.equal(resolveVisitMilestone(24)?.kind, 'visit_reward_24')
+    assert.equal(resolveVisitMilestone(30)?.kind, 'visit_reward_30')
+    assert.equal(resolveVisitMilestone(36), null)
+    assert.match(buildLifecycleSms('visit_reward_6'), /Free car freshener/)
+    assert.match(buildLifecycleSms('visit_reward_30'), /15% off/)
     assert.equal(resolveVisitMilestone(0), null)
     assert.equal(resolveVisitMilestone('x'), null)
   })
