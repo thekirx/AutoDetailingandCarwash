@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { BarChart3, Car, GitCompare, MessageSquareWarning, Receipt, Users } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessInquiries, canSeeAllBranches, canSeeAllKpiBranches, getBranchScopeList, ROLES } from '@/auth/permissions'
+import { canAccessInquiries, canSeeAllBranches, canSeeAllKpiBranches, getBranchScopeList, isSuperAdmin, ROLES } from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
 import { applyBranchScope, collectPaged, resolveKpiRpcBranch } from '@/lib/crmInsights'
 import { aggregateByService, averageCycleMinutes, averageWaitMinutes, compareBranchesByCompleted, failedQaInRange, finishedForAverage, inTimeRange, kpiStatHover } from '@/lib/kpiPart8'
@@ -43,7 +43,7 @@ function todayISO() {
   return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
 }
 
-export default function KpiPage() {
+export default function KpiPage({ embedded = false } = {}) {
   const { profile, canViewQueueOperations } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const isTl = profile?.role === ROLES.TEAM_LEAD
@@ -278,6 +278,10 @@ export default function KpiPage() {
     compare: GitCompare,
     service: Car,
     sales: Receipt,
+  }
+
+  if (!embedded && isSuperAdmin(profile)) {
+    return <Navigate to="/operations/dashboard#month" replace />
   }
 
   return (

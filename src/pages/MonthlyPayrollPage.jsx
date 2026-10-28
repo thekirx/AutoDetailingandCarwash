@@ -1,158 +1,250 @@
 /**
- * Monthly salaries (office / BA etc.): ASA/SA posts paid expenses to account 14 with cash or GCash.
- * Day crew pay stays on the Daily Sheet — this page is not a floor-payroll wizard.
+ * Office payroll. One half-month at a time. Day crew stay on the Daily Sheet.
+ * A locked period refuses new slips. Super Admin can unlock it.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
+import { Lock, LockOpen } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
-import { canEditFinanceBooks, getBranchScopeList } from '@/auth/permissions'
+import { canEditFinanceBooks, getBranchScopeList, isSuperAdmin } from '@/auth/permissions'
 import { listStaffPeople } from '@/lib/adminApi'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { formatAccounting } from '@/lib/dailySheet'
-import { isDayCrewRole, payHalfChoices, payslipTakeHome } from '@/lib/payslip'
+import { isDayCrewRole, officePayrollPeople, payPeriodList, payslipStatusLabel, payslipTakeHome } from '@/lib/payslip'
 import { parsePesosToMinor } from '@/lib/shiftClose'
 import { supabase } from '@/lib/supabase'
 import { fetchBranches } from '@/queue/queueApi'
 import OpsPageShell from '@/components/ops/OpsPageShell'
+import OpsTabList from '@/components/ops/OpsTabBar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { NamedSelect } from '@/components/ui/named-select'
+import { Tabs } from '@/components/ui/tabs'
+
+function roleLabel(role) {
+  if (role === 'assistant_super_admin') return 'General Admin'
+  if (role === 'BossMich') return 'Owner'
+  if (role === 'admin') return 'Branch Admin'
+  if (role === 'operations_lead') return 'Operations Lead'
+  return String(role || 'Office').replace(/_/g, ' ')
+}
+
+function pesos(minor) {
+  if (minor == null) return ''
+  return (Number(minor) / 100).toFixed(2)
+}
 
 export default function MonthlyPayrollPage() {
   const { profile } = useAuth()
   const canWrite = canEditFinanceBooks(profile)
+  const owner = isSuperAdmin(profile)
   const scope = getBranchScopeList(profile)
+  const [searchParams, setSearchParams] = useSearchParams()
   const [branches, setBranches] = useState([])
   const [people, setPeople] = useState([])
-  const [salaryAccountId, setSalaryAccountId] = useState('')
   const [branch, setBranch] = useState('')
-  const [staffId, setStaffId] = useState('')
-  const [amountText, setAmountText] = useState('')
-  const [incentiveText, setIncentiveText] = useState('')
-  const [periodKey, setPeriodKey] = useState('')
-  const [paidFrom, setPaidFrom] = useState('cash')
-  const [note, setNote] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [recent, setRecent] = useState([])
+  const [drafts, setDrafts] = useState({})
+  const [slips, setSlips] = useState([])
+  const [locked, setLocked] = useState(false)
+  const [busyId, setBusyId] = useState('')
+  const [locking, setLocking] = useState(false)
+  const [formError, setFormError] = useState('')
 
-  const load = useCallback(async () => {
-    const [br, staff, cat, rows] = await Promise.all([
+  const periods = useMemo(() => payPeriodList(getLocalCalendarDate(), 4), [])
+  const periodKey = searchParams.get('period') || periods[0]?.start || ''
+  const period = periods.find((row) => row.start === periodKey) || periods[0] || null
+
+  const loadPeople = useCallback(async () => {
+    const [br, staff] = await Promise.all([
       fetchBranches(),
       listStaffPeople({ includeInactive: false }),
-      supabase.from('expense_categories').select('id, code, name').eq('code', '14').maybeSingle(),
-      supabase
-        .from('expenses')
-        .select('id, title, total_minor, branch, paid_from, created_at, status')
-        .eq('expense_kind', 'salary_monthly')
-        .order('created_at', { ascending: false })
-        .limit(12),
     ])
     const scoped = (br || []).filter((b) => scope === null || (Array.isArray(scope) && scope.includes(b.slug)))
     setBranches(scoped)
     setBranch((cur) => cur || scoped[0]?.slug || '')
     setPeople(staff || [])
-    if (cat.data?.id) setSalaryAccountId(cat.data.id)
-    if (cat.error) toast.error(cat.error.message)
-    if (rows.error) toast.error(rows.error.message)
-    else setRecent(rows.data || [])
   }, [scope])
 
-  useEffect(() => {
-    load().catch((e) => toast.error(e.message))
-  }, [load])
+  const loadPeriod = useCallback(async () => {
+    if (!branch || !period) return
+    const [slipRes, lockRes] = await Promise.all([
+      supabase
+        .from('payslips')
+        .select('id, staff_id, salary_minor, incentive_minor, paid_from, note, status')
+        .eq('branch', branch)
+        .eq('period_start', period.start)
+        .eq('period_end', period.end),
+      supabase
+        .from('payroll_period_locks')
+        .select('id')
+        .eq('branch', branch)
+        .eq('period_start', period.start)
+        .eq('period_end', period.end)
+        .maybeSingle(),
+    ])
+    if (slipRes.error) toast.error(slipRes.error.message)
+    else setSlips(slipRes.data || [])
+    if (lockRes.error) toast.error(lockRes.error.message)
+    else setLocked(Boolean(lockRes.data?.id))
+  }, [branch, period])
 
-  const halves = useMemo(() => payHalfChoices(getLocalCalendarDate()), [])
-  const period = halves.find((row) => row.start === periodKey) || halves[0] || null
-  const inBranch = (p) => !branch || !p.branch_slug || p.branch_slug === branch || (p.branch_slugs || []).includes(branch)
-  const staffOptions = useMemo(
-    () =>
-      (people || [])
-        .filter((p) => inBranch(p) && !isDayCrewRole(p.role))
-        .map((p) => ({ value: p.id, label: `${p.full_name}${p.role ? ` · ${String(p.role).replace(/_/g, ' ')}` : ''}` })),
+  useEffect(() => {
+    loadPeople().catch((e) => toast.error(e.message))
+  }, [loadPeople])
+
+  useEffect(() => {
+    loadPeriod().catch((e) => toast.error(e.message))
+  }, [loadPeriod])
+
+  const inBranch = (person) => !branch || !person.branch_slug || person.branch_slug === branch || (person.branch_slugs || []).includes(branch)
+  const office = useMemo(
+    () => officePayrollPeople(people).filter(inBranch),
     [people, branch],
   )
-  const crewNames = useMemo(
-    () => (people || []).filter((p) => inBranch(p) && isDayCrewRole(p.role)).map((p) => p.full_name),
+  const crewCount = useMemo(
+    () => (people || []).filter((person) => inBranch(person) && isDayCrewRole(person.role)).length,
     [people, branch],
   )
+  const slipByStaff = useMemo(() => {
+    const map = new Map()
+    for (const row of slips) map.set(row.staff_id, row)
+    return map
+  }, [slips])
+
+  function selectPeriod(start) {
+    const next = new URLSearchParams(searchParams)
+    if (!start || start === periods[0]?.start) next.delete('period')
+    else next.set('period', start)
+    setSearchParams(next, { replace: true })
+    setFormError('')
+  }
+
+  function draftFor(person) {
+    return drafts[person.id] || { salary: '', incentive: '', paidFrom: 'cash', note: '' }
+  }
+
+  function patchDraft(id, patch) {
+    setDrafts((cur) => ({ ...cur, [id]: { ...draftFor({ id }), ...cur[id], ...patch } }))
+  }
 
   if (!canWrite) return <Navigate to="/operations/access-denied" replace />
 
-  async function submit(e) {
-    e.preventDefault()
-    if (!salaryAccountId) return toast.error('Salary account (code 14) is missing.')
-    if (!branch) return toast.error('Pick a branch.')
-    if (!staffId) return toast.error('Pick who is paid.')
-    const minor = parsePesosToMinor(amountText)
-    if (minor == null || minor <= 0) return toast.error('Enter a peso amount.')
-    const incentive = incentiveText.trim() ? parsePesosToMinor(incentiveText) : 0
-    if (incentive == null || incentive < 0) return toast.error('Incentive must be zero or more.')
-    if (!period) return toast.error('Pick the half month.')
-    const person = people.find((p) => p.id === staffId)
-    if (isDayCrewRole(person?.role)) return toast.error('Crew are paid on the Daily Sheet.')
+  async function sendOne(person) {
+    setFormError('')
+    if (locked) {
+      setFormError('This period is locked. Super Admin can unlock it.')
+      return
+    }
+    if (!branch || !period) {
+      setFormError('Pick a branch and a payroll period.')
+      return
+    }
+    if (isDayCrewRole(person.role)) {
+      setFormError('Crew are paid on the Daily Sheet.')
+      return
+    }
+    const existing = slipByStaff.get(person.id)
+    const draft = draftFor(person)
+    const salaryText = draft.salary || (existing ? pesos(existing.salary_minor) : '')
+    const incentiveText = draft.incentive !== undefined && draft.incentive !== ''
+      ? draft.incentive
+      : (existing ? pesos(existing.incentive_minor) : '')
+    const minor = parsePesosToMinor(salaryText)
+    if (minor == null || minor <= 0) {
+      setFormError(`Enter a salary for ${person.full_name}.`)
+      return
+    }
+    const incentive = String(incentiveText).trim() ? parsePesosToMinor(incentiveText) : 0
+    if (incentive == null || incentive < 0) {
+      setFormError(`Incentive for ${person.full_name} must be zero or more.`)
+      return
+    }
     const takeHome = payslipTakeHome(minor, incentive)
-    setBusy(true)
+    const paidFrom = (draft.paidFrom || existing?.paid_from) === 'gcash' ? 'gcash' : 'cash'
+    const note = (draft.note || existing?.note || '').trim()
+    setBusyId(person.id)
     try {
-      const { error: slipError } = await supabase.rpc('send_payslip', {
-        p_staff: staffId,
+      const { error } = existing?.status === 'sent'
+        ? await supabase.rpc('update_office_payslip', {
+            p_id: existing.id,
+            p_salary: minor,
+            p_incentive: incentive,
+            p_paid_from: paidFrom,
+            p_note: note || null,
+          })
+        : await supabase.rpc('send_payslip', {
+            p_staff: person.id,
+            p_branch: branch,
+            p_start: period.start,
+            p_end: period.end,
+            p_salary: minor,
+            p_incentive: incentive,
+            p_paid_from: paidFrom,
+            p_note: note || null,
+          })
+      if (error) throw error
+      toast.success(`${existing ? 'Saved' : 'Sent'} ${formatAccounting(takeHome)} for ${person.full_name}. Finance has the same amount.`)
+      await loadPeriod()
+    } catch (err) {
+      const message = err.message || 'Could not send the payslip'
+      setFormError(message)
+      toast.error(message)
+    } finally {
+      setBusyId('')
+    }
+  }
+
+  async function toggleLock() {
+    if (!period || !branch) return
+    const next = !locked
+    const verb = next ? 'Lock' : 'Unlock'
+    if (!window.confirm(`${verb} ${period.label} for this branch?`)) return
+    setLocking(true)
+    setFormError('')
+    try {
+      const { error } = await supabase.rpc('set_payroll_period_lock', {
         p_branch: branch,
         p_start: period.start,
         p_end: period.end,
-        p_salary: minor,
-        p_incentive: incentive,
-        p_paid_from: paidFrom === 'gcash' ? 'gcash' : 'cash',
-        p_note: note.trim() || null,
-      })
-      if (slipError && !/payslips_one_half|duplicate key/i.test(slipError.message || '')) throw slipError
-      const title = `Monthly salary · ${person?.full_name || 'staff'}`
-      const { error } = await supabase.from('expenses').insert({
-        title,
-        description: [note.trim(), incentive > 0 ? `incentive:${incentive}` : '', `period:${period.start}`].filter(Boolean).join(' · ') || `monthly:${period.start}:${staffId}`,
-        quantity: 1,
-        unit_cost_minor: takeHome,
-        total_minor: takeHome,
-        branch,
-        category_id: salaryAccountId,
-        status: 'paid',
-        expense_kind: 'salary_monthly',
-        paid_from: paidFrom === 'gcash' ? 'gcash' : 'cash',
-        created_by: profile.id,
-        approved_by: profile.id,
-        paid_by: profile.id,
+        p_lock: next,
       })
       if (error) throw error
-      toast.success(`Sent ${formatAccounting(takeHome)} for ${period.label}. No tax.`)
-      setAmountText('')
-      setIncentiveText('')
-      setNote('')
-      await load()
+      toast.success(next ? 'Period locked.' : 'Period unlocked.')
+      await loadPeriod()
     } catch (err) {
-      toast.error(err.message || 'Could not post monthly salary')
+      setFormError(err.message || 'Could not change the lock')
+      toast.error(err.message || 'Could not change the lock')
     } finally {
-      setBusy(false)
+      setLocking(false)
     }
   }
+
+  const tabs = periods.map((row, index) => ({
+    id: row.start,
+    label: index === 0 ? 'This period' : row.label,
+  }))
 
   return (
     <OpsPageShell
       className="hakum-monthly-payroll"
       eyebrow="Finance"
-      title="Monthly salaries"
-      description="Office and admin pay, one half of a month at a time. Salary plus an optional incentive. No tax. The slip is sent to the employee to receive and sign. Day crew stay on the Daily Sheet."
+      title="Payroll"
+      description="Office and admin pay, 14 days at a time. Lucy or Super Admin types the salary and incentive by hand, in cash or GCash. No tax. The same amount posts to Finance. Crew stay on the Daily Sheet."
       actions={
         <Button type="button" variant="outline" className="min-h-11" asChild>
-          <Link to="/operations/payslips">Payslips</Link>
+          <Link to="/operations/payslips">My payslips</Link>
         </Button>
       }
     >
-      <form onSubmit={submit} className="mx-auto flex w-full max-w-xl flex-col gap-4 rounded-2xl border border-border bg-card p-5">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div className="flex w-full max-w-xs flex-col gap-1.5">
             <Label htmlFor="mp-branch">Branch</Label>
             <NamedSelect
               id="mp-branch"
+              name="branch"
               className="min-h-11"
               value={branch}
               onChange={setBranch}
@@ -160,77 +252,150 @@ export default function MonthlyPayrollPage() {
               placeholder="Branch"
             />
           </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="mp-paid">Paid with</Label>
-            <NamedSelect
-              id="mp-paid"
-              className="min-h-11"
-              value={paidFrom}
-              onChange={setPaidFrom}
-              options={[
-                { value: 'cash', label: 'Cash' },
-                { value: 'gcash', label: 'GCash' },
-              ]}
-            />
-          </div>
+          {crewCount ? (
+            <p className="text-sm text-muted-foreground">
+              {crewCount === 1 ? '1 crew member stays on the Daily Sheet.' : `${crewCount} crew stay on the Daily Sheet.`}
+            </p>
+          ) : null}
         </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="mp-staff">Monthly employee</Label>
-          <NamedSelect id="mp-staff" className="min-h-11" value={staffId} onChange={setStaffId} options={staffOptions} placeholder="Who is paid" />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="mp-period">Half month</Label>
-          <NamedSelect
-            id="mp-period"
-            className="min-h-11"
-            value={period?.start || ''}
-            onChange={setPeriodKey}
-            options={halves.map((row) => ({ value: row.start, label: row.label }))}
-            placeholder="Half month"
-          />
-        </div>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="mp-amount">Salary (₱)</Label>
-            <Input id="mp-amount" className="min-h-11 text-right tabular-nums" inputMode="decimal" value={amountText} onChange={(e) => setAmountText(e.target.value)} />
-          </div>
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="mp-incentive">Incentive (₱, optional)</Label>
-            <Input id="mp-incentive" className="min-h-11 text-right tabular-nums" inputMode="decimal" value={incentiveText} onChange={(e) => setIncentiveText(e.target.value)} />
-          </div>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="mp-note">Note (optional)</Label>
-          <Input id="mp-note" className="min-h-11" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. October admin salary" />
-        </div>
-        <Button type="submit" className="min-h-11" disabled={busy}>
-          {busy ? 'Sending…' : 'Send payslip and post'}
-        </Button>
-      </form>
-      {crewNames.length ? (
-        <p className="mx-auto mt-3 w-full max-w-xl text-sm text-muted-foreground">
-          Day crew on the Daily Sheet: {crewNames.join(', ')}
-        </p>
-      ) : null}
 
-      {recent.length ? (
-        <section className="mx-auto mt-6 w-full max-w-xl" aria-label="Recent monthly salaries">
-          <h2 className="mb-2 text-sm font-semibold tracking-wide text-muted-foreground uppercase">Recent posts</h2>
-          <ul className="divide-y divide-border rounded-2xl border border-border bg-card">
-            {recent.map((row) => (
-              <li key={row.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
-                <span>
-                  <span className="font-medium">{row.title}</span>
-                  <span className="block text-xs text-muted-foreground">
-                    {row.branch} · {row.paid_from === 'gcash' ? 'GCash' : 'Cash'} · {row.status}
-                  </span>
-                </span>
-                <span className="tabular-nums font-medium">{formatAccounting(row.total_minor)}</span>
-              </li>
-            ))}
-          </ul>
+        <Tabs value={period?.start || ''} onValueChange={selectPeriod}>
+          <OpsTabList aria-label="Payroll periods" tabs={tabs} />
+        </Tabs>
+
+        <section className="rounded-2xl border border-border bg-card" aria-labelledby="mp-period-heading">
+          <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <h2 id="mp-period-heading" className="text-lg font-semibold text-pretty">
+                {period ? period.label : 'Payroll period'}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {locked
+                  ? 'Locked. New payslips wait until Super Admin unlocks this period.'
+                  : 'Open. Type salary and incentive, pick cash or GCash, then send. A sent slip can still be changed until the employee receives it. Finance gets the same amount.'}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11 shrink-0"
+              disabled={locking || !branch || (locked && !owner)}
+              onClick={toggleLock}
+            >
+              {locked ? <Lock aria-hidden /> : <LockOpen aria-hidden />}
+              {locking ? 'Saving…' : locked ? (owner ? 'Unlock period' : 'Locked') : 'Lock period'}
+            </Button>
+          </div>
+
+          {formError ? (
+            <p className="mx-4 mt-4 rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm" role="alert">
+              {formError}
+            </p>
+          ) : null}
+
+          {office.length ? (
+            <ul className="divide-y divide-border">
+              {office.map((person) => {
+                const slip = slipByStaff.get(person.id)
+                const draft = draftFor(person)
+                const salaryMinor = slip ? slip.salary_minor : parsePesosToMinor(draft.salary)
+                const incentiveMinor = slip ? slip.incentive_minor : (draft.incentive.trim() ? parsePesosToMinor(draft.incentive) : 0)
+                const takeHome = salaryMinor != null && incentiveMinor != null ? payslipTakeHome(salaryMinor, incentiveMinor) : null
+                const frozen = locked || (slip && slip.status !== 'sent')
+                return (
+                  <li key={person.id} className="flex flex-col gap-3 p-4">
+                    <div className="flex min-w-0 items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{person.full_name}</p>
+                        <p className="text-xs text-muted-foreground">{roleLabel(person.role)}</p>
+                      </div>
+                      <p className="shrink-0 text-right text-sm">
+                        <span className="block text-xs text-muted-foreground">Take-home</span>
+                        <span className="tabular-nums font-semibold">{takeHome == null ? '—' : formatAccounting(takeHome)}</span>
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={`mp-salary-${person.id}`}>Salary (₱)</Label>
+                        <Input
+                          id={`mp-salary-${person.id}`}
+                          name={`salary-${person.id}`}
+                          className="min-h-11 text-right tabular-nums"
+                          inputMode="decimal"
+                          autoComplete="off"
+                          disabled={frozen}
+                          value={frozen && slip ? pesos(slip.salary_minor) : (draft.salary || (slip ? pesos(slip.salary_minor) : ''))}
+                          onChange={(e) => patchDraft(person.id, { salary: e.target.value })}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={`mp-incentive-${person.id}`}>Incentive (₱)</Label>
+                        <Input
+                          id={`mp-incentive-${person.id}`}
+                          name={`incentive-${person.id}`}
+                          className="min-h-11 text-right tabular-nums"
+                          inputMode="decimal"
+                          autoComplete="off"
+                          disabled={frozen}
+                          value={frozen && slip ? pesos(slip.incentive_minor) : (draft.incentive || (slip ? pesos(slip.incentive_minor) : ''))}
+                          onChange={(e) => patchDraft(person.id, { incentive: e.target.value })}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={`mp-paid-${person.id}`}>Paid with</Label>
+                        <NamedSelect
+                          id={`mp-paid-${person.id}`}
+                          name={`paid-${person.id}`}
+                          className="min-h-11"
+                          disabled={frozen}
+                          value={frozen && slip ? slip.paid_from : (draft.paidFrom || slip?.paid_from || 'cash')}
+                          onChange={(value) => patchDraft(person.id, { paidFrom: value })}
+                          options={[
+                            { value: 'cash', label: 'Cash' },
+                            { value: 'gcash', label: 'GCash' },
+                          ]}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor={`mp-note-${person.id}`}>Note</Label>
+                        <Input
+                          id={`mp-note-${person.id}`}
+                          name={`note-${person.id}`}
+                          className="min-h-11"
+                          autoComplete="off"
+                          disabled={frozen}
+                          value={frozen && slip ? (slip.note || '') : (draft.note || slip?.note || '')}
+                          onChange={(e) => patchDraft(person.id, { note: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      {slip ? (
+                        <p className="text-sm text-muted-foreground">
+                          {payslipStatusLabel(slip.status)}
+                          {slip.paid_from === 'gcash' ? ' · GCash' : ' · Cash'}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-muted-foreground">{locked ? 'Not sent. Period is locked.' : 'Not sent yet.'}</p>
+                      )}
+                      <Button
+                        type="button"
+                        className="min-h-11 sm:w-auto"
+                        disabled={frozen || busyId === person.id}
+                        onClick={() => sendOne(person)}
+                      >
+                        {busyId === person.id ? 'Saving…' : slip?.status === 'sent' && !locked ? 'Save changes' : slip ? payslipStatusLabel(slip.status) : 'Send payslip'}
+                      </Button>
+                    </div>
+                  </li>
+                )
+              })}
+            </ul>
+          ) : (
+            <p className="p-4 text-sm text-muted-foreground">No office or admin staff at this branch. Crew are paid on the Daily Sheet.</p>
+          )}
         </section>
-      ) : null}
+      </div>
     </OpsPageShell>
   )
 }

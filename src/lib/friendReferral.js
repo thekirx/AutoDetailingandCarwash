@@ -1,7 +1,7 @@
 /** Friend-code helpers. The live points and discount live in app_settings referral_program. */
 
 export const FRIEND_REFERRAL_POINTS = 50
-export const REFERRER_DISCOUNT_RATE = 0.03
+export const REFERRER_DISCOUNT_RATE = 0.05
 
 const ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 

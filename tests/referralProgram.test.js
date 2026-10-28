@@ -3,10 +3,10 @@ import { readFileSync } from 'node:fs'
 import test from 'node:test'
 import { formatDiscountPercent, normalizeReferralProgram, referralOfferCopy, DEFAULT_FRIEND_POINTS, DEFAULT_DISCOUNT_RATE } from '../src/lib/referralProgram.js'
 
-test('missing settings stay at 50 points and 3 percent', () => {
+test('missing settings stay at 50 points and 5 percent', () => {
   const program = normalizeReferralProgram(null)
-  assert.deepEqual(program, { friend_points: 50, discount_rate: 0.03 })
-  assert.equal(formatDiscountPercent(program.discount_rate), '3%')
+  assert.deepEqual(program, { friend_points: 50, discount_rate: 0.05 })
+  assert.equal(formatDiscountPercent(program.discount_rate), '5%')
 })
 
 test('percent input and stored rate normalize to the same offer', () => {
@@ -25,11 +25,9 @@ test('blank offer input uses the same defaults as the database function', () => 
     friend_points: DEFAULT_FRIEND_POINTS,
     discount_rate: DEFAULT_DISCOUNT_RATE,
   })
-  const sql = readFileSync(new URL('../supabase/migrations/20261017170000_referral_program_settings.sql', import.meta.url), 'utf8')
-  const points = sql.match(/friend_points', ''\)::int[\s\S]*?\), (\d+)\)/)
-  const rate = sql.match(/discount_rate', ''\)::numeric[\s\S]*?\), ([\d.]+)\)/)
-  assert.equal(Number(points?.[1]), DEFAULT_FRIEND_POINTS)
-  assert.equal(Number(rate?.[1]), DEFAULT_DISCOUNT_RATE)
+  const sql = readFileSync(new URL('../supabase/migrations/20261028120000_referral_discount_default_5.sql', import.meta.url), 'utf8')
+  assert.match(sql, /friend_points', ''\)::int[\s\S]*?\), 50\)/)
+  assert.match(sql, /discount_rate', ''\)::numeric[\s\S]*?\), 0\.05\)/)
 })
 
 test('a points redemption deducts the pickup branch, not global stock', () => {

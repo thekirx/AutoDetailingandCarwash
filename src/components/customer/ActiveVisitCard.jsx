@@ -20,7 +20,7 @@ export default function ActiveVisitCard({ visit, branchName, className = '', var
     return (
       <article className={`capp-live-card capp-span ${info.done ? 'is-done ' : ''}${className}`.trim()} aria-label="Active visit">
         <div className="capp-live-top">
-          <p className="capp-eyebrow">{[visit.queue_label, branchName].filter(Boolean).join(' · ') || 'Your car'}</p>
+          <p className="capp-eyebrow">{branchName || 'Your car'}</p>
           <Badge status={visit.status} label={statusLabel} />
         </div>
         <h2 className="capp-live-plate">{visit.vehicle_plate || visit.service_name || 'Your car'}</h2>
@@ -78,12 +78,6 @@ export default function ActiveVisitCard({ visit, branchName, className = '', var
         </div>
         <div className="grid justify-items-end gap-1.5">
           <Badge status={visit.status} label={statusLabel} />
-          {visit.queue_label ? (
-            <p className="capp-q">
-              {visit.queue_label}
-              <span>Ticket</span>
-            </p>
-          ) : null}
         </div>
       </div>
       <VisitProgress visit={progress} />

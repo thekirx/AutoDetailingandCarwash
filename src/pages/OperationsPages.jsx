@@ -39,6 +39,7 @@ import {
   buildCompensationPostPlan,
 } from '../lib/compensation'
 import { collectPaged } from '../lib/crmInsights'
+import CustomerNotesPanel from '../components/CustomerNotesPanel'
 import QueueTicketEditModal from '../components/QueueTicketEditModal'
 import QueueTicketEditor from '../components/QueueTicketEditor'
 import TeamLeadQueuePage from './TeamLeadQueuePage'
@@ -1621,6 +1622,11 @@ export function NewQueueTicketPage() {
                   </p>
                 ) : plateLookupState === 'loading' ? (
                   <p className="sm:col-span-2 floor-alert">Checking plate number...</p>
+                ) : null}
+                {form.customer_id ? (
+                  <div className="sm:col-span-2">
+                    <CustomerNotesPanel customerId={form.customer_id} plate={form.vehicle_plate} canWrite={false} />
+                  </div>
                 ) : null}
                 <VehicleMakeModelFields
                   make={form.vehicle_make}

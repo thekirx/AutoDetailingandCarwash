@@ -18,7 +18,7 @@ Live database: `lybxhpzzqqyqswvuwpxv`. Unit suite at the last product commit: 24
 1. **Cash advance on the person's page.** Every employee and crew except Super Admin can ask. My advances shows the amount still owed, the history, a partial payment, and paid up. Super Admin and Assistant Super Admin approve the request. That approval writes the code. The branch then records the cash on the Daily Sheet against that person. It is not an expense.
 2. **Not the planner form.** The person types the amount and what it is for on My advances. The Daily Sheet is where the cash leaves the drawer.
 3. **Queue number** on every wash, package, and detailing ticket.
-4. **Team Lead notes in step 1.** The new-ticket step shows notes. Once the car is in the queue, crew see the same notes, or “No notes”.
+4. **Team Lead notes in step 1.** The first step of a new ticket, Vehicle, has a notes box. The queue card shows the customer name and those notes, or “No notes”, so crew see them without opening the ticket.
 5. **Branch Admin does not sell detailing, packages, or services.** They add merch and coffee drinks only, and only on a ticket the Team Lead already sent to payment. They cannot rewrite that ticket. If it needs a change, they tell the Team Lead.
 6. **Unpaid advances for the owner.** Floor Insight lists who still owes. The POS Cash advances tab is the summary. When a name is chosen on the Daily Sheet, the remaining balance is shown before the cash is given or paid back.
 7. **Cash, not drawer.** Daily Sheet labels and the close hint say cash.
@@ -38,7 +38,7 @@ Live database: `lybxhpzzqqyqswvuwpxv`. Unit suite at the last product commit: 24
 21. **Inventory is per branch.** Branch Admin requests a restock and cannot type over the current count. Super Admin approves on `/operations/approvals` before the count changes. The approval does not create a bill. Cost stays a manual finance entry.
 22. **Show in POS** is a checkbox on each item. Coffee stock and chemicals stay hidden even if the box is checked. Point-only merch stays hidden until it also has a peso price.
 23. **Stock categories.** Merchandise can show on POS. Coffee drinks, such as a Spanish latte, are their own POS items. Coffee stock (cups, beans, supplies) is inventory only and stays off POS. Chemicals stay off POS.
-24. **Approvals.** `/operations/approvals` is the central page. Floor Insight shows how many restocks and bills are waiting, for the owner only. Assistant Super Admin can open Approvals and cannot approve a restock. Owner is BossMich. Lucy is whoever holds Assistant Super Admin. They can set a stock count.
+24. **Approvals.** `/operations/approvals` is the central page. Floor Insight shows how many restocks and bills are waiting, for the owner only. Assistant Super Admin can open Approvals and cannot approve a restock. Owner is BossMich. Lucy is the General Admin account Luci (`assistant@hakumautocare.com`). Robert is a second General Admin (`robert@hakumautocare.com`) with the same role, all branches, and the same grants. Both can set a stock count. Only Super Admin approves a restock.
 25. **Cash label and collection.** No morning float. Cash left is the day's cash, not float plus cash.
 
 ## Kept — in the note, not what the app does
@@ -47,7 +47,7 @@ Live database: `lybxhpzzqqyqswvuwpxv`. Unit suite at the last product commit: 24
 |---|---|
 | Newest ticket on top, and also the next car is FIFO | Oldest waiting car stays next. A new ticket goes to the bottom |
 | Super Admin, Branch Admin, and ASA see unpaid advances on Floor Insight | Owner sees that list on Floor Insight. Branch Admin and ASA use the POS Cash advances tab or the Daily Sheet. The 19 Oct access sheet does not give them Floor Insight |
-| Robert can correct stock, and Robert approves with Lucy and the owner | No Robert account. Owner and whoever holds Assistant Super Admin can set a count. Only Super Admin approves a restock |
+| Robert approves restock with the owner | Robert’s account is General Admin, the same role as Lucy. He can set a stock count. He opens Approvals and cannot approve a restock. Only Super Admin approves a restock |
 | Each coffee sale deducts one cup and 20 grams of beans, and the coffee menu shows cups and beans left | A drink does not deduct coffee stock. The remaining-cups and remaining-grams line on the coffee menu was removed with that deduction. Coffee stock is counted on the branch inventory page only |
 | The register adds the free visit reward as a line | The branch hands the gift. POS shows the reward. The sale total stays the money that was paid |
 

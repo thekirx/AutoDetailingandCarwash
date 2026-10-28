@@ -156,7 +156,7 @@ export default function CustomerQueuePage() {
               <Link key={b.id} className="capp-card capp-queue-car" to={customerVisitPath(b.id)}>
                 <div className="capp-card-row">
                   <div className="min-w-0">
-                    <p className="capp-eyebrow">{b.queue_label || 'Ticket'}</p>
+                    <p className="capp-eyebrow">Your car</p>
                     <h3 className="capp-title" style={{ fontSize: '1.05rem' }}>
                       {b.vehicle_plate || b.service_name || 'Visit'}
                     </h3>

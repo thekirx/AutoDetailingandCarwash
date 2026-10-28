@@ -69,7 +69,7 @@ export default function ReferralProgramCard() {
       <div>
         <h2 className="text-base font-semibold text-foreground">Friend referral</h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Owner and Super Admin set both numbers. The friend&apos;s points and the detailing discount percent are whatever you save here (the starting default is 50 points and 3%). Nothing in the app locks this to 5%. Discounts already applied stay as they were.
+          Owner and Super Admin set both numbers. The friend&apos;s points and the detailing discount percent are whatever you save here (the starting default is 50 points and 5%). Discounts already applied stay as they were.
         </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">

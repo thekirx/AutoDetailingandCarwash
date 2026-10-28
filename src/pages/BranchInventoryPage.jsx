@@ -53,6 +53,7 @@ export default function BranchInventoryPage({
   const [restockQty, setRestockQty] = useState({})
   const [pointPrice, setPointPrice] = useState({})
   const [ownerQty, setOwnerQty] = useState({})
+  const [moveTo, setMoveTo] = useState({})
   const [leftoverQty, setLeftoverQty] = useState({})
   const [recons, setRecons] = useState([])
   const [pendingRestocks, setPendingRestocks] = useState([])
@@ -275,6 +276,39 @@ export default function BranchInventoryPage({
       if (movErr) throw movErr
       toast.success(`Restocked ${product.name} (+${add})`)
       setRestockQty((s) => ({ ...s, [product.id]: '' }))
+      await load()
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function onTransfer(product) {
+    if (!canCatalog) return
+    if (!assertCanMutate()) return
+    const qty = Number(restockQty[product.id])
+    const dest = moveTo[product.id]
+    if (!dest || dest === branch) {
+      toast.error('Pick another branch.')
+      return
+    }
+    if (!Number.isInteger(qty) || qty < 1) {
+      toast.error('Enter how many to move in the add box.')
+      return
+    }
+    setSaving(true)
+    try {
+      const { error } = await supabase.rpc('transfer_branch_stock', {
+        p_product: product.id,
+        p_from: branch,
+        p_to: dest,
+        p_qty: qty,
+      })
+      if (error) throw error
+      toast.success(`Moved ${qty} of ${product.name}`)
+      setRestockQty((s) => ({ ...s, [product.id]: '' }))
+      setMoveTo((s) => ({ ...s, [product.id]: '' }))
       await load()
     } catch (err) {
       toast.error(err.message)
@@ -565,6 +599,21 @@ export default function BranchInventoryPage({
                         />
                         <Button type="button" variant="outline" size="sm" disabled={saving || !p.assigned} onClick={() => onOwnerSet(p)}>
                           Set
+                        </Button>
+                        <select
+                          className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                          aria-label={`Move ${p.name} to another branch`}
+                          value={moveTo[p.id] || ''}
+                          disabled={!p.assigned || saving}
+                          onChange={(e) => setMoveTo((s) => ({ ...s, [p.id]: e.target.value }))}
+                        >
+                          <option value="">Move to</option>
+                          {branches.filter((b) => b.slug !== branch).map((b) => (
+                            <option key={b.slug} value={b.slug}>{b.name}</option>
+                          ))}
+                        </select>
+                        <Button type="button" variant="outline" size="sm" disabled={saving || !p.assigned} onClick={() => onTransfer(p)}>
+                          Move
                         </Button>
                       </div>
                     </TableCell>

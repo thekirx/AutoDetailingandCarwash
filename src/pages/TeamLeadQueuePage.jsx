@@ -409,7 +409,7 @@ export default function TeamLeadQueuePage() {
 
 /** Minimal select for plate history (avoids pulling unused board columns). */
 const QUEUE_BOARD_SELECT_MIN = `
-  booking_id, branch, queue_number, queue_date, status, customer_name, customer_phone,
+  booking_id, branch, queue_number, queue_date, status, customer_id, customer_name, customer_phone,
   vehicle_plate, vehicle_make, vehicle_model, vehicle_type, service_name, service_sla_minutes,
   base_price_minor, final_price_minor, assigned_staff_name, created_at, visit_group_id,
   service_pay_category, waiting_at, in_progress_at, final_checking_at, for_payment_at,

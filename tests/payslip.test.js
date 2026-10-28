@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { isDayCrewRole, payHalf, payHalfChoices, payslipStatusLabel, payslipTakeHome } from '../src/lib/payslip.js'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { isDayCrewRole, officePayrollPeople, payHalf, payHalfChoices, payPeriodList, payslipStatusLabel, payslipTakeHome } from '../src/lib/payslip.js'
 
 describe('payslips', () => {
   it('pays the salary plus the incentive and does not take tax', () => {
@@ -9,21 +12,45 @@ describe('payslips', () => {
     assert.equal(payslipTakeHome(2000000), 2000000)
   })
 
-  it('splits the month into two halves', () => {
-    assert.deepEqual(payHalf('2026-10-07'), {
-      start: '2026-10-01',
-      end: '2026-10-15',
-      label: 'October 1–15',
+  it('uses 14-day periods from the Monday anchor', () => {
+    assert.deepEqual(payHalf('2026-01-05'), {
+      start: '2026-01-05',
+      end: '2026-01-18',
+      label: 'January 5–18',
     })
-    assert.equal(payHalf('2026-10-26').start, '2026-10-16')
-    assert.equal(payHalf('2026-10-26').end, '2026-10-31')
-    assert.equal(payHalf('2026-02-20').end, '2026-02-28')
+    assert.equal(payHalf('2026-01-19').start, '2026-01-19')
+    assert.equal(payHalf('2026-01-19').end, '2026-02-01')
   })
 
-  it('offers the current half and the one before it', () => {
-    const choices = payHalfChoices('2026-10-02')
-    assert.equal(choices[0].start, '2026-10-01')
-    assert.equal(choices[1].end, '2026-09-30')
+  it('offers the current period and the one before it', () => {
+    const choices = payHalfChoices('2026-01-10')
+    assert.equal(choices[0].start, '2026-01-05')
+    assert.equal(choices[1].end, '2026-01-04')
+  })
+
+  it('lists four bi-weekly tabs with this period first', () => {
+    const periods = payPeriodList('2026-01-20', 4)
+    assert.deepEqual(periods.map((row) => row.start), ['2026-01-19', '2026-01-05', '2025-12-22', '2025-12-08'])
+  })
+
+  it('keeps crew off the office roster', () => {
+    const rows = officePayrollPeople([
+      { role: 'staff', full_name: 'Crew', is_active: true },
+      { role: 'admin', full_name: 'Branch', is_active: true },
+      { role: 'assistant_super_admin', full_name: 'Office', is_active: false },
+    ])
+    assert.deepEqual(rows.map((row) => row.full_name), ['Branch'])
+  })
+
+  it('payroll page uses period tabs and a lock', () => {
+    const page = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../src/pages/MonthlyPayrollPage.jsx'), 'utf8')
+    const sql = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../supabase/migrations/20261028130000_payroll_period_lock.sql'), 'utf8')
+    assert.match(page, /This period/)
+    assert.match(page, /Lock period/)
+    assert.match(page, /officePayrollPeople/)
+    assert.match(page, /set_payroll_period_lock/)
+    assert.match(sql, /This payroll period is locked/)
+    assert.match(sql, /Only Super Admin can unlock/)
   })
 
   it('keeps crew off the monthly list', () => {

@@ -1,7 +1,7 @@
 /** Saved friend-referral offer. The booking trigger reads the same app_settings row. */
 
 export const DEFAULT_FRIEND_POINTS = 50
-export const DEFAULT_DISCOUNT_RATE = 0.03
+export const DEFAULT_DISCOUNT_RATE = 0.05
 
 function presentNumber(value) {
   if (value === '' || value == null) return null
@@ -24,7 +24,7 @@ export function normalizeReferralProgram(raw = {}) {
 
 export function formatDiscountPercent(rate) {
   const pct = Math.round(Number(rate) * 1000) / 10
-  if (!Number.isFinite(pct)) return '3%'
+  if (!Number.isFinite(pct)) return '5%'
   return `${Number.isInteger(pct) ? pct : pct}%`
 }
 

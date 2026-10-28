@@ -32,7 +32,7 @@ describe('booking referral source', () => {
     const friend = normalizeReferral({ source: 'friend_referral', name: ' hk-4k 2m9p ' })
     assert.equal(friend.referred_by_name, 'HK4K2M9P')
     assert.equal(friend.referred_by_staff_id, null)
-    assert.equal(referrerDiscountMinor(100000), 97000)
+    assert.equal(referrerDiscountMinor(100000), 95000)
     assert.equal(mintReferralCode(() => 0), 'HKAAAAAA')
   })
 

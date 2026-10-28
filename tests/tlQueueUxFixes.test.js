@@ -31,6 +31,11 @@ describe('TL queue UX — size, crew-first, start, price', () => {
 
   it('queue list offers Start · pick crew through the existing ticket modal', () => {
     assert.match(card, /Start · pick crew/)
+    assert.match(card, /ticket\.customer_name/)
+    assert.match(card, /No notes/)
+    assert.match(card, /formatQueueNumberForKind/)
+    assert.match(card, /Repeat customer/)
+    assert.match(tlPage, /customer_id/)
     assert.match(card, /onClick=\{onOpen\}/)
     assert.match(tlPage, /onOpen=\{\(\) => setEditBookingId\(ticket\.booking_id\)\}/)
     assert.match(tlPage, /canManage/)

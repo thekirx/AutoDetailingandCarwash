@@ -1,6 +1,6 @@
 # NewChanges checklist
 
-Source: `NewChanges.md` (Hakum notes, 25 Oct 2026). Later instructions override two lines: coffee drinks do not deduct cups or grams, and Robert is not an account. Co-dev summary: `docs/plans/2026-10-26-new-changes-handoff.md`.
+Source: `NewChanges.md` (Hakum notes, 25 Oct 2026). Later instructions override one line: coffee drinks do not deduct cups or grams. Robert has a General Admin account, the same role as Lucy. Co-dev summary: `docs/plans/2026-10-26-new-changes-handoff.md`.
 
 Status key: **Done** means the screen and the database agree. **Kept** means the note and a later rule disagree, and the later rule is what the app does.
 
@@ -46,8 +46,8 @@ Status key: **Done** means the screen and the database agree. **Kept** means the
 | Merchandise and coffee drinks on POS. Coffee stock and chemicals off POS | **Done** | Coffee drinks are their own items. Coffee stock is a count. A drink sale does not deduct cups or grams |
 | Show in POS toggle | **Done** | Coffee stock and chemicals stay hidden. Point-only merch stays hidden until it has a peso price |
 | Branch Admin restocks. Super Admin approves. No cost | **Done** | The count moves on approval. The approval does not create a bill |
-| Owner and Lucy can correct a count | **Done** | Owner is BossMich. Lucy is whoever holds Assistant Super Admin. They can set the count |
-| Robert can correct a count | **Kept** | Robert is a name in the note, not a role. No account was created |
+| Owner and Lucy can correct a count | **Done** | Owner is BossMich. Lucy is the General Admin Luci. She can set the count |
+| Robert can correct a count | **Done** | Robert is a General Admin, same role and grants as Lucy, all branches. Login `robert@hakumautocare.com`. He can set a count and cannot approve a restock |
 | Approvals page and a waiting count on Floor Insight | **Done** | `/operations/approvals`. Floor Insight shows the waiting count for the owner. Assistant Super Admin can open the page and cannot approve a restock |
 
 ## Database

@@ -8,6 +8,16 @@ export const DAYLIGHT_STAGES = [
   { key: 'completed', label: 'Done', color: 'var(--ok)', collapsed: true },
   { key: 'cancelled', label: 'Cancelled', color: 'var(--ink-3)', collapsed: true },
 ]
+function byQueueSequence(a, b) {
+  const aQ = Number(a.queue_number)
+  const bQ = Number(b.queue_number)
+  if (Number.isFinite(aQ) && Number.isFinite(bQ) && aQ !== bQ) return aQ - bQ
+  const aT = new Date(a.waiting_at || a.created_at).getTime()
+  const bT = new Date(b.waiting_at || b.created_at).getTime()
+  if (Number.isFinite(aT) && Number.isFinite(bT) && aT !== bT) return aT - bT
+  return 0
+}
+
 export function formatDaylightDuration(minutes) {
   if (minutes == null || !Number.isFinite(minutes) || minutes < 0 || minutes > 1440) return '—'
   return `${Math.round(minutes)} min`
@@ -23,7 +33,10 @@ export function groupDaylightQueue(tickets, yourMove) {
   const stages = yourMove
     ? [{ key: 'your_move', status: 'final_checking', label: 'Your move', color: 'var(--blue)' }, ...DAYLIGHT_STAGES.filter(s => s.key !== 'final_checking')]
     : DAYLIGHT_STAGES
-  const groups = stages.map(stage => ({ ...stage, tickets: rows.filter(t => t.status === (stage.status || stage.key)) }))
+  const groups = stages.map(stage => ({
+    ...stage,
+    tickets: rows.filter(t => t.status === (stage.status || stage.key)).sort(byQueueSequence),
+  }))
   // Keep any legacy loaded status accessible instead of dropping a ticket.
   const known = new Set(DAYLIGHT_STAGES.map(s => s.key))
   for (const ticket of rows.filter(t => !known.has(t.status))) {

@@ -12,6 +12,14 @@ describe('Daylight queue presentation', () => {
     assert.deepEqual(groupDaylightQueue(rows, false).map(g => g.key), ['waiting', 'in_progress', 'final_checking', 'redo', 'for_payment', 'completed', 'cancelled'])
     assert.equal(rows[2].status, 'final_checking')
   })
+  it('orders a lane by queue number so the first arrival is first', () => {
+    const groups = groupDaylightQueue([
+      { booking_id: 'late', status: 'waiting', queue_number: 8, waiting_at: '2026-10-28T02:00:00Z' },
+      { booking_id: 'first', status: 'waiting', queue_number: 2, waiting_at: '2026-10-28T01:00:00Z' },
+      { booking_id: 'mid', status: 'waiting', queue_number: 5, waiting_at: '2026-10-28T01:30:00Z' },
+    ], false)
+    assert.deepEqual(groups[0].tickets.map(t => t.booking_id), ['first', 'mid', 'late'])
+  })
   it('marks an unavailable payment count as unknown instead of inventing zero', () => {
     const rows = [{ status: 'waiting' }, { status: 'final_checking' }]
     assert.deepEqual(queueSummary(rows, ['waiting', 'in_progress', 'final_checking', 'redo']).map(s => s.value), [1, 0, 1, null])

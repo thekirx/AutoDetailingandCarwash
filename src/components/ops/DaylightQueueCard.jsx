@@ -1,5 +1,6 @@
 import { Check, Play, Undo2 } from 'lucide-react'
 import { formatDaylightDuration } from '../../queue/daylightPresentation'
+import { formatQueueNumberForKind } from '../../lib/serviceKinds'
 import { isOverSla } from '../../lib/ownerRevisionsPhase7'
 
 function elapsedMinutes(ticket) {
@@ -27,8 +28,13 @@ export default function DaylightQueueCard({ ticket, yourMove, next, canStart, ca
     <article className={`daylight-car ${yourMove ? 'daylight-car-your-move' : ''}`}>
       <button type="button" className="daylight-car-open" onClick={onOpen} aria-label={`Open ticket ${ticket.vehicle_plate || 'No plate'} · ${vehicle}`}>
         <span className="daylight-car-top">
+          {ticket.queue_number != null && ticket.queue_number !== '' ? (
+            <span className="tabular-nums">{formatQueueNumberForKind(ticket.queue_number, ticket.service_pay_category)}</span>
+          ) : null}
           <span className="daylight-plate">{ticket.vehicle_plate || 'NO PLATE'}</span>
           <strong>{vehicle}</strong>
+          {ticket.customer_name ? <span>{ticket.customer_name}</span> : null}
+          {ticket.customer_id ? <span>Repeat customer</span> : null}
           <span className={`daylight-time ${late ? 'daylight-time-late' : ''}`}>
             {late ? <span className="sr-only">Over service time: </span> : null}{time}
           </span>
@@ -40,6 +46,7 @@ export default function DaylightQueueCard({ ticket, yourMove, next, canStart, ca
             <span className="daylight-next">Happy birthday — ask for their code</span>
           ) : null}
         </span>
+        <span className="daylight-car-meta">{ticket.notes?.trim() ? ticket.notes : 'No notes'}</span>
         {crew.length ? (
           <span className="daylight-crew">
             <span className="daylight-avatars" aria-hidden>

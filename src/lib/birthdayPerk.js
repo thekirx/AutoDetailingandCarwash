@@ -101,7 +101,7 @@ export function isBirthdayPerkActive(perk, now = new Date()) {
  */
 export const BIRTHDAY_GIFT_LABEL = 'free carwash'
 export const BIRTHDAY_GIFT_TITLE = 'Free carwash'
-export const BIRTHDAY_PERK_DAYS = 30
+export const BIRTHDAY_PERK_DAYS = 7
 
 const DAY_MS = 86_400_000
 /** Countdown turns amber once this few days remain. */

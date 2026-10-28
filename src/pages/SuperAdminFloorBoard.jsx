@@ -9,6 +9,7 @@ import { canSeeAllBranches, isAssistantSuperAdmin, isSuperAdmin, ROLES } from '@
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { canReviewDailySheet } from '@/lib/dailySheet'
 import FloorMoneyPanel from './FloorMoneyPanel'
+import KpiPage from './KpiPage'
 import PosCashAdvancePanel from '@/pages/pos/PosCashAdvancePanel'
 import ReferralRank from '@/components/bookings/ReferralRank'
 import { paymentMethodLabel } from '@/lib/paymentMethods'
@@ -808,6 +809,12 @@ export default function SuperAdminFloorBoard() {
           </div>
         </div>
       </Section>
+
+      {isSuperAdmin(profile) ? (
+        <Section id="month" eyebrow="Month" title="Crew and branch">
+          <KpiPage embedded />
+        </Section>
+      ) : null}
     </section>
   )
 }

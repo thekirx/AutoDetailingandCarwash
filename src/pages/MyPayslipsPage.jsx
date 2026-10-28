@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessMyPayslips } from '@/auth/permissions'
 import { formatAccounting } from '@/lib/dailySheet'
-import { payslipStatusLabel } from '@/lib/payslip'
+import { payslipStatusLabel, payslipTakeHome } from '@/lib/payslip'
 import { supabase } from '@/lib/supabase'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import { Button } from '@/components/ui/button'
@@ -67,7 +67,7 @@ export default function MyPayslipsPage() {
       className="hakum-my-payslips"
       eyebrow="Finance"
       title="Payslips"
-      description="Each slip is one half of a month. Salary plus any incentive. No tax. Mark it received, then sign with your name."
+      description="Each slip covers 14 days. Salary plus any incentive Lucy or Super Admin typed. No tax. Mark it received, then sign with your name."
       actions={
         <Button type="button" variant="outline" className="min-h-11" asChild>
           <Link to="/operations/my-advances">My advances</Link>
@@ -77,25 +77,41 @@ export default function MyPayslipsPage() {
       {rows.length ? (
         <ul className="mx-auto flex w-full max-w-xl flex-col gap-3" aria-label="Your payslips">
           {rows.map((row) => {
-            const takeHome = (Number(row.salary_minor) || 0) + (Number(row.incentive_minor) || 0)
+            const takeHome = payslipTakeHome(row.salary_minor, row.incentive_minor)
             return (
               <li key={row.id} className="rounded-2xl border border-border bg-card p-4">
                 <div className="flex items-start justify-between gap-3">
-                  <div>
+                  <div className="min-w-0">
                     <p className="font-medium">
                       {row.period_start} – {row.period_end}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {row.branch} · {row.paid_from === 'gcash' ? 'GCash' : 'Cash'} · {payslipStatusLabel(row.status)}
+                      {row.branch} · {payslipStatusLabel(row.status)}
                     </p>
                   </div>
-                  <p className="tabular-nums font-medium">{formatAccounting(takeHome)}</p>
+                  <p className="shrink-0 text-right">
+                    <span className="block text-xs text-muted-foreground">Take-home</span>
+                    <span className="tabular-nums font-semibold">{formatAccounting(takeHome)}</span>
+                  </p>
                 </div>
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Salary {formatAccounting(row.salary_minor)}
-                  {row.incentive_minor > 0 ? ` · Incentive ${formatAccounting(row.incentive_minor)}` : ''}
-                  {row.note ? ` · ${row.note}` : ''}
-                </p>
+                <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Salary</dt>
+                    <dd className="tabular-nums">{formatAccounting(row.salary_minor)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Incentive</dt>
+                    <dd className="tabular-nums">{formatAccounting(row.incentive_minor || 0)}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Paid with</dt>
+                    <dd>{row.paid_from === 'gcash' ? 'GCash' : 'Cash'}</dd>
+                  </div>
+                  <div>
+                    <dt className="text-xs text-muted-foreground">Note</dt>
+                    <dd className="break-words">{row.note || '—'}</dd>
+                  </div>
+                </dl>
                 {row.status === 'sent' ? (
                   <Button type="button" className="mt-3 min-h-11" disabled={busyId === row.id} onClick={() => receive(row.id)}>
                     I received this

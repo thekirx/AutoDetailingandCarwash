@@ -90,7 +90,7 @@ export default function CustomerVisitPage() {
       className="capp-visit"
       title={visit?.vehicle_plate || 'Visit'}
       subtitle={visit ? [visit.service_name, car].filter(Boolean).join(' · ') : ''}
-      navTitle={visit?.queue_label || visit?.vehicle_plate || 'Visit'}
+      navTitle={visit?.vehicle_plate || 'Visit'}
       onBack={back}
     >
       {error ? (
@@ -113,7 +113,6 @@ export default function CustomerVisitPage() {
         <>
           <div className="capp-visit-status">
             <Badge status={finished ? 'completed' : visit.status} label={finished ? 'Completed' : progress.label || visit.status} />
-            {visit.queue_label ? <span className="capp-visit-ticket">Ticket {visit.queue_label}</span> : null}
           </div>
 
           <section className="capp-section" aria-label="Progress">
@@ -158,12 +157,6 @@ export default function CustomerVisitPage() {
               <h2>Details</h2>
             </div>
             <dl className="capp-sum">
-              {visit.queue_label ? (
-                <div>
-                  <dt>Ticket</dt>
-                  <dd>{visit.queue_label}</dd>
-                </div>
-              ) : null}
               <div>
                 <dt>Branch</dt>
                 <dd>{branchLabel(branches, visit.branch) || visit.branch || '—'}</dd>

@@ -3,10 +3,11 @@
  * Talked to an employee stores the name and, when it matches, the staff id.
  */
 export const REFERRAL_SOURCES = Object.freeze([
+  { id: 'facebook_ads', label: 'Saw your Facebook ads' },
   { id: 'talked_to_employee', label: 'Talked to an employee' },
-  { id: 'facebook_ads', label: 'Facebook ads' },
+  { id: 'friend_referral', label: 'Referred by a customer' },
+  { id: 'facebook_page', label: 'Inquiry on Facebook page' },
   { id: 'social_media', label: 'Social media' },
-  { id: 'friend_referral', label: 'Friend referral (customer)' },
 ])
 
 export const STAFF_REFERRAL = 'talked_to_employee'

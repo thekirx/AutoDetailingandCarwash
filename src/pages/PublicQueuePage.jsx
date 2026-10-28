@@ -437,9 +437,8 @@ export default function PublicQueuePage({ mode = 'customer' }) {
                           <ul className="lq-tickets">
                             {items.length ? (
                               items.map((item) => (
-                                <li key={`${status}-${item.queueNumber}-${item.plate}`} className="lq-ticket lq-ticket-tv">
+                                <li key={`${status}-${item.plate}-${item.serviceName}`} className="lq-ticket lq-ticket-tv">
                                   <div className="lq-ticket-main">
-                                    <span className="lq-ticket-num tabular-nums">{item.queueNumber}</span>
                                     <span className="lq-ticket-plate tabular-nums">{item.plate}</span>
                                   </div>
                                   <div className="lq-ticket-meta">

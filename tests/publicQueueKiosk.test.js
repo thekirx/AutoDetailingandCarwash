@@ -79,5 +79,8 @@ describe('public queue kiosk modes', () => {
     assert.equal(model.groups.waiting[0].kindLabel, 'Package')
     assert.equal(model.groups.in_progress[0].kindLabel, 'Detailing')
     assert.match(model.groups.in_progress[0].queueNumber, /^D-/)
+    assert.doesNotMatch(page, /lq-ticket-num/)
+    assert.doesNotMatch(page, /\{item\.queueNumber\}/)
+    assert.doesNotMatch(tvPage, /card\.queueNumber|queueNumber\}/)
   })
 })
