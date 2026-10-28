@@ -42,6 +42,19 @@ describe('payslips', () => {
     assert.deepEqual(rows.map((row) => row.full_name), ['Branch'])
   })
 
+  it('the database chooses the 14-day block and will not store a made-up span', () => {
+    const sql = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../supabase/migrations/20261028150000_payroll_period_calendar.sql'), 'utf8')
+    const lib = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../src/lib/payslip.js'), 'utf8')
+    assert.match(sql, /payroll_period_containing/)
+    assert.match(sql, /date '2026-01-05'/)
+    assert.match(sql, /floor\(\(p_on - date '2026-01-05'\)::numeric \/ 14\)/)
+    assert.match(sql, /Use the 14-day payroll block/)
+    assert.match(sql, /payslips_branch_period_idx/)
+    assert.match(sql, /payslip_id/)
+    assert.match(lib, /Date\.UTC\(2026, 0, 5\)/)
+    assert.doesNotMatch(sql, /p_end - p_start\) > 16/)
+  })
+
   it('payroll page uses period tabs and a lock', () => {
     const page = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../src/pages/MonthlyPayrollPage.jsx'), 'utf8')
     const sql = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../supabase/migrations/20261028130000_payroll_period_lock.sql'), 'utf8')
