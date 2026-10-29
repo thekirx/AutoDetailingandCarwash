@@ -11,7 +11,7 @@ import { canEditFinanceBooks, getBranchScopeList, isSuperAdmin } from '@/auth/pe
 import { listStaffPeople } from '@/lib/adminApi'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { formatAccounting } from '@/lib/dailySheet'
-import { isDayCrewRole, officePayrollPeople, payPeriodList, payslipStatusLabel, payslipTakeHome } from '@/lib/payslip'
+import { isDayCrewRole, officePayrollPeople, payPeriodList, payrollPaidFrom, payslipStatusLabel, payslipTakeHome } from '@/lib/payslip'
 import { parsePesosToMinor } from '@/lib/shiftClose'
 import { supabase } from '@/lib/supabase'
 import { fetchBranches } from '@/queue/queueApi'
@@ -122,7 +122,7 @@ export default function MonthlyPayrollPage() {
   }
 
   function draftFor(person) {
-    return drafts[person.id] || { salary: '', incentive: '', paidFrom: 'cash', note: '' }
+    return drafts[person.id] || { salary: '', incentive: '', paidFrom: '', note: '' }
   }
 
   function patchDraft(id, patch) {
@@ -162,7 +162,7 @@ export default function MonthlyPayrollPage() {
       return
     }
     const takeHome = payslipTakeHome(minor, incentive)
-    const paidFrom = (draft.paidFrom || existing?.paid_from) === 'gcash' ? 'gcash' : 'cash'
+    const paidFrom = payrollPaidFrom(draft.paidFrom, existing?.paid_from)
     const note = (draft.note || existing?.note || '').trim()
     setBusyId(person.id)
     try {
@@ -348,7 +348,7 @@ export default function MonthlyPayrollPage() {
                           name={`paid-${person.id}`}
                           className="min-h-11"
                           disabled={frozen}
-                          value={frozen && slip ? slip.paid_from : (draft.paidFrom || slip?.paid_from || 'cash')}
+                          value={payrollPaidFrom(frozen ? slip?.paid_from : draft.paidFrom, slip?.paid_from)}
                           onChange={(value) => patchDraft(person.id, { paidFrom: value })}
                           options={[
                             { value: 'cash', label: 'Cash' },

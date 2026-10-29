@@ -1,0 +1,38 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "Office payroll period",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    { "id": "lucy", "label": "Lucy" },
+    { "id": "calendar", "label": "14-day calendar" },
+    { "id": "books", "label": "Finance" },
+    { "id": "employee", "label": "Office employee" },
+    { "id": "stop", "label": "Refused", "variant": "exception" }
+  ],
+  "mainPath": ["period", "roster", "send", "bill", "slip", "sign"],
+  "nodes": [
+    { "id": "period", "lane": "calendar", "col": 0, "type": "database", "label": "This period", "sublabel": "14 days" },
+    { "id": "roster", "lane": "lucy", "col": 1, "type": "frontend", "label": "Office roster", "sublabel": "salary + incentive" },
+    { "id": "send", "lane": "lucy", "col": 2, "type": "backend", "label": "Send payslip", "sublabel": "one save" },
+    { "id": "bill", "lane": "books", "col": 3, "type": "database", "label": "Salary bill", "sublabel": "account 14" },
+    { "id": "slip", "lane": "employee", "col": 4, "type": "frontend", "label": "Payslip", "sublabel": "breakdown" },
+    { "id": "sign", "lane": "employee", "col": 5, "type": "security", "label": "Sign", "sublabel": "received first" },
+    { "id": "lock", "lane": "lucy", "col": 3, "type": "security", "label": "Lock period", "sublabel": "owner unlocks" },
+    { "id": "refuse", "lane": "stop", "col": 2, "type": "security", "label": "Wrong dates", "sublabel": "not 14 days" }
+  ],
+  "edges": [
+    { "from": "period", "to": "roster", "label": "open tab" },
+    { "from": "roster", "to": "send", "label": "cash or GCash" },
+    { "from": "send", "to": "bill", "label": "paid salary" },
+    { "from": "bill", "to": "slip", "label": "same amount" },
+    { "from": "slip", "to": "sign" },
+    { "from": "send", "to": "lock", "label": "close period", "role": "branch" },
+    { "from": "send", "to": "refuse", "label": "bad span", "role": "error" }
+  ],
+  "cards": [
+    { "dot": "emerald", "title": "One save", "items": ["Slip and Finance bill write together", "Crew stay on the Daily Sheet"] }
+  ]
+}

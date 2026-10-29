@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { isDayCrewRole, officePayrollPeople, payHalf, payHalfChoices, payPeriodList, payslipStatusLabel, payslipTakeHome } from '../src/lib/payslip.js'
+import { isDayCrewRole, officePayrollPeople, payHalf, payHalfChoices, payPeriodList, payrollPaidFrom, payslipStatusLabel, payslipTakeHome } from '../src/lib/payslip.js'
 
 describe('payslips', () => {
   it('pays the salary plus the incentive and does not take tax', () => {
@@ -53,6 +53,16 @@ describe('payslips', () => {
     assert.match(sql, /payslip_id/)
     assert.match(lib, /Date\.UTC\(2026, 0, 5\)/)
     assert.doesNotMatch(sql, /p_end - p_start\) > 16/)
+  })
+
+  it('does not turn a GCash slip into cash when the editor has not chosen a method', () => {
+    assert.equal(payrollPaidFrom('', 'gcash'), 'gcash')
+    assert.equal(payrollPaidFrom(undefined, 'gcash'), 'gcash')
+    assert.equal(payrollPaidFrom('cash', 'gcash'), 'cash')
+    assert.equal(payrollPaidFrom('', null), 'cash')
+    const page = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../src/pages/MonthlyPayrollPage.jsx'), 'utf8')
+    assert.match(page, /payrollPaidFrom/)
+    assert.doesNotMatch(page, /paidFrom: 'cash'/)
   })
 
   it('payroll page uses period tabs and a lock', () => {

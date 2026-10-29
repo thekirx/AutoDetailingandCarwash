@@ -77,6 +77,12 @@ export function officePayrollPeople(people = []) {
   return (people || []).filter((person) => person && !isDayCrewRole(person.role) && person.is_active !== false)
 }
 
+/** Empty draft keeps the saved method. A new slip with no choice is cash. */
+export function payrollPaidFrom(draftPaidFrom, savedPaidFrom) {
+  const chosen = draftPaidFrom || savedPaidFrom || 'cash'
+  return chosen === 'gcash' ? 'gcash' : 'cash'
+}
+
 export function payslipStatusLabel(status) {
   if (status === 'signed') return 'Signed'
   if (status === 'received') return 'Received'
