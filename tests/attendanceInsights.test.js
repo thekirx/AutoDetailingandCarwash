@@ -6,6 +6,9 @@ import {
   summarizePeriodAttendance,
   summarizeTodayAttendance,
   attendanceRoleHeadcount,
+  formatAttendanceHeadcountStrings,
+  isFloorCrew,
+  isAdministrativeCrew,
 } from '../src/lib/attendanceInsights.js'
 import {
   DEFAULT_COMPENSATION_RULES,
@@ -27,6 +30,40 @@ describe('attendanceInsights', () => {
     { staff_id: 'c', attendance_date: '2026-08-27', status: 'absent' },
     { staff_id: 'a', attendance_date: '2026-08-26', status: 'present' },
   ]
+
+  it('formatAttendanceHeadcountStrings matches required two-line format', () => {
+    const roleHeadcount = [
+      { role: 'staff', label: 'Crew', onSite: 8, total: 10 },
+      { role: 'team_lead', label: 'Team Lead', onSite: 2, total: 2 },
+      { role: 'admin', label: 'Admin', onSite: 1, total: 2 },
+    ]
+    const res = formatAttendanceHeadcountStrings('Bacoor', roleHeadcount)
+    assert.equal(res.crewLine, 'Bacoor Branch Crew - 8 out of 10')
+    assert.equal(res.adminLine, 'Team Lead - 2 out of 2 Admin - 1 out of 2')
+    assert.equal(res.fullText, 'Bacoor Branch Crew - 8 out of 10\nTeam Lead - 2 out of 2 Admin - 1 out of 2')
+
+    // Handles lowercase 'bacoor' and strips 'Hakum Auto Care' prefix
+    const res2 = formatAttendanceHeadcountStrings('Hakum Auto Care Bacoor', roleHeadcount)
+    assert.equal(res2.crewLine, 'Bacoor Branch Crew - 8 out of 10')
+
+    const res3 = formatAttendanceHeadcountStrings('bacoor branch', roleHeadcount)
+    assert.equal(res3.crewLine, 'Bacoor branch Crew - 8 out of 10')
+
+    // All branches fallback
+    const resAll = formatAttendanceHeadcountStrings('all', roleHeadcount)
+    assert.equal(resAll.crewLine, 'All Branches Crew - 8 out of 10')
+  })
+
+  it('isFloorCrew and isAdministrativeCrew correctly separate floor crew from admin', () => {
+    assert.equal(isFloorCrew('staff'), true)
+    assert.equal(isFloorCrew('detailer'), true)
+    assert.equal(isFloorCrew('admin'), false)
+    assert.equal(isFloorCrew('team_lead'), false)
+    assert.equal(isFloorCrew({ role: 'staff' }), true)
+    assert.equal(isFloorCrew({ role: 'admin' }), false)
+    assert.equal(isAdministrativeCrew({ role: 'admin' }), true)
+    assert.equal(isAdministrativeCrew({ role: 'staff' }), false)
+  })
 
   it('attendanceRoleHeadcount reads crew, team lead, and admin as on site out of roster', () => {
     const rows = attendanceRoleHeadcount(

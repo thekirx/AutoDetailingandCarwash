@@ -142,6 +142,7 @@ export function BookingPage() {
   const { branches, loading: branchesLoading, error: branchesError } = usePublicBranches()
   const [catalog, setCatalog] = useState([])
   const [status, setStatus] = useState('idle')
+  const [voucherCode, setVoucherCode] = useState('')
   const [error, setError] = useState('')
   const [plateHint, setPlateHint] = useState('')
   const [packageNote, setPackageNote] = useState('')
@@ -321,6 +322,7 @@ export function BookingPage() {
           referral_source: form.referral_source,
           referred_by_name: form.referred_by_name,
           referred_by_staff_id: form.referred_by_staff_id || null,
+          voucher_code: voucherCode.trim() || undefined,
         }),
       })
       const body = await res.json().catch(() => ({}))
@@ -528,6 +530,19 @@ export function BookingPage() {
                 </div>
               ))}
             </dl>
+            <div className="bk-field mt-3">
+              <span>Have a promo voucher? (Optional)</span>
+              <input
+                value={voucherCode}
+                placeholder="Voucher code (e.g. SUMMER10)"
+                onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                autoCapitalize="characters"
+                autoComplete="off"
+                maxLength={16}
+                style={{ fontFamily: 'monospace', textTransform: 'uppercase' }}
+              />
+              <small>Discount will be verified and applied to your booking confirmation.</small>
+            </div>
             <FormLegalNotice id="book-legal" className="bk-agree" />
           </>
         )

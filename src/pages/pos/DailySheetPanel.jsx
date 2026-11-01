@@ -9,7 +9,7 @@ import { NamedSelect } from '@/components/ui/named-select'
 import { cn } from '@/lib/utils'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { cashAdvanceReleaseError } from '@/lib/cashAdvanceCode'
-import { cashAdvanceBalanceLabel, cashAdvanceBalances, cashAdvanceRowsForBalance } from '@/lib/cashAdvanceBalance'
+import { calculateProjectedCashAdvance, cashAdvanceBalances } from '@/lib/cashAdvanceBalance'
 import { parsePesosToMinor } from '@/lib/shiftClose'
 import { notifyOpsEvent } from '@/lib/opsEventNotify'
 import { ROLES } from '@/auth/permissions'
@@ -309,14 +309,25 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
     () => activeAccounts(ctx?.accounts, lines.map((l) => l.account_id)).map((a) => ({ value: a.id, label: a.code ? `${a.code} · ${a.name}` : a.name })),
     [ctx, lines],
   )
+  const priorBalances = useMemo(() => {
+    const saved = (ctx?.caLedger || []).filter((row) => !sheet?.id || row.sheet_id !== sheet.id)
+    return cashAdvanceBalances(saved)
+  }, [ctx?.caLedger, sheet?.id])
+
   const staffOptions = useMemo(() => {
     const seen = new Map()
     for (const a of ctx?.attendance || []) seen.set(a.staff_id, a.full_name || 'Staff')
     for (const s of ctx?.staff || []) {
       if (!seen.has(s.id) && (!s.branch_slug || s.branch_slug === branch)) seen.set(s.id, s.full_name || 'Staff')
     }
-    return [...seen.entries()].map(([value, label]) => ({ value, label }))
-  }, [ctx, branch])
+    const priorMap = new Map(priorBalances.map((r) => [r.staffId, r]))
+    return [...seen.entries()].map(([value, name]) => {
+      const b = priorMap.get(value)
+      const remaining = b?.remainingMinor || 0
+      const debtHint = remaining > 0 ? ` · owes ₱${(remaining / 100).toLocaleString('en-PH', { minimumFractionDigits: 2 })}` : ''
+      return { value, label: `${name}${debtHint}` }
+    })
+  }, [ctx, branch, priorBalances])
   const staffName = (id) => staffOptions.find((o) => o.value === id)?.label || lines.find((l) => l.staff_id === id)?.staff_name || 'Staff'
 
   function patchLine(id, patch) {
@@ -431,10 +442,6 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
 
   const expenseLines = lines.filter((l) => l.kind === 'expense')
   const salaryLines = lines.filter((l) => l.kind === 'salary')
-  const caBalances = useMemo(
-    () => cashAdvanceBalances(cashAdvanceRowsForBalance(ctx?.caLedger || [], lines, sheet?.id || null)),
-    [ctx?.caLedger, lines, sheet?.id],
-  )
   const caLines = lines.filter((l) => l.kind === 'ca_release' || l.kind === 'ca_repay')
   const isSuperAdmin = profile?.role === ROLES.SUPER_ADMIN
   const sheetBranchSlug = review ? sheet?.branch : branch
@@ -705,14 +712,44 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
                     <div className="flex flex-col gap-1">
                       <Label htmlFor={`ds-ca-s-${l.id}`} className="text-xs text-muted-foreground">Staff</Label>
                       <NamedSelect id={`ds-ca-s-${l.id}`} className="min-h-11" value={l.staff_id} onChange={(v) => patchLine(l.id, { staff_id: v })} options={staffOptions} placeholder="Pick staff" />
-                      {l.staff_id ? (
-                        <p className="text-xs font-medium text-foreground">
-                          {cashAdvanceBalanceLabel(caBalances.find((row) => row.staffId === l.staff_id))}
-                          {(caBalances.find((row) => row.staffId === l.staff_id)?.givenMinor || 0) > 0
-                            ? ` · ${formatAccounting(caBalances.find((row) => row.staffId === l.staff_id)?.remainingMinor || 0)}`
-                            : ''}
-                        </p>
-                      ) : null}
+                      {l.staff_id ? (() => {
+                        const priorStaff = priorBalances.find((r) => r.staffId === l.staff_id)
+                        const priorDebt = priorStaff?.remainingMinor || 0
+                        const currentAmount = Number(l.amount_minor) || 0
+                        const projected = calculateProjectedCashAdvance(priorDebt, l.kind, currentAmount)
+                        return (
+                          <div className="mt-1.5 rounded-xl border border-border/80 bg-muted/40 p-2.5 text-xs space-y-1">
+                            <div className="flex items-center justify-between text-muted-foreground">
+                              <span>Current balance (prior debt):</span>
+                              <span className="font-semibold tabular-nums text-foreground">
+                                {priorDebt > 0 ? `${formatAccounting(priorDebt)} owed` : '₱0.00 (No debt)'}
+                              </span>
+                            </div>
+                            {currentAmount > 0 ? (
+                              <>
+                                <div className="flex items-center justify-between text-muted-foreground">
+                                  <span>{l.kind === 'ca_release' ? 'Additional payout:' : 'Payment / deduction:'}</span>
+                                  <span className={`font-semibold tabular-nums ${l.kind === 'ca_release' ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                    {l.kind === 'ca_release' ? `+${formatAccounting(currentAmount)}` : `-${formatAccounting(currentAmount)}`}
+                                  </span>
+                                </div>
+                                <div className="flex items-center justify-between border-t border-border/60 pt-1 font-bold">
+                                  <span className="text-foreground">New remaining balance:</span>
+                                  <span className={`tabular-nums ${projected.newRemainingMinor > 0 ? 'text-amber-600 dark:text-amber-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+                                    {formatAccounting(projected.newRemainingMinor)} ({projected.label})
+                                  </span>
+                                </div>
+                              </>
+                            ) : (
+                              <p className="text-[11px] text-muted-foreground pt-0.5">
+                                {l.kind === 'ca_release'
+                                  ? 'Type advance amount to see additional remaining balance.'
+                                  : 'Type payment amount to see remaining balance after deduction.'}
+                              </p>
+                            )}
+                          </div>
+                        )
+                      })() : null}
                     </div>
                     {l.kind === 'ca_release' ? (
                       <div className="flex flex-col gap-1">

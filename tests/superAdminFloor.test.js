@@ -99,6 +99,33 @@ describe('crew roster available vs absent', () => {
 })
 
 describe('Super Admin floor wiring', () => {
+  it('getCrewAttendanceModel excludes administrative crew from active staff, counts, and busy', () => {
+    const model = getCrewAttendanceModel({
+      staffPool: [
+        { id: 'a', full_name: 'Ana Floor', role: 'staff', is_active: true },
+        { id: 'b', full_name: 'Ben Detail', role: 'detailer', is_active: true },
+        { id: 'c', full_name: 'Carol TL', role: 'team_lead', is_active: true },
+        { id: 'd', full_name: 'Dave Admin', role: 'admin', is_active: true },
+      ],
+      attendance: [
+        { staff_id: 'a', status: 'present' },
+        { staff_id: 'b', status: 'present' },
+        { staff_id: 'c', status: 'present' },
+        { staff_id: 'd', status: 'present' },
+      ],
+      busyStaff: [
+        { staff_id: 'a', booking_id: 'bk-1', booking_status: 'in_progress' },
+        { staff_id: 'c', booking_id: 'bk-2', booking_status: 'in_progress' },
+      ],
+    })
+    assert.equal(model.staffPool.length, 2)
+    assert.deepEqual(model.staffPool.map((s) => s.id), ['a', 'b'])
+    assert.equal(model.presentCount, 2)
+    assert.equal(model.onBayCount, 1)
+    assert.equal(model.availableCount, 1)
+    assert.equal(model.availableStaff[0].staff_id, 'b')
+  })
+
   it('dashboard routes network scope to SuperAdminFloorBoard', () => {
     const page = readFileSync(join(root, 'src/pages/OperationsPages.jsx'), 'utf8')
     const board = readFileSync(join(root, 'src/pages/SuperAdminFloorBoard.jsx'), 'utf8')
@@ -113,6 +140,8 @@ describe('Super Admin floor wiring', () => {
     assert.match(board, /LaneStrip family="detailing"/)
     assert.match(board, /Services Failed QA/)
     assert.match(board, /Floor Insight/)
+    assert.match(board, /formatAttendanceHeadcountStrings/)
+    assert.match(page, /formatAttendanceHeadcountStrings/)
     assert.doesNotMatch(board, /Administrative crew/)
     assert.match(board, /Cancel loss/)
     assert.match(board, /Failed QA/)

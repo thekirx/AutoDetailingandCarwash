@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Cake, KeyRound, LogOut, Mail, Moon, Phone, Plus, Settings, Sun, Smartphone } from 'lucide-react'
+import { Cake, KeyRound, LogOut, Mail, Moon, Phone, Plus, Settings, Sun, Smartphone, Wallet } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
@@ -23,6 +23,10 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { BIRTHDAY_GIFT_LABEL } from '@/lib/birthdayPerk'
+import { loadCashAdvanceLedger } from '@/lib/dailySheetApi'
+import { cashAdvanceBalances } from '@/lib/cashAdvanceBalance'
+import { formatAccounting } from '@/lib/dailySheet'
+import { Badge } from '@/components/ui/badge'
 
 async function portalAction(action, payload) {
   const token = await getAccessTokenFresh()
@@ -65,6 +69,7 @@ export default function UserSettingsModal({
   const [smsBusy, setSmsBusy] = useState(false)
   const [car, setCar] = useState({ plate_number: '', vehicle_make: '', vehicle_model: '', vehicle_type: 'medium', color: '' })
   const [mounted, setMounted] = useState(false)
+  const [caBalance, setCaBalance] = useState(null)
 
   const isCustomer = audience === 'customer' || showGarage
 
@@ -84,7 +89,18 @@ export default function UserSettingsModal({
     loadUserSettings()
       .then((s) => setSmsOptIn(s.sms_opt_in !== false))
       .catch(() => setSmsOptIn(true))
-  }, [open, profile, initialTab])
+
+    if (!isCustomer && profile?.id) {
+      loadCashAdvanceLedger(profile?.branch_slug || null, profile.id)
+        .then((rows) => {
+          const balances = cashAdvanceBalances(rows)
+          setCaBalance(balances[0] || null)
+        })
+        .catch(() => setCaBalance(null))
+    } else {
+      setCaBalance(null)
+    }
+  }, [open, profile, initialTab, isCustomer])
 
   async function toggleSms(next) {
     setSmsBusy(true)
@@ -316,6 +332,53 @@ export default function UserSettingsModal({
 
           {tab === 'account' ? (
             <div className="space-y-5">
+              {!isCustomer && profile?.id ? (
+                <div className="rounded-2xl border border-border bg-card p-4 shadow-sm space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Wallet className="size-4 text-primary" aria-hidden />
+                      <span className="text-sm font-bold text-foreground">Cash advance & debt balance</span>
+                    </div>
+                    <Badge variant={caBalance && caBalance.remainingMinor > 0 ? 'destructive' : 'outline'}>
+                      {caBalance && caBalance.remainingMinor > 0 ? 'Active Debt' : 'Paid Up / No Debt'}
+                    </Badge>
+                  </div>
+
+                  <div>
+                    <p className="text-2xl font-bold tabular-nums text-foreground">
+                      {caBalance && caBalance.givenMinor > 0 ? formatAccounting(caBalance.remainingMinor) : formatAccounting(0)}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {caBalance && caBalance.remainingMinor > 0
+                        ? 'You have an outstanding cash advance debt to be repaid at the branch.'
+                        : caBalance && caBalance.givenMinor > 0
+                          ? 'All cash advances have been fully paid up.'
+                          : 'You currently have no cash advance on record.'}
+                    </p>
+                  </div>
+
+                  {caBalance && caBalance.givenMinor > 0 ? (
+                    <div className="flex items-center justify-between border-t border-border pt-2 text-xs text-muted-foreground">
+                      <span>Total given: <strong className="text-foreground">{formatAccounting(caBalance.givenMinor)}</strong></span>
+                      <span>Total repaid: <strong className="text-foreground">{formatAccounting(caBalance.repaidMinor)}</strong></span>
+                    </div>
+                  ) : null}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full min-h-10 text-xs font-semibold"
+                    onClick={() => {
+                      onOpenChange(false)
+                      navigate('/operations/my-advances')
+                    }}
+                  >
+                    View cash advance history & requests →
+                  </Button>
+                </div>
+              ) : null}
+
               <form onSubmit={saveEmail} className="space-y-3">
                 <div className="flex items-center gap-2 text-sm font-bold">
                   <Mail className="size-4 text-primary" aria-hidden />

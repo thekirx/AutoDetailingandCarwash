@@ -57,6 +57,14 @@ function BookingCarCard({ booking, tone, branchName, expanded, onToggle, next, o
             {whenLabel(booking.scheduled_start)}
             {booking.queue_number != null ? ` · ${formatQueueNumberForKind(booking.queue_number, 'detailing')}` : ''}
           </p>
+          {booking.notes?.trim() ? (
+            <div className="mt-2 flex items-start gap-1.5 rounded-md border border-amber-500/25 bg-amber-500/10 px-2 py-1 text-xs font-medium text-amber-950 dark:text-amber-200" title={booking.notes}>
+              <span className="shrink-0 rounded bg-amber-500/20 px-1 py-0.5 text-[9px] font-bold uppercase tracking-wider text-amber-900 dark:bg-amber-400/20 dark:text-amber-200">Note</span>
+              <span className="line-clamp-2 break-words leading-tight">{booking.notes.trim()}</span>
+            </div>
+          ) : (
+            <p className="mt-1 text-xs text-muted-foreground/60">No notes</p>
+          )}
         </div>
         <span className="qmgr-chevron" aria-hidden>
           {expanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}

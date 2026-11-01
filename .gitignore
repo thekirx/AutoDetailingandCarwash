@@ -19,6 +19,14 @@ tmp-*.txt
 # Local-only backups, never committed
 local-backups/
 .claude/
+.codex/
+.gemini/
+.grok/
+.impeccable/
+*.csv
+e2e-evidence/pos-voice/*.mp3
+e2e-evidence/nav-walk/*FAIL.png
+docs/architecture/payroll-period.workflow.visual-check.*
 .env*
 
 # Graphify: commit graph.json / report / wiki / manifest; skip cost, cache, sidecars

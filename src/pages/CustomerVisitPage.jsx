@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Check, MessageCircle, Radio } from 'lucide-react'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
+import { toast } from 'sonner'
 import { visitProgressFor, visitStepInfo } from '@/lib/customerVisitSteps'
 import { Badge, Skeleton } from '@/components/customer/CustomerUi'
 import { HAKUM_MESSENGER_URL } from '@/components/public/bredesign/TalkToUsButton'
@@ -45,6 +46,25 @@ export default function CustomerVisitPage() {
   const [error, setError] = useState('')
   const [ack, setAck] = useState('')
   const [busy, setBusy] = useState(false)
+  const [visitVoucher, setVisitVoucher] = useState('')
+
+  async function applyVoucherToVisit(e) {
+    e.preventDefault()
+    if (!visit || busy) return
+    const code = visitVoucher.trim().toUpperCase()
+    if (!code) return
+    setBusy(true)
+    try {
+      await portalAction('apply-booking-voucher', { booking_id: visit.id, code })
+      toast.success('Voucher applied to your visit!')
+      setVisitVoucher('')
+      setData(await fetchPortal())
+    } catch (err) {
+      toast.error(err.message || 'Could not apply voucher')
+    } finally {
+      setBusy(false)
+    }
+  }
   const back = useBackOr('/account')
   usePageMeta({ title: 'Visit', description: 'Follow your car through each step.', path: CUSTOMER_VISIT_PATH })
 
@@ -173,14 +193,46 @@ export default function CustomerVisitPage() {
                 <dt>{finished ? 'Visited' : 'Booked for'}</dt>
                 <dd>{formatDay(visit.scheduled_start || visit.created_at) || '—'}</dd>
               </div>
-              {finished && visit.final_price_minor != null ? (
+              {visit.promo_discount_minor ? (
                 <div>
-                  <dt>Paid</dt>
-                  <dd>{formatMoney(visit.final_price_minor)}</dd>
+                  <dt>Voucher discount</dt>
+                  <dd className="text-emerald-600 dark:text-emerald-400 font-semibold">-{formatMoney(visit.promo_discount_minor)}</dd>
+                </div>
+              ) : null}
+              {visit.final_price_minor != null ? (
+                <div>
+                  <dt>{finished ? 'Paid' : 'Total due'}</dt>
+                  <dd className="font-bold">{formatMoney(visit.final_price_minor)}</dd>
                 </div>
               ) : null}
             </dl>
           </section>
+
+          {!finished && !visit.promo_voucher_id ? (
+            <section className="capp-section" aria-label="Add voucher">
+              <div className="capp-sect">
+                <h2>Have a voucher code?</h2>
+              </div>
+              <form onSubmit={applyVoucherToVisit} className="capp-card flex gap-2">
+                <input
+                  type="text"
+                  value={visitVoucher}
+                  onChange={(e) => setVisitVoucher(e.target.value.toUpperCase())}
+                  placeholder="Voucher code (e.g. SUMMER10)"
+                  className="min-h-11 flex-1 font-mono uppercase tracking-wider px-3.5 py-2 rounded-xl border border-border bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                  maxLength={16}
+                  autoCapitalize="characters"
+                />
+                <button
+                  type="submit"
+                  className="capp-btn capp-btn-accent min-h-11 font-semibold"
+                  disabled={!visitVoucher.trim() || busy}
+                >
+                  Apply
+                </button>
+              </form>
+            </section>
+          ) : null}
 
           {canReschedule || waitingOnCall || ack ? (
             <section className="capp-section" aria-label="Reschedule">

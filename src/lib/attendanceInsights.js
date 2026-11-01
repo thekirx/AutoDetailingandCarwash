@@ -8,6 +8,56 @@ const ATTENDANCE_HEADCOUNT = Object.freeze([
   { role: 'admin', label: 'Admin' },
 ])
 
+export const ADMINISTRATIVE_ROLES = Object.freeze([
+  'admin',
+  'assistant_super_admin',
+  'super_admin',
+  'marketing',
+  'video_editor',
+  'sales',
+  'operations_lead',
+  'team_lead',
+])
+
+export function isFloorCrew(memberOrRole) {
+  const role = typeof memberOrRole === 'string' ? memberOrRole : memberOrRole?.role
+  return role === 'staff' || role === 'detailer'
+}
+
+export function isAdministrativeCrew(memberOrRole) {
+  return !isFloorCrew(memberOrRole)
+}
+
+/**
+ * Format attendance headcount for Floor Insight dashboard and Attendance page.
+ * Example output:
+ *   crewLine: "Bacoor Branch Crew - 8 out of 10"
+ *   adminLine: "Team Lead - 2 out of 2 Admin - 1 out of 2"
+ */
+export function formatAttendanceHeadcountStrings(branchName = '', roleHeadcount = []) {
+  const crew = (roleHeadcount || []).find((r) => r.role === 'staff') || { onSite: 0, total: 0 }
+  const tl = (roleHeadcount || []).find((r) => r.role === 'team_lead') || { onSite: 0, total: 0 }
+  const admin = (roleHeadcount || []).find((r) => r.role === 'admin') || { onSite: 0, total: 0 }
+
+  let rawBranch = String(branchName || '').trim()
+  rawBranch = rawBranch.replace(/^Hakum\s+(Auto\s+Care\s+)?(- )?/i, '').trim()
+
+  let branchLabel = ''
+  if (!rawBranch || rawBranch.toLowerCase() === 'all' || rawBranch.toLowerCase() === 'all branches') {
+    branchLabel = 'All Branches'
+  } else if (/branch/i.test(rawBranch)) {
+    branchLabel = rawBranch.charAt(0).toUpperCase() + rawBranch.slice(1)
+  } else {
+    const capitalized = rawBranch.charAt(0).toUpperCase() + rawBranch.slice(1)
+    branchLabel = `${capitalized} Branch`
+  }
+
+  const crewLine = `${branchLabel} Crew - ${crew.onSite} out of ${crew.total}`
+  const adminLine = `Team Lead - ${tl.onSite} out of ${tl.total} Admin - ${admin.onSite} out of ${admin.total}`
+
+  return { crewLine, adminLine, fullText: `${crewLine}\n${adminLine}` }
+}
+
 /** On site (present or late) out of the roster, split the way the branch reads it. */
 export function attendanceRoleHeadcount(staff = [], attendance = [], today = getLocalCalendarDate()) {
   const byStaff = new Map(

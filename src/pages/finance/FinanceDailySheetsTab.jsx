@@ -1,7 +1,7 @@
 /** Finance › Daily sheets — inbox + history. Open a row to read the sheet and Approve / Return it. */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Download, Printer, RefreshCw, X } from 'lucide-react'
+import { Download, Printer, RefreshCw, Wallet, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -13,6 +13,7 @@ import { listSheets, sheetErrorMessage } from '@/lib/dailySheetApi'
 import { downloadCsv, downloadExcel, formatFinanceWindow, printAsPdf } from '@/lib/financeData'
 import DailySheetPanel, { SheetStatusChip } from '@/pages/pos/DailySheetPanel'
 import { FinanceEmpty, FinanceMetricCell, FinanceMetricStrip, FinancePanel, FinanceTabSkeleton } from './FinanceChrome'
+import FinanceDrilldownSheet from './FinanceDrilldownSheet'
 
 const STATUS_FILTERS = [
   { value: 'submitted', label: 'Waiting for approval' },
@@ -69,6 +70,7 @@ export default function FinanceDailySheetsTab({
   const [submitter, setSubmitter] = useState('')
   const [minNet, setMinNet] = useState('')
   const [maxNet, setMaxNet] = useState('')
+  const [caDrilldown, setCaDrilldown] = useState(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -157,6 +159,25 @@ export default function FinanceDailySheetsTab({
             <Button type="button" variant="outline" className="min-h-11 gap-2" disabled={!visible.length} onClick={() => exportRows('print')}>
               <Printer aria-hidden className="size-4" />
               {selected.size ? `Print (${selected.size})` : 'Print / PDF'}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-11 gap-2"
+              onClick={() =>
+                setCaDrilldown({
+                  kind: 'expense',
+                  category: 'Cash advance and cash advance payment',
+                  code: '9',
+                  start: range.start,
+                  end: range.end,
+                  branch: branchFilter,
+                  periodLabel: formatFinanceWindow(range.start, range.end),
+                })
+              }
+            >
+              <Wallet aria-hidden className="size-4" />
+              Cash advances
             </Button>
             <Button asChild variant="ghost" className="min-h-11">
               <Link to="/operations/finance?tab=shift-close">Old shift closes</Link>
@@ -305,6 +326,16 @@ export default function FinanceDailySheetsTab({
           ) : null}
         </SheetContent>
       </Sheet>
+
+      <FinanceDrilldownSheet
+        open={Boolean(caDrilldown)}
+        onOpenChange={(open) => {
+          if (!open) setCaDrilldown(null)
+        }}
+        target={caDrilldown}
+        profile={profile}
+        branchOptions={branchOptions}
+      />
     </div>
   )
 }

@@ -245,7 +245,8 @@ function BookingStageTicket({
   const isList = variant === 'list'
   const service = bookingDetailingTypeText(booking)
   const carPlate = bookingCarPlateLine(booking)
-  const label = `${service}, ${carPlate}`
+  const notes = String(booking.notes || '').trim()
+  const label = `${service}, ${carPlate}${notes ? ` · Note: ${notes}` : ''}`
   const className = cn(
     isList ? 'bk-card bk-ticket-compact planner-ticket' : 'floor-ticket bk-ticket-compact planner-ticket',
     tone,
@@ -262,6 +263,14 @@ function BookingStageTicket({
           {detailingBoardStatusLabel(booking.status) || STATUS_LABELS[booking.status] || booking.status}
         </p>
       ) : null}
+      {notes ? (
+        <div className="bk-ticket-notes" title={notes}>
+          <span className="bk-ticket-notes-tag">Note</span>
+          <span className="bk-ticket-notes-text">{notes}</span>
+        </div>
+      ) : (
+        <p className="bk-ticket-notes-empty">No notes</p>
+      )}
     </>
   )
 
@@ -1337,7 +1346,17 @@ export default function BookingBoardPage() {
                         <div className="text-xs text-muted-foreground">{b.customer_phone || 'No phone'}</div>
                       </TableCell>
                       <TableCell className="text-foreground">{bookingVehicleText(b)}</TableCell>
-                      <TableCell className="font-medium text-primary">{bookingServiceText(b) || '—'}</TableCell>
+                      <TableCell className="font-medium text-primary">
+                        <div>{bookingServiceText(b) || '—'}</div>
+                        {b.notes?.trim() ? (
+                          <div className="mt-1 flex items-start gap-1 text-xs font-normal text-amber-800 dark:text-amber-300" title={b.notes}>
+                            <span className="shrink-0 rounded bg-amber-500/15 px-1 py-0.5 text-[10px] font-bold uppercase text-amber-900 dark:bg-amber-400/20 dark:text-amber-200">Note</span>
+                            <span className="line-clamp-1 break-words">{b.notes}</span>
+                          </div>
+                        ) : (
+                          <div className="text-[11px] font-normal text-muted-foreground/60">No notes</div>
+                        )}
+                      </TableCell>
                       <TableCell className="capitalize text-foreground">{branchNameBySlug[b.branch] || b.branch}</TableCell>
                       <TableCell className="tabular-nums text-foreground">{bookingTableWhen(b.scheduled_start)}</TableCell>
                       <TableCell>

@@ -296,6 +296,17 @@ export function canManageServices(profile) {
   return false
 }
 
+/**
+ * Direct stock modification (overriding on-hand counts) and restock approvals.
+ * Allowed for Owner (BossMich), Lucy, and Robert (assistant_super_admin).
+ * Branch Admin cannot directly modify stock; they can only submit restock requests.
+ */
+export function canModifyStock(profile) {
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) return true
+  return false
+}
+
 /** BA restock + Sunday recon (scoped). SA/ASA with catalog access also. */
 export function canRestockInventory(profile) {
   if (canManageServices(profile)) return true
@@ -310,8 +321,8 @@ export function canAccessInventory(profile) {
 /** Restock and bill approvals. Floor Insight still stays with the owner. */
 export function canAccessApprovals(profile) {
   if (isSuperAdmin(profile)) return true
-  if (!isAssistantSuperAdmin(profile)) return false
-  return hasGrant(profile, 'finance_write') || hasGrant(profile, 'services_merch')
+  if (isAssistantSuperAdmin(profile)) return true
+  return false
 }
 
 export function canManageCrew(profile) {

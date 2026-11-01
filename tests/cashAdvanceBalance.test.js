@@ -7,6 +7,7 @@ import {
   cashAdvanceBalanceLabel,
   cashAdvanceBalances,
   remainingForStaff,
+  calculateProjectedCashAdvance,
 } from '../src/lib/cashAdvanceBalance.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -46,4 +47,27 @@ test('the ledger function is the only read, and crew are limited to themselves',
   assert.match(sql, /ca_release/)
   assert.match(sql, /ca_repay/)
   assert.match(sql, /grant execute on function public.cash_advance_ledger/)
+})
+
+test('calculateProjectedCashAdvance computes additional payout or repayment', () => {
+  // Existing debt of ₱2,000 (200,000 minor) + additional advance of ₱1,000 (100,000 minor)
+  const advance = calculateProjectedCashAdvance(200000, 'ca_release', 100000)
+  assert.equal(advance.priorRemainingMinor, 200000)
+  assert.equal(advance.amountMinor, 100000)
+  assert.equal(advance.newRemainingMinor, 300000)
+  assert.equal(advance.isRelease, true)
+  assert.equal(advance.label, 'Remaining debt')
+
+  // Repayment of ₱500 (50,000 minor) against ₱2,000 debt
+  const repay = calculateProjectedCashAdvance(200000, 'ca_repay', 50000)
+  assert.equal(repay.priorRemainingMinor, 200000)
+  assert.equal(repay.amountMinor, 50000)
+  assert.equal(repay.newRemainingMinor, 150000)
+  assert.equal(repay.isRelease, false)
+  assert.equal(repay.label, 'Remaining debt')
+
+  // Full repayment
+  const full = calculateProjectedCashAdvance(200000, 'ca_repay', 200000)
+  assert.equal(full.newRemainingMinor, 0)
+  assert.equal(full.label, 'Paid up')
 })

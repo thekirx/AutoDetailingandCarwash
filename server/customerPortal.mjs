@@ -1,6 +1,6 @@
 /**
  * Customer portal data (service role) — JWT customer → history / garage / queue / loyalty.
- * POST actions: add-vehicle | update-vehicle | archive-vehicle | sync-email | update-phone | update-birthday | submit-review | request-reschedule | claim-birthday | redeem-accessory
+ * POST actions: add-vehicle | update-vehicle | archive-vehicle | sync-email | update-phone | update-birthday | submit-review | request-reschedule | claim-birthday | redeem-accessory | check-voucher | apply-booking-voucher
  * (kept in step with mutateCustomerPortal by scripts/check-portal-actions.mjs)
  */
 import { createClient } from '@supabase/supabase-js'
@@ -23,6 +23,15 @@ import { birthdayLockError, birthdayQueryDays, isBirthdayToday } from '../src/li
 import { normalizeReferralProgram } from '../src/lib/referralProgram.js'
 import { mintReferralCode } from '../src/lib/friendReferral.js'
 import { ensureBirthdayPerk } from './birthdayGreetings.mjs'
+import {
+  customerVoucherRulesLine,
+  normalizePromoCode,
+  promoAppliesToService,
+  promoCodeShapeError,
+  promoDiscountedPriceMinor,
+  promoVoucherWindowError,
+  voucherScopeLabel,
+} from '../src/lib/promoVoucher.js'
 
 async function ensureReferralCode(admin, customerId, existing) {
   if (existing) return existing
@@ -180,7 +189,7 @@ export async function loadCustomerPortal({ accessToken, origin = '' }) {
     admin
       .from('promo_vouchers')
       .select(
-        'id, code, title, rules_text, discount_kind, discount_percent, applies_to, starts_on, ends_on, max_uses, uses_count, is_active',
+        'id, code, title, rules_text, discount_kind, discount_percent, discount_amount_minor, applies_to, service_id, starts_on, ends_on, max_uses, uses_count, is_active',
       )
       .eq('is_active', true)
       .order('created_at', { ascending: false })
@@ -740,6 +749,175 @@ export async function mutateCustomerPortal({ accessToken, body }) {
     })
     if (error) throw Object.assign(new Error(error.message), { status: 400 })
     return data
+  }
+
+  if (action === 'check-voucher') {
+    const rawCode = String(body.code || '').trim()
+    const normalized = normalizePromoCode(rawCode)
+    const shapeErr = promoCodeShapeError(normalized)
+    if (shapeErr) throw Object.assign(new Error(shapeErr), { status: 400 })
+
+    const { data: voucher, error: vErr } = await admin
+      .from('promo_vouchers')
+      .select('*, services(name, slug)')
+      .eq('code', normalized)
+      .maybeSingle()
+    if (vErr) throw Object.assign(new Error(vErr.message), { status: 400 })
+    if (!voucher || voucher.is_active !== true) {
+      throw Object.assign(new Error('That voucher code was not found or is inactive.'), { status: 404 })
+    }
+
+    const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
+    const windowErr = promoVoucherWindowError(voucher, todayKey)
+    if (windowErr) throw Object.assign(new Error(windowErr), { status: 400 })
+
+    const { count: holds } = await admin
+      .from('bookings')
+      .select('*', { count: 'exact', head: true })
+      .eq('promo_voucher_id', voucher.id)
+      .not('status', 'in', '("completed","cancelled")')
+    const maxUses = Math.max(0, Math.floor(Number(voucher.max_uses) || 0))
+    const usesCount = Math.max(0, Math.floor(Number(voucher.uses_count) || 0))
+    if (usesCount + (holds || 0) >= maxUses) {
+      throw Object.assign(new Error('That voucher has no uses left.'), { status: 400 })
+    }
+
+    if (userId) {
+      const { count: priorUses } = await admin
+        .from('promo_voucher_redemptions')
+        .select('*', { count: 'exact', head: true })
+        .eq('voucher_id', voucher.id)
+        .eq('customer_id', userId)
+        .not('consumed_at', 'is', null)
+      const maxPer = Math.max(1, Math.floor(Number(voucher.max_per_customer) || 1))
+      if ((priorUses || 0) >= maxPer) {
+        throw Object.assign(new Error('You have already used that voucher the maximum number of times.'), { status: 400 })
+      }
+    }
+
+    if (body.service_id) {
+      const { data: svc } = await admin.from('services').select('id, name, pay_category, slug, parent_service_id').eq('id', body.service_id).maybeSingle()
+      if (svc && !promoAppliesToService(voucher, svc.pay_category, svc.slug, svc.id, svc.parent_service_id)) {
+        const scope = voucherScopeLabel(voucher, voucher.services?.name || svc.name)
+        throw Object.assign(new Error(`That voucher is for ${scope}.`), { status: 400 })
+      }
+    }
+
+    const price = Math.max(0, Number(body.price_minor) || 0)
+    const discountedPrice = promoDiscountedPriceMinor(price, voucher)
+    const discountMinor = price - discountedPrice
+
+    return {
+      ok: true,
+      voucher: {
+        id: voucher.id,
+        code: voucher.code,
+        title: voucher.title,
+        discount_kind: voucher.discount_kind,
+        discount_percent: voucher.discount_percent,
+        discount_amount_minor: voucher.discount_amount_minor || 0,
+        applies_to: voucher.applies_to,
+        service_id: voucher.service_id || null,
+        rules_text: voucher.rules_text || customerVoucherRulesLine(voucher),
+        starts_on: voucher.starts_on,
+        ends_on: voucher.ends_on,
+        discount_minor: discountMinor,
+        new_price_minor: discountedPrice,
+      },
+    }
+  }
+
+  if (action === 'apply-booking-voucher') {
+    const bookingId = String(body.booking_id || '').trim()
+    const rawCode = String(body.code || '').trim()
+    const normalized = normalizePromoCode(rawCode)
+    if (!bookingId) throw Object.assign(new Error('booking_id is required.'), { status: 400 })
+    const shapeErr = promoCodeShapeError(normalized)
+    if (shapeErr) throw Object.assign(new Error(shapeErr), { status: 400 })
+
+    const { data: booking, error: bErr } = await admin
+      .from('bookings')
+      .select('id, branch, status, customer_id, service_id, price_minor, final_price_minor, promo_voucher_id, services(pay_category, slug)')
+      .eq('id', bookingId)
+      .eq('customer_id', userId)
+      .maybeSingle()
+    if (bErr) throw Object.assign(new Error(bErr.message), { status: 400 })
+    if (!booking) throw Object.assign(new Error('Booking not found.'), { status: 404 })
+    if (['completed', 'cancelled'].includes(booking.status)) {
+      throw Object.assign(new Error('That ticket is already closed.'), { status: 400 })
+    }
+    if (booking.promo_voucher_id) {
+      throw Object.assign(new Error('This ticket already has a voucher.'), { status: 400 })
+    }
+
+    const { data: voucher, error: vErr } = await admin
+      .from('promo_vouchers')
+      .select('*, services(name, slug)')
+      .eq('code', normalized)
+      .maybeSingle()
+    if (vErr || !voucher || !voucher.is_active) {
+      throw Object.assign(new Error('That voucher code was not found.'), { status: 404 })
+    }
+    const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
+    const windowErr = promoVoucherWindowError(voucher, todayKey)
+    if (windowErr) throw Object.assign(new Error(windowErr), { status: 400 })
+
+    const { count: holds } = await admin
+      .from('bookings')
+      .select('*', { count: 'exact', head: true })
+      .eq('promo_voucher_id', voucher.id)
+      .not('status', 'in', '("completed","cancelled")')
+    if (Math.max(0, Number(voucher.uses_count) || 0) + (holds || 0) >= Number(voucher.max_uses)) {
+      throw Object.assign(new Error('That voucher has no uses left.'), { status: 400 })
+    }
+
+    const { count: priorUses } = await admin
+      .from('promo_voucher_redemptions')
+      .select('*', { count: 'exact', head: true })
+      .eq('voucher_id', voucher.id)
+      .eq('customer_id', userId)
+      .not('consumed_at', 'is', null)
+    if ((priorUses || 0) >= Number(voucher.max_per_customer || 1)) {
+      throw Object.assign(new Error('You have already used that voucher the maximum number of times.'), { status: 400 })
+    }
+
+    if (!promoAppliesToService(voucher, booking.services?.pay_category, booking.services?.slug, booking.service_id)) {
+      const scope = voucherScopeLabel(voucher, voucher.services?.name || booking.services?.name)
+      throw Object.assign(new Error(`That voucher is for ${scope}.`), { status: 400 })
+    }
+
+    const listPrice = Math.max(0, Number(booking.final_price_minor ?? booking.price_minor) || 0)
+    const newPrice = promoDiscountedPriceMinor(listPrice, voucher)
+    const discount = listPrice - newPrice
+
+    const { error: updateErr } = await admin
+      .from('bookings')
+      .update({
+        promo_voucher_id: voucher.id,
+        promo_discount_minor: discount,
+        final_price_minor: newPrice,
+        promo_applied_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', booking.id)
+    if (updateErr) throw Object.assign(new Error(updateErr.message), { status: 400 })
+
+    await admin.from('promo_voucher_redemptions').insert({
+      voucher_id: voucher.id,
+      booking_id: booking.id,
+      customer_id: userId,
+      discount_minor: discount,
+      consumed_at: null,
+    })
+
+    return {
+      ok: true,
+      voucher_id: voucher.id,
+      code: voucher.code,
+      title: voucher.title,
+      discount_minor: discount,
+      final_price_minor: newPrice,
+    }
   }
 
   throw Object.assign(new Error('Unknown action.'), { status: 400 })

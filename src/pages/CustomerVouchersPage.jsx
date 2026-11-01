@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ArrowRight, CheckCircle2 } from 'lucide-react'
 import { toast } from 'sonner'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
 import { SectionHead, Skeleton } from '@/components/customer/CustomerUi'
@@ -22,6 +23,43 @@ export default function CustomerVouchersPage() {
   const [error, setError] = useState('')
   const [busy, setBusy] = useState('')
   const [branch, setBranch] = useState('')
+  const [voucherInput, setVoucherInput] = useState('')
+  const [verifiedVoucher, setVerifiedVoucher] = useState(null)
+  const [voucherCheckError, setVoucherCheckError] = useState('')
+
+  async function checkVoucherCode(e) {
+    e.preventDefault()
+    const code = voucherInput.trim().toUpperCase()
+    if (!code) return
+    setBusy('check-voucher')
+    setVoucherCheckError('')
+    try {
+      const res = await portalAction('check-voucher', { code })
+      if (res?.ok && res.voucher) {
+        setVerifiedVoucher(res.voucher)
+        toast.success(`Voucher ${res.voucher.code} is valid!`)
+        setData((prev) => {
+          if (!prev) return prev
+          const active = prev.vouchers?.active || []
+          if (active.some((v) => v.code === res.voucher.code)) return prev
+          return {
+            ...prev,
+            vouchers: {
+              ...prev.vouchers,
+              active: [res.voucher, ...active],
+            },
+          }
+        })
+      } else {
+        throw new Error(res?.error || 'Voucher not found')
+      }
+    } catch (err) {
+      setVoucherCheckError(err.message || 'That voucher code could not be verified.')
+      toast.error(err.message || 'Voucher code not found')
+    } finally {
+      setBusy('')
+    }
+  }
 
   function reload() {
     return fetchPortal().then(setData).catch((err) => setError(err.message))
@@ -117,6 +155,66 @@ export default function CustomerVouchersPage() {
             </div>
           </section>
 
+          <section className="capp-card" aria-label="Enter voucher code">
+            <SectionHead title="Have a voucher code?" />
+            <p className="capp-meta">Enter your promo code or discount voucher to verify it and use it on bookings.</p>
+            <form onSubmit={checkVoucherCode} className="mt-3 space-y-3">
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input
+                  type="text"
+                  value={voucherInput}
+                  onChange={(e) => setVoucherInput(e.target.value.toUpperCase())}
+                  placeholder="Enter code (e.g. SUMMER10)"
+                  className="min-h-11 flex-1 font-mono uppercase tracking-wider px-3.5 py-2 rounded-xl border border-border bg-background text-sm text-foreground placeholder:normal-case placeholder:tracking-normal focus:outline-none focus:ring-2 focus:ring-primary"
+                  aria-label="Voucher code"
+                  autoCapitalize="characters"
+                  autoComplete="off"
+                  maxLength={16}
+                />
+                <button
+                  type="submit"
+                  className="capp-btn capp-btn-accent min-h-11 font-semibold"
+                  disabled={!voucherInput.trim() || busy === 'check-voucher'}
+                >
+                  {busy === 'check-voucher' ? 'Checking…' : 'Check code'}
+                </button>
+              </div>
+
+              {voucherCheckError ? (
+                <p className="text-xs font-medium text-destructive mt-1.5" role="alert">
+                  {voucherCheckError}
+                </p>
+              ) : null}
+
+              {verifiedVoucher ? (
+                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3.5 space-y-2 mt-2">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-300">
+                      <CheckCircle2 size={15} /> Active Voucher
+                    </span>
+                    <strong className="font-mono text-sm px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-900 dark:text-emerald-200">
+                      {verifiedVoucher.code}
+                    </strong>
+                  </div>
+                  <p className="text-sm font-semibold text-foreground">
+                    {verifiedVoucher.title} · {verifiedVoucher.discount_kind === 'free' ? 'Free service' : (verifiedVoucher.discount_kind === 'fixed' || verifiedVoucher.discount_kind === 'amount') ? `₱${Math.round((verifiedVoucher.discount_amount_minor || 0) / 100).toLocaleString()} discount` : `${verifiedVoucher.discount_percent}% discount`}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {verifiedVoucher.rules_text}
+                  </p>
+                  <div className="pt-1">
+                    <Link
+                      to={`/account/book?voucher=${verifiedVoucher.code}`}
+                      className="capp-btn capp-btn-fill capp-btn-block text-xs font-bold inline-flex items-center justify-center gap-1.5"
+                    >
+                      Use on next booking <ArrowRight size={14} />
+                    </Link>
+                  </div>
+                </div>
+              ) : null}
+            </form>
+          </section>
+
           <section className="capp-card" aria-label="Promo vouchers">
             <SectionHead title="Promo vouchers" />
             <p className="capp-meta">Show the code to the Team Lead on the queue. The counter counts each use.</p>
@@ -129,6 +227,12 @@ export default function CustomerVouchersPage() {
                       <p className="capp-pass-line">{row.title}</p>
                       <p className="capp-meta">{row.rules_text || customerVoucherRulesLine(row)}</p>
                     </div>
+                    <Link
+                      to={`/account/book?voucher=${row.code}`}
+                      className="capp-link text-xs font-semibold whitespace-nowrap self-center ml-auto flex items-center gap-1"
+                    >
+                      Book with this →
+                    </Link>
                   </div>
                 ))}
               </div>

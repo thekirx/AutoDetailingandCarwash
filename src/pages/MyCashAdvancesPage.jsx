@@ -115,14 +115,33 @@ export default function MyCashAdvancesPage() {
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : (
         <div className="flex flex-col gap-4">
-          <div className="rounded-xl border border-border p-4">
-            <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">Remaining</p>
-            <p className="mt-1 text-2xl font-semibold tabular-nums">
+          <div className={`rounded-2xl border p-5 ${
+            balance && balance.remainingMinor > 0
+              ? 'border-amber-500/35 bg-amber-500/[0.06]'
+              : 'border-border bg-card'
+          }`}>
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-bold tracking-wide text-muted-foreground uppercase">
+                {balance && balance.remainingMinor > 0 ? 'Outstanding Cash Advance Debt' : 'Cash Advance Balance'}
+              </p>
+              <Badge variant={balance && balance.remainingMinor > 0 ? 'destructive' : 'outline'}>
+                {balance && balance.remainingMinor > 0 ? 'Active Debt' : 'Paid Up / No Debt'}
+              </Badge>
+            </div>
+            <p className="mt-2 text-3xl font-extrabold tabular-nums text-foreground">
               {balance && balance.givenMinor > 0 ? formatAccounting(balance.remainingMinor) : formatAccounting(0)}
             </p>
             <p className="mt-1 text-sm text-muted-foreground">
-              {balance ? cashAdvanceBalanceLabel(balance) : 'No cash has been given yet.'}
+              {balance && balance.remainingMinor > 0
+                ? 'Total unpaid cash advance debt recorded on the Daily Sheet.'
+                : balance ? cashAdvanceBalanceLabel(balance) : 'No cash advance has been given yet.'}
             </p>
+            {balance && balance.givenMinor > 0 ? (
+              <div className="mt-3 flex flex-wrap gap-4 border-t border-border/80 pt-3 text-xs text-muted-foreground">
+                <span>Total given: <strong className="text-foreground">{formatAccounting(balance.givenMinor)}</strong></span>
+                <span>Total repaid: <strong className="text-foreground">{formatAccounting(balance.repaidMinor)}</strong></span>
+              </div>
+            ) : null}
           </div>
           <form onSubmit={ask} className="flex flex-col gap-3 rounded-xl border border-border p-4" aria-label="Ask for a cash advance">
             <div className="flex flex-col gap-1.5">

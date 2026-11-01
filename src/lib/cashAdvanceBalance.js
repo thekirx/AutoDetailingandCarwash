@@ -60,3 +60,24 @@ export function cashAdvanceBalanceLabel(balance) {
   if (balance.remainingMinor < 0) return 'Paid more than was given'
   return 'Paid up'
 }
+
+/**
+ * Calculate the projected balance after an additional payout or repayment.
+ * @param {number} priorRemainingMinor - Outstanding debt before this line
+ * @param {'ca_release'|'ca_repay'} kind - Payout or Repayment
+ * @param {number} amountMinor - Amount being entered on this line
+ * @returns {{ priorRemainingMinor, amountMinor, newRemainingMinor, isRelease, label }}
+ */
+export function calculateProjectedCashAdvance(priorRemainingMinor = 0, kind = 'ca_release', amountMinor = 0) {
+  const prior = Number(priorRemainingMinor) || 0
+  const amount = Number(amountMinor) || 0
+  const isRelease = kind === 'ca_release'
+  const newRemainingMinor = isRelease ? prior + amount : prior - amount
+  return {
+    priorRemainingMinor: prior,
+    amountMinor: amount,
+    newRemainingMinor,
+    isRelease,
+    label: newRemainingMinor > 0 ? 'Remaining debt' : newRemainingMinor === 0 ? 'Paid up' : 'Advance credit',
+  }
+}

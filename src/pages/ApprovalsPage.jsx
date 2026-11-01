@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessApprovals, isSuperAdmin } from '@/auth/permissions'
+import { canAccessApprovals, canModifyStock } from '@/auth/permissions'
 import { supabase } from '@/lib/supabase'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import { Button } from '@/components/ui/button'
@@ -12,7 +12,7 @@ export default function ApprovalsPage() {
   const [rows, setRows] = useState([])
   const [bills, setBills] = useState(0)
   const [busyId, setBusyId] = useState('')
-  const canDecide = isSuperAdmin(profile)
+  const canDecide = canModifyStock(profile)
 
   const load = useCallback(async () => {
     const [stock, expenses] = await Promise.all([

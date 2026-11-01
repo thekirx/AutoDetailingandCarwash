@@ -49,6 +49,21 @@ describe('my advances access + route', () => {
     assert.ok(getStaffDock(staff).some((i) => i.to === '/operations/my-advances'))
   })
 
+  it('profile modal, attendance day card, and daily sheet surface cash advance debt to employees', () => {
+    const modal = read('src/components/UserSettingsModal.jsx')
+    const attendance = read('src/pages/crew/CrewAttendancePanels.jsx')
+    const sheet = read('src/pages/pos/DailySheetPanel.jsx')
+    const myAdv = read('src/pages/MyCashAdvancesPage.jsx')
+    assert.match(modal, /Cash advance & debt balance/)
+    assert.match(modal, /loadCashAdvanceLedger/)
+    assert.match(attendance, /Cash advance debt:/)
+    assert.match(attendance, /loadCashAdvanceLedger/)
+    assert.match(sheet, /calculateProjectedCashAdvance/)
+    assert.match(sheet, /Additional payout:/)
+    assert.match(sheet, /New remaining balance:/)
+    assert.match(myAdv, /Outstanding Cash Advance Debt/)
+  })
+
   it('page queries own cash_advance submissions', () => {
     const page = read('src/pages/MyCashAdvancesPage.jsx')
     assert.match(page, /ops_form_submissions/)

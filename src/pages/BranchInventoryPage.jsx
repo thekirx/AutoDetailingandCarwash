@@ -1,20 +1,22 @@
 /** BA restock + Sunday recon; SA/ASA also approve recon and set absolute qty. */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { ClipboardCheck, Package } from 'lucide-react'
+import { AlertTriangle, CheckCircle2, ClipboardCheck, Clock, Info, Package, Sparkles, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
-import { canManageServices, canRestockInventory, getBranchScopeList, isSuperAdmin } from '@/auth/permissions'
+import { canManageServices, canModifyStock, canRestockInventory, getBranchScopeList } from '@/auth/permissions'
 import OpsGuideCard from '@/components/ops/OpsGuideCard'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import OpsTabList from '@/components/ops/OpsTabBar'
 import { BRANCH_STOCK_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
 import { applyOwnerSetQty, applyReconLine, applyRestockQty, branchAssignmentRows, reconUsageQty } from '@/lib/inventoryBranchStock'
-import { stockCategoryLabel } from '@/lib/inventoryCatalog'
+import { LOW_STOCK_THRESHOLD, RESTOCK_POLICY_NOTICE, STOCK_CATEGORIES, materialRoleLabel, stockCategoryLabel } from '@/lib/inventoryCatalog'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { supabase } from '@/lib/supabase'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { fetchBranches } from '@/queue/queueApi'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -43,9 +45,11 @@ export default function BranchInventoryPage({
 } = {}) {
   const { profile, user } = useAuth()
   const canCatalog = canManageServices(profile)
+  const canEditStock = canModifyStock(profile)
   const scopeList = getBranchScopeList(profile)
   const [tab, setTab] = useState(defaultTab === 'recon' ? 'recon' : 'restock')
   const [stockFilter, setStockFilter] = useState('assigned')
+  const [categoryFilter, setCategoryFilter] = useState('all')
   const [branches, setBranches] = useState([])
   const [branch, setBranch] = useState('')
   const [products, setProducts] = useState([])
@@ -71,7 +75,7 @@ export default function BranchInventoryPage({
       const [prodRes, stockRes, reconRes, restockRes] = await Promise.all([
         supabase
           .from('products')
-          .select('id, name, sku, category, tags, usage_kind, stock_category, is_active, points_price')
+          .select('id, name, sku, category, tags, usage_kind, stock_category, material_role, show_in_pos, is_active, points_price')
           .eq('is_active', true)
           .eq('is_archived', false)
           .order('name'),
@@ -84,9 +88,10 @@ export default function BranchInventoryPage({
           .limit(20),
         supabase
           .from('restock_requests')
-          .select('id, product_id, add_qty, products(name)')
+          .select('id, product_id, add_qty, branch_slug, created_at, status, products(name)')
           .eq('branch_slug', branch)
-          .eq('status', 'pending'),
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false }),
       ])
       if (prodRes.error) throw prodRes.error
       if (stockRes.error) throw stockRes.error
@@ -128,13 +133,41 @@ export default function BranchInventoryPage({
   }, [load])
 
   const internalProducts = useMemo(
-    () => products.filter((p) => String(p.usage_kind || '').toLowerCase() === 'internal'),
+    () => products.filter((p) => String(p.usage_kind || '').toLowerCase() === 'internal' || p.stock_category === 'chemical'),
     [products],
   )
-  const visibleProducts = useMemo(
-    () => branchAssignmentRows(products, stockByProduct, stockFilter),
-    [products, stockByProduct, stockFilter],
-  )
+
+  const branchKpis = useMemo(() => {
+    let totalUnits = 0
+    let lowStockCount = 0
+    let chemUnits = 0
+    for (const p of products) {
+      const qty = Number(stockByProduct[p.id]) || 0
+      totalUnits += qty
+      if (p.stock_category === 'chemical') chemUnits += qty
+      if (qty <= LOW_STOCK_THRESHOLD) lowStockCount++
+    }
+    return { totalUnits, lowStockCount, chemUnits }
+  }, [products, stockByProduct])
+
+  const visibleProducts = useMemo(() => {
+    const baseFilter =
+      stockFilter === 'needs_restock' || stockFilter === 'out_of_stock'
+        ? 'assigned'
+        : stockFilter
+    const rows = branchAssignmentRows(products, stockByProduct, baseFilter)
+    let filtered = rows
+    if (categoryFilter !== 'all') {
+      filtered = filtered.filter((r) => (r.stock_category || 'merchandise') === categoryFilter)
+    }
+    if (stockFilter === 'needs_restock') {
+      filtered = filtered.filter((r) => (Number(r.on_hand) || 0) <= LOW_STOCK_THRESHOLD)
+    } else if (stockFilter === 'out_of_stock') {
+      filtered = filtered.filter((r) => (Number(r.on_hand) || 0) <= 0)
+    }
+    return filtered
+  }, [products, stockByProduct, stockFilter, categoryFilter])
+
   const pointItems = useMemo(
     () => branchAssignmentRows(products, stockByProduct, 'assigned'),
     [products, stockByProduct],
@@ -227,7 +260,8 @@ export default function BranchInventoryPage({
       toast.error('Enter a restock quantity')
       return
     }
-    if (!isSuperAdmin(profile)) {
+
+    if (!canEditStock) {
       setSaving(true)
       try {
         const { error } = await supabase.rpc('request_restock', {
@@ -236,7 +270,7 @@ export default function BranchInventoryPage({
           p_qty: add,
         })
         if (error) throw error
-        toast.success(`Asked Super Admin to add ${add} ${product.name}. The count stays until they approve.`)
+        toast.success(`Restock request for ${add} ${product.name} submitted. Sent to Super Admin for approval before reconciling.`)
         setRestockQty((s) => ({ ...s, [product.id]: '' }))
         await load()
       } catch (err) {
@@ -246,6 +280,7 @@ export default function BranchInventoryPage({
       }
       return
     }
+
     setSaving(true)
     try {
       const current = stockByProduct[product.id]
@@ -318,7 +353,10 @@ export default function BranchInventoryPage({
   }
 
   async function onOwnerSet(product) {
-    if (!canCatalog) return
+    if (!canEditStock) {
+      toast.error('Only Owner, Lucy, and Robert can modify stock counts directly.')
+      return
+    }
     if (!assertCanMutate()) return
     const next = applyOwnerSetQty(ownerQty[product.id])
     setSaving(true)
@@ -350,6 +388,42 @@ export default function BranchInventoryPage({
       })
       if (movErr) throw movErr
       toast.success(`Set ${product.name} to ${next}`)
+      await load()
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function onApproveRestock(request) {
+    if (!canEditStock) return
+    setSaving(true)
+    try {
+      const { error } = await supabase.rpc('review_restock', {
+        p_id: request.id,
+        p_decision: 'approved',
+      })
+      if (error) throw error
+      toast.success(`Restock approved for ${request.products?.name || 'item'} (+${request.add_qty})`)
+      await load()
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function onRejectRestock(request) {
+    if (!canEditStock) return
+    setSaving(true)
+    try {
+      const { error } = await supabase.rpc('review_restock', {
+        p_id: request.id,
+        p_decision: 'rejected',
+      })
+      if (error) throw error
+      toast.success('Restock request declined')
       await load()
     } catch (err) {
       toast.error(err.message)
@@ -503,14 +577,115 @@ export default function BranchInventoryPage({
       {!embedded ? (
         <OpsGuideCard
           title="How branch stock works"
-          description="Restock when shipment arrives. Submit Sunday recon for owner approval."
+          description="Branch admin restocks wait for Super Admin approval before reconciling to total inventory. Sunday recon covers internal materials."
           steps={BRANCH_STOCK_WORKFLOW_STEPS}
           stepIcons={branchStockStepIcons}
           defaultOpen={tab === 'restock'}
         />
       ) : null}
 
-      <div className="flex flex-wrap items-end gap-3">
+      {/* Inventory Restock Policy Callout */}
+      <div className="flex items-start gap-3 rounded-2xl border border-sky-500/30 bg-sky-500/5 p-4 text-foreground">
+        <Info className="mt-0.5 h-5 w-5 shrink-0 text-sky-600 dark:text-sky-400" aria-hidden />
+        <div className="flex-1 space-y-1">
+          <p className="text-sm font-semibold text-sky-950 dark:text-sky-100">
+            Inventory Restock &amp; Bulk Purchasing Policy
+          </p>
+          <p className="text-xs leading-relaxed text-muted-foreground">
+            {RESTOCK_POLICY_NOTICE}
+          </p>
+        </div>
+      </div>
+
+      {/* Branch KPI Summary Cards */}
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <Card className="border-border">
+          <CardContent className="flex items-center justify-between p-4">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Branch Total Units
+              </p>
+              <p className="text-2xl font-bold tracking-tight text-foreground">
+                {branchKpis.totalUnits.toLocaleString()}
+              </p>
+              <p className="text-[11px] text-muted-foreground">On-hand at this branch</p>
+            </div>
+            <div className="rounded-xl bg-primary/10 p-2.5 text-primary">
+              <Package size={22} aria-hidden />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card
+          className={`cursor-pointer border-border transition-colors hover:border-amber-500/60 ${
+            stockFilter === 'needs_restock' ? 'ring-2 ring-amber-500' : ''
+          }`}
+          onClick={() => setStockFilter((cur) => (cur === 'needs_restock' ? 'assigned' : 'needs_restock'))}
+        >
+          <CardContent className="flex items-center justify-between p-4">
+            <div>
+              <p className="text-xs font-medium text-amber-700 dark:text-amber-400 uppercase tracking-wider">
+                Needs Restock
+              </p>
+              <p className="text-2xl font-bold tracking-tight text-amber-600 dark:text-amber-400">
+                {branchKpis.lowStockCount}
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                {stockFilter === 'needs_restock' ? 'Filtered (click to reset)' : `≤ ${LOW_STOCK_THRESHOLD} units on-hand`}
+              </p>
+            </div>
+            <div className="rounded-xl bg-amber-500/10 p-2.5 text-amber-600 dark:text-amber-400">
+              <AlertTriangle size={22} aria-hidden />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card
+          className={`cursor-pointer border-border transition-colors hover:border-blue-500/60 ${
+            categoryFilter === 'chemical' ? 'ring-2 ring-blue-500' : ''
+          }`}
+          onClick={() => setCategoryFilter((cur) => (cur === 'chemical' ? 'all' : 'chemical'))}
+        >
+          <CardContent className="flex items-center justify-between p-4">
+            <div>
+              <p className="text-xs font-medium text-blue-700 dark:text-blue-400 uppercase tracking-wider">
+                Chemicals On-Hand
+              </p>
+              <p className="text-2xl font-bold tracking-tight text-blue-600 dark:text-blue-400">
+                {branchKpis.chemUnits.toLocaleString()}
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                {categoryFilter === 'chemical' ? 'Filtered (click to reset)' : 'Bulk purchase in Finance'}
+              </p>
+            </div>
+            <div className="rounded-xl bg-blue-500/10 p-2.5 text-blue-600 dark:text-blue-400">
+              <Sparkles size={22} aria-hidden />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border">
+          <CardContent className="flex items-center justify-between p-4">
+            <div>
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                Pending Restocks
+              </p>
+              <p className="text-2xl font-bold tracking-tight text-foreground">
+                {pendingRestocks.length}
+              </p>
+              <p className="text-[11px] text-muted-foreground">
+                {canEditStock ? 'Waiting for review below' : 'Awaiting Super Admin'}
+              </p>
+            </div>
+            <div className="rounded-xl bg-secondary p-2.5 text-foreground">
+              <Clock size={22} aria-hidden />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Branch and Filters Bar */}
+      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-3">
         <div className="flex min-w-[12rem] flex-col gap-1">
           <Label htmlFor="branch-stock-branch">Branch</Label>
           <Select value={branch} onValueChange={setBranch} disabled={!branchOptions.length}>
@@ -526,7 +701,25 @@ export default function BranchInventoryPage({
             </SelectContent>
           </Select>
         </div>
-        <div className="flex min-w-[12rem] flex-col gap-1">
+
+        <div className="flex min-w-[10rem] flex-col gap-1">
+          <Label htmlFor="branch-stock-category">Category</Label>
+          <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+            <SelectTrigger id="branch-stock-category">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {STOCK_CATEGORIES.map((c) => (
+                <SelectItem key={c.id} value={c.id}>
+                  {c.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="flex min-w-[10rem] flex-col gap-1">
           <Label htmlFor="branch-stock-filter">Show</Label>
           <Select value={stockFilter} onValueChange={setStockFilter}>
             <SelectTrigger id="branch-stock-filter">
@@ -534,6 +727,8 @@ export default function BranchInventoryPage({
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="assigned">At this branch</SelectItem>
+              <SelectItem value="needs_restock">Needs Restock (≤ {LOW_STOCK_THRESHOLD} units)</SelectItem>
+              <SelectItem value="out_of_stock">Out of Stock (0 units)</SelectItem>
               <SelectItem value="unassigned">Not at this branch</SelectItem>
               <SelectItem value="accessories">Accessories</SelectItem>
               <SelectItem value="sellables">Sellables</SelectItem>
@@ -545,133 +740,284 @@ export default function BranchInventoryPage({
       <Tabs value={tab} onValueChange={setTab} className="flex flex-col gap-5">
         <OpsTabList tabs={BRANCH_STOCK_TABS} aria-label="Branch stock" />
 
-        <TabsContent value="restock" className="mt-0 outline-none">
+        <TabsContent value="restock" className="mt-0 outline-none space-y-6">
+          {/* Pending Restocks Approval Card */}
+          {pendingRestocks.length ? (
+            <Card className="border-amber-500/40 bg-amber-500/5">
+              <CardHeader className="py-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Clock size={18} className="text-amber-600 dark:text-amber-400" />
+                    <CardTitle className="text-base font-semibold text-amber-900 dark:text-amber-200">
+                      Restock Requests Waiting for Approval ({pendingRestocks.length})
+                    </CardTitle>
+                  </div>
+                  <Badge variant="outline" className="border-amber-500/40 text-xs text-amber-700 dark:text-amber-300">
+                    {canEditStock ? 'Review required' : 'Pending Super Admin'}
+                  </Badge>
+                </div>
+                <CardDescription className="text-xs text-muted-foreground">
+                  {canEditStock
+                    ? 'Branch Admins requested to restock these items. Approving will reconcile the quantity directly into branch on-hand.'
+                    : 'Your submitted restock requests are waiting for approval by Owner, Lucy, or Robert before reconciling.'}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <ul className="divide-y divide-border/60" aria-label="Restock waiting">
+                  {pendingRestocks.map((row) => (
+                    <li key={row.id} className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <div className="font-medium text-foreground">{row.products?.name || 'Item'}</div>
+                        <p className="text-xs text-muted-foreground">
+                          Add: <strong className="text-foreground">+{row.add_qty} units</strong> · Submitted {new Date(row.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      {canEditStock ? (
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="h-8 gap-1 bg-emerald-600 text-white hover:bg-emerald-700"
+                            disabled={saving}
+                            onClick={() => onApproveRestock(row)}
+                          >
+                            <CheckCircle2 size={14} /> Approve (+{row.add_qty})
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="h-8 gap-1 text-destructive hover:bg-destructive/10"
+                            disabled={saving}
+                            onClick={() => onRejectRestock(row)}
+                          >
+                            <XCircle size={14} /> Decline
+                          </Button>
+                        </div>
+                      ) : (
+                        <Badge variant="secondary" className="self-start text-xs text-amber-700 dark:text-amber-300">
+                          Awaiting approval
+                        </Badge>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          ) : null}
+
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Product</TableHead>
-                <TableHead>Kind</TableHead>
-                <TableHead className="text-right">On hand</TableHead>
-                <TableHead>Add</TableHead>
-                {canCatalog && <TableHead>Set qty</TableHead>}
-                <TableHead />
+                <TableHead>Category</TableHead>
+                <TableHead className="text-right">On Hand</TableHead>
+                <TableHead>Add (+)</TableHead>
+                {canEditStock && <TableHead>Set Qty</TableHead>}
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {visibleProducts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={canCatalog ? 6 : 5} className="text-muted-foreground">
+                  <TableCell colSpan={canEditStock ? 6 : 5} className="text-muted-foreground">
                     {stockFilter === 'unassigned'
-                      ? 'Every sellable is already on this branch.'
-                      : 'Nothing on this branch yet. Switch to Not at this branch and assign it.'}
+                      ? 'Every item in this category is already on this branch.'
+                      : 'Nothing on this branch matches the current filters.'}
                   </TableCell>
                 </TableRow>
-              ) : visibleProducts.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell>
-                    <div className="font-medium">{p.name}</div>
-                    {p.sku ? <div className="text-xs text-muted-foreground">{p.sku}</div> : null}
-                  </TableCell>
-                  <TableCell className="capitalize">{stockCategoryLabel(p.stock_category)}</TableCell>
-                  <TableCell className="text-right tabular-nums">
-                    {p.on_hand == null ? '—' : p.on_hand}
-                  </TableCell>
-                  <TableCell>
-                    <Input
-                      type="number"
-                      min="1"
-                      className="w-24"
-                      value={restockQty[p.id] ?? ''}
-                      disabled={!p.assigned}
-                      onChange={(e) => setRestockQty((s) => ({ ...s, [p.id]: e.target.value }))}
-                    />
-                  </TableCell>
-                  {canCatalog && (
+              ) : (
+                visibleProducts.map((p) => (
+                  <TableRow key={p.id}>
                     <TableCell>
-                      <div className="flex gap-2">
-                        <Input
-                          type="number"
-                          min="0"
-                          className="w-24"
-                          value={ownerQty[p.id] ?? ''}
-                          disabled={!p.assigned}
-                          onChange={(e) => setOwnerQty((s) => ({ ...s, [p.id]: e.target.value }))}
-                        />
-                        <Button type="button" variant="outline" size="sm" disabled={saving || !p.assigned} onClick={() => onOwnerSet(p)}>
-                          Set
-                        </Button>
-                        <select
-                          className="h-9 rounded-md border border-input bg-background px-2 text-sm"
-                          aria-label={`Move ${p.name} to another branch`}
-                          value={moveTo[p.id] || ''}
-                          disabled={!p.assigned || saving}
-                          onChange={(e) => setMoveTo((s) => ({ ...s, [p.id]: e.target.value }))}
-                        >
-                          <option value="">Move to</option>
-                          {branches.filter((b) => b.slug !== branch).map((b) => (
-                            <option key={b.slug} value={b.slug}>{b.name}</option>
-                          ))}
-                        </select>
-                        <Button type="button" variant="outline" size="sm" disabled={saving || !p.assigned} onClick={() => onTransfer(p)}>
-                          Move
-                        </Button>
+                      <div className="font-medium">{p.name}</div>
+                      <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                        {p.sku ? <span>{p.sku}</span> : null}
+                        {p.stock_category === 'coffee_menu' ? (
+                          <Badge variant="outline" className="border-amber-500/40 text-[10px] text-amber-600 dark:text-amber-400">
+                            Recipe: 1 Cup + 20g Beans
+                          </Badge>
+                        ) : null}
+                        {p.material_role ? (
+                          <Badge variant="outline" className="border-orange-500/40 text-[10px] text-orange-600 dark:text-orange-400">
+                            Role: {materialRoleLabel(p.material_role)}
+                          </Badge>
+                        ) : null}
                       </div>
                     </TableCell>
-                  )}
-                  <TableCell>
-                    <div className="flex flex-wrap gap-2">
-                      {p.assigned ? (
-                        <Button type="button" size="sm" className="min-h-11" disabled={saving} onClick={() => onRestock(p)}>
-                          {isSuperAdmin(profile) ? 'Restock' : 'Request'}
-                        </Button>
+                    <TableCell>
+                      <Badge variant="outline" className="capitalize text-xs">
+                        {stockCategoryLabel(p.stock_category)}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right tabular-nums font-semibold">
+                      {p.on_hand == null ? (
+                        <span className="text-muted-foreground">—</span>
+                      ) : p.on_hand > LOW_STOCK_THRESHOLD ? (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <span className="text-emerald-600 dark:text-emerald-400 font-bold">{p.on_hand}</span>
+                          <Badge variant="secondary" className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 text-[10px]">
+                            In Stock
+                          </Badge>
+                        </div>
+                      ) : p.on_hand > 0 ? (
+                        <div className="flex items-center justify-end gap-1.5">
+                          <span className="text-amber-600 dark:text-amber-400 font-bold">{p.on_hand}</span>
+                          <Badge variant="outline" className="border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300 text-[10px]">
+                            Low Stock
+                          </Badge>
+                        </div>
                       ) : (
-                        <Button type="button" size="sm" disabled={saving || !branch} onClick={() => assignToBranch(p)}>
-                          Assign to branch
-                        </Button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <span className="text-destructive font-bold">0</span>
+                          <Badge variant="destructive" className="text-[10px] uppercase">
+                            Out
+                          </Badge>
+                        </div>
                       )}
-                      {canCatalog && p.assigned ? (
-                        <Button type="button" size="sm" variant="ghost" disabled={saving} onClick={() => removeFromBranch(p)}>
-                          Remove
-                        </Button>
-                      ) : null}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        min="1"
+                        className="w-24"
+                        placeholder="+ qty"
+                        value={restockQty[p.id] ?? ''}
+                        disabled={!p.assigned}
+                        onChange={(e) => setRestockQty((s) => ({ ...s, [p.id]: e.target.value }))}
+                      />
+                    </TableCell>
+                    {canEditStock && (
+                      <TableCell>
+                        <div className="flex flex-wrap gap-2">
+                          <Input
+                            type="number"
+                            min="0"
+                            className="w-20"
+                            placeholder="Set"
+                            value={ownerQty[p.id] ?? ''}
+                            disabled={!p.assigned}
+                            onChange={(e) => setOwnerQty((s) => ({ ...s, [p.id]: e.target.value }))}
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={saving || !p.assigned}
+                            onClick={() => onOwnerSet(p)}
+                          >
+                            Set
+                          </Button>
+                          <select
+                            className="h-9 rounded-md border border-input bg-background px-2 text-xs"
+                            aria-label={`Move ${p.name} to another branch`}
+                            value={moveTo[p.id] || ''}
+                            disabled={!p.assigned || saving}
+                            onChange={(e) => setMoveTo((s) => ({ ...s, [p.id]: e.target.value }))}
+                          >
+                            <option value="">Move to</option>
+                            {branches
+                              .filter((b) => b.slug !== branch)
+                              .map((b) => (
+                                <option key={b.slug} value={b.slug}>
+                                  {b.name}
+                                </option>
+                              ))}
+                          </select>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={saving || !p.assigned}
+                            onClick={() => onTransfer(p)}
+                          >
+                            Move
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        {p.assigned ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="min-h-9"
+                            disabled={saving}
+                            onClick={() => onRestock(p)}
+                          >
+                            {canEditStock ? 'Restock' : 'Request Restock'}
+                          </Button>
+                        ) : (
+                          <Button
+                            type="button"
+                            size="sm"
+                            disabled={saving || !branch}
+                            onClick={() => assignToBranch(p)}
+                          >
+                            Assign to branch
+                          </Button>
+                        )}
+                        {canCatalog && p.assigned ? (
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            disabled={saving}
+                            onClick={() => removeFromBranch(p)}
+                          >
+                            Remove
+                          </Button>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
-          {pendingRestocks.length ? (
-            <ul className="mt-4 space-y-1 text-sm text-muted-foreground" aria-label="Restock waiting">
-              {pendingRestocks.map((row) => (
-                <li key={row.id}>
-                  {row.products?.name || 'Item'} · add {row.add_qty} · waiting for Super Admin
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          <div className="mt-6 flex flex-col gap-3">
-            <h2 className="text-base font-semibold text-foreground">Point prices</h2>
-            <p className="text-sm text-muted-foreground">Point price is the same at every branch. Assign the accessory or sellable to this branch first. 0 keeps it out of the voucher shop.</p>
+
+          {/* Point Prices Section */}
+          <div className="mt-8 flex flex-col gap-3 rounded-xl border border-border bg-card p-4">
+            <h2 className="text-base font-semibold text-foreground">Point Prices (Voucher Shop)</h2>
+            <p className="text-sm text-muted-foreground">
+              When a customer redeems an accessory or merchandise item for points, the item is automatically deducted from this branch&apos;s inventory. Point price 0 hides it from the voucher shop.
+            </p>
             {pointItems.length === 0 ? (
               <p className="text-sm text-muted-foreground">Nothing is assigned to this branch yet.</p>
-            ) : pointItems.map((product) => (
-              <div key={product.id} className="flex flex-wrap items-end gap-2">
-                <div className="flex min-w-40 flex-1 flex-col gap-1">
-                  <Label htmlFor={`points-${product.id}`}>{product.name}</Label>
-                  <Input
-                    id={`points-${product.id}`}
-                    type="number"
-                    min="0"
-                    className="w-32"
-                    value={pointPrice[product.id] ?? ''}
-                    onChange={(e) => setPointPrice((s) => ({ ...s, [product.id]: e.target.value }))}
-                  />
-                </div>
-                <Button type="button" size="sm" disabled={saving} onClick={() => saveAccessoryPoints(product)}>
-                  Save points
-                </Button>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {pointItems.map((product) => (
+                  <div key={product.id} className="flex flex-col gap-1.5 rounded-lg border border-border p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-medium text-sm text-foreground">{product.name}</span>
+                      <span className="text-xs text-muted-foreground">On-hand: {product.on_hand ?? 0}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id={`points-${product.id}`}
+                        type="number"
+                        min="0"
+                        className="h-9 w-24 text-xs"
+                        placeholder="Points"
+                        value={pointPrice[product.id] ?? ''}
+                        onChange={(e) => setPointPrice((s) => ({ ...s, [product.id]: e.target.value }))}
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-9 text-xs"
+                        disabled={saving}
+                        onClick={() => saveAccessoryPoints(product)}
+                      >
+                        Save
+                      </Button>
+                    </div>
+                  </div>
+                ))}
               </div>
-            ))}
+            )}
           </div>
         </TabsContent>
 
@@ -693,7 +1039,7 @@ export default function BranchInventoryPage({
                 {internalProducts.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-muted-foreground">
-                      No products tagged usage_kind = internal.
+                      No products tagged usage_kind = internal or stock_category = chemical.
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -702,7 +1048,10 @@ export default function BranchInventoryPage({
                     const left = leftoverQty[p.id] ?? String(prev)
                     return (
                       <TableRow key={p.id}>
-                        <TableCell>{p.name}</TableCell>
+                        <TableCell>
+                          <div className="font-medium">{p.name}</div>
+                          <div className="text-xs text-muted-foreground">{stockCategoryLabel(p.stock_category)}</div>
+                        </TableCell>
                         <TableCell className="text-right tabular-nums">{prev}</TableCell>
                         <TableCell>
                           <Input
@@ -720,7 +1069,12 @@ export default function BranchInventoryPage({
                 )}
               </TableBody>
             </Table>
-            <Button className="mt-3" type="button" disabled={saving || !internalProducts.length} onClick={onSubmitRecon}>
+            <Button
+              className="mt-3"
+              type="button"
+              disabled={saving || !internalProducts.length}
+              onClick={onSubmitRecon}
+            >
               Submit Sunday recon
             </Button>
           </div>
@@ -733,7 +1087,7 @@ export default function BranchInventoryPage({
                   <TableHead>Week</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Lines</TableHead>
-                  <TableHead />
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -742,13 +1096,19 @@ export default function BranchInventoryPage({
                     <TableCell>{r.week_of}</TableCell>
                     <TableCell className="capitalize">{r.status}</TableCell>
                     <TableCell>{(r.inventory_recon_lines || []).length}</TableCell>
-                    <TableCell className="space-x-2">
+                    <TableCell className="space-x-2 text-right">
                       {canCatalog && r.status === 'submitted' ? (
                         <>
                           <Button type="button" size="sm" disabled={saving} onClick={() => onApproveRecon(r)}>
                             Approve
                           </Button>
-                          <Button type="button" size="sm" variant="outline" disabled={saving} onClick={() => onRejectRecon(r)}>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={saving}
+                            onClick={() => onRejectRecon(r)}
+                          >
                             Reject
                           </Button>
                         </>
@@ -771,7 +1131,7 @@ export default function BranchInventoryPage({
       className="hakum-inventory-branch"
       eyebrow="Branch stock"
       title="Inventory"
-      description="Restock arrivals and Sunday leftover recon for your branch."
+      description="Restock arrivals and Sunday leftover recon for your branch. Restocks require Super Admin approval."
     >
       {body}
     </OpsPageShell>

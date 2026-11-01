@@ -54,7 +54,6 @@ function body(name, file) {
 
 const ORIG = 'supabase/migrations/20261001090000_daily_sheet.sql'
 const FIX = 'supabase/migrations/20261010170000_daily_sheet_cash_blank_is_cash.sql'
-const PAID_FROM = 'supabase/migrations/20261019210000_daily_sheet_expected_cash_paid_from.sql'
 
 /** The function as originally shipped — history, and the shape the bug lived in. */
 const totals = body('daily_sheet_server_totals', ORIG)

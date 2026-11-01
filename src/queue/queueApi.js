@@ -1,4 +1,5 @@
 import { isBirthdayToday } from '../lib/birthdayPerk'
+import { attendanceRoleHeadcount } from '../lib/attendanceInsights'
 import { supabase } from '../lib/supabase'
 import { getAccessTokenFresh } from '../lib/authToken'
 import { notifyOpsEvent } from '../lib/opsEventNotify'
@@ -232,7 +233,16 @@ export async function fetchOperationsSnapshot(profile, { branchFilter = 'all', f
     ? Promise.resolve({ data: { value: cachedTiming }, error: null })
     : supabase.from('app_settings').select('value').eq('key', 'queue_timing_warnings').maybeSingle()
 
-  const [queue, staffPool, attendance, busyStaff, events, handoffs, settings] = await Promise.all([
+  let allStaffHeadcountQuery = scopedStaffQuery(
+    supabase
+      .from('staff_profiles')
+      .select('id, full_name, role, branch_slug, is_active')
+      .in('role', ['staff', 'team_lead', 'admin'])
+      .eq('is_active', true),
+    branchScope,
+  )
+
+  const [queue, staffPool, attendance, busyStaff, events, handoffs, settings, allStaffRes] = await Promise.all([
     queueQuery.order('created_at', { ascending: false }).limit(250),
     staffPoolQuery.order('full_name'),
     attendanceQuery,
@@ -240,6 +250,7 @@ export async function fetchOperationsSnapshot(profile, { branchFilter = 'all', f
     eventsQuery ? eventsQuery.order('created_at', { ascending: false }).limit(40) : emptyResult(),
     handoffsQuery ? handoffsQuery.order('handed_off_at', { ascending: false }).limit(40) : emptyResult(),
     settingsQuery,
+    allStaffHeadcountQuery.order('full_name'),
   ])
 
   const attendanceRows = attendance.error ? [] : attendance.data || []
@@ -275,6 +286,12 @@ export async function fetchOperationsSnapshot(profile, { branchFilter = 'all', f
     (ticket) => boardStatuses.includes(ticket.status) && isTicketOnTodayFloor(ticket, today),
   )
 
+  const roleHeadcount = attendanceRoleHeadcount(
+    allStaffRes?.data || staffPool.data || [],
+    attendanceRows,
+    today,
+  )
+
   return {
     queue: queueRows,
     activeQueue,
@@ -286,6 +303,7 @@ export async function fetchOperationsSnapshot(profile, { branchFilter = 'all', f
     availableCount: crewModel.availableCount ?? (crewModel.availableStaff?.length || 0),
     absentCount: crewModel.absentCount ?? 0,
     onBayCount: crewModel.onBayCount ?? (crewModel.busyStaff?.length || 0),
+    roleHeadcount,
     events: events.data || [],
     handoffs: handoffs.data || [],
     timingWarnings,
@@ -414,6 +432,7 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
       carSizeBySale: [],
       bestSellers: [],
       chemicalUsage: { stub: true, weeks: [] },
+      roleHeadcount: [],
     }
   }
 

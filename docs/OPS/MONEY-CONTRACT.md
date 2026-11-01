@@ -46,6 +46,7 @@ Paid POS (services / packages / detailing / merch)
 | B3 | Crew request an advance in **Planner → Forms → Cash advance**. Super Admin or Assistant Super Admin approves it and a code is minted. The sheet chip appears only after that. *Given out* is saved only when the Branch Admin types that code and the amount matches. |
 | B4 | **Retired** — payroll-wizard CA deduct. Advances and repayments are sheet lines only; there is no auto-deduct from pay. |
 | B5 | Prefer settling a prior advance before a new one (BA judgement; not enforced). |
+| B6 | Cash advances are tracked under **Chart of Accounts Code 9** ("Cash advance and cash advance payment"). In Finance → P&L, drilling down on cash advance lines displays both releases and repayments from approved Daily Sheets alongside any bills. |
 
 ### Crew pay on the sheet
 
@@ -90,6 +91,14 @@ Paid POS (services / packages / detailing / merch)
 | G1 | BA = merch + Pay queue + Daily Sheet. | Less wrong tickets; SA / ASA for walk-in bay / detailing. |
 | G2 | Daily Sheet submit: BA (own branches) + SA / ASA. Team Lead denied. | |
 | G3 | Approve / return: SA + ASA with `finance_view` only. Branch Admin never approves a sheet. | Mirrors SQL `daily_sheet_can_review()` (migration `20261001090000_daily_sheet.sql`) and `src/lib/dailySheet.js` `canReviewDailySheet`. |
+
+### Inventory Restock & Purchasing Policy
+
+| Fact | Source of truth | Law & Contract |
+|------|-----------------|----------------|
+| **Inventory Restock** | `product_branch_stock` + `product_stock_movements` | Restocking updates on-hand physical inventory counts only and **never incurs or creates expenses** in `expenses` or `finance_daily_pl`. Branch admins submit restock requests (`restock_requests`) which wait for Super Admin / Assistant Super Admin approval. |
+| **Bulk Chemical & Supply Purchasing** | `expenses` (category `Chemical and Other Inventory`, account code 3) | Because chemicals and inventory items are ordered in bulk, all purchasing costs are entered manually in **Finance** (`/operations/finance` under Operating Expenses → Chemical and Other Inventory). Admins monitor total on-hand counts across branches to determine when reorders are required. |
+| **Total Inventory Count Sync** | `public.sync_product_total_stock_qty()` trigger | `products.stock_qty` is automatically synced to `SUM(product_branch_stock.qty)` so network inventory is always accurate in both table queries and UI dashboards. |
 
 ### Who may do what
 

@@ -2,8 +2,8 @@
 
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 
-export const PROMO_APPLIES_TO = Object.freeze(['wash', 'detailing', 'any'])
-export const PROMO_DISCOUNT_KINDS = Object.freeze(['percent', 'free'])
+export const PROMO_APPLIES_TO = Object.freeze(['any', 'wash', 'detailing', 'service'])
+export const PROMO_DISCOUNT_KINDS = Object.freeze(['percent', 'fixed', 'free'])
 
 export function mintPromoCode(random = Math.random) {
   let code = 'VK'
@@ -46,27 +46,73 @@ export function promoDiscountedPriceMinor(priceMinor, voucher) {
   const price = Math.max(0, Math.floor(Number(priceMinor) || 0))
   if (!voucher) return price
   if (voucher.discount_kind === 'free') return 0
+  if (voucher.discount_kind === 'fixed' || voucher.discount_kind === 'amount') {
+    const off = Math.max(
+      0,
+      Math.floor(
+        voucher.discount_amount_minor != null
+          ? Number(voucher.discount_amount_minor)
+          : (Number(voucher.discount_amount || 0) * 100)
+      )
+    )
+    return Math.max(0, price - off)
+  }
   const pct = Math.min(100, Math.max(0, Number(voucher.discount_percent) || 0))
   return Math.max(0, Math.round(price * (1 - pct / 100)))
 }
 
-export function promoAppliesToService(voucher, payCategory, serviceKind) {
+export function promoAppliesToService(voucher, payCategory, serviceKind, serviceId = null, parentServiceId = null) {
+  if (!voucher) return true
   const scope = String(voucher?.applies_to || 'any')
-  if (scope === 'any') return true
+  if (scope === 'any' && !voucher.service_id) return true
+
+  if (scope === 'service' || voucher.service_id) {
+    if (!voucher.service_id) return true
+    const sId = String(serviceId || serviceKind || '')
+    const targetId = String(voucher.service_id)
+    const pId = parentServiceId ? String(parentServiceId) : ''
+    return sId === targetId || pId === targetId || String(serviceKind || '') === targetId
+  }
+
   const kind = String(serviceKind || '')
   const cat = String(payCategory || '')
   if (scope === 'detailing') return kind === 'detailing' || cat === 'detailing'
   if (scope === 'wash') return kind !== 'detailing' && cat !== 'detailing'
+
+  if (scope !== 'any') {
+    const sId = String(serviceId || '')
+    return scope === kind || scope === sId
+  }
   return true
+}
+
+export function voucherScopeLabel(voucher, serviceName = '') {
+  if (!voucher) return 'all services'
+  const scope = String(voucher?.applies_to || 'any')
+  if (scope === 'detailing') return 'detailing only'
+  if (scope === 'wash') return 'wash and packages only'
+  if (scope === 'service' || voucher?.service_id) {
+    return serviceName ? `${serviceName} only` : 'a specific service only'
+  }
+  if (scope !== 'any') return `${scope} only`
+  return 'all services'
 }
 
 export function customerVoucherRulesLine(voucher) {
   if (!voucher) return ''
   const left = promoVoucherRemaining(voucher)
-  const kind =
-    voucher.discount_kind === 'free'
-      ? 'Free service'
-      : `${Math.round(Number(voucher.discount_percent) || 0)}% off`
+  let kind = ''
+  if (voucher.discount_kind === 'free') {
+    kind = 'Free service'
+  } else if (voucher.discount_kind === 'fixed' || voucher.discount_kind === 'amount') {
+    const amtMinor = voucher.discount_amount_minor != null
+      ? Number(voucher.discount_amount_minor)
+      : (Number(voucher.discount_amount || 0) * 100)
+    const pesos = Math.round(amtMinor / 100)
+    kind = `₱${pesos.toLocaleString()} off`
+  } else {
+    kind = `${Math.round(Number(voucher.discount_percent) || 0)}% off`
+  }
   const when = voucher.ends_on ? ` until ${String(voucher.ends_on).slice(0, 10)}` : ''
   return `${kind}. ${left} of ${voucher.max_uses} uses left${when}. Show the code to the Team Lead.`
 }

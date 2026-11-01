@@ -1,10 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
-import { resolveSupabaseConfig } from './supabaseConfig'
+import { resolveSupabaseConfig } from './supabaseConfig.js'
 
 const config = resolveSupabaseConfig({
-  url: import.meta.env.VITE_SUPABASE_URL,
-  key: import.meta.env.VITE_SUPABASE_ANON_KEY,
-  isDev: import.meta.env.DEV,
+  url: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_URL) || globalThis.process?.env?.VITE_SUPABASE_URL || '',
+  key: (typeof import.meta !== 'undefined' && import.meta.env?.VITE_SUPABASE_ANON_KEY) || globalThis.process?.env?.VITE_SUPABASE_ANON_KEY || '',
+  isDev: typeof import.meta !== 'undefined' && import.meta.env ? Boolean(import.meta.env.DEV) : true,
 })
 
 export const supabase = createClient(config.url, config.key, {

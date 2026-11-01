@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { CalendarDays, Car, Check, ChevronLeft, ChevronRight, Droplets, MapPin, Plus } from 'lucide-react'
+import { CalendarDays, Car, Check, CheckCircle2, ChevronLeft, ChevronRight, Droplets, MapPin, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
 import { supabase } from '@/lib/supabase'
 import { getAccessTokenFresh } from '@/lib/authToken'
-import { fetchPortal } from '@/lib/customerPortalClient'
+import { fetchPortal, portalAction } from '@/lib/customerPortalClient'
+import { normalizePromoCode, promoDiscountedPriceMinor } from '@/lib/promoVoucher'
 import { formatSizePriceRange, PRICING_SIZES, resolveServicePriceMinor, normalizePricingSize } from '@/lib/servicePricing'
 import { filterFloorDetailingServices } from '@/lib/serviceKinds'
 import { packagesForService, bookedDetailingServiceId } from '@/lib/detailingPackages'
@@ -85,6 +86,10 @@ export default function CustomerBookPage() {
   const referralStaff = useReferralStaff()
   const [day, setDay] = useState(() => earliestBookableDay())
   const [time, setTime] = useState('10:00')
+  const [voucherInput, setVoucherInput] = useState(() => String(params.get('voucher') || '').toUpperCase())
+  const [appliedVoucher, setAppliedVoucher] = useState(null)
+  const [voucherBusy, setVoucherBusy] = useState(false)
+  const [voucherError, setVoucherError] = useState('')
   const [otherTime, setOtherTime] = useState(false)
   const [flowOpen, setFlowOpen] = useState(false)
   const [step, setStep] = useState(0)
@@ -176,13 +181,17 @@ export default function CustomerBookPage() {
   const selected = services.find((s) => s.id === form.service_id)
   const packages = packagesForService(catalog, form.service_id)
   const selectedPackage = packages.find((p) => p.id === form.package_id) || null
-  const quote = selectedPackage?.price_minor > 0
-    ? formatPeso(selectedPackage.price_minor)
-    : selectedPackage
-      ? 'Ask for price'
-      : selected
-        ? formatPeso(resolveServicePriceMinor(selected, form.vehicle_type))
-        : ''
+  const basePriceMinor = selectedPackage?.price_minor > 0
+    ? selectedPackage.price_minor
+    : selected
+      ? resolveServicePriceMinor(selected, form.vehicle_type)
+      : 0
+  const quote = basePriceMinor > 0 ? formatPeso(basePriceMinor) : selectedPackage ? 'Ask for price' : ''
+  const discountedPriceMinor = appliedVoucher
+    ? promoDiscountedPriceMinor(basePriceMinor, appliedVoucher)
+    : basePriceMinor
+  const voucherDiscountMinor = Math.max(0, basePriceMinor - discountedPriceMinor)
+  const availablePromos = portal?.vouchers?.active || []
   const sizeLabel = PRICING_SIZES.find((s) => s.slug === form.vehicle_type)?.label || form.vehicle_type
   const branchRow = branches.find((b) => b.slug === form.branch)
   const savedCar = vehicles.find((v) => v.plate_number === form.vehicle_plate) || null
@@ -200,6 +209,33 @@ export default function CustomerBookPage() {
         : stepId === 'when'
           ? Boolean(day && time)
           : Boolean(form.customer_first_name && form.customer_phone) && !referralRequiredError(form) && !friendCodeAccountError(form, authProfile?.role === 'customer' ? user?.id : null)
+
+  async function applyVoucherDirect(rawCode) {
+    const code = normalizePromoCode(rawCode)
+    if (!code) return
+    setVoucherBusy(true)
+    setVoucherError('')
+    try {
+      const targetServiceId = bookedDetailingServiceId(form.service_id, form.package_id, packages)
+      const res = await portalAction('check-voucher', {
+        code,
+        service_id: targetServiceId,
+        price_minor: basePriceMinor,
+      })
+      if (res?.ok && res.voucher) {
+        setAppliedVoucher(res.voucher)
+        setVoucherInput(res.voucher.code)
+        toast.success(`Voucher ${res.voucher.code} applied!`)
+      } else {
+        throw new Error(res?.error || 'Voucher not found')
+      }
+    } catch (err) {
+      setVoucherError(err.message || 'That voucher could not be applied.')
+      toast.error(err.message || 'Voucher could not be applied')
+    } finally {
+      setVoucherBusy(false)
+    }
+  }
 
   function openFlow(serviceId) {
     setForm((f) => ({ ...f, service_id: serviceId, package_id: '' }))
@@ -251,6 +287,7 @@ export default function CustomerBookPage() {
         ...form,
         service_id: bookedDetailingServiceId(form.service_id, form.package_id, packages),
         scheduled_start: `${day}T${time}`,
+        voucher_code: appliedVoucher ? appliedVoucher.code : undefined,
       }),
       })
       const body = await res.json().catch(() => ({}))
@@ -638,9 +675,118 @@ export default function CustomerBookPage() {
                   </div>
                   <div>
                     <dt>Price</dt>
-                    <dd className="capp-sum-price">{quote || '—'}</dd>
+                    <dd className={appliedVoucher ? 'line-through text-muted-foreground' : 'capp-sum-price'}>
+                      {quote || '—'}
+                    </dd>
                   </div>
+                  {appliedVoucher ? (
+                    <div>
+                      <dt className="text-emerald-700 dark:text-emerald-400 font-semibold">
+                        Voucher ({appliedVoucher.code})
+                      </dt>
+                      <dd className="text-emerald-700 dark:text-emerald-400 font-bold">
+                        -{formatPeso(voucherDiscountMinor)} ({appliedVoucher.discount_kind === 'free' ? 'Free service' : (appliedVoucher.discount_kind === 'fixed' || appliedVoucher.discount_kind === 'amount') ? `${formatPeso(appliedVoucher.discount_amount_minor || 0)} off` : `${appliedVoucher.discount_percent}% off`})
+                      </dd>
+                    </div>
+                  ) : null}
+                  {appliedVoucher ? (
+                    <div>
+                      <dt className="font-bold">Total price</dt>
+                      <dd className="capp-sum-price font-extrabold text-emerald-700 dark:text-emerald-400">
+                        {formatPeso(discountedPriceMinor)}
+                      </dd>
+                    </div>
+                  ) : null}
                 </dl>
+
+                <div className="capp-sect mt-3">
+                  <h2>Promo voucher</h2>
+                </div>
+                <div className="capp-card space-y-3">
+                  {appliedVoucher ? (
+                    <div className="flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3">
+                      <div className="min-w-0 pr-2">
+                        <div className="flex items-center gap-1.5">
+                          <CheckCircle2 size={15} className="text-emerald-600 dark:text-emerald-400" />
+                          <span className="font-mono font-bold text-sm text-emerald-800 dark:text-emerald-300">
+                            {appliedVoucher.code}
+                          </span>
+                          <span className="text-xs text-muted-foreground">· Applied</span>
+                        </div>
+                        <p className="text-xs text-muted-foreground truncate mt-0.5">
+                          {appliedVoucher.title} ({appliedVoucher.discount_kind === 'free' ? 'Free service' : (appliedVoucher.discount_kind === 'fixed' || appliedVoucher.discount_kind === 'amount') ? `${formatPeso(appliedVoucher.discount_amount_minor || 0)} off` : `${appliedVoucher.discount_percent}% off`})
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        className="text-xs font-semibold text-destructive hover:underline px-2 py-1"
+                        onClick={() => {
+                          setAppliedVoucher(null)
+                          setVoucherInput('')
+                          setVoucherError('')
+                        }}
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          value={voucherInput}
+                          onChange={(e) => {
+                            setVoucherInput(e.target.value.toUpperCase())
+                            setVoucherError('')
+                          }}
+                          placeholder="Voucher code (e.g. SUMMER10)"
+                          className="min-h-11 flex-1 font-mono uppercase tracking-wider px-3.5 py-2 rounded-xl border border-border bg-background text-sm text-foreground placeholder:normal-case placeholder:tracking-normal focus:outline-none focus:ring-2 focus:ring-primary"
+                          autoCapitalize="characters"
+                          autoComplete="off"
+                          maxLength={16}
+                        />
+                        <button
+                          type="button"
+                          className="capp-btn capp-btn-accent min-h-11 font-semibold"
+                          disabled={!voucherInput.trim() || voucherBusy}
+                          onClick={() => applyVoucherDirect(voucherInput)}
+                        >
+                          {voucherBusy ? 'Checking…' : 'Apply'}
+                        </button>
+                      </div>
+                      {voucherError ? (
+                        <p className="text-xs font-medium text-destructive mt-1" role="alert">
+                          {voucherError}
+                        </p>
+                      ) : null}
+                      {availablePromos.length ? (
+                        <div className="pt-1">
+                          <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+                            Available vouchers:
+                          </p>
+                          <div className="flex flex-wrap gap-1.5">
+                            {availablePromos.slice(0, 3).map((v) => (
+                              <button
+                                key={v.id || v.code}
+                                type="button"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-border bg-muted/60 text-xs font-medium hover:bg-muted transition-colors text-foreground"
+                                onClick={() => {
+                                  setVoucherInput(v.code)
+                                  applyVoucherDirect(v.code)
+                                }}
+                              >
+                                <strong className="font-mono">{v.code}</strong>
+                                <span className="text-[11px] text-muted-foreground">
+                                  ({v.discount_kind === 'free' ? 'Free' : (v.discount_kind === 'fixed' || v.discount_kind === 'amount') ? `${formatPeso(v.discount_amount_minor || 0)} off` : `${v.discount_percent}%`})
+                                </span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null}
+                    </>
+                  )}
+                </div>
                 <div className="capp-sect">
                   <h2>Contact</h2>
                 </div>

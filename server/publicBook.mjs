@@ -8,6 +8,14 @@ import { plateValidationError } from '../src/lib/customerAuth.js'
 import { inferPhPricingSize } from '../src/lib/phVehicleSizes.js'
 import { isBookingBoardService } from '../src/lib/serviceKinds.js'
 import { isCustomerBookable } from '../src/lib/bookingLead.js'
+import {
+  normalizePromoCode,
+  promoAppliesToService,
+  promoCodeShapeError,
+  promoDiscountedPriceMinor,
+  promoVoucherWindowError,
+  voucherScopeLabel,
+} from '../src/lib/promoVoucher.js'
 
 function admin() {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
@@ -131,6 +139,64 @@ export async function handlePublicBookRequest(req, res) {
     const referralError = referralRequiredError(referral) || friendCodeAccountError(referral, customer_id)
     if (referralError) return json(res, 400, { error: referralError })
 
+    const rawVoucherCode = String(body.voucher_code || '').trim()
+    let appliedVoucher = null
+    let promoDiscountMinor = 0
+    let finalPriced = priced
+
+    if (rawVoucherCode) {
+      const normalizedCode = normalizePromoCode(rawVoucherCode)
+      const shapeErr = promoCodeShapeError(normalizedCode)
+      if (shapeErr) return json(res, 400, { error: shapeErr })
+
+      const { data: voucher, error: vErr } = await db
+        .from('promo_vouchers')
+        .select('*, services(name, slug)')
+        .eq('code', normalizedCode)
+        .eq('is_active', true)
+        .maybeSingle()
+      if (vErr || !voucher) {
+        return json(res, 400, { error: 'That voucher code was not found.' })
+      }
+
+      const todayKey = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })
+      const windowErr = promoVoucherWindowError(voucher, todayKey)
+      if (windowErr) return json(res, 400, { error: windowErr })
+
+      const { count: holds } = await db
+        .from('bookings')
+        .select('*', { count: 'exact', head: true })
+        .eq('promo_voucher_id', voucher.id)
+        .not('status', 'in', '("completed","cancelled")')
+      const maxUses = Math.max(0, Math.floor(Number(voucher.max_uses) || 0))
+      const usesCount = Math.max(0, Math.floor(Number(voucher.uses_count) || 0))
+      if (usesCount + (holds || 0) >= maxUses) {
+        return json(res, 400, { error: 'That voucher has no uses left.' })
+      }
+
+      if (customer_id) {
+        const { count: prior } = await db
+          .from('promo_voucher_redemptions')
+          .select('*', { count: 'exact', head: true })
+          .eq('voucher_id', voucher.id)
+          .eq('customer_id', customer_id)
+          .not('consumed_at', 'is', null)
+        const maxPer = Math.max(1, Math.floor(Number(voucher.max_per_customer) || 1))
+        if ((prior || 0) >= maxPer) {
+          return json(res, 400, { error: 'You have already used that voucher.' })
+        }
+      }
+
+      if (!promoAppliesToService(voucher, svc.pay_category, svc.slug, svc.id, svc.parent_service_id)) {
+        const scope = voucherScopeLabel(voucher, voucher.services?.name || svc.name)
+        return json(res, 400, { error: `That voucher is for ${scope}.` })
+      }
+
+      finalPriced = promoDiscountedPriceMinor(priced, voucher)
+      promoDiscountMinor = priced - finalPriced
+      appliedVoucher = voucher
+    }
+
     const insert = {
       customer_name,
       customer_phone,
@@ -148,11 +214,24 @@ export async function handlePublicBookRequest(req, res) {
       status: 'pending',
       is_archived: false,
       price_minor: priced,
-      final_price_minor: priced,
+      final_price_minor: finalPriced,
+      promo_voucher_id: appliedVoucher ? appliedVoucher.id : null,
+      promo_discount_minor: promoDiscountMinor,
+      promo_applied_at: appliedVoucher ? new Date().toISOString() : null,
     }
 
     const { data: booking, error } = await db.from('bookings').insert(insert).select('*').single()
     if (error) return json(res, 400, { error: error.message })
+
+    if (appliedVoucher) {
+      await db.from('promo_voucher_redemptions').insert({
+        voucher_id: appliedVoucher.id,
+        booking_id: booking.id,
+        customer_id: customer_id || null,
+        discount_minor: promoDiscountMinor,
+        consumed_at: null,
+      })
+    }
 
     // Best-effort notify — never fail the booking
     let notify = null

@@ -44,6 +44,7 @@ import QueueTicketEditModal from '../components/QueueTicketEditModal'
 import QueueTicketEditor from '../components/QueueTicketEditor'
 import TeamLeadQueuePage from './TeamLeadQueuePage'
 import SuperAdminFloorBoard from './SuperAdminFloorBoard'
+import { formatAttendanceHeadcountStrings, isFloorCrew } from '@/lib/attendanceInsights'
 import {
   formatQueueNumber,
   getBranchScope,
@@ -194,7 +195,8 @@ function TicketCard({ ticket, timingWarnings, onOpen, compact = false, viewOnly 
   const car = [ticket.vehicle_make, ticket.vehicle_model].filter(Boolean).join(' ') || 'Vehicle TBD'
   const service = ticket.service_name || 'Service TBD'
   const qNum = formatQueueNumber(ticket.queue_number, ticket.service_pay_category)
-  const label = `${qNum} · ${plate}, ${car}, ${service}`
+  const notes = String(ticket.notes || '').trim()
+  const label = `${qNum} · ${plate}, ${car}, ${service}${notes ? ` · Note: ${notes}` : ''}`
   const body = (
     <>
       <p className="bk-ticket-status tabular-nums">{qNum}</p>
@@ -210,6 +212,14 @@ function TicketCard({ ticket, timingWarnings, onOpen, compact = false, viewOnly 
           Fast in-progress
         </p>
       ) : null}
+      {notes ? (
+        <div className="bk-ticket-notes" title={notes}>
+          <span className="bk-ticket-notes-tag">Note</span>
+          <span className="bk-ticket-notes-text">{notes}</span>
+        </div>
+      ) : (
+        <p className="bk-ticket-notes-empty">No notes</p>
+      )}
     </>
   )
   if (onOpen) {
@@ -244,7 +254,7 @@ function TicketCard({ ticket, timingWarnings, onOpen, compact = false, viewOnly 
 
 function useOperationsSnapshot(branchFilter = 'all', family = 'wash') {
   const { profile } = useAuth()
-  const [snapshot, setSnapshot] = useState({ queue: [], activeQueue: [], staffPool: [], availableStaff: [], busyStaff: [], events: [], handoffs: [], timingWarnings: null })
+  const [snapshot, setSnapshot] = useState({ queue: [], activeQueue: [], staffPool: [], availableStaff: [], busyStaff: [], events: [], handoffs: [], timingWarnings: null, roleHeadcount: [] })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [live, setLive] = useState(false)
@@ -335,7 +345,7 @@ function ScopedFloorDashboard() {
   const [salesBoard, setSalesBoard] = useState({ summary: null, recentSales: [] })
   const [salesError, setSalesError] = useState('')
   const [salesLoading, setSalesLoading] = useState(true)
-  const { activeQueue, availableStaff, busyStaff, events, handoffs, timingWarnings, loading, error, live, reload } = useOperationsSnapshot(branchFilter, 'detailing')
+  const { activeQueue, availableStaff, busyStaff, events, handoffs, timingWarnings, loading, error, live, reload, roleHeadcount } = useOperationsSnapshot(branchFilter, 'detailing')
   const boardStatuses = useMemo(() => getOpsBoardStatuses(profile), [profile])
   const detailingStatuses = useMemo(() => getOpsBoardStatuses(profile, { family: 'detailing' }), [profile])
   const washQueue = useMemo(
@@ -666,9 +676,22 @@ function ScopedFloorDashboard() {
         <div className={investor ? 'mt-4 sm:mt-5' : 'mt-4 grid gap-4 xl:grid-cols-[1.1fr_.9fr] sm:mt-5 sm:gap-5'}>
         {investor ? null : (
         <Panel title="Crew Availability" icon={Users}>
+          <div className="mb-4 rounded-xl border border-border/80 bg-muted/30 p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <p className="text-sm font-bold text-foreground">
+                {formatAttendanceHeadcountStrings(branchFilter === 'all' ? 'All branches' : (branches.find((b) => b.slug === branchFilter)?.name || branchFilter), roleHeadcount).crewLine}
+              </p>
+              <p className="mt-0.5 text-xs font-medium text-muted-foreground">
+                {formatAttendanceHeadcountStrings(branchFilter === 'all' ? 'All branches' : (branches.find((b) => b.slug === branchFilter)?.name || branchFilter), roleHeadcount).adminLine}
+              </p>
+            </div>
+            <Link to="/operations/attendance" className="text-xs font-semibold text-primary hover:underline">
+              View register →
+            </Link>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2">
-            <CrewList title="Available" rows={availableStaff} empty="No available staff" />
-            <CrewList title="Busy" rows={busyStaff} empty="No busy staff" busy />
+            <CrewList title="Available" rows={(availableStaff || []).filter(isFloorCrew)} empty="No available staff" />
+            <CrewList title="Busy" rows={(busyStaff || []).filter(isFloorCrew)} empty="No busy staff" busy />
           </div>
         </Panel>
         )}
@@ -1071,7 +1094,17 @@ function OperationsQueueBoardPage() {
                       <div className="text-xs text-muted-foreground">{ticket.customer_phone || 'No phone'}</div>
                     </TableCell>
                     <TableCell className="text-foreground">{bookingCarText(ticket) || '—'}</TableCell>
-                    <TableCell className="q-col-service font-medium text-primary">{ticket.service_name || '—'}</TableCell>
+                    <TableCell className="q-col-service font-medium text-primary">
+                      <div>{ticket.service_name || '—'}</div>
+                      {ticket.notes?.trim() ? (
+                        <div className="mt-1 flex items-start gap-1 text-xs font-normal text-amber-800 dark:text-amber-300" title={ticket.notes}>
+                          <span className="shrink-0 rounded bg-amber-500/15 px-1 py-0.5 text-[10px] font-bold uppercase text-amber-900 dark:bg-amber-400/20 dark:text-amber-200">Note</span>
+                          <span className="line-clamp-1 break-words">{ticket.notes}</span>
+                        </div>
+                      ) : (
+                        <div className="text-[11px] font-normal text-muted-foreground/60">No notes</div>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <StatusBadge status={ticket.status} label={statusShortLabel(ticket.status)} />
                     </TableCell>
@@ -2051,7 +2084,7 @@ export function MyTasksPage() {
     const [queueRes, planRes] = await Promise.all([
       supabase
       .from('queue_assignments')
-        .select('id, booking_id, task_name, task_notes, status, started_at, completed_at, released_at, created_at, bookings(vehicle_plate, branch, status, queue_number)')
+        .select('id, booking_id, task_name, task_notes, status, started_at, completed_at, released_at, created_at, bookings(vehicle_plate, branch, status, queue_number, notes)')
       .eq('staff_id', staffId)
         .in('status', ['active', 'pending'])
         .order('created_at', { ascending: false }),
@@ -2260,7 +2293,15 @@ export function MyTasksPage() {
                     )}
             </div>
             </div>
-            {row.task_notes && <p className="mt-4 text-sm text-muted-foreground">{row.task_notes}</p>}
+            {booking?.notes?.trim() ? (
+              <div className="mt-3 flex items-start gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2.5 py-1.5 text-xs font-medium text-amber-950 dark:text-amber-200">
+                <span className="shrink-0 rounded bg-amber-500/20 px-1 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-900 dark:bg-amber-400/20 dark:text-amber-200">Note</span>
+                <span className="break-words leading-relaxed"><span className="font-semibold">Customer instruction:</span> {booking.notes}</span>
+              </div>
+            ) : (
+              <p className="mt-2 text-xs text-muted-foreground/70">No customer notes</p>
+            )}
+            {row.task_notes && <p className="mt-2 text-sm text-muted-foreground"><span className="font-semibold">Task instructions:</span> {row.task_notes}</p>}
           </article>
             )
           }) : <EmptyLine text={loading ? 'Loading…' : empty ? 'No assigned tasks right now.' : 'No queue assignments.'} />}

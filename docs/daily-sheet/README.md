@@ -65,6 +65,7 @@ ceramic and detailer splits as before; Team Leads get their **daily rate** (`sta
 
 | Code | Account |
 |---|---|
+| 9 | Cash advance and cash advance payment |
 | 10 | Meals and Entertainment |
 | 11 | Apparel Inventory |
 | 12 | Chemical and Other Inventory |
@@ -78,7 +79,18 @@ ceramic and detailer splits as before; Team Leads get their **daily rate** (`sta
 | 20 | Shipping and/or Delivery Fees |
 | 21 | Taxes and Accounting Fees |
 
+Account **9** tracks cash advance releases and repayments across daily sheets and bills.
 Salaries post under **14**. Monthly salaries (office, Branch Admins) are entered as **Bills** in Finance under 14.
+
+### General Ledger Drill-Down (P&L line-by-line inspection)
+
+In **Finance → Profit and Loss**, every category row header and cell (in monthly comparison, period view, and branch columns) is interactive.
+Clicking any category or cell opens an immersive slide-over breakdown drawer (`FinanceDrilldownSheet`):
+- Displays each underlying transaction line inputted into the system (Bills, approved Daily Sheet expenses, Payroll, POS sales, and Cash Advance movements).
+- Filters by text query (title, party/payee/customer, note, reference) and source type chips (Bill, Daily Sheet, Payslip, POS Sale).
+- Displays individual line dates, branch, payment method (cash / GCash / card), amounts, and references.
+- One-click redirection to underlying source records: direct deep link to the specific Daily Sheet (`/operations/finance?tab=sheets&sheet=<id>`), Bill Account (`/operations/finance?tab=purchases&acct=<id>`), or POS Sales (`/operations/finance?tab=sales`).
+- Export breakdown as CSV with full audit headers.
 
 Only Super Admin or an ASA with `finance_write` can set a staff member's **daily rate** — a database trigger (`staff_profiles_guard_daily_rate`) refuses anyone else, even if they can edit other staff fields. The same people edit **Settings → Daily sheet rules**; other ASAs see the rules read-only.
 

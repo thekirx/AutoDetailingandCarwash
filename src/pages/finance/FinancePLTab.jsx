@@ -1,6 +1,6 @@
 /** Finance Profit and Loss — Xero-style: statement, this year by month, compare 1–12 periods, compare branches.
  * Trading income is split by service family with a reconciling discounts row. Layout lives in the URL (by, n). */
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import { Download, FileSpreadsheet, Printer } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -33,6 +33,7 @@ import {
   yearMonths,
 } from '@/lib/financeBooks'
 import { FinanceEmpty, FinanceMetricCell, FinanceMetricStrip, FinancePanel, FinanceTabSkeleton } from './FinanceChrome'
+import FinanceDrilldownSheet from './FinanceDrilldownSheet'
 
 const expenseConfig = {
   amount: { label: 'Spend', color: '#b91c1c' },
@@ -66,35 +67,119 @@ function usePlSpan({ enabled, start, end, profile, branchFilter }) {
   return state
 }
 
-function PivotTable({ headings, pivot }) {
+function PivotTable({
+  headings,
+  pivot,
+  periods = [],
+  branchCols = [],
+  layout = '',
+  range = {},
+  branchFilter = 'all',
+  onOpenDrilldown,
+}) {
   const sum = (arr) => arr.reduce((s, v) => s + v, 0)
-  const cells = (values, total, strong) => (
+  const cells = (values, total, strong, rowKind, rowCategory) => (
     <>
       {values.map((v, i) => (
         <td key={headings[i]} className={`num${strong ? ' font-semibold' : ''}`}>
-          {v ? formatAccounting(v) : '—'}
+          {v && onOpenDrilldown && !strong ? (
+            <button
+              type="button"
+              className="pl-cell-btn"
+              onClick={() =>
+                onOpenDrilldown({
+                  kind: rowKind,
+                  category: rowCategory,
+                  start: layout === 'branches' ? range?.start : periods[i]?.start || range?.start,
+                  end: layout === 'branches' ? range?.end : periods[i]?.end || range?.end,
+                  periodLabel: headings[i],
+                  branch: layout === 'branches' ? branchCols[i]?.slug : branchFilter,
+                  amount: v,
+                })
+              }
+              title={`Inspect ${headings[i]} breakdown for ${rowCategory} (${formatAccounting(v)})`}
+              aria-label={`Inspect ${rowCategory} for ${headings[i]}`}
+            >
+              {formatAccounting(v)}
+            </button>
+          ) : v ? (
+            formatAccounting(v)
+          ) : (
+            '—'
+          )}
         </td>
       ))}
-      <td className="num font-semibold">{formatAccounting(total)}</td>
+      <td className="num font-semibold">
+        {total && onOpenDrilldown && !strong ? (
+          <button
+            type="button"
+            className="pl-cell-btn font-bold"
+            onClick={() =>
+              onOpenDrilldown({
+                kind: rowKind,
+                category: rowCategory,
+                start: layout === 'branches' ? range?.start : periods[0]?.start || range?.start,
+                end: layout === 'branches' ? range?.end : periods[periods.length - 1]?.end || range?.end,
+                periodLabel: layout === 'branches' ? 'All branches (Total)' : 'Full period total',
+                branch: branchFilter,
+                amount: total,
+              })
+            }
+            title={`Inspect total breakdown for ${rowCategory} (${formatAccounting(total)})`}
+            aria-label={`Inspect total for ${rowCategory}`}
+          >
+            {formatAccounting(total)}
+          </button>
+        ) : (
+          formatAccounting(total)
+        )}
+      </td>
     </>
   )
-  const section = (title, rows, totalLabel, totals) => (
-    <>
-      <tr className="finance-pl-section">
-        <th colSpan={headings.length + 2}>{title}</th>
-      </tr>
-      {rows.map((r) => (
-        <tr key={`${title}:${r.category}`}>
-          <td>{r.category}</td>
-          {cells(r.values, r.total)}
+  const section = (title, rows, totalLabel, totals) => {
+    const rowKind = title === 'Trading income' ? 'income' : 'expense'
+    return (
+      <>
+        <tr className="finance-pl-section">
+          <th colSpan={headings.length + 2}>{title}</th>
         </tr>
-      ))}
-      <tr className="finance-pl-subtotal">
-        <td>{totalLabel}</td>
-        {cells(totals, sum(totals), true)}
-      </tr>
-    </>
-  )
+        {rows.map((r) => (
+          <tr key={`${title}:${r.category}`}>
+            <td className="font-medium">
+              {onOpenDrilldown ? (
+                <button
+                  type="button"
+                  className="pl-clickable-category"
+                  onClick={() =>
+                    onOpenDrilldown({
+                      kind: rowKind,
+                      category: r.category,
+                      start: layout === 'branches' ? range?.start : periods[0]?.start || range?.start,
+                      end: layout === 'branches' ? range?.end : periods[periods.length - 1]?.end || range?.end,
+                      periodLabel: layout === 'branches' ? 'All branches' : 'All Months (Total)',
+                      branch: branchFilter,
+                      amount: r.total,
+                    })
+                  }
+                  title={`Click to inspect each line for ${r.category}`}
+                  aria-label={`Inspect breakdown for ${r.category}`}
+                >
+                  <span>{r.category}</span>
+                </button>
+              ) : (
+                r.category
+              )}
+            </td>
+            {cells(r.values, r.total, false, rowKind, r.category)}
+          </tr>
+        ))}
+        <tr className="finance-pl-subtotal">
+          <td>{totalLabel}</td>
+          {cells(totals, sum(totals), true, rowKind, totalLabel)}
+        </tr>
+      </>
+    )
+  }
   const net = sum(pivot.totals.net)
   return (
     <div className="overflow-x-auto">
@@ -115,13 +200,14 @@ function PivotTable({ headings, pivot }) {
           {section('Operating expenses', pivot.expense, 'Total operating expenses', pivot.totals.expenses)}
           <tr className={`finance-pl-net ${net >= 0 ? 'is-positive' : 'is-negative'}`}>
             <td>Net profit</td>
-            {cells(pivot.totals.net, net, true)}
+            {cells(pivot.totals.net, net, true, 'net', 'Net profit')}
           </tr>
         </tbody>
       </table>
     </div>
   )
 }
+
 
 export default function FinancePLTab({
   plRows,
@@ -193,9 +279,7 @@ export default function FinancePLTab({
     ]
   }, [incomeRows, expenseRows, pl, prior, comparing])
 
-  const [openExpense, setOpenExpense] = useState('')
-  const [expenseLines, setExpenseLines] = useState([])
-  const [expenseNote, setExpenseNote] = useState('')
+  const [drilldown, setDrilldown] = useState(null)
   const windowLabel = formatFinanceWindow(range.start, range.end)
   const subtitle =
     layout === 'fy'
@@ -223,38 +307,6 @@ export default function FinancePLTab({
   }
 
   if (loading) return <FinanceTabSkeleton metrics={4} />
-
-  async function openExpenseCategory(category) {
-    if (openExpense === category) {
-      setOpenExpense('')
-      return
-    }
-    setOpenExpense(category)
-    setExpenseLines([])
-    setExpenseNote('Loading…')
-    try {
-      const rows = await collectPaged(async (from, to) => {
-        const q = scopeBranch(
-          supabase
-            .from('expenses')
-            .select('id, title, description, total_minor, created_at, expense_categories(name)')
-            .in('status', ['paid', 'posted'])
-            .gte('created_at', `${range.start}T00:00:00+08:00`)
-            .lte('created_at', `${range.end}T23:59:59.999+08:00`),
-          profile,
-          branchFilter,
-        )
-        const { data, error } = await q.order('created_at', { ascending: false }).range(from, to)
-        if (error) throw error
-        return data || []
-      }, 200)
-      const matched = rows.filter((row) => (row.expense_categories?.name || 'Uncategorized') === category)
-      setExpenseLines(matched)
-      setExpenseNote(matched.length ? '' : 'No paid lines for this account in the window.')
-    } catch (err) {
-      setExpenseNote(err.message || 'Could not load the lines')
-    }
-  }
 
   const colSpan = comparing ? 4 : 2
   const emptyBooks = pl.income === 0 && pl.expenses === 0
@@ -345,7 +397,16 @@ export default function FinancePLTab({
               {span.error}
             </p>
           ) : grid.pivot.income.length || grid.pivot.expense.length ? (
-            <PivotTable headings={grid.headings} pivot={grid.pivot} />
+            <PivotTable
+              headings={grid.headings}
+              pivot={grid.pivot}
+              periods={periods}
+              branchCols={branchCols}
+              layout={layout}
+              range={range}
+              branchFilter={branchFilter}
+              onOpenDrilldown={setDrilldown}
+            />
           ) : (
             <FinanceEmpty title="No income or expenses in these columns" body="Pick a later end date in the filter bar, or another layout." />
           )}
@@ -366,20 +427,46 @@ export default function FinancePLTab({
                   </tr>
                 </thead>
                 <tbody>
-                  <StatementSection title="Trading income" rows={incomeRows} comparing={comparing} colSpan={colSpan} empty="No income in this window." />
-                  <TotalRow label="Total trading income" current={pl.income} prior={prior.income} comparing={comparing} />
+                  <StatementSection
+                    title="Trading income"
+                    rows={incomeRows}
+                    comparing={comparing}
+                    colSpan={colSpan}
+                    empty="No income in this window."
+                    onOpenDrilldown={setDrilldown}
+                    range={range}
+                    branchFilter={branchFilter}
+                  />
+                  <TotalRow
+                    label="Total trading income"
+                    current={pl.income}
+                    prior={prior.income}
+                    comparing={comparing}
+                    onOpenDrilldown={setDrilldown}
+                    rowKind="income"
+                    range={range}
+                    branchFilter={branchFilter}
+                  />
                   <StatementSection
                     title="Operating expenses"
                     rows={expenseRows}
                     comparing={comparing}
                     colSpan={colSpan}
                     empty="No expenses in this window."
-                    onOpen={openExpenseCategory}
-                    openCategory={openExpense}
-                    lines={expenseLines}
-                    note={expenseNote}
+                    onOpenDrilldown={setDrilldown}
+                    range={range}
+                    branchFilter={branchFilter}
                   />
-                  <TotalRow label="Total operating expenses" current={pl.expenses} prior={prior.expenses} comparing={comparing} />
+                  <TotalRow
+                    label="Total operating expenses"
+                    current={pl.expenses}
+                    prior={prior.expenses}
+                    comparing={comparing}
+                    onOpenDrilldown={setDrilldown}
+                    rowKind="expense"
+                    range={range}
+                    branchFilter={branchFilter}
+                  />
                   <TotalRow
                     label={pl.net >= 0 ? 'Net profit' : 'Net loss'}
                     current={pl.net}
@@ -427,11 +514,31 @@ export default function FinancePLTab({
           </FinancePanel>
         </div>
       )}
+
+      <FinanceDrilldownSheet
+        open={Boolean(drilldown)}
+        onOpenChange={(open) => {
+          if (!open) setDrilldown(null)
+        }}
+        target={drilldown}
+        profile={profile}
+        branchOptions={branchOptions}
+      />
     </div>
   )
 }
 
-function StatementSection({ title, rows, comparing, colSpan, empty, onOpen, openCategory, lines = [], note = '' }) {
+function StatementSection({
+  title,
+  rows,
+  comparing,
+  colSpan,
+  empty,
+  onOpenDrilldown,
+  range,
+  branchFilter,
+}) {
+  const rowKind = title === 'Trading income' ? 'income' : 'expense'
   return (
     <>
       <tr className="finance-pl-section">
@@ -446,55 +553,105 @@ function StatementSection({ title, rows, comparing, colSpan, empty, onOpen, open
         </tr>
       ) : (
         rows.map((r) => (
-          <Fragment key={`${title}-${r.category}`}>
-            <tr>
-              <td>
-                {onOpen ? (
-                  <button
-                    type="button"
-                    className="min-h-11 text-left font-medium underline-offset-2 hover:underline"
-                    aria-expanded={openCategory === r.category}
-                    onClick={() => onOpen(r.category)}
-                  >
-                    {r.category}
-                  </button>
-                ) : (
-                  r.category
-                )}
-              </td>
-              <td className="text-right tabular-nums">{formatAccounting(r.current)}</td>
-              {comparing ? <td className="text-right tabular-nums">{formatAccounting(r.prior)}</td> : null}
-              {comparing ? <td className="text-right tabular-nums">{formatDelta(r.delta, r.deltaPct)}</td> : null}
-            </tr>
-            {onOpen && openCategory === r.category ? (
-              <tr>
-                <td colSpan={colSpan} className="bg-muted/30">
-                  {note ? <p className="py-2 text-xs text-muted-foreground">{note}</p> : null}
-                  {lines.length ? (
-                    <ul className="flex flex-col gap-1 py-2">
-                      {lines.map((line) => (
-                        <li key={line.id} className="flex items-baseline justify-between gap-3 text-sm">
-                          <span>{line.title || line.description || 'Line'}</span>
-                          <span className="tabular-nums">{formatAccounting(line.total_minor)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
-                </td>
-              </tr>
-            ) : null}
-          </Fragment>
+          <tr key={`${title}-${r.category}`}>
+            <td>
+              {onOpenDrilldown ? (
+                <button
+                  type="button"
+                  className="pl-clickable-category"
+                  onClick={() =>
+                    onOpenDrilldown({
+                      kind: rowKind,
+                      category: r.category,
+                      start: range.start,
+                      end: range.end,
+                      periodLabel: `${range.start} → ${range.end}`,
+                      branch: branchFilter,
+                      amount: r.current,
+                    })
+                  }
+                  title={`Inspect each line for ${r.category}`}
+                  aria-label={`Inspect ${r.category}`}
+                >
+                  <span>{r.category}</span>
+                </button>
+              ) : (
+                r.category
+              )}
+            </td>
+            <td className="text-right tabular-nums">
+              {r.current && onOpenDrilldown ? (
+                <button
+                  type="button"
+                  className="pl-cell-btn"
+                  onClick={() =>
+                    onOpenDrilldown({
+                      kind: rowKind,
+                      category: r.category,
+                      start: range.start,
+                      end: range.end,
+                      periodLabel: `${range.start} → ${range.end}`,
+                      branch: branchFilter,
+                      amount: r.current,
+                    })
+                  }
+                  title={`Inspect breakdown for ${r.category} (${formatAccounting(r.current)})`}
+                  aria-label={`Inspect ${r.category}`}
+                >
+                  {formatAccounting(r.current)}
+                </button>
+              ) : (
+                formatAccounting(r.current)
+              )}
+            </td>
+            {comparing ? <td className="text-right tabular-nums">{formatAccounting(r.prior)}</td> : null}
+            {comparing ? <td className="text-right tabular-nums">{formatDelta(r.delta, r.deltaPct)}</td> : null}
+          </tr>
         ))
       )}
     </>
   )
 }
 
-function TotalRow({ label, current, prior, comparing, className = 'finance-pl-subtotal' }) {
+function TotalRow({
+  label,
+  current,
+  prior,
+  comparing,
+  className = 'finance-pl-subtotal',
+  onOpenDrilldown,
+  rowKind,
+  range,
+  branchFilter,
+}) {
   return (
     <tr className={className}>
       <td>{label}</td>
-      <td className="text-right tabular-nums">{formatAccounting(current)}</td>
+      <td className="text-right tabular-nums">
+        {current && onOpenDrilldown && rowKind ? (
+          <button
+            type="button"
+            className="pl-cell-btn font-bold"
+            onClick={() =>
+              onOpenDrilldown({
+                kind: rowKind,
+                category: label === 'Total trading income' ? 'Total trading income' : 'Total operating expenses',
+                start: range.start,
+                end: range.end,
+                periodLabel: `${range.start} → ${range.end}`,
+                branch: branchFilter,
+                amount: current,
+              })
+            }
+            title={`Inspect breakdown for ${label}`}
+            aria-label={`Inspect ${label}`}
+          >
+            {formatAccounting(current)}
+          </button>
+        ) : (
+          formatAccounting(current)
+        )}
+      </td>
       {comparing ? <td className="text-right tabular-nums">{formatAccounting(prior)}</td> : null}
       {comparing ? <td className="text-right tabular-nums">{formatDelta(current - prior)}</td> : null}
     </tr>

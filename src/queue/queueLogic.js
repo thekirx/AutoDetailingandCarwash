@@ -987,19 +987,20 @@ export function formatQueueActionError(error) {
 
 export function getCrewAttendanceModel({ staffPool = [], attendance = [], busyStaff = [] } = {}) {
   const activeStaff = staffPool
-    .filter((member) => member.role === 'staff' && member.is_active !== false && member.is_archived !== true)
+    .filter((member) => (member.role === 'staff' || member.role === 'detailer') && member.is_active !== false && member.is_archived !== true)
     .sort((left, right) => String(left.full_name || '').localeCompare(String(right.full_name || '')))
+  const activeStaffIds = new Set(activeStaff.map((m) => m.id))
   const attendanceByStaffId = new Map(attendance.map((row) => [row.staff_id, row]))
-  // On-site for bay work: timed-in present or late (matches assignable crew).
+  // On-site for bay work: timed-in present or late (matches assignable floor crew only).
   const onSiteIds = new Set(
     attendance
-      .filter((row) => row.status === 'present' || row.status === 'late')
+      .filter((row) => activeStaffIds.has(row.staff_id) && (row.status === 'present' || row.status === 'late'))
       .map((row) => row.staff_id),
   )
   const markedAbsentIds = new Set(
-    attendance.filter((row) => row.status === 'absent').map((row) => row.staff_id),
+    attendance.filter((row) => activeStaffIds.has(row.staff_id) && row.status === 'absent').map((row) => row.staff_id),
   )
-  const activeBusy = busyStaff.filter((row) => onSiteIds.has(row.staff_id) && isActiveQueueStatus(row.booking_status))
+  const activeBusy = busyStaff.filter((row) => activeStaffIds.has(row.staff_id) && onSiteIds.has(row.staff_id) && isActiveQueueStatus(row.booking_status))
   const busyIds = new Set(activeBusy.map((row) => row.staff_id))
   const availableStaff = activeStaff
     .filter((member) => onSiteIds.has(member.id) && !busyIds.has(member.id))

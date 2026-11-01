@@ -46,7 +46,17 @@ export default function DaylightQueueCard({ ticket, yourMove, next, canStart, ca
             <span className="daylight-next">Happy birthday — ask for their code</span>
           ) : null}
         </span>
-        <span className="daylight-car-meta">{ticket.notes?.trim() ? ticket.notes : 'No notes'}</span>
+        {ticket.notes?.trim() ? (
+          <span className="daylight-car-notes" title={ticket.notes}>
+            <span className="daylight-notes-tag">Note</span>
+            <span className="daylight-notes-text">{ticket.notes}</span>
+          </span>
+        ) : (
+          <span className="daylight-car-notes daylight-car-notes--empty">
+            <span className="daylight-notes-tag daylight-notes-tag--empty">Note</span>
+            <span className="daylight-notes-text">No notes</span>
+          </span>
+        )}
         {crew.length ? (
           <span className="daylight-crew">
             <span className="daylight-avatars" aria-hidden>

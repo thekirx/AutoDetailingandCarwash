@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import { useEffect, useState } from 'react'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { FRIEND_REFERRAL, REFERRAL_SOURCES, STAFF_REFERRAL } from '@/lib/referralSource'
@@ -44,7 +45,7 @@ function FriendCode({ variant, idPrefix, name, onType }) {
     : undefined
   return (
     <label className={wrap}>
-      <span className={variant === 'ops' ? 'text-sm font-medium text-foreground' : undefined}>Friend's referral code</span>
+      <span className={variant === 'ops' ? 'text-sm font-medium text-foreground' : undefined}>Friend&apos;s referral code</span>
       <input
         id={`${idPrefix}-friend-code`}
         className={inputClass}

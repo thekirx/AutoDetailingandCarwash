@@ -89,6 +89,10 @@ const EXEMPTED = [
   '20261028130000_payroll_period_lock.sql',
   '20261028140000_payslip_posts_finance.sql',
   '20261028150000_payroll_period_calendar.sql',
+  '20261101160000_cash_advance_account_category.sql',
+  '20261101180000_inventory_categories_and_rbac.sql',
+  '20261101190000_sync_products_total_stock_qty.sql',
+  '20261101200000_voucher_specific_service_and_fixed_amount.sql',
 ]
 
 const read = (name) => readFileSync(join(migrationsDir, name), 'utf8')

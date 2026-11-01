@@ -8,6 +8,7 @@ import { useAuth } from '@/auth/AuthProvider'
 import { canSeeAllBranches, isAssistantSuperAdmin, isSuperAdmin, ROLES } from '@/auth/permissions'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { canReviewDailySheet } from '@/lib/dailySheet'
+import { formatAttendanceHeadcountStrings, isFloorCrew } from '@/lib/attendanceInsights'
 import FloorMoneyPanel from './FloorMoneyPanel'
 import KpiPage from './KpiPage'
 import PosCashAdvancePanel from '@/pages/pos/PosCashAdvancePanel'
@@ -290,8 +291,10 @@ export default function SuperAdminFloorBoard() {
   const lanesByFamily = board?.laneCountsByFamily || { wash: {}, detailing: {} }
   const financials = board?.financials || {}
   const kpi = board?.kpi || {}
-  const available = board?.availableStaff || []
-  const absent = board?.absentStaff || []
+  const available = (board?.availableStaff || []).filter(isFloorCrew)
+  const absent = (board?.absentStaff || []).filter(isFloorCrew)
+  const busy = (board?.busyStaff || []).filter(isFloorCrew)
+  const floorStaffPool = (board?.staffPool || []).filter(isFloorCrew)
   const failedQaJobs = board?.failedQaJobs || []
 
   function openFamilyLane(family, lane) {
@@ -536,10 +539,26 @@ export default function SuperAdminFloorBoard() {
           </Link>
         }
       >
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm">
+          <div>
+            <p className="text-base font-bold text-foreground">
+              {formatAttendanceHeadcountStrings(branchLabel, board?.roleHeadcount || []).crewLine}
+            </p>
+            <p className="mt-0.5 text-sm font-medium text-muted-foreground">
+              {formatAttendanceHeadcountStrings(branchLabel, board?.roleHeadcount || []).adminLine}
+            </p>
+          </div>
+          <Link
+            to="/operations/attendance"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+          >
+            Open attendance register →
+          </Link>
+        </div>
         <div className="grid grid-cols-2 gap-3 overflow-visible sm:grid-cols-4">
           <StatTile
             label="Available"
-            value={board?.availableCount ?? available.length}
+            value={available.length}
             tone="green"
             hint="Present or late · free"
             onNavigate={() => navigate('/operations/attendance')}
@@ -554,12 +573,12 @@ export default function SuperAdminFloorBoard() {
           />
           <StatTile
             label="On a bay"
-            value={board?.onBayCount ?? (board?.busyStaff?.length || 0)}
+            value={busy.length}
             hint="Assigned now"
             onNavigate={() => navigate('/operations/attendance')}
             breakdown={
-              (board?.busyStaff || []).length
-                ? `Crew currently assigned to a live bay:\n${(board.busyStaff || [])
+              busy.length
+                ? `Crew currently assigned to a live bay:\n${busy
                     .slice(0, 24)
                     .map((r) => r.full_name)
                     .join('\n')}`
@@ -568,7 +587,7 @@ export default function SuperAdminFloorBoard() {
           />
           <StatTile
             label="Absent / not in"
-            value={board?.absentCount ?? absent.length}
+            value={absent.length}
             tone="rose"
             hint="Not on site today"
             onNavigate={() => navigate('/operations/attendance')}
@@ -583,7 +602,7 @@ export default function SuperAdminFloorBoard() {
           />
           <StatTile
             label="Crew total"
-            value={board?.staffPool?.length ?? available.length + absent.length}
+            value={floorStaffPool.length || available.length + absent.length}
             hint={branchLabel}
             onNavigate={() => navigate('/operations/attendance')}
             breakdown={`Total carwash staff in the pool for ${branchLabel} (available + on bay + absent).`}

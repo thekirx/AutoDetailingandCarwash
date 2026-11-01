@@ -64,6 +64,7 @@ import {
   summarizePeriodAttendance,
   summarizeTodayAttendance,
   attendanceRoleHeadcount,
+  formatAttendanceHeadcountStrings,
 } from '@/lib/attendanceInsights'
 import { createCoalescedReload } from '@/lib/coalesceReload'
 import {
@@ -76,6 +77,8 @@ import {
   toCompensationSettingsRow,
 } from '@/lib/compensation'
 import { describeClock, myWeek } from '@/lib/daylightClock'
+import { loadCashAdvanceLedger } from '@/lib/dailySheetApi'
+import { cashAdvanceBalances } from '@/lib/cashAdvanceBalance'
 import { formatCurrentCarLine } from '@/lib/crewDayCard'
 import { staffNeedsBirthday } from '@/lib/staffBirthday'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
@@ -156,6 +159,7 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
   const [pageSize, setPageSize] = useState(ATTENDANCE_PAGE_SIZE)
   const [myPayMinor, setMyPayMinor] = useState(null)
   const [dayCard, setDayCard] = useState(null)
+  const [myDebtMinor, setMyDebtMinor] = useState(0)
   const [staffBirthdays, setStaffBirthdays] = useState([])
   const [crewFloor, setCrewFloor] = useState(null)
   const [compRules, setCompRules] = useState(DEFAULT_COMPENSATION_RULES)
@@ -203,7 +207,7 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
         setMyToday(attRows.find((r) => r.staff_id === profile.id && r.attendance_date === today) || null)
         const startIso = `${today}T00:00:00+08:00`
         const endIso = `${today}T23:59:59.999+08:00`
-        const [sales, daySnap] = await Promise.all([
+        const [sales, daySnap, caRows] = await Promise.all([
           collectPaged(async (from, to) => {
             const { data, error } = await supabase
               .from('sales')
@@ -221,7 +225,10 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
             if (error) throw error
             return data
           }),
+          loadCashAdvanceLedger(branchSlug, profile.id).catch(() => []),
         ])
+        const myCa = cashAdvanceBalances(caRows)[0]
+        setMyDebtMinor(myCa && myCa.remainingMinor > 0 ? myCa.remainingMinor : 0)
         const roster = staffRows.map((member) => {
           const rec = attRows.find((r) => r.staff_id === member.id && r.attendance_date === today)
           return {
@@ -243,6 +250,7 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
       } else {
         setMyPayMinor(null)
         setDayCard(null)
+        setMyDebtMinor(0)
       }
     } catch (err) {
       toast.error(err.message)
@@ -435,6 +443,17 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
             <li>Late is counted from your shift start.</li>
             <li>Late days still earn, at a smaller share.</li>
           </ul>
+          {seesOwnPayEstimate(profile) && myDebtMinor > 0 ? (
+            <div className="flex items-center justify-between rounded-xl border border-amber-500/30 bg-amber-500/10 px-3.5 py-2 text-xs font-medium text-foreground">
+              <span className="flex items-center gap-1.5">
+                <Wallet className="size-4 text-amber-600 dark:text-amber-400" aria-hidden />
+                Cash advance debt: <strong className="tabular-nums">{formatMoney(myDebtMinor)}</strong> still owed
+              </span>
+              <Link to="/operations/my-advances" className="font-semibold text-primary hover:underline">
+                View debt →
+              </Link>
+            </div>
+          ) : null}
           {seesOwnPayEstimate(profile) && myPayMinor != null ? (
             <p className="daylight-clock-pay">
               <Wallet className="size-4" aria-hidden />
@@ -560,12 +579,15 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <h2 className="text-lg font-semibold tracking-tight">Attendance register</h2>
-              <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-                {branchLabel}
-                {' · '}
-                {roleHeadcount.map((row) => `${row.label} ${row.onSite} of ${row.total}`).join(' · ')}
-                {canOverride ? ' · tap heatmap or Override to correct a row' : ''}
-              </p>
+              <div className="mt-1 flex flex-col gap-0.5 text-sm">
+                <p className="font-semibold text-foreground">
+                  {formatAttendanceHeadcountStrings(branchLabel, roleHeadcount).crewLine}
+                </p>
+                <p className="font-medium text-muted-foreground">
+                  {formatAttendanceHeadcountStrings(branchLabel, roleHeadcount).adminLine}
+                  {canOverride ? <span className="text-xs text-muted-foreground font-normal"> · tap heatmap or Override to correct a row</span> : null}
+                </p>
+              </div>
             </div>
             <div className="flex flex-wrap items-end gap-2">
               {(canManage || isSuperAdmin(profile) || scope === null) && branchOptions.length ? (

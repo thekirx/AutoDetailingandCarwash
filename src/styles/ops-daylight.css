@@ -90,6 +90,12 @@
 .daylight-time { align-self: center; font-size: 12px; font-weight: 800; white-space: nowrap; font-variant-numeric: tabular-nums; color: var(--ink-3); }
 .daylight-time-late { color: var(--bad); }
 .daylight-car-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 9px; color: var(--ink-3); font-size: 12.5px; line-height: 1.5; text-transform: none; }
+.daylight-car-notes { display: flex; align-items: flex-start; gap: 6px; margin-top: 8px; padding: 4px 8px; border-radius: 6px; background: #FEF3C7; border: 1px solid #FDE68A; color: #78350F; font-size: 12px; line-height: 1.4; text-transform: none; }
+.daylight-notes-tag { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; padding: 1px 5px; border-radius: 4px; background: #D97706; color: #FFFFFF; font-size: 9px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; margin-top: 1px; }
+.daylight-notes-text { font-weight: 600; overflow-wrap: anywhere; word-break: break-word; }
+.daylight-car-notes--empty { background: #F4F4F0; border-color: #E5E5DE; color: var(--ink-3); padding: 3px 6px; }
+.daylight-notes-tag--empty { background: #D1D5DB; color: #374151; }
+.daylight-car-notes--empty .daylight-notes-text { font-weight: 400; color: var(--ink-3); }
 .daylight-next { display: inline-flex; padding: 2px 6px; border-radius: 4px; background: #E9EDFC; color: var(--blue); font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
 .daylight-crew { display: flex; align-items: center; gap: 10px; margin-top: 10px; color: var(--ink-3); font-size: 12px; line-height: 1.5; }
 .daylight-avatars { display: flex; flex: none; padding-left: 4px; }

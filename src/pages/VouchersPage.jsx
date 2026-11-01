@@ -20,31 +20,41 @@ const emptyForm = {
   rules_text: 'Show this code to the Team Lead at the branch.',
   discount_kind: 'percent',
   discount_percent: '10',
+  discount_amount: '300',
   applies_to: 'any',
+  service_id: '',
   starts_on: '',
   ends_on: '',
   max_uses: '10',
   max_per_customer: '1',
 }
 
-/** SA / ASA board: create promo codes with a use limit and date window. */
+/** SA / ASA board: create promo codes with a use limit, date window, fixed or percent discount, and optional service scope. */
 export default function VouchersPage() {
   const { profile } = useAuth()
   const [rows, setRows] = useState([])
+  const [services, setServices] = useState([])
   const [form, setForm] = useState(emptyForm)
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(true)
 
   const load = useCallback(async () => {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('promo_vouchers')
-      .select(
-        'id, code, title, rules_text, discount_kind, discount_percent, applies_to, starts_on, ends_on, max_uses, uses_count, max_per_customer, is_active, created_at',
-      )
-      .order('created_at', { ascending: false })
+    const [{ data, error }, { data: svcData }] = await Promise.all([
+      supabase
+        .from('promo_vouchers')
+        .select(
+          'id, code, title, rules_text, discount_kind, discount_percent, discount_amount_minor, applies_to, service_id, starts_on, ends_on, max_uses, uses_count, max_per_customer, is_active, created_at, services(id, name, slug)',
+        )
+        .order('created_at', { ascending: false }),
+      supabase
+        .from('services')
+        .select('id, name, slug, pay_category')
+        .order('name'),
+    ])
     if (error) toast.error(error.message)
     setRows(data || [])
+    setServices((svcData || []).filter((s) => !s.name?.startsWith('Audit Svc') && !s.name?.startsWith('CRUD Service')))
     setLoading(false)
   }, [])
 
@@ -70,14 +80,32 @@ export default function VouchersPage() {
         return
       }
     }
+    if (form.discount_kind === 'fixed') {
+      const amt = Number(form.discount_amount)
+      if (!(amt > 0)) {
+        toast.error('Exact voucher discount amount must be greater than ₱0.')
+        return
+      }
+    }
+    if (form.applies_to === 'service' && !form.service_id) {
+      toast.error('Please select the specific service this voucher applies to.')
+      return
+    }
+
     setSaving(true)
+    const discountAmountMinor = form.discount_kind === 'fixed'
+      ? Math.round(Number(form.discount_amount) * 100)
+      : 0
+
     const { error } = await supabase.from('promo_vouchers').insert({
       code,
       title: form.title.trim() || code,
       rules_text: form.rules_text.trim(),
       discount_kind: form.discount_kind,
-      discount_percent: form.discount_kind === 'free' ? 100 : Number(form.discount_percent) || 0,
+      discount_percent: form.discount_kind === 'free' ? 100 : form.discount_kind === 'percent' ? Number(form.discount_percent) || 0 : 0,
+      discount_amount_minor: discountAmountMinor,
       applies_to: form.applies_to,
+      service_id: form.applies_to === 'service' && form.service_id ? form.service_id : null,
       starts_on: form.starts_on || null,
       ends_on: form.ends_on || null,
       max_uses: maxUses,
@@ -109,77 +137,106 @@ export default function VouchersPage() {
       description="Create promo codes. The Team Lead types them on the queue. POS counts each use."
       icon={TicketPercent}
     >
-      {canMint ? <form className="mb-8 grid gap-4 rounded-2xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-3" onSubmit={createVoucher}>
-        <label className="grid gap-1.5">
-          <Label htmlFor="voucher-code">Code</Label>
-          <Input
-            id="voucher-code"
-            value={form.code}
-            onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
-            placeholder="Blank mints VK…"
-            maxLength={16}
-            autoComplete="off"
-            className="uppercase"
-          />
-        </label>
-        <label className="grid gap-1.5 sm:col-span-2 lg:col-span-2">
-          <Label htmlFor="voucher-title">Title</Label>
-          <Input id="voucher-title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
-        </label>
-        <label className="grid gap-1.5">
-          <Label>Discount</Label>
-          <Select value={form.discount_kind} onValueChange={(v) => setForm({ ...form, discount_kind: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="percent">Percent off</SelectItem>
-              <SelectItem value="free">Free service</SelectItem>
-            </SelectContent>
-          </Select>
-        </label>
-        {form.discount_kind === 'percent' ? (
+      {canMint ? (
+        <form className="mb-8 grid gap-4 rounded-2xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-3" onSubmit={createVoucher}>
           <label className="grid gap-1.5">
-            <Label htmlFor="voucher-pct">Percent</Label>
-            <Input id="voucher-pct" type="number" min="1" max="100" value={form.discount_percent} onChange={(e) => setForm({ ...form, discount_percent: e.target.value })} />
+            <Label htmlFor="voucher-code">Code</Label>
+            <Input
+              id="voucher-code"
+              value={form.code}
+              onChange={(e) => setForm({ ...form, code: e.target.value.toUpperCase() })}
+              placeholder="Blank mints VK…"
+              maxLength={16}
+              autoComplete="off"
+              className="uppercase"
+            />
           </label>
-        ) : null}
-        <label className="grid gap-1.5">
-          <Label>Applies to</Label>
-          <Select value={form.applies_to} onValueChange={(v) => setForm({ ...form, applies_to: v })}>
-            <SelectTrigger><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="any">Wash, packages, detailing</SelectItem>
-              <SelectItem value="wash">Wash and packages</SelectItem>
-              <SelectItem value="detailing">Detailing only</SelectItem>
-            </SelectContent>
-          </Select>
-        </label>
-        <label className="grid gap-1.5">
-          <Label htmlFor="voucher-max">Max uses</Label>
-          <Input id="voucher-max" type="number" min="1" value={form.max_uses} onChange={(e) => setForm({ ...form, max_uses: e.target.value })} required />
-        </label>
-        <label className="grid gap-1.5">
-          <Label htmlFor="voucher-per">Per customer</Label>
-          <Input id="voucher-per" type="number" min="1" value={form.max_per_customer} onChange={(e) => setForm({ ...form, max_per_customer: e.target.value })} />
-        </label>
-        <label className="grid gap-1.5">
-          <Label htmlFor="voucher-start">Starts</Label>
-          <Input id="voucher-start" type="date" value={form.starts_on} onChange={(e) => setForm({ ...form, starts_on: e.target.value })} />
-        </label>
-        <label className="grid gap-1.5">
-          <Label htmlFor="voucher-end">Ends</Label>
-          <Input id="voucher-end" type="date" value={form.ends_on} onChange={(e) => setForm({ ...form, ends_on: e.target.value })} />
-        </label>
-        <label className="grid gap-1.5 sm:col-span-2 lg:col-span-3">
-          <Label htmlFor="voucher-rules">Customer rules</Label>
-          <Textarea id="voucher-rules" rows={2} value={form.rules_text} onChange={(e) => setForm({ ...form, rules_text: e.target.value })} />
-        </label>
-        <div className="sm:col-span-2 lg:col-span-3">
-          <Button type="submit" disabled={saving} className="min-h-11 gap-2">
-            <Plus className="size-4" aria-hidden />
-            {saving ? 'Saving…' : 'Create voucher'}
-          </Button>
-        </div>
-      </form> : <p className="mb-6 text-sm text-muted-foreground">Read only. Voucher codes are created by Owner, Super Admin, or General Admin.</p>}
+          <label className="grid gap-1.5 sm:col-span-2 lg:col-span-2">
+            <Label htmlFor="voucher-title">Title</Label>
+            <Input id="voucher-title" value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
+          </label>
+          <label className="grid gap-1.5">
+            <Label>Discount</Label>
+            <Select value={form.discount_kind} onValueChange={(v) => setForm({ ...form, discount_kind: v })}>
+              <SelectTrigger id="voucher-discount-kind"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="percent">Percent off (%)</SelectItem>
+                <SelectItem value="fixed">Fixed amount off (₱)</SelectItem>
+                <SelectItem value="free">Free service</SelectItem>
+              </SelectContent>
+            </Select>
+          </label>
+          {form.discount_kind === 'percent' ? (
+            <label className="grid gap-1.5">
+              <Label htmlFor="voucher-pct">Percent off (%)</Label>
+              <Input id="voucher-pct" type="number" min="1" max="100" value={form.discount_percent} onChange={(e) => setForm({ ...form, discount_percent: e.target.value })} />
+            </label>
+          ) : null}
+          {form.discount_kind === 'fixed' ? (
+            <label className="grid gap-1.5">
+              <Label htmlFor="voucher-amount">Voucher amount (₱)</Label>
+              <Input id="voucher-amount" type="number" min="1" step="any" placeholder="e.g. 300" value={form.discount_amount} onChange={(e) => setForm({ ...form, discount_amount: e.target.value })} required />
+            </label>
+          ) : null}
+          <label className="grid gap-1.5">
+            <Label>Applies to</Label>
+            <Select value={form.applies_to} onValueChange={(v) => setForm({ ...form, applies_to: v })}>
+              <SelectTrigger id="voucher-applies-to"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="any">Wash, packages, detailing (All)</SelectItem>
+                <SelectItem value="wash">Wash and packages</SelectItem>
+                <SelectItem value="detailing">Detailing only</SelectItem>
+                <SelectItem value="service">Specific service…</SelectItem>
+              </SelectContent>
+            </Select>
+          </label>
+          {form.applies_to === 'service' ? (
+            <label className="grid gap-1.5 sm:col-span-2 lg:col-span-1">
+              <Label>Choose service</Label>
+              <Select value={form.service_id} onValueChange={(v) => setForm({ ...form, service_id: v })}>
+                <SelectTrigger id="voucher-service-id">
+                  <SelectValue placeholder="Select specific service" />
+                </SelectTrigger>
+                <SelectContent>
+                  {services.map((svc) => (
+                    <SelectItem key={svc.id} value={svc.id}>
+                      {svc.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </label>
+          ) : null}
+          <label className="grid gap-1.5">
+            <Label htmlFor="voucher-max">Max uses</Label>
+            <Input id="voucher-max" type="number" min="1" value={form.max_uses} onChange={(e) => setForm({ ...form, max_uses: e.target.value })} required />
+          </label>
+          <label className="grid gap-1.5">
+            <Label htmlFor="voucher-per">Per customer</Label>
+            <Input id="voucher-per" type="number" min="1" value={form.max_per_customer} onChange={(e) => setForm({ ...form, max_per_customer: e.target.value })} />
+          </label>
+          <label className="grid gap-1.5">
+            <Label htmlFor="voucher-start">Starts</Label>
+            <Input id="voucher-start" type="date" value={form.starts_on} onChange={(e) => setForm({ ...form, starts_on: e.target.value })} />
+          </label>
+          <label className="grid gap-1.5">
+            <Label htmlFor="voucher-end">Ends</Label>
+            <Input id="voucher-end" type="date" value={form.ends_on} onChange={(e) => setForm({ ...form, ends_on: e.target.value })} />
+          </label>
+          <label className="grid gap-1.5 sm:col-span-2 lg:col-span-3">
+            <Label htmlFor="voucher-rules">Customer rules</Label>
+            <Textarea id="voucher-rules" rows={2} value={form.rules_text} onChange={(e) => setForm({ ...form, rules_text: e.target.value })} />
+          </label>
+          <div className="sm:col-span-2 lg:col-span-3">
+            <Button type="submit" disabled={saving} className="min-h-11 gap-2">
+              <Plus className="size-4" aria-hidden />
+              {saving ? 'Saving…' : 'Create voucher'}
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <p className="mb-6 text-sm text-muted-foreground">Read only. Voucher codes are created by Owner, Super Admin, or General Admin.</p>
+      )}
 
       {loading ? <p className="text-sm text-muted-foreground">Loading vouchers…</p> : null}
       {!loading && !rows.length ? <p className="text-sm text-muted-foreground">No vouchers yet.</p> : null}
@@ -202,7 +259,19 @@ export default function VouchersPage() {
                 <TableCell>
                   <div className="font-medium">{row.title}</div>
                   <div className="text-xs text-muted-foreground">
-                    {row.discount_kind === 'free' ? 'Free service' : `${row.discount_percent}% off`} · {row.applies_to}
+                    {row.discount_kind === 'free'
+                      ? 'Free service'
+                      : row.discount_kind === 'fixed'
+                        ? `₱${Math.round((row.discount_amount_minor || 0) / 100).toLocaleString()} off`
+                        : `${row.discount_percent}% off`}
+                    {' · '}
+                    {row.applies_to === 'service' && row.services?.name
+                      ? `${row.services.name} only`
+                      : row.applies_to === 'detailing'
+                        ? 'Detailing only'
+                        : row.applies_to === 'wash'
+                          ? 'Wash and packages'
+                          : 'All services'}
                   </div>
                 </TableCell>
                 <TableCell className="tabular-nums">
