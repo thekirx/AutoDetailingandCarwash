@@ -215,7 +215,7 @@ export default function SuperAdminFloorBoard() {
     branchFilter === 'all' ? 'All branches' : branches.find((b) => b.slug === branchFilter)?.name || branchFilter
 
   useEffect(() => {
-    if (!isSuperAdmin(profile)) return undefined
+    if (!isSuperAdmin(profile) && !isAssistantSuperAdmin(profile)) return undefined
     let current = true
     Promise.all([
       supabase.from('restock_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
@@ -610,13 +610,13 @@ export default function SuperAdminFloorBoard() {
         </div>
       </Section>
 
-      {isSuperAdmin(profile) ? (
+      {isSuperAdmin(profile) || isAssistantSuperAdmin(profile) ? (
         <Section eyebrow="Cash advances" title="Still unpaid">
           <PosCashAdvancePanel branch={branchFilter || 'all'} branchLabel={branchLabel} />
         </Section>
       ) : null}
 
-      {isSuperAdmin(profile) ? (
+      {isSuperAdmin(profile) || isAssistantSuperAdmin(profile) ? (
         <Section title="Waiting for approval">
           <Link to="/operations/approvals" className="inline-flex min-h-11 items-center text-sm font-medium">
             {pendingApprovals} waiting

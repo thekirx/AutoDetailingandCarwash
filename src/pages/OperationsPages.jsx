@@ -43,6 +43,7 @@ import CustomerNotesPanel from '../components/CustomerNotesPanel'
 import QueueTicketEditModal from '../components/QueueTicketEditModal'
 import QueueTicketEditor from '../components/QueueTicketEditor'
 import TeamLeadQueuePage from './TeamLeadQueuePage'
+import PosCashAdvancePanel from '@/pages/pos/PosCashAdvancePanel'
 import SuperAdminFloorBoard from './SuperAdminFloorBoard'
 import { formatAttendanceHeadcountStrings, isFloorCrew } from '@/lib/attendanceInsights'
 import {
@@ -771,6 +772,11 @@ function ScopedFloorDashboard() {
           )}
         </div>
       </Panel> : null}
+      {isAdmin(profile) ? (
+        <Panel title="Cash advances · Still unpaid" icon={Wallet} className="mt-4 sm:mt-5">
+          <PosCashAdvancePanel branch={branchFilter || 'all'} branchLabel={branchLabel} />
+        </Panel>
+      ) : null}
       {!isTeamLeadFloor ? (
         <Panel title="Queue Activity Logs" icon={ClipboardList} className="mt-4 sm:mt-5">
           <div className="grid max-h-64 gap-3 overflow-y-auto sm:max-h-80">
@@ -1728,6 +1734,19 @@ export function NewQueueTicketPage() {
                     <button type="button" className="ntw-review-edit" onClick={() => setStep(editStep)}>Edit</button>
                   </div>
                 ))}
+                              <div className="sm:col-span-2 mt-2">
+                  <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
+                    Voucher code (optional)
+                    <input
+                      type="text"
+                      value={form.voucher_code || ''}
+                      onChange={(e) => setForm((c) => ({ ...c, voucher_code: e.target.value.toUpperCase() }))}
+                      placeholder="e.g. TINT300, WELCOME50"
+                      className="floor-control mt-1"
+                    />
+                  </label>
+                  <p className="mt-1 text-xs text-muted-foreground">Optional promo or voucher code to apply discount upon creating ticket.</p>
+                </div>
               </dl>
             ) : null}
 
