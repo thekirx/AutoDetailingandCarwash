@@ -55,7 +55,7 @@ export function isPlannerBoardVisible(board) {
 }
 
 /** 19 Oct matrix: TL, Branch Admin, Marketing, Customer Rep have no Cash advance board. */
-const CASH_ADVANCE_BOARD_HIDDEN_ROLES = new Set(['team_lead', 'admin', 'marketing', 'sales'])
+const CASH_ADVANCE_BOARD_HIDDEN_ROLES = new Set(['team_lead', 'admin', 'marketing', 'sales', 'assistant_super_admin'])
 
 export function isCashAdvancePlannerBoard(board) {
   return /cash\s*advance/i.test(String(board?.name || ''))

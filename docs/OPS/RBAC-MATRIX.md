@@ -4,6 +4,27 @@ Source: Sir Michi’s access sheet. This file is the contract. `src/auth/permiss
 
 People listed below are the sheet’s examples of who holds each group. The app role is what the code enforces. Crew, detailer, video editor, and Operations Lead are not on the sheet; their existing docks stay.
 
+## Named Accounts (Nov 2026 Access Sheet)
+
+| User Account | Group Membership | Branch Access Delegation | Notes |
+|---|---|---|---|
+| Michihiko | Owner | All Branches | Full access including Floor Insight |
+| Robert | Super Admin | All Branches | Full access, no Floor Insight |
+| Lucy | Super Admin | All Branches | Full access, no Floor Insight (promoted from General Admin) |
+| Bryan | General Admin | All Branches | Queue/Detailing full, no POS/Vouchers/Finance, HR read, CRM partial |
+| Jaycee | Bacoor-TL | Bacoor Branch | Queue/Detailing full, CRM read |
+| Rovi | Dasma-TL | Dasmarinas Branch | Queue/Detailing full, CRM read |
+| Kyle | Batangas-TL | Batangas Branch | Queue/Detailing full, CRM read |
+| Rex | Batangas-TL | Batangas Branch | Queue/Detailing full, CRM read |
+| Peter | Bacoor-Adm | Bacoor Branch | POS full, Queue/Detailing read, CRM create/modify |
+| Jennica | Bacoor-Adm | Bacoor Branch | POS full, Queue/Detailing read, CRM create/modify |
+| Sam | Batangas-Adm | Batangas Branch | POS full, Queue/Detailing read, CRM create/modify |
+| Almirra | Batangas-Adm | Batangas Branch | POS full, Queue/Detailing read, CRM create/modify |
+| Bryan | Marketing | All Branches | Queue/Detailing read, CRM read |
+| Ron | Marketing | All Branches | Queue/Detailing read, CRM read |
+| Dummy Account | Customer Rep | All Branches | Queue/Detailing read, CRM create/modify + reports |
+| Investor Account | Investors | Specific Branch | Queue/Detailing read, POS read, Finance read |
+
 ## Groups
 
 | Sheet group | App role | Branch scope |

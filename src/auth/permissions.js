@@ -651,8 +651,12 @@ export function canViewQueueOperations(profile) {
  * General Admin, Branch Admin, Team Lead, Marketing, Customer Rep, and Investor have no Floor Board (docs/OPS/RBAC-MATRIX.md).
  */
 export function canAccessFloorBoard(profile) {
-  if (isSuperAdmin(profile)) return true
-  return profile?.role === ROLES.STAFF
+  if (profile?.role === ROLES.STAFF) return true
+  if (isSuperAdmin(profile)) {
+    if (profile?.floor_insight === false || profile?.floor_insight_access === false) return false
+    return true
+  }
+  return false
 }
 
 /**

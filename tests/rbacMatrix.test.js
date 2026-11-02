@@ -40,6 +40,7 @@ describe('19 Oct RBAC matrix', () => {
 
   it('Floor Board is Owner/Super Admin and crew only', () => {
     assert.equal(canAccessFloorBoard(sa), true)
+    assert.equal(canAccessFloorBoard({ role: ROLES.SUPER_ADMIN, floor_insight: false }), false)
     assert.equal(canAccessFloorBoard({ role: ROLES.STAFF }), true)
     for (const p of [ga, tl, ba, mk, rep, inv]) assert.equal(canAccessFloorBoard(p), false, p.role)
   })
@@ -66,8 +67,10 @@ describe('19 Oct RBAC matrix', () => {
     assert.equal(hidesCashAdvancePlannerBoard(ba), true)
     assert.equal(hidesCashAdvancePlannerBoard(mk), true)
     assert.equal(hidesCashAdvancePlannerBoard(rep), true)
+    assert.equal(hidesCashAdvancePlannerBoard(ga), true)
     assert.equal(hidesCashAdvancePlannerBoard(sa), false)
     assert.deepEqual(visiblePlannerBoards(boards, tl).map((b) => b.name), ['Hakum Planner'])
+    assert.deepEqual(visiblePlannerBoards(boards, ga).map((b) => b.name), ['Hakum Planner'])
     assert.deepEqual(visiblePlannerBoards(boards, sa).map((b) => b.name), ['Hakum Planner', 'Cash advance'])
     assert.equal(canEditPlanning(rep), false)
     assert.equal(allowRoute(inv, 'planning'), false)
