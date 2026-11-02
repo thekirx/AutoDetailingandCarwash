@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import BdAppPreview from '../components/public/bredesign/BdAppPreview'
+import BdRewards from '../components/public/bredesign/BdRewards'
 import BdHero from '../components/public/bredesign/BdHero'
 import BdProducts from '../components/public/bredesign/BdProducts'
 import BdReviews from '../components/public/bredesign/BdReviews'
@@ -50,6 +51,7 @@ export default function PublicLandingPage() {
       <BdServices />
       <BdOrigin />
       <BdAppPreview />
+      <BdRewards />
       <BdPhotos />
       {/* The gallery is our own work; the reviews are the outside voice
           confirming it, so they follow immediately rather than sitting below

@@ -23,7 +23,7 @@ export const SERVICE_POINTS = Object.freeze([
   { name: 'Black trims restore', points: 3 },
   { name: 'Glass detailing', points: 5 },
   { name: 'Glass coating', points: 5 },
-  { name: 'Classic ceramic', points: 15 },
+  { name: 'Classic ceramic coating', points: 15 },
   { name: 'Premium ceramic', points: 20 },
   { name: 'Platinum ceramic', points: 25 },
   { name: 'Nano Ceramic Tint', points: 10 },
@@ -48,6 +48,33 @@ export const MERCH_POINTS = Object.freeze([
   { name: 'Luxury gloss spray', points: 50 },
   { name: 'Hakum car scent', points: 30 },
   { name: 'Air Spencer', points: 30 },
+])
+
+export const MEMBER_TIERS = Object.freeze([
+  {
+    name: 'Hakum Basic Member',
+    visits: '1–29 visits',
+    badge: 'Basic',
+    description: 'Welcome tier for all Hakum drivers. Accumulate visit stamps and points on every service.',
+  },
+  {
+    name: 'Hakum Deluxe Member',
+    visits: '30–69 visits',
+    badge: 'Deluxe',
+    description: 'Dedicated regular care status with milestone visit rewards and priority seasonal offers.',
+  },
+  {
+    name: 'Hakum Premium Member',
+    visits: '70–99 visits',
+    badge: 'Premium',
+    description: 'Enthusiast tier with elevated loyalty rewards, priority bay queueing, and anniversary perks.',
+  },
+  {
+    name: 'Hakum Platinum Member',
+    visits: '100+ visits',
+    badge: 'Platinum',
+    description: 'Elite network tier with VIP privileges, exclusive merchandise access, and maximum rewards.',
+  },
 ])
 
 export function memberTier(visits) {

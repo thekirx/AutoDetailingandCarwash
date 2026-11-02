@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { earnedVisitRewards, latestEarnedVisitReward, memberTier, MERCH_POINTS, nextVisitReward, SERVICE_POINTS } from '../src/lib/rewardsCatalog.js'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { earnedVisitRewards, latestEarnedVisitReward, MEMBER_TIERS, memberTier, MERCH_POINTS, nextVisitReward, SERVICE_POINTS } from '../src/lib/rewardsCatalog.js'
+
+const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+const read = (p) => readFileSync(join(root, p), 'utf8')
 
 describe('visit rewards and member tier', () => {
   it('uses the visit counts from the 25 Oct notes', () => {
@@ -22,6 +28,17 @@ describe('visit rewards and member tier', () => {
     assert.equal(memberTier(30).name, 'Hakum Deluxe Member')
     assert.equal(memberTier(70).name, 'Hakum Premium Member')
     assert.equal(memberTier(100).name, 'Hakum Platinum Member')
+  })
+
+  it('exposes 4 membership tiers and connects rewards to the public landing page', () => {
+    assert.equal(MEMBER_TIERS.length, 4)
+    assert.deepEqual(
+      MEMBER_TIERS.map((t) => t.name),
+      ['Hakum Basic Member', 'Hakum Deluxe Member', 'Hakum Premium Member', 'Hakum Platinum Member'],
+    )
+    const landing = read('src/pages/PublicLandingPage.jsx')
+    assert.match(landing, /import BdRewards from '\.\.\/components\/public\/bredesign\/BdRewards'/)
+    assert.match(landing, /<BdRewards \/>/)
   })
 
   it('keeps the published points table', () => {
