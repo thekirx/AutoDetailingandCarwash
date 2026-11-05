@@ -1,3 +1,4 @@
+import PointsShopPickup from '@/components/merch/PickupHandover'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { Cake, CarFront, ClipboardList, Gift, History, Link2, Lock, MapPin, Minus, Plus, Search, Settings2, ShoppingBag, ShoppingCart, Trash2, Volume2, VolumeX, Wallet, X } from 'lucide-react'
@@ -1591,6 +1592,8 @@ function PosCounterPage() {
               />
             </section>
           ) : null}
+
+          <PointsShopPickup customerId={customerId || ticketBooking?.customer_id} branch={branch} />
 
           <section aria-label={activeHandoff ? 'Add-ons' : 'Items'} className="flex flex-col">
             <p className="text-[10px] font-bold tracking-[0.16em] text-muted-foreground uppercase">

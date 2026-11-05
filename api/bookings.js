@@ -1,3 +1,4 @@
+import { handlePointsShopRequest } from '../server/pointsShop.mjs'
 import { createGateway } from '../server/apiGateway.mjs'
 import { handleBookingStatusRequest } from '../server/bookingStatus.mjs'
 import { handleMaintenanceSchedulesRequest } from '../server/maintenanceSchedulesApi.mjs'
@@ -8,6 +9,7 @@ import { handleReferralProgramRequest } from '../server/referralProgram.mjs'
 import { handlePublicPlateLookup } from '../server/publicPlateLookup.mjs'
 
 export const operations = Object.freeze({
+  'points-shop': handlePointsShopRequest,
   'accessory-points': handleAccessoryPointsRequest,
   'booking-status': handleBookingStatusRequest,
   'maintenance-schedules': handleMaintenanceSchedulesRequest,

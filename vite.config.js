@@ -60,6 +60,10 @@ function attachHakumApis(server) {
     server.middlewares.use(pathName, (req, res) => handler(req, res, apiHelpers(server, req)))
   }
 
+  mount('/api/points-shop', async (req, res) => {
+    const { handlePointsShopRequest } = await import('./server/pointsShop.mjs')
+    return handlePointsShopRequest(req, res)
+  })
   mount('/api/provision-customer', handleProvisionRequest)
   mount('/api/provision-staff', handleProvisionStaffRequest)
   mount('/api/update-staff', handleUpdateStaffRequest)

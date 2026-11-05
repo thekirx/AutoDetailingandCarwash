@@ -6,23 +6,20 @@ import CustomerAppFrame from '@/components/CustomerAppFrame'
 import { SectionHead, Skeleton } from '@/components/customer/CustomerUi'
 import { fetchPortal, portalAction } from '@/lib/customerPortalClient'
 import { CUSTOMER_VOUCHERS_PATH } from '@/lib/customerAccountNav'
-import { branchOnHand } from '@/lib/inventoryBranchStock'
-import { pointsLabel } from '@/lib/loyaltyPoints'
 import { customerVoucherRulesLine } from '@/lib/promoVoucher'
 import { usePageMeta } from '@/lib/pageMeta'
 import { formatMoney } from '@/queue/queueApi'
 
-/** /account/vouchers — birthday car wash on the birthday, and the points shop. */
+/** /account/vouchers — birthday car wash and service vouchers. */
 export default function CustomerVouchersPage() {
   usePageMeta({
     title: 'Vouchers',
-    description: 'Claim a birthday car wash, or spend points on accessories and sellables.',
+    description: 'Claim a birthday car wash and view service vouchers.',
     path: CUSTOMER_VOUCHERS_PATH,
   })
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState('')
-  const [branch, setBranch] = useState('')
   const [voucherInput, setVoucherInput] = useState('')
   const [verifiedVoucher, setVerifiedVoucher] = useState(null)
   const [voucherCheckError, setVoucherCheckError] = useState('')
@@ -72,12 +69,6 @@ export default function CustomerVouchersPage() {
   const birthday = data?.birthday
   const promoActive = data?.vouchers?.active || []
   const promoHistory = data?.vouchers?.history || []
-  const points = Number(data?.loyalty?.loyaltyPoints) || 0
-  const shop = data?.rewards?.shop || []
-  const redemptions = data?.rewards?.redemptions || []
-  const branches = data?.branches || []
-  const pickup = branch || branches[0]?.slug || ''
-  const pickupName = branches.find((row) => row.slug === pickup)?.name || 'the branch'
   const ready = Boolean(birthday?.perk)
   const used = Boolean(birthday?.used)
   const isToday = Boolean(birthday?.is_today)
@@ -96,22 +87,9 @@ export default function CustomerVouchersPage() {
     }
   }
 
-  async function redeem(product) {
-    if (!pickup) return
-    setBusy(product.id)
-    try {
-      await portalAction('redeem-accessory', { product_id: product.id, branch_slug: pickup })
-      toast.success(`${product.name} is saved. Pick it up at ${pickupName}.`)
-      await reload()
-    } catch (err) {
-      toast.error(err.message)
-    } finally {
-      setBusy('')
-    }
-  }
 
   return (
-    <CustomerAppFrame title="Vouchers" subtitle="Birthday wash and the points shop." cols>
+    <CustomerAppFrame title="Vouchers" subtitle="Birthday wash and service vouchers." cols>
       {error ? (
         <div className="capp-empty capp-span" role="alert">
           <strong>{error}</strong>
@@ -262,73 +240,7 @@ export default function CustomerVouchersPage() {
             </section>
           ) : null}
 
-          <section className="capp-section" aria-label="Points shop">
-            <SectionHead title="Points shop" note={pointsLabel(points)} />
-            {branches.length ? (
-              <label className="capp-pass-line" htmlFor="voucher-pickup">
-                Pickup branch
-                <select
-                  id="voucher-pickup"
-                  className="capp-select"
-                  value={pickup}
-                  onChange={(e) => setBranch(e.target.value)}
-                >
-                  {branches.map((row) => (
-                    <option key={row.slug} value={row.slug}>{row.name}</option>
-                  ))}
-                </select>
-              </label>
-            ) : (
-              <p className="capp-empty">No branch is open for pickup.</p>
-            )}
-            {shop.length ? (
-              <div className="capp-group">
-                {shop.map((item) => {
-                  const cost = Number(item.points_price) || 0
-                  const onHand = branchOnHand(item.product_branch_stock, pickup)
-                  const short = points < cost
-                  const missing = onHand == null
-                  const out = missing || onHand <= 0
-                  const stockLine = missing ? 'Not at this branch' : out ? 'Out of stock' : pointsLabel(cost)
-                  return (
-                    <div className="capp-row" key={item.id}>
-                      <div>
-                        <strong>{item.name}</strong>
-                        <p className="capp-meta">{stockLine}</p>
-                      </div>
-                      <button
-                        type="button"
-                        className="capp-btn capp-btn-fill"
-                        style={{ marginLeft: 'auto' }}
-                        disabled={!pickup || short || out || busy === item.id}
-                        onClick={() => redeem(item)}
-                      >
-                        {missing ? 'Not here' : out ? 'Out of stock' : short ? 'Need points' : 'Use points'}
-                      </button>
-                    </div>
-                  )
-                })}
-              </div>
-            ) : (
-              <p className="capp-empty">Nothing is in the shop yet.</p>
-            )}
-          </section>
 
-          {redemptions.length ? (
-            <section className="capp-section" aria-label="Your redemptions">
-              <SectionHead title="Ready for pickup" />
-              <div className="capp-group">
-                {redemptions.map((row) => (
-                  <div className="capp-row" key={row.id}>
-                    <div>
-                      <strong>{row.products?.name || 'Accessory'}</strong>
-                      <p className="capp-meta">{pointsLabel(row.points_spent)}. {row.status === 'fulfilled' ? 'Picked up' : `Show this at ${branches.find((b) => b.slug === row.branch_slug)?.name || 'the branch'}`}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          ) : null}
         </>
       ) : null}
     </CustomerAppFrame>

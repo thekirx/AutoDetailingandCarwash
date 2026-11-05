@@ -33,6 +33,7 @@ const migrationsDir = join(root, 'supabase', 'migrations')
 
 /** Migrations that narrow or replace an RLS policy on the live database. */
 const GUARDED = [
+  '20261105070344_points_shop.sql',
   '20261010120000_protect_daily_sheet_posted_expenses.sql',
   '20261010130000_drop_permissive_admin_for_all_policies.sql',
   '20261010140000_scope_notification_reads.sql',

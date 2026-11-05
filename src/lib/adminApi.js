@@ -1068,7 +1068,7 @@ function normalizeProductTags(raw) {
 export async function listProducts({ includeArchived = false } = {}) {
   let q = supabase
     .from('products')
-    .select('id, name, sku, category, price_minor, points_price, stock_qty, stock_group, branch_slug, tags, usage_kind, size_options, stock_category, show_in_pos, material_role, is_active, is_archived, updated_at')
+    .select('id, name, sku, category, price_minor, points_price, description, photo_url, show_in_app, stock_qty, stock_group, branch_slug, tags, usage_kind, size_options, stock_category, show_in_pos, material_role, is_active, is_archived, updated_at')
     .order('name')
   if (!includeArchived) q = q.eq('is_archived', false)
   const { data, error } = await q
@@ -1093,6 +1093,7 @@ export async function createProduct(payload) {
     tags: tags.length ? tags : ['sellable', 'merch'],
     usage_kind: payload.usage_kind === 'internal' ? 'internal' : 'resellable',
     size_options: normalizeProductSizeOptions(payload.sizes),
+    ...(payload.show_in_app !== undefined ? { description: payload.description || null, photo_url: payload.photo_url || null, show_in_app: Boolean(payload.show_in_app), points_price: Math.max(1, Math.floor(Number(payload.points_price) || 0)) } : {}),
     ...stockCatalogFields(payload),
     is_active: payload.is_active !== false,
     is_archived: false,
@@ -1135,6 +1136,11 @@ export async function updateProduct(id, payload) {
   }
   if (payload.stock_category !== undefined) {
     Object.assign(patch, stockCatalogFields(payload))
+  }
+  if (payload.show_in_app !== undefined) {
+    patch.description = payload.description || null
+    patch.photo_url = payload.photo_url || null
+    patch.show_in_app = Boolean(payload.show_in_app)
   }
   if (payload.points_price !== undefined) {
     patch.points_price = payload.points_price === '' || payload.points_price == null

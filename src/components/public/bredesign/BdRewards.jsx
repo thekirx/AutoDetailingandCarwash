@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Award, Sparkles, ArrowRight } from 'lucide-react'
-import { MEMBER_TIERS, MERCH_POINTS, SERVICE_POINTS, VISIT_REWARDS } from '@/lib/rewardsCatalog'
+import { MEMBER_TIERS, SERVICE_POINTS, VISIT_REWARDS } from '@/lib/rewardsCatalog'
+import BdAppGuide from './BdAppGuide'
 import './BdRewards.css'
 
 export default function BdRewards() {
-  const [activeTab, setActiveTab] = useState('milestones') // 'milestones' | 'tiers' | 'points' | 'merch'
+  const [activeTab, setActiveTab] = useState('milestones') // 'milestones' | 'tiers' | 'points'
 
   return (
     <section className="bd-rewards" id="rewards">
@@ -17,7 +18,7 @@ export default function BdRewards() {
           </h2>
           <p>
             Taking care of your car never gets this exciting. Accumulate points across services and detailing,
-            unlock free visit milestones regardless of which vehicle you bring, and redeem exclusive Hakum merchandise.
+            unlock free visit milestones regardless of which vehicle you bring, and use points for Hakum merch in the Hakum app.
           </p>
         </div>
 
@@ -44,13 +45,7 @@ export default function BdRewards() {
           >
             Points Table
           </button>
-          <button
-            type="button"
-            className={`bd-rewards-tab-btn ${activeTab === 'merch' ? 'is-active' : ''}`}
-            onClick={() => setActiveTab('merch')}
-          >
-            Merchandise Claims
-          </button>
+
         </div>
 
         {/* TAB 1: Visit Rewards (Every Nth visit, regardless of car used) */}
@@ -119,17 +114,10 @@ export default function BdRewards() {
           </div>
         )}
 
-        {/* TAB 4: Merchandise Claims */}
-        {activeTab === 'merch' && (
-          <div className="bd-merch-grid bd-reveal">
-            {MERCH_POINTS.map((item) => (
-              <div key={item.name} className="bd-merch-card">
-                <div className="bd-merch-name">{item.name}</div>
-                <div className="bd-merch-cost">{item.points} Points</div>
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="bd-rewards-footer bd-reveal">
+          <p>Use your points for Hakum merch in the Hakum app.</p>
+          <BdAppGuide className="bd-btn bd-btn-quiet">Get the app <ArrowRight size={16} /></BdAppGuide>
+        </div>
 
         {/* Footer Call to Action */}
         <div className="bd-rewards-footer bd-reveal">

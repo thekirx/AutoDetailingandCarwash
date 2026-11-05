@@ -290,6 +290,10 @@ export function canAccessReports(profile) {
 }
 
 /** Catalog CRUD (services + merch stock). Branch Admin is checkout-only — no manage tabs. */
+export function canManageMerchShop(profile) {
+  return isSuperAdmin(profile) || (isAssistantSuperAdmin(profile) && hasGrant(profile, 'services_merch'))
+}
+
 export function canManageServices(profile) {
   if (isSuperAdmin(profile)) return true
   if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'services_merch') || hasGrant(profile, 'pos')
@@ -974,6 +978,7 @@ export function getOperationsNav(profile) {
   if (canAccessMemberships(profile)) {
     items.push(nav('Memberships', '/operations/memberships', 'Crown', 'customers'))
   }
+  if (canManageMerchShop(profile)) items.push(nav('Merch shop', '/operations/merch-shop', 'Package', 'customers'))
   if (canAccessInquiries(profile)) {
     items.push(nav('Inquiries', '/operations/inquiries', 'Inbox', 'customers'))
   }
@@ -1203,6 +1208,7 @@ export function allowRoute(profile, key) {
     reviews: canAccessReviews,
     reports: canAccessReports,
     memberships: canAccessMemberships,
+    'merch-shop': canManageMerchShop,
     vouchers: canViewVouchers,
     settings: canAccessSettings,
     content: canManageSiteContent,

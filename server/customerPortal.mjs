@@ -1,3 +1,5 @@
+import { sendShopMessage } from './pointsShop.mjs'
+import { shopItems } from '../src/lib/pointsShop.js'
 /**
  * Customer portal data (service role) — JWT customer → history / garage / queue / loyalty.
  * POST actions: add-vehicle | update-vehicle | archive-vehicle | sync-email | update-phone | update-birthday | submit-review | request-reschedule | claim-birthday | redeem-accessory | check-voucher | apply-booking-voucher
@@ -303,7 +305,8 @@ export async function loadCustomerPortal({ accessToken, origin = '' }) {
       .eq('status', 'available'),
     admin
       .from('products')
-      .select('id, name, points_price, product_branch_stock(branch_slug, qty)')
+      .select('id, name, points_price, description, photo_url, show_in_app, size_options, product_branch_stock(branch_slug, size_key, qty)')
+      .eq('show_in_app', true)
       .or('usage_kind.is.null,usage_kind.neq.internal')
       .eq('is_active', true)
       .eq('is_archived', false)
@@ -311,10 +314,10 @@ export async function loadCustomerPortal({ accessToken, origin = '' }) {
       .order('name'),
     admin
       .from('accessory_redemptions')
-      .select('id, points_spent, status, created_at, branch_slug, products(name)')
+      .select('id, points_spent, status, created_at, branch_slug, size_key, pickup_code, expires_at, fulfilled_at, expired_at, products(name, photo_url)')
       .eq('customer_id', userId)
       .order('created_at', { ascending: false })
-      .limit(12),
+      .limit(50),
     admin.rpc('referral_program_settings'),
   ])
 
@@ -361,7 +364,7 @@ export async function loadCustomerPortal({ accessToken, origin = '' }) {
       referral_code: profile.referral_code,
       available_discounts: (credits.data || []).length,
       program: normalizeReferralProgram(Array.isArray(programRow.data) ? programRow.data[0] : programRow.data),
-      shop: shop.data || [],
+      shop: shopItems(shop.data || []),
       redemptions: redemptions.data || [],
     },
     maintenanceDue: (maint.data || []).filter((row) => maintenanceNeedsOpsAttention(row)),
@@ -746,8 +749,11 @@ export async function mutateCustomerPortal({ accessToken, body }) {
       p_customer: userId,
       p_product: productId,
       p_branch: branch,
+      p_size: String(body.size || '').trim(),
     })
     if (error) throw Object.assign(new Error(error.message), { status: 400 })
+    const branchRow = await admin.from('branches').select('name').eq('slug', branch).maybeSingle()
+    await sendShopMessage(admin, { ...data, customer_id: userId, branches: branchRow.data }, 'claimed').catch(() => {})
     return data
   }
 

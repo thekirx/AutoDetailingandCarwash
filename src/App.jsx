@@ -33,6 +33,7 @@ const CustomerSetPasswordPage = lazy(() => import('./pages/CustomerSetPasswordPa
 const CustomerAccountPage = lazy(() => import('./pages/CustomerAccountPage'))
 const CustomerQueuePage = lazy(() => import('./pages/CustomerQueuePage'))
 const CustomerBookPage = lazy(() => import('./pages/CustomerBookPage'))
+const CustomerPickupPage = lazy(() => import('./pages/CustomerPickupPage'))
 const CustomerLoyaltyPage = lazy(() => import('./pages/CustomerLoyaltyPage'))
 const CustomerReferralPage = lazy(() => import('./pages/CustomerReferralPage'))
 const CustomerVouchersPage = lazy(() => import('./pages/CustomerVouchersPage'))
@@ -48,6 +49,7 @@ const AuditLogPage = lazy(() => import('./pages/AuditLogPage'))
 const DataCenterPage = lazy(() => import('./pages/DataCenterPage'))
 const InquiriesPage = lazy(() => import('./pages/InquiriesPage'))
 const PosPage = lazy(() => import('./pages/PosPage'))
+const MerchShopPage = lazy(() => import('./pages/MerchShopPage'))
 const InventoryPage = lazy(() => import('./pages/InventoryPage'))
 const FinancePage = lazy(() => import('./pages/FinancePage'))
 const CrmPage = lazy(() => import('./pages/CrmPage'))
@@ -166,6 +168,7 @@ export default function App() {
             <Route path="/account/events" element={<CustomerEventsPage />} />
             <Route path="/account/queue" element={<CustomerQueuePage />} />
             <Route path="/account/book" element={<CustomerBookPage />} />
+            <Route path="/account/pickup/:id" element={<CustomerPickupPage />} />
             <Route path="/account/loyalty" element={<CustomerLoyaltyPage />} />
             <Route path="/account/referral" element={<CustomerReferralPage />} />
             <Route path="/account/vouchers" element={<CustomerVouchersPage />} />
@@ -213,6 +216,7 @@ export default function App() {
             <Route path="kpi" element={gate('kpi', <KpiPage />)} />
             <Route path="my-tasks" element={gate('my-tasks', <MyTasksPage />)} />
             <Route path="pos" element={gate('pos', <PosPage />)} />
+            <Route path="merch-shop" element={gate('merch-shop', <MerchShopPage />)} />
             <Route path="inventory" element={gate('inventory', <InventoryPage />)} />
             <Route path="approvals" element={gate('approvals', <ApprovalsPage />)} />
             <Route path="finance" element={gate('finance', <FinancePage />)} />

@@ -1,7 +1,9 @@
+import MerchItemFields from '@/components/merch/MerchItemFields'
+import { merchPhoto } from '@/lib/pointsShop'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthProvider'
-import { canManageServices, canModifyStock } from '@/auth/permissions'
+import { canManageMerchShop, canManageServices, canModifyStock } from '@/auth/permissions'
 import { archiveProduct, createProduct, listBranches, listProducts, updateProduct } from '@/lib/adminApi'
 import { applyOwnerSetQty, applyRestockQty } from '@/lib/inventoryBranchStock'
 import { formatBranchOnHandSummary, stockRowsByProductId } from '@/lib/inventoryLock'
@@ -52,7 +54,7 @@ const empty = {
   sizes: [],
 }
 
-function SizeFields({ rows, onChange, disabled }) {
+function SizeFields({ rows, onChange, disabled, pointsOnly = false }) {
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between gap-2">
@@ -63,13 +65,13 @@ function SizeFields({ rows, onChange, disabled }) {
           variant="outline"
           className="min-h-11"
           disabled={disabled}
-          onClick={() => onChange([...(rows || []), { label: '', price: '' }])}
+          onClick={() => onChange([...(rows || []), { label: '', price: pointsOnly ? '0' : '' }])}
         >
           Add size
         </Button>
       </div>
       <p className="text-xs text-muted-foreground">
-        Optional. Leave empty for one price. Each size has its own name, price, and branch on-hand (12 oz, M, XL).
+        {pointsOnly ? 'Leave empty for items with no size (keychain, freshener). Every size costs the same points.' : 'Optional. Leave empty for one price. Each size has its own name, price, and branch on-hand (12 oz, M, XL).'}
       </p>
       {(rows || []).map((row, index) => (
         <div key={index} className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_7rem_auto]">
@@ -80,6 +82,7 @@ function SizeFields({ rows, onChange, disabled }) {
             disabled={disabled}
             onChange={(e) => onChange(rows.map((item, i) => (i === index ? { ...item, label: e.target.value } : item)))}
           />
+          {!pointsOnly ? (
           <Input
             type="number"
             min="0"
@@ -90,6 +93,7 @@ function SizeFields({ rows, onChange, disabled }) {
             disabled={disabled}
             onChange={(e) => onChange(rows.map((item, i) => (i === index ? { ...item, price: e.target.value } : item)))}
           />
+          ) : null}
           <Button
             type="button"
             variant="ghost"
@@ -107,13 +111,21 @@ function SizeFields({ rows, onChange, disabled }) {
 
 const LOCKED_MSG = 'Inventory is locked. Ask Super Admin to unlock.'
 
-export default function ProductsManagePage({ embedded = false, crudLocked = false, canMutate = true } = {}) {
+/** Merch shop: one total per branch (sizes added up), short branch names. */
+function merchBranchTotals(stockItems = [], branchNames = {}) {
+  const totals = new Map()
+  for (const r of stockItems) totals.set(r.branch_slug, (totals.get(r.branch_slug) || 0) + (Number(r.qty) || 0))
+  if (!totals.size) return 'Not at any branch'
+  return [...totals].map(([slug, qty]) => `${String(branchNames[slug] || slug).replace(/^Hakum Auto Care\s*/i, '')} ${qty}`).join(' · ')
+}
+
+export default function ProductsManagePage({ embedded = false, crudLocked = false, canMutate = true, merchShop = false, shopBranch = 'all', onProductsLoaded } = {}) {
   const { profile, user } = useAuth()
   const canEditStock = canModifyStock(profile)
   const [products, setProducts] = useState([])
   const [branches, setBranches] = useState([])
   const [stockRows, setStockRows] = useState([])
-  const [form, setForm] = useState(empty)
+  const [form, setForm] = useState(merchShop ? { ...empty, price: '0', show_in_pos: false, show_in_app: true, points_price: '', description: '', photo_url: '' } : empty)
   const [editing, setEditing] = useState(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -136,18 +148,22 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
         supabase.from('restock_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
       ])
       if (stockRes.error) throw stockRes.error
-      setProducts(p)
+      const catalog = merchShop ? p.filter((r) => r.usage_kind !== 'internal' && (Number(r.points_price) > 0 || r.show_in_app)) : p
+      setProducts(catalog)
+      onProductsLoaded?.(catalog)
       setBranches(b)
       setStockRows(stockRes.data || [])
       setPendingRestocksCount(restockRes.error ? 0 : Number(restockRes.count) || 0)
     } catch (err) {
       toast.error(err.message)
     }
-  }, [])
+  }, [merchShop, onProductsLoaded])
 
   useEffect(() => {
-    if (canManageServices(profile)) load()
-  }, [load, profile])
+    if (merchShop ? canManageMerchShop(profile) : canManageServices(profile)) load()
+  }, [load, profile, merchShop])
+
+  const branchScope = merchShop ? shopBranch : selectedBranch
 
   const stockByProduct = useMemo(() => stockRowsByProductId(stockRows), [stockRows])
   const branchNames = useMemo(() => Object.fromEntries((branches || []).map((b) => [b.slug, b.name])), [branches])
@@ -168,7 +184,7 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
       const rows = stockByProduct[row.id] || []
       const totalQty = computeProductTotalOnHand(rows)
 
-      if (selectedBranch === 'all') {
+      if (branchScope === 'all') {
         if (availabilityFilter === 'in_stock') {
           if (totalQty <= LOW_STOCK_THRESHOLD) return false
         } else if (availabilityFilter === 'low_stock') {
@@ -179,7 +195,7 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
           if (totalQty > 0) return false
         }
       } else {
-        const branchMatches = rows.filter((r) => r.branch_slug === selectedBranch)
+        const branchMatches = rows.filter((r) => r.branch_slug === branchScope)
         const isAssigned = branchMatches.length > 0
         const branchQty = branchMatches.reduce((acc, r) => acc + (Number(r.qty) || 0), 0)
 
@@ -197,7 +213,7 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
       }
       return true
     })
-  }, [products, categoryFilter, familyFilter, query, selectedBranch, stockByProduct, availabilityFilter])
+  }, [products, categoryFilter, familyFilter, query, branchScope, stockByProduct, availabilityFilter])
 
   const categoryCounts = useMemo(() => {
     const counts = { all: products.length, merchandise: 0, coffee_menu: 0, coffee_material: 0, chemical: 0 }
@@ -215,9 +231,9 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
 
     for (const p of products) {
       const rows = stockByProduct[p.id] || []
-      const branchRows = selectedBranch === 'all'
+      const branchRows = branchScope === 'all'
         ? rows
-        : rows.filter((r) => r.branch_slug === selectedBranch)
+        : rows.filter((r) => r.branch_slug === branchScope)
       const qty = branchRows.reduce((acc, r) => acc + Math.max(0, Number(r.qty) || 0), 0)
       totalUnits += qty
 
@@ -225,7 +241,7 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
         chemicalUnits += qty
       }
 
-      if (selectedBranch === 'all') {
+      if (branchScope === 'all') {
         if (qty <= LOW_STOCK_THRESHOLD) needsRestockCount++
       } else {
         const isAssigned = branchRows.length > 0
@@ -234,9 +250,9 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
     }
 
     return { totalUnits, needsRestockCount, chemicalUnits }
-  }, [products, stockByProduct, selectedBranch])
+  }, [products, stockByProduct, branchScope])
 
-  if (!canManageServices(profile)) {
+  if (!(merchShop ? canManageMerchShop(profile) : canManageServices(profile))) {
     if (embedded) return null
     return <Navigate to="/operations/access-denied" replace />
   }
@@ -254,11 +270,12 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
     try {
       await createProduct({
         ...form,
+        ...(merchShop ? { show_in_pos: false, price: '0', stock_category: 'merchandise' } : {}),
         branch_slug: form.branch_slug || null,
         material_role: form.stock_category === 'coffee_material' ? form.material_role || null : null,
       })
       toast.success('Product created')
-      setForm(empty)
+      setForm(merchShop ? { ...empty, price: '0', show_in_pos: false, show_in_app: true, points_price: '', description: '', photo_url: '' } : empty)
       setCreateOpen(false)
       await load()
     } catch (err) {
@@ -288,6 +305,7 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
         show_in_pos: editing.show_in_pos,
         material_role: editing.stock_category === 'coffee_material' ? editing.material_role || null : null,
         is_active: editing.is_active,
+        ...(merchShop ? { description: editing.description, photo_url: editing.photo_url, show_in_app: editing.show_in_app, show_in_pos: false } : {}),
         points_price: String(editing.usage_kind || 'resellable').toLowerCase() === 'internal' ? null : editing.points_price,
       })
       toast.success('Product updated')
@@ -353,6 +371,9 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
     setRestockDraft(addDraft)
     setEditing({
       id: row.id,
+      description: row.description || '',
+      photo_url: row.photo_url || '',
+      show_in_app: Boolean(row.show_in_app),
       name: row.name,
       sku: row.sku || '',
       category: row.category || 'merch',
@@ -688,6 +709,7 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
 
   return (
     <section className="flex flex-col gap-8">
+      {!merchShop ? <>
       {!embedded ? (
         <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-end">
           <div>
@@ -961,16 +983,21 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
         </Button>
       </div>
 
+      </> : null}
+
       {/* Create Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Add Inventory Item</DialogTitle>
+            <DialogTitle>{merchShop ? 'Add merch item' : 'Add Inventory Item'}</DialogTitle>
             <DialogDescription>
               Assign category and branch stock. Restocks by Branch Admins will require Super Admin approval.
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={onCreate} className="flex flex-col gap-3">
+            {merchShop ? <MerchItemFields value={form} onChange={setForm} disabled={!canMutate || saving} onBusy={setSaving}>
+              <SizeFields rows={form.sizes} onChange={(sizes) => setForm({ ...form, sizes })} disabled={!canMutate || saving} pointsOnly />
+            </MerchItemFields> : <>
             <div className="flex flex-col gap-2">
               <Label>Name</Label>
               <Input
@@ -1126,6 +1153,7 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
                 disabled={!canMutate}
               />
             </div>
+            </>}
             <DialogFooter>
               <Button type="button" variant="outline" className="min-h-11" onClick={() => setCreateOpen(false)}>
                 Cancel
@@ -1142,10 +1170,10 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
       <Card className="planner-ticket">
         <CardHeader className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
-            <CardTitle>Catalog Items</CardTitle>
+            <CardTitle>{merchShop ? 'Merch items' : 'Catalog Items'}</CardTitle>
             <CardDescription>
               {visible.length} of {products.length} items
-              {selectedBranch !== 'all' ? ` · Branch: ${branchNames[selectedBranch] || selectedBranch}` : ' · All Branches'}
+              {branchScope !== 'all' ? ` · Branch: ${branchNames[branchScope] || branchScope}` : ' · All Branches'}
               {crudLocked ? ' · locked' : ''}
             </CardDescription>
           </div>
@@ -1156,7 +1184,7 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
             disabled={!canMutate}
           >
             <Plus size={16} className="mr-1.5" aria-hidden />
-            Add Inventory Item
+            {merchShop ? 'Add merch item' : 'Add Inventory Item'}
           </Button>
         </CardHeader>
         <CardContent>
@@ -1164,12 +1192,12 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
             <TableHeader>
               <TableRow>
                 <TableHead>Item</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead>POS Visibility</TableHead>
-                <TableHead>Price</TableHead>
+                <TableHead>{merchShop ? 'Points' : 'Category'}</TableHead>
+                <TableHead>{merchShop ? 'In the app' : 'POS Visibility'}</TableHead>
+                <TableHead>{merchShop ? 'Sizes' : 'Price'}</TableHead>
                 <TableHead>Total On-Hand</TableHead>
                 <TableHead>
-                  {selectedBranch !== 'all' ? `${branchNames[selectedBranch] || selectedBranch} On-Hand` : 'Branch Breakdown'}
+                  {branchScope !== 'all' ? `${branchNames[branchScope] || branchScope} On-Hand` : 'Branch Breakdown'}
                 </TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -1177,21 +1205,20 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
             </TableHeader>
             <TableBody>
               {visible.map((row) => {
-                const isSelected = selectedBranch !== 'all'
+                const isSelected = branchScope !== 'all'
                 const stockItems = stockByProduct[row.id] || []
                 const totalOnHand = computeProductTotalOnHand(stockItems)
                 const totalEval = evaluateStockStatus(totalOnHand)
-                const branchStockRow = isSelected ? findBranchSizeStock(stockItems, selectedBranch, '') : null
-                const isAssigned = isSelected ? branchAssignedForProduct(stockItems, selectedBranch) : true
-                const onHandQty = isSelected && branchStockRow ? Number(branchStockRow.qty) || 0 : 0
+                const isAssigned = isSelected ? branchAssignedForProduct(stockItems, branchScope) : true
+                const onHandQty = isSelected ? stockItems.filter((r) => r.branch_slug === branchScope).reduce((sum, r) => sum + (Number(r.qty) || 0), 0) : 0
                 const isSized = productSizeRows(row).length > 0
 
                 return (
                   <TableRow key={row.id}>
                     <TableCell>
-                      <div className="font-medium text-foreground">{row.name}</div>
+                      <div className="flex items-center gap-2.5">{merchShop ? <img src={merchPhoto(row)} alt="" className="size-10 shrink-0 rounded-lg border object-cover" /> : null}<div className={merchShop ? 'min-w-[10rem] whitespace-normal' : undefined}><div className="font-medium text-foreground">{row.name}</div>{merchShop && !row.photo_url ? <p className="text-xs text-muted-foreground">Placeholder photo</p> : null}</div></div>
                       <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                        {row.sku ? <span>SKU: {row.sku}</span> : null}
+                        {!merchShop && row.sku ? <span>SKU: {row.sku}</span> : null}
                         {row.stock_category === 'coffee_menu' ? (
                           <Badge variant="outline" className="border-amber-500/40 text-[10px] text-amber-600 dark:text-amber-400">
                             Recipe: 1 Cup + 20g Beans
@@ -1204,10 +1231,10 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
                         ) : null}
                       </div>
                     </TableCell>
-                    <TableCell>{renderCategoryBadge(row.stock_category)}</TableCell>
-                    <TableCell>{renderVisibilityBadge(row)}</TableCell>
+                    <TableCell>{merchShop ? <Badge variant="secondary">{row.points_price} pts</Badge> : renderCategoryBadge(row.stock_category)}</TableCell>
+                    <TableCell>{merchShop ? <Badge variant={row.show_in_app ? 'secondary' : 'outline'}>{row.show_in_app ? 'Shown' : 'Hidden'}</Badge> : renderVisibilityBadge(row)}</TableCell>
                     <TableCell className="tabular-nums">
-                      {isSized
+                      {merchShop ? (productSizeRows(row).map((z) => z.label).join(' · ') || 'One size') : isSized
                         ? productSizeRows(row)
                             .map((s) => `${s.label} ${formatMoney(s.price_minor)}`)
                             .join(' · ')
@@ -1237,7 +1264,7 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
                     <TableCell>
                       {!isSelected ? (
                         <span className="max-w-[14rem] text-xs tabular-nums text-muted-foreground">
-                          {formatBranchOnHandSummary(stockItems, branchNames)}
+                          {merchShop ? merchBranchTotals(stockItems, branchNames) : formatBranchOnHandSummary(stockItems, branchNames)}
                         </span>
                       ) : !isAssigned ? (
                         <div className="flex items-center gap-2">
@@ -1250,7 +1277,7 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
                             variant="outline"
                             className="h-8 text-xs"
                             disabled={saving || !canMutate}
-                            onClick={() => assignBranch(row.id, selectedBranch)}
+                            onClick={() => assignBranch(row.id, branchScope)}
                           >
                             Assign here
                           </Button>
@@ -1290,7 +1317,7 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
                                   variant="outline"
                                   className="h-8 px-2 text-xs"
                                   disabled={saving || !canMutate}
-                                  onClick={() => handleQuickBranchAction(row.id, selectedBranch, 'set')}
+                                  onClick={() => handleQuickBranchAction(row.id, branchScope, 'set')}
                                 >
                                   Set
                                 </Button>
@@ -1300,7 +1327,7 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
                                 size="sm"
                                 className="h-8 px-2 text-xs"
                                 disabled={saving || !canMutate}
-                                onClick={() => handleQuickBranchAction(row.id, selectedBranch, 'restock')}
+                                onClick={() => handleQuickBranchAction(row.id, branchScope, 'restock')}
                               >
                                 {canEditStock ? '+ Restock' : 'Request'}
                               </Button>
@@ -1309,7 +1336,7 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
                             <span className="text-[11px] text-muted-foreground">
                               {productSizeRows(row)
                                 .map((s) => {
-                                  const hit = findBranchSizeStock(stockItems, selectedBranch, productSizeKey(s.label))
+                                  const hit = findBranchSizeStock(stockItems, branchScope, productSizeKey(s.label))
                                   return `${s.label}: ${hit ? hit.qty : 0}`
                                 })
                                 .join(' · ')}
@@ -1356,10 +1383,13 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
       <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
         <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit Inventory Item</DialogTitle>
+            <DialogTitle>{merchShop ? 'Edit merch item' : 'Edit Inventory Item'}</DialogTitle>
           </DialogHeader>
           {editing && (
             <form onSubmit={onSaveEdit} className="flex flex-col gap-4">
+              {merchShop ? <MerchItemFields value={editing} onChange={setEditing} disabled={!canMutate || saving} onBusy={setSaving}>
+                <SizeFields rows={editing.sizes} onChange={(sizes) => setEditing({ ...editing, sizes })} disabled={!canMutate || saving} pointsOnly />
+              </MerchItemFields> : <>
               <div className="flex flex-col gap-2">
                 <Label>Name</Label>
                 <Input
@@ -1537,10 +1567,12 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
                 />
               </div>
 
+              </>}
+
               {/* Branch On-Hand Section */}
               <div className="flex flex-col gap-3 rounded-lg border border-border p-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium">Branch On-Hand Management</p>
+                  <p className="text-sm font-medium">{merchShop ? 'Stock at each branch' : 'Branch On-Hand Management'}</p>
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <ShieldCheck size={14} className="text-primary" />
                     {canEditStock ? 'Direct set enabled (Super Admin / Lucy / Robert)' : 'Restock requests require approval'}

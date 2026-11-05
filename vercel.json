@@ -3,6 +3,7 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "rewrites": [
+    { "source": "/api/points-shop", "destination": "/api/bookings?operation=points-shop" },
     { "source": "/api/booking-status", "destination": "/api/bookings?operation=booking-status" },
     { "source": "/api/maintenance-schedules", "destination": "/api/bookings?operation=maintenance-schedules" },
     { "source": "/api/busybee", "destination": "/api/notifications?operation=busybee" },
@@ -56,6 +57,10 @@
     }
   ],
   "crons": [
+    {
+      "path": "/api/notifications?operation=points-shop-expiry",
+      "schedule": "30 0 * * *"
+    },
     {
       "path": "/api/notifications?operation=birthday-greetings",
       "schedule": "5 16 * * *"

@@ -7,7 +7,7 @@
 
 ## Nav
 
-Floor Insight · Carwash Queue · Detailing Schedule · Team Planner · Point of Sales · Vouchers · Inventory · Financials · Monthly salaries · Approvals · Payslips · Attendance · Customers · Memberships · Inquiries · Branches · Services and Packages · Detailing Packages · Vehicle List · RBAC Delegation · Transfer car · Content · Settings · History · Notifications · Audit · Data Center
+Floor Insight · Carwash Queue · Detailing Schedule · Team Planner · Point of Sales · Vouchers · Inventory · Financials · Monthly salaries · Approvals · Payslips · Attendance · Customers · Memberships · Merch shop · Inquiries · Branches · Services and Packages · Detailing Packages · Vehicle List · RBAC Delegation · Transfer car · Content · Settings · History · Notifications · Audit · Data Center
 
 Retired from this nav: **Console** (off since the Floor Board became the landing surface) and **Payroll / Crew** (`canAccessConsole()` returns `false`; `crew` is denied).
 
@@ -27,3 +27,6 @@ Retired from this nav: **Console** (off since the Floor Board became the landing
 Cannot exceed grants. `rbac_edit` required to edit other ASA grants.
 
 Approving a Daily Sheet needs `finance_view`. Setting daily rates or editing Daily sheet rules needs `finance_write`. See `docs/OPS/MONEY-CONTRACT.md`.
+
+## Merch shop
+Manage app-only points items, real photos, descriptions, sizes, points, visibility, and branch stock using the usual stock controls. Requires the services_merch grant. Waiting pickups show masked codes: ask the customer for their code, enter it, then Hand over. This never creates a sale. Holds expire after ten days and return stock and points automatically; customers cannot cancel.

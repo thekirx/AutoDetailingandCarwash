@@ -6,6 +6,7 @@ import { readGatewayOperation } from '../server/apiGateway.mjs'
 const config = JSON.parse(readFileSync(new URL('../vercel.json', import.meta.url), 'utf8'))
 
 const expected = {
+  '/api/points-shop': '/api/bookings?operation=points-shop',
   '/api/booking-status': '/api/bookings?operation=booking-status',
   '/api/maintenance-schedules': '/api/bookings?operation=maintenance-schedules',
   '/api/busybee': '/api/notifications?operation=busybee',

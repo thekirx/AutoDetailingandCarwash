@@ -1,3 +1,4 @@
+import PointsShop from '@/components/customer/PointsShop'
 import { useEffect, useState } from 'react'
 import { Cake, Check, Gift, Percent, Star, Ticket } from 'lucide-react'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
@@ -5,7 +6,7 @@ import StampTrack from '@/components/customer/StampTrack'
 import { BirthdayPass } from '@/components/customer/BirthdayGreeting'
 import ReferralCard from '@/components/customer/ReferralCard'
 import { BIRTHDAY_GIFT_LABEL, BIRTHDAY_PERK_DAYS } from '@/lib/birthdayPerk'
-import { memberTier, MERCH_POINTS, nextVisitReward, earnedVisitRewards, SERVICE_POINTS } from '@/lib/rewardsCatalog'
+import { memberTier, nextVisitReward, earnedVisitRewards, SERVICE_POINTS } from '@/lib/rewardsCatalog'
 import { Row, SectionHead, Skeleton, Stat } from '@/components/customer/CustomerUi'
 import { fetchPortal } from '@/lib/customerPortalClient'
 import { CUSTOMER_LOYALTY_PATH, CUSTOMER_REFERRAL_PATH, CUSTOMER_VOUCHERS_PATH } from '@/lib/customerAccountNav'
@@ -118,6 +119,8 @@ export default function CustomerLoyaltyPage() {
         </div>
       ) : null}
 
+      {data ? <PointsShop data={data} onRefresh={setData} /> : null}
+
       {/* Points ride on the pass when stamps are on; on their own otherwise. */}
       {(loyalty?.pointsEnabled && loyalty?.stampsEnabled === false) || loyalty?.membership ? (
         <div className="capp-stats" style={{ gridTemplateColumns: loyalty.pointsEnabled && loyalty.stampsEnabled === false && loyalty.membership ? undefined : '1fr' }}>
@@ -165,7 +168,7 @@ export default function CustomerLoyaltyPage() {
             <Row
               icon={Ticket}
               title="Vouchers"
-              sub="Birthday car wash and the accessory shop."
+              sub="Birthday car wash."
               to={CUSTOMER_VOUCHERS_PATH}
               chevron
             />
@@ -194,12 +197,7 @@ export default function CustomerLoyaltyPage() {
                   <span className="tabular-nums">{row.points}</span>
                 </li>
               ))}
-              {MERCH_POINTS.map((row) => (
-                <li key={row.name} className="flex justify-between gap-3">
-                  <span>{row.name}</span>
-                  <span className="tabular-nums">{row.points} to claim</span>
-                </li>
-              ))}
+
             </ul>
           </details>
         </section>

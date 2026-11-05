@@ -21,7 +21,7 @@ export function getCustomerAccountTabs() {
 export function customerAccountTabId(pathname = '') {
   if (pathname.startsWith('/account/book')) return 'book'
   if (pathname.startsWith('/account/queue') || pathname.startsWith('/queue')) return 'queue'
-  if (pathname.startsWith('/account/loyalty') || pathname.startsWith('/account/referral') || pathname.startsWith('/account/vouchers')) {
+  if (pathname.startsWith('/account/pickup/') || pathname.startsWith('/account/loyalty') || pathname.startsWith('/account/referral') || pathname.startsWith('/account/vouchers')) {
     return 'rewards'
   }
   if (pathname.startsWith('/account/visit')) return 'home'

@@ -1,3 +1,4 @@
+import { handlePointsShopExpiryRequest } from '../server/pointsShop.mjs'
 import { createGateway } from '../server/apiGateway.mjs'
 import { handleBusybeeRequest } from '../server/busybeeApi.mjs'
 import { handleLifecycleSmsRequest } from '../server/lifecycleSmsApi.mjs'
@@ -17,6 +18,7 @@ import { handleBookingRemindersRequest } from '../server/bookingRemindersApi.mjs
 import { handleMaintenanceRemindersRequest } from '../server/maintenanceRemindersApi.mjs'
 
 export const operations = Object.freeze({
+  'points-shop-expiry': handlePointsShopExpiryRequest,
   busybee: handleBusybeeRequest,
   'lifecycle-sms': handleLifecycleSmsRequest,
   'maintenance-reminders': handleMaintenanceRemindersRequest,

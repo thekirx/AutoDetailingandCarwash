@@ -33,7 +33,7 @@ test('blank offer input uses the same defaults as the database function', () => 
 test('a points redemption deducts the pickup branch, not global stock', () => {
   const sql = readFileSync(new URL('../supabase/migrations/20261017180000_redeem_branch_stock.sql', import.meta.url), 'utf8')
   const portal = readFileSync(new URL('../server/customerPortal.mjs', import.meta.url), 'utf8')
-  const page = readFileSync(new URL('../src/pages/CustomerVouchersPage.jsx', import.meta.url), 'utf8')
+  const page = readFileSync(new URL('../src/components/customer/PointsShop.jsx', import.meta.url), 'utf8')
   assert.match(sql, /product_branch_stock/)
   assert.match(sql, /hakum\.allow_stock_decrease/)
   assert.doesNotMatch(sql, /stock_qty/)

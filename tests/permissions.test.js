@@ -48,6 +48,7 @@ describe('RBAC Part 1 matrix', () => {
         '/operations/attendance',
         '/operations/crm',
         '/operations/memberships',
+        '/operations/merch-shop',
         '/operations/inquiries',
         '/operations/branches',
         '/operations/inventory?tab=bay',
