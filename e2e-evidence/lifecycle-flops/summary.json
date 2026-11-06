@@ -1,7 +1,7 @@
 {
-  "ok": true,
-  "passed": 24,
-  "total": 24,
+  "ok": false,
+  "passed": 2,
+  "total": 3,
   "steps": [
     {
       "ok": true,
@@ -14,132 +14,11 @@
       "detail": "wash Full Care Package · detailing Paint Maintenance"
     },
     {
-      "ok": true,
-      "name": "C1.customer.book",
-      "detail": "63d587e9-82fd-4f90-85b8-9297b10285ad pending"
-    },
-    {
-      "ok": true,
-      "name": "C1.tl.confirm_booking",
-      "detail": "confirmed"
-    },
-    {
-      "ok": true,
-      "name": "B1.tl.booking_to_waiting",
-      "detail": "waiting"
-    },
-    {
-      "ok": true,
-      "name": "A1.crew.attendance",
-      "detail": "Crew One present 2026-10-11"
-    },
-    {
-      "ok": true,
-      "name": "W1.tl.wash_to_final_check",
-      "detail": "50577b22-8f09-42fa-a2fa-f8f72ac6e53b"
-    },
-    {
-      "ok": true,
-      "name": "W1.admin.pos_paid",
-      "detail": "70e3b9bf-7b57-4bbf-ba79-702c3788f49f 450000 minor"
-    },
-    {
-      "ok": true,
-      "name": "W2.tl.cancel",
-      "detail": "65bc4017-97e7-4e0c-a2a1-32b14092be14"
-    },
-    {
-      "ok": true,
-      "name": "W3.sa.redo_then_cancel",
-      "detail": "db87af1c-de81-423b-8997-f0f56f1b999d"
-    },
-    {
-      "ok": true,
-      "name": "F1.sql.kind_sum",
-      "detail": "bacoor 2026-10-11 450000 minor"
-    },
-    {
-      "ok": true,
-      "name": "E1.sheet.sales_include_qa_sale",
-      "detail": "net 450000 · 1 paid"
-    },
-    {
-      "ok": true,
-      "name": "E1.sheet.ba_reads_today",
-      "detail": "not started yet"
-    },
-    {
-      "ok": true,
-      "name": "ui.01.public_book",
-      "detail": "screenshot"
-    },
-    {
-      "ok": true,
-      "name": "ui.02.tl_bookings",
-      "detail": "screenshot"
-    },
-    {
-      "ok": true,
-      "name": "ui.03.attendance",
-      "detail": "screenshot"
-    },
-    {
-      "ok": true,
-      "name": "ui.04.tl_queue",
-      "detail": "screenshot"
-    },
-    {
-      "ok": true,
-      "name": "R1.tl.pos_denied",
-      "detail": "http://127.0.0.1:5173/operations/access-denied"
-    },
-    {
-      "ok": true,
-      "name": "ui.05.ba_pos",
-      "detail": "screenshot"
-    },
-    {
-      "ok": true,
-      "name": "ui.08.ba_daily_sheet",
-      "detail": "screenshot"
-    },
-    {
-      "ok": true,
-      "name": "ui.09.finance_today",
-      "detail": "kind 450000"
-    },
-    {
-      "ok": true,
-      "name": "ui.10.daily_sheets",
-      "detail": "screenshot"
-    },
-    {
-      "ok": true,
-      "name": "R1.investor.sheets_denied",
-      "detail": "http://127.0.0.1:5173/operations/finance"
-    },
-    {
-      "ok": true,
-      "name": "Rec.frames",
-      "detail": "4 jpgs · total events 4"
+      "ok": false,
+      "name": "fatal",
+      "detail": "fetch failed"
     }
   ],
-  "report": {
-    "today": "2026-10-11",
-    "branch": "bacoor",
-    "plates": {
-      "book": "NKA10114",
-      "wash": "NKA10111",
-      "cancel": "NKA10112",
-      "redo": "NKA10113"
-    },
-    "sale_id": "70e3b9bf-7b57-4bbf-ba79-702c3788f49f",
-    "kind_sum_minor": 450000,
-    "wash_minor": 450000,
-    "sheet_net_minor": 450000,
-    "sheet_id": null,
-    "sheet_status": null,
-    "frames": 4
-  },
-  "at": "2026-10-11T08:55:02.253Z"
+  "report": {},
+  "at": "2026-11-06T13:27:54.264Z"
 }

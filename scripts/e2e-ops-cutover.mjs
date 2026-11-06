@@ -75,7 +75,7 @@ for (const key of navKeys) {
 // Nothing outside the investor allow-list may leak into their nav (queue, people,
 // settings, finance vendors…). This is the containment that a hardcoded length-1
 // assertion could never express.
-const known = new Set(['dashboard', 'pos', 'finance', 'reports'])
+const known = new Set(['dashboard', ...INVESTOR_ROUTE_KEYS])
 for (const key of navKeys) {
   assert(known.has(key), `investor nav contains an unknown route key: ${key}`)
 }

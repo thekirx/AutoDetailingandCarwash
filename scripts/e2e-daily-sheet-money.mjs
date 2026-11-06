@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Live Daily Sheet money path against the real Supabase project (sandbox day 2000-01-03, bacoor).
  * BA save → submit (server checks) → SA return → resubmit → SA approve (posts paid expenses once)
  * → re-approve is a no-op → SA reopen voids them. Plus role/branch refusals, receipts bucket,
@@ -68,7 +68,14 @@ async function refused(name, promise, pattern) {
   pass(name, error.message.slice(0, 80))
 }
 
+let caSubId = null
+
 async function cleanup() {
+  if (caSubId) {
+    await admin.from('audit_logs').delete().eq('entity_type', 'ops_form_submissions').eq('entity_id', caSubId)
+    await admin.from('ops_form_submissions').delete().eq('id', caSubId)
+    caSubId = null
+  }
   const { data: sheets } = await admin.from('daily_sheets').select('id').eq('branch', QA_BRANCH).eq('business_date', QA_DATE)
   for (const s of sheets || []) {
     const { data: lines } = await admin.from('daily_sheet_lines').select('id').eq('sheet_id', s.id)
@@ -119,13 +126,36 @@ try {
     .maybeSingle()
   assert(!detErr && detailer?.id, `need an active bacoor detailer: ${detErr?.message}`)
 
+  const { data: caForm } = await admin.from('ops_forms').select('id').eq('kind', 'cash_advance').limit(1).maybeSingle()
+  assert(caForm?.id, 'need cash_advance form')
+  const { data: caSub, error: caSubErr } = await admin
+    .from('ops_form_submissions')
+    .insert({
+      form_id: caForm.id,
+      payload: { amount: 200, branch: QA_BRANCH, staff_id: detailer.id, employee_name: 'Detailer QA' },
+      status: 'new',
+      source: 'staff',
+      respondent_label: 'QA CA',
+    })
+    .select('id')
+    .single()
+  assert(!caSubErr && caSub?.id, `seed ca request: ${caSubErr?.message}`)
+  caSubId = caSub.id
+
+  const { data: caAppr, error: apprErr } = await rpc(boss.client, 'approve_cash_advance', {
+    id: caSub.id,
+    action: 'approve',
+  })
+  assert(!apprErr && caAppr?.approval_code, `approve ca request: ${apprErr?.message}`)
+  const caApprovalCode = caAppr.approval_code
+
   // No sales on this sandbox day. Salary comes out of the cash transaction.
   // Cash left = 0 − 90000 salary + 5000 repaid − 50000 expense − 20000 advance = −155000.
   // The count cannot be negative, so the drawer is short and the note explains it.
   const lines = [
     { kind: 'expense', account_id: generalAccount, description: 'QA e2e load', amount_minor: 50000 },
     { kind: 'salary', staff_id: detailer.id, suggested_minor: 80000, amount_minor: 90000, reason: '' },
-    { kind: 'ca_release', staff_id: detailer.id, amount_minor: 20000 },
+    { kind: 'ca_release', staff_id: detailer.id, amount_minor: 20000, reason: caApprovalCode },
     { kind: 'ca_repay', staff_id: detailer.id, amount_minor: 5000 },
   ]
   const sheetPayload = (overrides = {}) => ({
