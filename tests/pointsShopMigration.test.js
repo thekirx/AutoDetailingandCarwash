@@ -5,7 +5,7 @@ const sql = readFileSync(new URL('../supabase/migrations/20261105070344_points_s
 test('migration guards sized legacy claims and carries only pending unsized claims', () => {
   assert.match(sql, /Pending sized claims need manual resolution/)
   assert.match(sql, /jsonb_array_length\(.*size_options/)
-  assert.match(sql, /created_at.*\n/)
+  assert.match(sql, /created_at.*\r?\n/)
   assert.match(sql, /where r.status = 'pending'/)
   assert.match(sql, /interval '10 days'/)
 })
