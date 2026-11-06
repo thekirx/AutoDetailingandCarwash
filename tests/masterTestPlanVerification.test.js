@@ -25,11 +25,9 @@ import {
   canEditBookings,
   canAccessPos,
   canManageVouchers,
-  canViewVouchers,
   canAccessFinance,
   canWriteFinance,
   canAccessAttendance,
-  canOverrideAttendance,
   canAccessCrm,
   canEditCrm,
   canModifyStock,
@@ -51,7 +49,6 @@ import {
 } from '../src/lib/rewardsCatalog.js'
 import {
   normalizePickupCode,
-  pickupDaysLeft,
   claimState,
 } from '../src/lib/pointsShop.js'
 
@@ -60,24 +57,20 @@ import {
   formatAttendanceHeadcountStrings,
   isFloorCrew,
   isAdministrativeCrew,
-  attendanceRoleHeadcount,
 } from '../src/lib/attendanceInsights.js'
 
 // Seam 4: Queue Logic, FIFO & Customer Name
 import {
   sortTicketsFifo,
   fifoNextTicketId,
-  normalizePlate,
 } from '../src/queue/queueLogic.js'
 import { resolveQueueCustomerDisplayName } from '../src/lib/queueCustomerName.js'
 
 // Seam 5: POS, Cash Advance & Bacoor Daily Close
 import {
   assertBranchAdminCart,
-  summarizePosCart,
 } from '../src/lib/posSale.js'
 import {
-  cashAdvanceBalances,
   calculateProjectedCashAdvance,
 } from '../src/lib/cashAdvanceBalance.js'
 import {
@@ -90,7 +83,6 @@ import {
   STOCK_CATEGORIES,
   MATERIAL_ROLES,
   RESTOCK_POLICY_NOTICE,
-  productShowsOnPos,
   evaluateStockStatus,
 } from '../src/lib/inventoryCatalog.js'
 
@@ -284,6 +276,7 @@ describe('Master Test Plan: 2. Customer Lifecycle, Loyalty & Points Shop', () =>
   })
 
   it('MEMBER_TIERS transitions dynamically at 30, 70, and 100 visits', () => {
+    assert.equal(MEMBER_TIERS.length, 4)
     assert.equal(memberTier(1).name, 'Hakum Basic Member')
     assert.equal(memberTier(29).name, 'Hakum Basic Member')
     assert.equal(memberTier(30).name, 'Hakum Deluxe Member')
@@ -551,6 +544,7 @@ describe('Master Test Plan: 8. Detailing, Tint & PPF Pipeline', () => {
   })
 
   it('SALES_BOARD_STATUSES permits customer sales desk to manage bookings including cancellation', () => {
+    assert.equal(SALES_BOARD_STATUSES.length, 8)
     assert.equal(isSalesBoardStatus('pending'), true)
     assert.equal(isSalesBoardStatus('cancelled'), true)
     assert.equal(isSalesBoardStatus('in_progress'), true)

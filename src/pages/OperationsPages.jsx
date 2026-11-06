@@ -31,7 +31,7 @@ import {
   QUEUE_FAMILY_DETAILING,
   ticketQueueFamily,
 } from '../lib/queueFamilies'
-import { allowRoute, canAccessPos, canEditQueueTicket, canManagePeople, canSeeAllBranches, canViewPlanning, canViewRedoLane, isAssistantSuperAdmin, isInvestor, isSalesRole, ROLES, isSuperAdmin } from '../auth/permissions'
+import { allowRoute, canAccessPos, canEditQueueTicket, canManagePeople, canSeeAllBranches, canViewPlanning, canViewRedoLane, isAdmin, isAssistantSuperAdmin, isInvestor, isSalesRole, ROLES, isSuperAdmin } from '../auth/permissions'
 import ReferralRank from '../components/bookings/ReferralRank'
 import {
   DEFAULT_COMPENSATION_RULES,
