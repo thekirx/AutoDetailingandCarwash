@@ -73,9 +73,9 @@ export function formatPhpMinor(minor) {
 }
 
 /**
- * Merge bookings + maintenance + sales into one timeline, newest first.
+ * Merge bookings + maintenance + sales + notes into one timeline, newest first.
  */
-export function buildHistoryTimeline({ bookings = [], maintenance = [], sales = [] } = {}) {
+export function buildHistoryTimeline({ bookings = [], maintenance = [], sales = [], notes = [] } = {}) {
   const events = []
 
   for (const b of bookings) {
@@ -163,6 +163,33 @@ export function buildHistoryTimeline({ bookings = [], maintenance = [], sales = 
     })
   }
 
+  for (const n of notes || []) {
+    const when = n.created_at
+    const authorTag = [n.author_name, n.author_branch ? `(${n.author_branch})` : ''].filter(Boolean).join(' ')
+    events.push({
+      id: `note:${n.id}`,
+      kind: 'note',
+      at: when,
+      sortAt: when,
+      title: `Guest note · ${n.note_type || 'general'}`,
+      subtitle: [authorTag, n.plate_normalized].filter(Boolean).join(' · '),
+      status: n.note_type,
+      branch: n.branch_slug || n.author_branch || null,
+      plate: n.plate_normalized,
+      phone: null,
+      customerName: null,
+      amountMinor: null,
+      customerId: n.customer_id || null,
+      createdAt: n.created_at || null,
+      notes: n.body,
+      noteType: n.note_type,
+      author: n.author_name || null,
+      authorName: n.author_name || null,
+      authorRole: n.author_role || null,
+      authorBranch: n.author_branch || null,
+    })
+  }
+
   return events.sort((a, b) => {
     const ta = new Date(a.sortAt || 0).getTime()
     const tb = new Date(b.sortAt || 0).getTime()
@@ -199,7 +226,15 @@ export function filterHistoryTimeline(events, { kinds, status, branch, serviceKi
   })
 }
 
-export function summarizeHistoryIdentity(bookings = [], maintenance = []) {
+export function summarizeHistoryIdentity(bookingsOrOptions = [], maintenanceArg = [], notesArg = []) {
+  let bookings = bookingsOrOptions || []
+  let maintenance = maintenanceArg || []
+  let notes = notesArg || []
+  if (bookingsOrOptions && !Array.isArray(bookingsOrOptions) && typeof bookingsOrOptions === 'object') {
+    bookings = bookingsOrOptions.bookings || []
+    maintenance = bookingsOrOptions.maintenance || []
+    notes = bookingsOrOptions.notes || []
+  }
   const names = new Set()
   const phones = new Set()
   const plates = new Set()
@@ -215,6 +250,11 @@ export function summarizeHistoryIdentity(bookings = [], maintenance = []) {
     if (m.customer_phone) phones.add(m.customer_phone)
     if (m.plate_number) plates.add(m.plate_number)
     if (m.branch_slug) branches.add(m.branch_slug)
+  }
+  for (const n of notes || []) {
+    if (n.plate_normalized) plates.add(n.plate_normalized)
+    if (n.branch_slug) branches.add(n.branch_slug)
+    if (n.author_branch) branches.add(n.author_branch)
   }
   return {
     names: [...names],

@@ -268,8 +268,10 @@ export default function LoginPage() {
         accounts={demoAccounts}
         disabled={submitting}
         onPick={async (a) => {
+          setEmail(a.email || '')
           setError('')
           setInfo('')
+          setSubmitting(true)
           // The server holds the password; this sends an id and adopts the
           // session it hands back. Nothing secret crosses the wire in either
           // direction.
@@ -283,6 +285,7 @@ export default function LoginPage() {
             window.location.assign('/operations')
           } catch (err) {
             setError(err?.message || 'Demo sign-in failed')
+            setSubmitting(false)
           }
         }}
       />

@@ -15,6 +15,7 @@ export default [
       'docs/_assets/**',
       'design-mocks/**',
       'tmp-*.mjs',
+      'scratch/**',
     ],
   },
   {

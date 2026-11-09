@@ -14,6 +14,7 @@ export default function CustomerNotesPanel({
   customerId = null,
   plate = '',
   vehicleId = null,
+  branch = '',
   limit = 8,
   canWrite = true,
 }) {
@@ -31,12 +32,17 @@ export default function CustomerNotesPanel({
     }
     let q = supabase
       .from('customer_notes')
-      .select('id, body, note_type, plate_normalized, created_at, created_by, customer_id')
+      .select('id, body, note_type, plate_normalized, created_at, created_by, customer_id, branch_slug')
       .is('archived_at', null)
       .order('created_at', { ascending: false })
       .limit(limit)
-    if (customerId) q = q.eq('customer_id', customerId)
-    else q = q.eq('plate_normalized', plateNorm)
+    if (customerId && plateNorm) {
+      q = q.or(`customer_id.eq.${customerId},plate_normalized.eq.${plateNorm}`)
+    } else if (customerId) {
+      q = q.eq('customer_id', customerId)
+    } else {
+      q = q.eq('plate_normalized', plateNorm)
+    }
     const { data, error: err } = await q
     if (err) {
       toast.error(err.message)
@@ -69,13 +75,25 @@ export default function CustomerNotesPanel({
     }
     setBusy(true)
     setError('')
+    const user = (await supabase.auth.getUser()).data?.user
+    let noteBranch = branch || null
+    if (!noteBranch && user?.id) {
+      const { data: sp } = await supabase
+        .from('staff_profiles')
+        .select('branch_slug')
+        .eq('id', user.id)
+        .maybeSingle()
+      if (sp?.branch_slug) noteBranch = sp.branch_slug
+    }
+
     const { error: err } = await supabase.from('customer_notes').insert({
       customer_id: customerId || null,
       vehicle_id: vehicleId || null,
       plate_normalized: check.plate_normalized,
       note_type: check.note_type,
       body: check.body,
-      created_by: (await supabase.auth.getUser()).data?.user?.id || null,
+      branch_slug: noteBranch,
+      created_by: user?.id || null,
     })
     setBusy(false)
     if (err) toast.error(err.message)
@@ -98,10 +116,23 @@ export default function CustomerNotesPanel({
         <ul className="space-y-2">
           {notes.map((n) => (
             <li key={n.id} className="rounded-lg border border-border px-3 py-2 text-sm">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">{n.note_type}</p>
-              <p>{n.body}</p>
+              <div className="flex items-center justify-between gap-2">
+                <span className="text-xs uppercase tracking-wide text-muted-foreground">{n.note_type}</span>
+                {n.branch_slug || n.author_branch ? (
+                  <Badge variant="outline" className="h-4 py-0 font-mono text-[10px] uppercase">
+                    {n.branch_slug || n.author_branch}
+                  </Badge>
+                ) : null}
+              </div>
+              <p className="mt-1">{n.body}</p>
               <p className="mt-1 text-xs text-muted-foreground" data-testid="note-author-date">
-                {formatNoteAuthorDate({ authorName: n.author_name, createdAt: n.created_at })}
+                {formatNoteAuthorDate({
+                  authorName: n.author_name,
+                  authorRole: n.author_role,
+                  authorBranch: n.author_branch,
+                  branch: n.branch_slug,
+                  createdAt: n.created_at,
+                })}
               </p>
             </li>
           ))}

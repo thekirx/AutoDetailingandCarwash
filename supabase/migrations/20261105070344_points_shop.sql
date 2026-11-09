@@ -46,10 +46,10 @@ alter table public.accessory_redemptions
 alter table public.accessory_redemptions drop constraint if exists accessory_redemptions_status_check;
 alter table public.accessory_redemptions add constraint accessory_redemptions_status_check
   check (status in ('pending', 'fulfilled', 'expired'));
-create index accessory_redemptions_expiry_idx on public.accessory_redemptions(expires_at) where status = 'pending';
+create index if not exists accessory_redemptions_expiry_idx on public.accessory_redemptions(expires_at) where status = 'pending';
 
 -- Eight random hex characters keep codes short without a lifetime 10,000-claim cap.
-create function public.mint_pickup_code() returns text
+create or replace function public.mint_pickup_code() returns text
 language sql volatile set search_path = pg_catalog, public
 as $$ select 'HK-' || upper(substr(replace(gen_random_uuid()::text, '-', ''), 1, 8)) $$;
 revoke all on function public.mint_pickup_code() from public, anon, authenticated;
@@ -84,7 +84,8 @@ alter table public.product_stock_movements add constraint product_stock_movement
   check (movement_type = any (array['sale','restock','recon_adjust','owner_set','coffee_recipe','transfer','points_claim','points_return']));
 
 drop function if exists public.redeem_accessory(uuid, uuid, text);
-create function public.redeem_accessory(p_customer uuid, p_product uuid, p_branch text, p_size text)
+drop function if exists public.redeem_accessory(uuid, uuid, text, text);
+create or replace function public.redeem_accessory(p_customer uuid, p_product uuid, p_branch text, p_size text)
 returns jsonb language plpgsql security definer set search_path = pg_catalog, public as $$
 declare
   v_product public.products%rowtype;
@@ -132,7 +133,7 @@ end $$;
 revoke all on function public.redeem_accessory(uuid, uuid, text, text) from public, anon, authenticated;
 grant execute on function public.redeem_accessory(uuid, uuid, text, text) to service_role;
 
-create function public.handover_redemption(p_branch text, p_code text, p_staff uuid)
+create or replace function public.handover_redemption(p_branch text, p_code text, p_staff uuid)
 returns jsonb language plpgsql security definer set search_path = pg_catalog, public as $$
 declare v_staff public.staff_profiles%rowtype; v_id uuid;
 begin
@@ -162,7 +163,7 @@ end $$;
 revoke all on function public.handover_redemption(text, text, uuid) from public, anon, authenticated;
 grant execute on function public.handover_redemption(text, text, uuid) to service_role;
 
-create function public.expire_redemptions() returns integer
+create or replace function public.expire_redemptions() returns integer
 language plpgsql security definer set search_path = pg_catalog, public as $$
 declare r public.accessory_redemptions%rowtype; v_count integer := 0;
 begin
@@ -189,7 +190,7 @@ revoke all on function public.expire_redemptions() from public, anon, authentica
 grant execute on function public.expire_redemptions() to service_role;
 
 -- A durable inbox tag deduplicates daily reminders and returned-points notices.
-create unique index user_notifications_points_shop_tag_idx on public.user_notifications(user_id, tag)
+create unique index if not exists user_notifications_points_shop_tag_idx on public.user_notifications(user_id, tag)
   where kind = 'points_shop';
 
 -- Seeding must also work while the catalog lock is enabled. Transaction-local only.

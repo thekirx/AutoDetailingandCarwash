@@ -22,21 +22,6 @@ function admin() {
   return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
-async function resolveBranchScope(db, staff) {
-  if (['BossMich', 'assistant_super_admin', 'sales', 'marketing'].includes(staff.role)) {
-    return null
-  }
-  let branches = staff.branch_slug ? [staff.branch_slug] : []
-  if (staff.role === 'admin') {
-    const { data: assigns } = await db
-      .from('staff_branch_assignments')
-      .select('branch_slug')
-      .eq('staff_id', staff.id)
-    if (assigns?.length) branches = assigns.map((a) => a.branch_slug).filter(Boolean)
-  }
-  return branches.length ? branches : staff.branch_slug ? [staff.branch_slug] : []
-}
-
 function bookingMatchesQuery(row, classified) {
   if (classified.kind === 'phone' || classified.kind === 'mixed') {
     if (classified.phone && phonesMatch(row.customer_phone, classified.phone)) return true
@@ -90,6 +75,8 @@ export async function handleCustomerHistoryRequest(req, res) {
     const url = new URL(req.url || '/', 'http://localhost')
     const q = String(body.q ?? url.searchParams.get('q') ?? '').trim()
     const statusFilter = String(body.status ?? url.searchParams.get('status') ?? 'all')
+    const branchParam = String(body.branch ?? url.searchParams.get('branch') ?? 'all').trim()
+    const explicitBranch = branchParam && branchParam !== 'all' ? [branchParam] : null
     const limit = Math.min(200, Math.max(20, Number(body.limit || url.searchParams.get('limit') || 100) || 100))
 
     if (q.length < 3) {
@@ -105,10 +92,9 @@ export async function handleCustomerHistoryRequest(req, res) {
       return json(res, 400, { error: 'Use a fuller plate (3+) or mobile number (7+ digits).' })
     }
 
-    const branchSlugs = await resolveBranchScope(db, staff)
-    if (Array.isArray(branchSlugs) && branchSlugs.length === 0) {
-      return json(res, 403, { error: 'No branch assigned for history search.' })
-    }
+    // Customer ledger is multi-branch ready so staff at any branch can view past visits and TL notes.
+    // An explicit branch filter from the client is honored when passed.
+    const branchSlugs = explicitBranch
 
     const bookingSelect =
       'id, customer_id, customer_name, customer_phone, vehicle_plate, vehicle_make, vehicle_model, branch, status, scheduled_start, scheduled_end, completed_at, created_at, updated_at, final_price_minor, price_minor, notes, service_id, services(name, slug, pay_category)'
@@ -250,6 +236,43 @@ export async function handleCustomerHistoryRequest(req, res) {
       }
     }
 
+    // Guest notes (likes, dislikes, preferences, complaints) across branches
+    let notes = []
+    if (customerIds.size || plateNorms.size) {
+      let notesQ = db
+        .from('customer_notes')
+        .select(
+          'id, customer_id, vehicle_id, plate_normalized, note_type, body, branch_slug, created_by, created_at',
+        )
+        .is('archived_at', null)
+        .order('created_at', { ascending: false })
+        .limit(50)
+      if (branchSlugs) notesQ = notesQ.in('branch_slug', branchSlugs)
+      const noteOr = []
+      for (const id of customerIds) noteOr.push(`customer_id.eq.${id}`)
+      for (const pn of plateNorms) if (pn && pn.length >= 3) noteOr.push(`plate_normalized.eq.${pn}`)
+      if (noteOr.length) {
+        const { data: noteRows } = await notesQ.or(noteOr.slice(0, 40).join(','))
+        const rawNotes = noteRows || []
+        const creatorIds = [...new Set(rawNotes.map((n) => n.created_by).filter(Boolean))]
+        let staffRows = []
+        if (creatorIds.length) {
+          const { data: sRows } = await db.rpc('staff_display_names', { p_ids: creatorIds })
+          staffRows = sRows || []
+        }
+        const staffMap = new Map((staffRows || []).map((s) => [s.id, s]))
+        notes = rawNotes.map((n) => {
+          const author = n.created_by ? staffMap.get(n.created_by) : null
+          return {
+            ...n,
+            author_name: author?.full_name || null,
+            author_role: author?.role || null,
+            author_branch: n.branch_slug || author?.branch_slug || null,
+          }
+        })
+      }
+    }
+
     // Customer profile (first id)
     let customer = null
     const firstCustomerId = [...customerIds][0]
@@ -262,8 +285,8 @@ export async function handleCustomerHistoryRequest(req, res) {
       customer = data || null
     }
 
-    const identity = summarizeHistoryIdentity(bookings, maintenance)
-    const timeline = buildHistoryTimeline({ bookings, maintenance, sales })
+    const identity = summarizeHistoryIdentity(bookings, maintenance, notes)
+    const timeline = buildHistoryTimeline({ bookings, maintenance, sales, notes })
 
     return json(res, 200, {
       query: classified,
@@ -274,11 +297,13 @@ export async function handleCustomerHistoryRequest(req, res) {
         bookings: bookings.length,
         maintenance: maintenance.length,
         sales: sales.length,
+        notes: notes.length,
         events: timeline.length,
       },
       bookings,
       maintenance,
       sales,
+      notes,
       timeline,
     })
   } catch (err) {

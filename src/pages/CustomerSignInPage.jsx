@@ -450,6 +450,7 @@ export default function CustomerSignInPage() {
           setError('')
           setInfo('')
           setSetupStatus(null)
+          setSubmitting(true)
           // Server-side sign-in: the browser sends an id, never a password.
           try {
             const { access_token, refresh_token } = await demoSignIn(a.id)
@@ -458,6 +459,7 @@ export default function CustomerSignInPage() {
             window.location.assign('/account')
           } catch (err) {
             setError(err?.message || 'Demo sign-in failed')
+            setSubmitting(false)
           }
         }}
       />

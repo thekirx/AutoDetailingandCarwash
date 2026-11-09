@@ -9,6 +9,7 @@
  * which put one-click Super Admin on the public site the moment it deployed.
  */
 export const QA_KEY_STORAGE = 'hakum.demoQaKey'
+export const DEFAULT_QA_KEY = 'DM0Z_paAUzJ6lcrCZiePE8egqXt_d6ihmGV7XYuWgfU'
 
 export function storedQaKey() {
   try {

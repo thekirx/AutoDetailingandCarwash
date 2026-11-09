@@ -642,6 +642,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
               customerId={ticket.customer_id || null}
               plate={ticket.vehicle_plate || ''}
               vehicleId={ticket.vehicle_id || null}
+              branch={ticket.branch || ''}
             />
           </div>
           {showEditActions && canEditServicePrice ? (

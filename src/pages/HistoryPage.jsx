@@ -40,6 +40,7 @@ const KIND_FILTERS = [
   { id: 'booking', label: 'Bookings' },
   { id: 'maintenance', label: 'Maintenance' },
   { id: 'sale', label: 'POS sales' },
+  { id: 'note', label: 'Guest notes' },
 ]
 
 const STATUS_OPTIONS = [
@@ -67,6 +68,7 @@ function formatWhen(iso) {
 function kindTone(kind) {
   if (kind === 'maintenance') return 'border-amber-500/50 bg-amber-500/10 text-amber-900 dark:text-amber-100'
   if (kind === 'sale') return 'border-emerald-500/40 bg-emerald-500/10 text-emerald-900 dark:text-emerald-100'
+  if (kind === 'note') return 'border-sky-500/40 bg-sky-500/10 text-sky-900 dark:text-sky-100'
   return 'border-primary/35 bg-primary/10 text-primary'
 }
 
@@ -80,7 +82,7 @@ export default function HistoryPage() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [searched, setSearched] = useState(false)
-  const [kinds, setKinds] = useState(['booking', 'maintenance', 'sale'])
+  const [kinds, setKinds] = useState(['booking', 'maintenance', 'sale', 'note'])
   const [status, setStatus] = useState('all')
   const [serviceKind, setServiceKind] = useState('all')
   const [branch, setBranch] = useState('all')
@@ -411,7 +413,7 @@ export default function HistoryPage() {
                 variant="outline"
                 className="mt-4 min-h-11"
                 onClick={() => {
-                  setKinds(['booking', 'maintenance', 'sale'])
+                  setKinds(['booking', 'maintenance', 'sale', 'note'])
                   setStatus('all')
                   setServiceKind('all')
                   setBranch('all')
@@ -439,7 +441,9 @@ export default function HistoryPage() {
                           ? 'bg-amber-500'
                           : ev.kind === 'sale'
                             ? 'bg-emerald-500'
-                            : 'bg-primary',
+                            : ev.kind === 'note'
+                              ? 'bg-sky-500'
+                              : 'bg-primary',
                       )}
                       aria-hidden
                     />
@@ -457,7 +461,7 @@ export default function HistoryPage() {
                                 kindTone(ev.kind),
                               )}
                             >
-                              {ev.kind === 'maintenance' ? 'Maintenance' : ev.kind === 'sale' ? 'POS' : 'Booking'}
+                              {ev.kind === 'maintenance' ? 'Maintenance' : ev.kind === 'sale' ? 'POS' : ev.kind === 'note' ? 'Guest Note' : 'Booking'}
                             </span>
                             {statusLabel ? (
                               <span className="text-xs capitalize text-muted-foreground">{statusLabel}</span>
@@ -523,6 +527,18 @@ export default function HistoryPage() {
                       ['Plate', selected.plate],
                       ['Phone', selected.phone],
                       ['Branch', selected.branch],
+                      [
+                        'Author',
+                        [
+                          selected.author,
+                          selected.authorRole ? `(${selected.authorRole})` : null,
+                          selected.authorBranch && selected.authorBranch !== selected.branch
+                            ? `· ${selected.authorBranch}`
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(' '),
+                      ],
                       ['Vehicle', [selected.vehicleMake, selected.vehicleModel].filter(Boolean).join(' ')],
                       ['Amount', formatPhpMinor(selected.amountMinor)],
                       ['Status time', selected.statusAt ? formatWhen(selected.statusAt) : null],

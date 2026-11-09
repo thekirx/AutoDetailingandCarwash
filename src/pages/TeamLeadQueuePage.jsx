@@ -218,6 +218,8 @@ export default function TeamLeadQueuePage() {
           const mapped = visits.map((v) => ({
             booking_id: v.booking_id || v.id,
             vehicle_plate: v.vehicle_plate || v.plate,
+            branch: v.branch,
+            notes: v.notes,
             status: v.status,
             final_price_minor: v.final_price_minor ?? v.total_minor,
             base_price_minor: v.base_price_minor,
@@ -345,6 +347,11 @@ export default function TeamLeadQueuePage() {
                   onClick={() => setEditBookingId(row.booking_id)}
                 >
                   <span className="font-semibold">{row.vehicle_plate}</span>
+                  {row.branch ? (
+                    <span className="rounded border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-[10px] uppercase text-muted-foreground">
+                      {row.branch}
+                    </span>
+                  ) : null}
                   <span className="text-muted-foreground">{({ in_progress: 'Washing', final_checking: 'Final check', for_payment: 'To pay', completed: 'Done' })[row.status] || STATUS_LABELS[row.status] || row.status}</span>
                   <span className="tabular-nums text-emerald-600 dark:text-emerald-400">
                     {formatMoney(row.final_price_minor ?? row.base_price_minor ?? 0)}

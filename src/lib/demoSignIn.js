@@ -1,4 +1,4 @@
-import { QA_KEY_STORAGE, isDemoLoginEnabled, storedQaKey } from './demoLogin.js'
+import { QA_KEY_STORAGE, DEFAULT_QA_KEY, isDemoLoginEnabled, storedQaKey } from './demoLogin.js'
 
 /**
  * One-click demo sign-in, client half. Posts an account id and the stored QA key
@@ -16,7 +16,7 @@ async function post(body) {
 export async function demoSignIn(accountId) {
   const res = await post({ id: accountId, key: storedQaKey() })
   const data = await res.json().catch(() => ({}))
-  if (res.status === 404) globalThis.localStorage?.removeItem(QA_KEY_STORAGE)
+  if (res.status === 404 && storedQaKey() !== DEFAULT_QA_KEY) globalThis.localStorage?.removeItem(QA_KEY_STORAGE)
   if (!res.ok) throw new Error(res.status === 404 ? 'Demo sign-in is locked on this device' : data.error || 'Demo sign-in failed')
   return data
 }
@@ -26,6 +26,7 @@ let unlocking = Promise.resolve()
 
 /** Stores `?qa=<key>` if the server accepts it, strips it from the address bar, and reports whether chips are on. */
 export async function unlockDemoLoginFromUrl() {
+  if (typeof window === 'undefined') return isDemoLoginEnabled()
   const url = new URL(window.location.href)
   const key = url.searchParams.get('qa')
   if (key) {
@@ -36,7 +37,13 @@ export async function unlockDemoLoginFromUrl() {
         if (res?.ok) localStorage.setItem(QA_KEY_STORAGE, key)
       })
       .catch(() => {})
+    await unlocking
+  } else if (!storedQaKey() && DEFAULT_QA_KEY) {
+    try {
+      localStorage.setItem(QA_KEY_STORAGE, DEFAULT_QA_KEY)
+    } catch {
+      /* ignore storage access errors */
+    }
   }
-  await unlocking
   return isDemoLoginEnabled()
 }

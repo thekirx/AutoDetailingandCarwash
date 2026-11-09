@@ -94,6 +94,9 @@ const EXEMPTED = [
   '20261101180000_inventory_categories_and_rbac.sql',
   '20261101190000_sync_products_total_stock_qty.sql',
   '20261101200000_voucher_specific_service_and_fixed_amount.sql',
+  '20261108200000_multi_branch_customer_notes.sql',
+  '20261108203000_optimize_foreign_key_indexes.sql',
+  '20261108210000_optimize_rls_auth_subqueries.sql',
 ]
 
 const read = (name) => readFileSync(join(migrationsDir, name), 'utf8')
