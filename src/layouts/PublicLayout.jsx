@@ -104,7 +104,8 @@ function PublicSiteHeader({ open, setOpen, isCustomer, className = '' }) {
       </div>
       {open && (
         <nav id="mobile-navigation" className="mobile-nav" aria-label="Mobile navigation">
-          {PUBLIC_NAV_ITEMS.map(([label, to]) => (
+          {/* Client, 10 Nov 2026: Events & Blogs is desktop only. */}
+          {PUBLIC_NAV_ITEMS.filter(([, to]) => to !== '/events').map(([label, to]) => (
             <NavLink key={to} to={to} end={to === '/home'}>
               {label}
             </NavLink>

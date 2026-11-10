@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 
 import BdAppPreview from '../components/public/bredesign/BdAppPreview'
-import BdRewards from '../components/public/bredesign/BdRewards'
 import BdHero from '../components/public/bredesign/BdHero'
 import BdProducts from '../components/public/bredesign/BdProducts'
 import BdReviews from '../components/public/bredesign/BdReviews'
@@ -51,15 +50,21 @@ export default function PublicLandingPage() {
       <BdServices />
       <BdOrigin />
       <BdAppPreview />
-      <BdRewards />
-      <BdPhotos />
+      {/* Client, 10 Nov 2026: Rewards & Loyalty is off the homepage entirely;
+          Photos & Videos and Events & meets are desktop only (the
+          .bd-home-desktop-only rule in bredesign.css hides them on phones). */}
+      <div className="bd-home-desktop-only">
+        <BdPhotos />
+      </div>
       {/* The gallery is our own work; the reviews are the outside voice
           confirming it, so they follow immediately rather than sitting below
           the fold under Branches. */}
       <BdReviews />
       {/* The page closes: events, the products we use, then the live queue —
           and the footer photo picks up from there. */}
-      <BdEvents state={content.event} />
+      <div className="bd-home-desktop-only">
+        <BdEvents state={content.event} />
+      </div>
       <BdProducts />
       <BdBranches branches={visibleBranches} />
     </>

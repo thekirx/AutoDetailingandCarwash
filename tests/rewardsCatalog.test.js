@@ -30,15 +30,15 @@ describe('visit rewards and member tier', () => {
     assert.equal(memberTier(100).name, 'Hakum Platinum Member')
   })
 
-  it('exposes 4 membership tiers and connects rewards to the public landing page', () => {
+  it('exposes 4 membership tiers and keeps rewards off the public landing page', () => {
     assert.equal(MEMBER_TIERS.length, 4)
     assert.deepEqual(
       MEMBER_TIERS.map((t) => t.name),
       ['Hakum Basic Member', 'Hakum Deluxe Member', 'Hakum Premium Member', 'Hakum Platinum Member'],
     )
     const landing = read('src/pages/PublicLandingPage.jsx')
-    assert.match(landing, /import BdRewards from '\.\.\/components\/public\/bredesign\/BdRewards'/)
-    assert.match(landing, /<BdRewards \/>/)
+    // Client, 10 Nov 2026: Rewards & Loyalty removed from the homepage.
+    assert.doesNotMatch(landing, /BdRewards/)
   })
 
   it('keeps the published points table', () => {

@@ -311,6 +311,13 @@
   line-height: 1.6;
   text-shadow: 0 2px 18px rgba(2, 10, 49, 0.9);
 }
+/* Client, 10 Nov 2026: Photos & Videos and Events & meets are desktop only on
+   the homepage. Same phone + portrait-tablet query as the hero below. */
+@media (max-width: 760px), (max-width: 1100px) and (orientation: portrait) {
+  .bredesign .bd-home-desktop-only {
+    display: none;
+  }
+}
 /* Phone and portrait tablet: the headline and paragraph stay at the top,
    sized to the screen. The buttons stay at the foot of the frame, where a
    thumb reaches them. */
