@@ -137,8 +137,8 @@ export const MEMBERSHIPS_WORKFLOW_STEPS = Object.freeze([
   },
   {
     id: 'tiers',
-    title: 'Premium plans',
-    body: 'Create tiers with price, discount, loyalty multiplier, and included services. POS reads active tiers live.',
+    title: 'Loyalty tiers',
+    body: 'Customer tiers based on visits (Basic, Deluxe, Premium, Platinum) with discounts and POS loyalty multipliers.',
   },
   {
     id: 'loyalty',

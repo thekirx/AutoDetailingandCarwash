@@ -17,6 +17,7 @@ import { normalizePricingSize, PRICING_SIZES } from '@/lib/servicePricing'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
 import { STATUS_LABELS } from '@/queue/queueLogic'
+import { memberTier } from '@/lib/rewardsCatalog'
 
 const BOOKING_SELECT =
   'id, status, branch, scheduled_start, completed_at, created_at, vehicle_plate, vehicle_make, vehicle_model, queue_number, final_price_minor, price_minor, visit_group_id, cancellation_reason, notes, team_lead_id, services(name)'
@@ -137,6 +138,11 @@ export default function CustomerProfileDialog({ customer, onOpenChange, profile,
   )
   const ticketNotes = useMemo(() => ticketNotesFromBookings(data.bookings), [data.bookings])
   const showTicket = canAccessQueuePage(profile)
+  const completedVisits = useMemo(
+    () => (data.bookings || []).filter((b) => b.status === 'completed').length,
+    [data.bookings],
+  )
+  const tierName = data.membership?.membership_tiers?.name || memberTier(completedVisits).name
 
   if (!customer) return null
   const smsOk = isSmsReachable(customer)
@@ -157,7 +163,7 @@ export default function CustomerProfileDialog({ customer, onOpenChange, profile,
               <div className="mt-2 flex flex-wrap gap-1.5">
                 <Badge variant={smsOk ? 'secondary' : 'outline'}>{smsOk ? 'SMS reachable' : 'No SMS'}</Badge>
                 <Badge variant={customer.notify_push !== false ? 'secondary' : 'outline'}>{customer.notify_push !== false ? 'Push on' : 'Push off'}</Badge>
-                {data.membership ? <Badge>{data.membership.membership_tiers?.name || 'Member'}</Badge> : null}
+                <Badge>{tierName}</Badge>
                 {customer.is_disabled ? <Badge variant="destructive"><BellOff aria-hidden /> Muted account</Badge> : null}
               </div>
             </div>

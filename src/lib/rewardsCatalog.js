@@ -52,37 +52,96 @@ export const MERCH_POINTS = Object.freeze([
 
 export const MEMBER_TIERS = Object.freeze([
   {
+    slug: 'basic',
     name: 'Hakum Basic Member',
     visits: '1–29 visits',
     badge: 'Basic',
+    min_visits: 1,
+    max_visits: 29,
+    discount_percent: 0,
+    loyalty_multiplier: 1.0,
     description: 'Welcome tier for all Hakum drivers. Accumulate visit stamps and points on every service.',
   },
   {
+    slug: 'deluxe',
     name: 'Hakum Deluxe Member',
     visits: '30–69 visits',
     badge: 'Deluxe',
+    min_visits: 30,
+    max_visits: 69,
+    discount_percent: 5,
+    loyalty_multiplier: 1.2,
     description: 'Dedicated regular care status with milestone visit rewards and priority seasonal offers.',
   },
   {
+    slug: 'premium',
     name: 'Hakum Premium Member',
     visits: '70–99 visits',
     badge: 'Premium',
+    min_visits: 70,
+    max_visits: 99,
+    discount_percent: 10,
+    loyalty_multiplier: 1.5,
     description: 'Enthusiast tier with elevated loyalty rewards, priority bay queueing, and anniversary perks.',
   },
   {
+    slug: 'platinum',
     name: 'Hakum Platinum Member',
     visits: '100+ visits',
     badge: 'Platinum',
+    min_visits: 100,
+    max_visits: null,
+    discount_percent: 15,
+    loyalty_multiplier: 2.0,
     description: 'Elite network tier with VIP privileges, exclusive merchandise access, and maximum rewards.',
   },
 ])
 
-export function memberTier(visits) {
+export function memberTier(visits, customTiers = null) {
   const n = Math.max(0, Math.floor(Number(visits) || 0))
-  if (n >= 100) return { name: 'Hakum Platinum Member', visits: n }
-  if (n >= 70) return { name: 'Hakum Premium Member', visits: n }
-  if (n >= 30) return { name: 'Hakum Deluxe Member', visits: n }
-  return { name: 'Hakum Basic Member', visits: n }
+  if (Array.isArray(customTiers) && customTiers.length > 0) {
+    const active = customTiers
+      .filter((t) => t && t.is_active !== false)
+      .sort((a, b) => (Number(b.min_visits) || 0) - (Number(a.min_visits) || 0))
+    for (const t of active) {
+      const min = Number(t.min_visits) || 0
+      const max = t.max_visits != null && t.max_visits !== '' ? Number(t.max_visits) : Infinity
+      if (n >= min && n <= max) {
+        return {
+          id: t.id,
+          name: t.name,
+          badge: t.name.replace(/Hakum\s*|\s*Member/gi, '').trim() || t.name,
+          visits: n,
+          min_visits: min,
+          max_visits: t.max_visits,
+          discount_percent: Number(t.discount_percent) || 0,
+          loyalty_multiplier: Number(t.loyalty_multiplier) || 1,
+          benefits: t.benefits || [],
+          included_services: t.included_services || [],
+        }
+      }
+    }
+    if (active.length > 0) {
+      const lowest = active[active.length - 1]
+      return {
+        id: lowest.id,
+        name: lowest.name,
+        badge: lowest.name.replace(/Hakum\s*|\s*Member/gi, '').trim() || lowest.name,
+        visits: n,
+        min_visits: Number(lowest.min_visits) || 0,
+        max_visits: lowest.max_visits,
+        discount_percent: Number(lowest.discount_percent) || 0,
+        loyalty_multiplier: Number(lowest.loyalty_multiplier) || 1,
+        benefits: lowest.benefits || [],
+        included_services: lowest.included_services || [],
+      }
+    }
+  }
+
+  if (n >= 100) return { name: 'Hakum Platinum Member', badge: 'Platinum', visits: n, min_visits: 100, max_visits: null, discount_percent: 15, loyalty_multiplier: 2.0 }
+  if (n >= 70) return { name: 'Hakum Premium Member', badge: 'Premium', visits: n, min_visits: 70, max_visits: 99, discount_percent: 10, loyalty_multiplier: 1.5 }
+  if (n >= 30) return { name: 'Hakum Deluxe Member', badge: 'Deluxe', visits: n, min_visits: 30, max_visits: 69, discount_percent: 5, loyalty_multiplier: 1.2 }
+  return { name: 'Hakum Basic Member', badge: 'Basic', visits: n, min_visits: 1, max_visits: 29, discount_percent: 0, loyalty_multiplier: 1.0 }
 }
 
 /** Next unpaid visit reward, counting every completed visit on any car. */

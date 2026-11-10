@@ -99,6 +99,7 @@ const EXEMPTED = [
   '20261108210000_optimize_rls_auth_subqueries.sql',
   '20261110180000_daily_sheet_returned_edit_and_roles.sql',
   '20261110200000_payroll_fixed_15_and_end_of_month.sql',
+  '20261110210000_visit_based_loyalty_tiers.sql',
 ]
 
 const read = (name) => readFileSync(join(migrationsDir, name), 'utf8')

@@ -761,7 +761,7 @@ export function formatPeso(minor) {
 }
 
 export async function listMembershipTiers({ includeInactive = true } = {}) {
-  let q = supabase.from('membership_tiers').select('*').order('starting_price_minor')
+  let q = supabase.from('membership_tiers').select('*').order('min_visits').order('starting_price_minor')
   if (!includeInactive) q = q.eq('is_active', true)
   const { data, error } = await q
   if (error) throw mapDbError(error)

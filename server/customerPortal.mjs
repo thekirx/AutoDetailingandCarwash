@@ -22,6 +22,7 @@ import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
 import { branchName, notifyStaffEvent } from './notifyOpsEvent.mjs'
 import { requestBookingReschedule } from './bookingReschedule.mjs'
 import { birthdayLockError, birthdayQueryDays, isBirthdayToday } from '../src/lib/birthdayPerk.js'
+import { memberTier } from '../src/lib/rewardsCatalog.js'
 import { normalizeReferralProgram } from '../src/lib/referralProgram.js'
 import { mintReferralCode } from '../src/lib/friendReferral.js'
 import { ensureBirthdayPerk } from './birthdayGreetings.mjs'
@@ -101,7 +102,7 @@ async function requireCustomer(accessToken) {
 export async function loadCustomerPortal({ accessToken, origin = '' }) {
   const { admin, userId, user, customer } = await requireCustomer(accessToken)
 
-  const [branches, history, purchases, active, queue, loyaltySettings, loyaltyMilestones, customerRow, vehicles, membershipRow, maint, visitCountRes] =
+  const [branches, history, purchases, active, queue, loyaltySettings, loyaltyMilestones, customerRow, vehicles, membershipRow, maint, visitCountRes, membershipTiersRes] =
     await Promise.all([
       admin.from('branches').select('slug, name, address, is_active, latitude, longitude, google_review_url').eq('is_active', true).eq('is_archived', false).order('name'),
       admin
@@ -166,6 +167,11 @@ export async function loadCustomerPortal({ accessToken, origin = '' }) {
         .select('id', { count: 'exact', head: true })
         .eq('customer_id', userId)
         .eq('status', 'completed'),
+      admin
+        .from('membership_tiers')
+        .select('name, min_visits, max_visits, discount_percent, loyalty_multiplier, is_active')
+        .eq('is_active', true)
+        .order('min_visits'),
     ])
 
   const { data: perkRow } = await admin
@@ -321,15 +327,30 @@ export async function loadCustomerPortal({ accessToken, origin = '' }) {
     admin.rpc('referral_program_settings'),
   ])
 
-  const membership = membershipsEnabled && membershipRow.data
-    ? {
-        id: membershipRow.data.id,
-        starts_at: membershipRow.data.starts_at,
-        ends_at: membershipRow.data.ends_at,
-        tier_name: membershipRow.data.membership_tiers?.name || null,
-        discount_percent: membershipRow.data.membership_tiers?.discount_percent ?? null,
-        loyalty_multiplier: membershipRow.data.membership_tiers?.loyalty_multiplier ?? null,
-      }
+  const visitCount = Number(visitCountRes?.count) || 0
+  const activeTiers = membershipTiersRes?.data || []
+  const resolvedTier = memberTier(visitCount, activeTiers)
+
+  const membership = membershipsEnabled
+    ? (membershipRow.data
+        ? {
+            id: membershipRow.data.id,
+            starts_at: membershipRow.data.starts_at,
+            ends_at: membershipRow.data.ends_at,
+            tier_name: membershipRow.data.membership_tiers?.name || null,
+            discount_percent: membershipRow.data.membership_tiers?.discount_percent ?? null,
+            loyalty_multiplier: membershipRow.data.membership_tiers?.loyalty_multiplier ?? null,
+            is_custom_assignment: true,
+          }
+        : {
+            id: null,
+            starts_at: null,
+            ends_at: null,
+            tier_name: resolvedTier?.name || null,
+            discount_percent: resolvedTier?.discount_percent ?? null,
+            loyalty_multiplier: resolvedTier?.loyalty_multiplier ?? null,
+            is_custom_assignment: false,
+          })
     : null
 
   return {

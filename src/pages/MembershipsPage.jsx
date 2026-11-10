@@ -46,7 +46,7 @@ const MEMBERSHIP_TAB_IDS = ['program', 'tiers', 'loyalty', 'scoring', 'assign']
 /** Source-scan contract — keep literal ids for ops shell tests. */
 const MEMBERSHIPS_SHELL_TABS = Object.freeze([
   { id: 'program', label: 'Program', icon: Settings2 },
-  { id: 'tiers', label: 'Premium plans', icon: Crown },
+  { id: 'tiers', label: 'Loyalty tiers', icon: Crown },
   { id: 'loyalty', label: 'Stamp thresholds', icon: Gift },
   { id: 'scoring', label: 'Service scoring', icon: Sparkles },
   { id: 'assign', label: 'Assign members', icon: Plus },
@@ -54,7 +54,9 @@ const MEMBERSHIPS_SHELL_TABS = Object.freeze([
 
 const emptyTier = {
   name: '',
-  starting_price: '',
+  min_visits: '1',
+  max_visits: '',
+  starting_price: '0',
   discount_percent: '0',
   loyalty_multiplier: '1',
   benefits: '',
@@ -195,7 +197,9 @@ export default function MembershipsPage() {
     try {
       await updateMembershipTier(tier.id, {
         name: tier.name,
-        starting_price: Number(tier.starting_price_minor) / 100,
+        min_visits: tier.min_visits,
+        max_visits: tier.max_visits,
+        starting_price: Number(tier.starting_price_minor || 0) / 100,
         discount_percent: tier.discount_percent,
         loyalty_multiplier: tier.loyalty_multiplier,
         benefits: tier.benefits,
@@ -453,10 +457,15 @@ export default function MembershipsPage() {
 
         <TabsContent value="tiers" className="mt-6 flex flex-col gap-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-muted-foreground">Paid membership plans with discount and loyalty multiplier on POS spend.</p>
+            <div>
+              <h2 className="text-base font-semibold text-foreground">Customer loyalty tiers</h2>
+              <p className="text-sm text-muted-foreground">
+                Customer tiers based on accumulated total visits (Basic, Deluxe, Premium, Platinum) with discounts and POS multipliers.
+              </p>
+            </div>
             <Button type="button" className="min-h-11 shrink-0" onClick={() => setCreateOpen('tier')}>
               <Plus size={16} className="mr-1.5" aria-hidden />
-              Add premium tier
+              Add loyalty tier
             </Button>
           </div>
 
@@ -464,14 +473,25 @@ export default function MembershipsPage() {
             {tiers.map((tier) => (
               <Card key={tier.id}>
                 <CardHeader className="flex flex-row items-start justify-between gap-3">
-                  <CardTitle>{tier.name}</CardTitle>
+                  <div className="flex flex-col gap-1">
+                    <CardTitle>{tier.name}</CardTitle>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline" className="font-semibold text-primary">
+                        {tier.max_visits != null && tier.max_visits !== ''
+                          ? `${tier.min_visits}–${tier.max_visits} visits`
+                          : `${tier.min_visits}+ visits`}
+                      </Badge>
+                      {tier.is_active ? <Badge>Active</Badge> : <Badge variant="secondary">Inactive</Badge>}
+                    </div>
+                  </div>
                   <div className="flex items-center gap-2">
-                    {tier.is_active ? <Badge>Active</Badge> : <Badge variant="secondary">Inactive</Badge>}
                     <Button variant="ghost" size="icon-sm" className="max-xl:size-11" onClick={() => setEditingTier({
                       ...tier,
-                      starting_price: String(Number(tier.starting_price_minor) / 100),
-                      discount_percent: String(tier.discount_percent),
-                      loyalty_multiplier: String(tier.loyalty_multiplier),
+                      min_visits: String(tier.min_visits ?? 0),
+                      max_visits: tier.max_visits != null ? String(tier.max_visits) : '',
+                      starting_price: String(Number(tier.starting_price_minor || 0) / 100),
+                      discount_percent: String(tier.discount_percent ?? 0),
+                      loyalty_multiplier: String(tier.loyalty_multiplier ?? 1),
                       benefits: (tier.benefits || []).join('\n'),
                       included_services: (tier.included_services || []).join('\n'),
                     })} aria-label={`Edit ${tier.name}`}>
@@ -480,11 +500,22 @@ export default function MembershipsPage() {
                   </div>
                 </CardHeader>
                 <CardContent className="flex flex-col gap-3">
-                  <p className="text-3xl font-semibold">{formatMoney(tier.starting_price_minor)}</p>
+                  <div className="flex flex-wrap items-baseline gap-2">
+                    <p className="text-2xl font-bold tracking-tight text-foreground">
+                      {tier.max_visits != null && tier.max_visits !== ''
+                        ? `${tier.min_visits}–${tier.max_visits} visits`
+                        : `${tier.min_visits}+ visits`}
+                    </p>
+                    {Number(tier.starting_price_minor) > 0 ? (
+                      <span className="text-xs text-muted-foreground">· Optional fee: {formatMoney(tier.starting_price_minor)}</span>
+                    ) : null}
+                  </div>
                   <p className="text-sm text-muted-foreground">Loyalty multiplier ×{tier.loyalty_multiplier} · {tier.discount_percent}% off</p>
-                  <ul className="list-disc pl-5 text-sm text-muted-foreground">
-                    {(tier.benefits || []).map((b) => <li key={b}>{b}</li>)}
-                  </ul>
+                  {(tier.benefits || []).length > 0 ? (
+                    <ul className="list-disc pl-5 text-sm text-muted-foreground">
+                      {tier.benefits.map((b) => <li key={b}>{b}</li>)}
+                    </ul>
+                  ) : null}
                   <p className="text-xs text-muted-foreground">Includes: {(tier.included_services || []).join(', ') || '—'}</p>
                   <Button variant="outline" size="sm" className="max-xl:min-h-11" onClick={() => toggleTierActive(tier)}>
                     {tier.is_active ? 'Deactivate' : 'Activate'}
@@ -492,7 +523,7 @@ export default function MembershipsPage() {
                 </CardContent>
               </Card>
             ))}
-            {!tiers.length && <p className="text-sm text-muted-foreground">No tiers yet — use Add premium tier to create your first plan.</p>}
+            {!tiers.length && <p className="text-sm text-muted-foreground">No loyalty tiers yet — use Add loyalty tier to create your first tier.</p>}
           </div>
         </TabsContent>
 
@@ -690,16 +721,42 @@ export default function MembershipsPage() {
       <Dialog open={createOpen === 'tier'} onOpenChange={(open) => !open && setCreateOpen('')}>
         <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Add premium tier</DialogTitle>
-            <DialogDescription>Paid membership plans with discount and loyalty multiplier on POS spend.</DialogDescription>
+            <DialogTitle>Add loyalty tier</DialogTitle>
+            <DialogDescription>Customer loyalty tiers based on accumulated total visits with discounts and points multipliers.</DialogDescription>
           </DialogHeader>
           <form onSubmit={onCreateTier} className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2 sm:col-span-2"><Label htmlFor="tier-name">Name</Label><Input id="tier-name" required className="min-h-11" value={tierForm.name} onChange={(e) => setTierForm({ ...tierForm, name: e.target.value })} /></div>
-            <div className="flex flex-col gap-2"><Label htmlFor="tier-price">Starting price (₱)</Label><Input id="tier-price" required type="number" min="0" step="0.01" className="min-h-11" value={tierForm.starting_price} onChange={(e) => setTierForm({ ...tierForm, starting_price: e.target.value })} /></div>
-            <div className="flex flex-col gap-2"><Label htmlFor="tier-discount">Discount %</Label><Input id="tier-discount" type="number" min="0" max="100" step="0.1" className="min-h-11" value={tierForm.discount_percent} onChange={(e) => setTierForm({ ...tierForm, discount_percent: e.target.value })} /></div>
-            <div className="flex flex-col gap-2"><Label htmlFor="tier-mult">Loyalty multiplier</Label><Input id="tier-mult" type="number" min="0" max="10" step="0.1" className="min-h-11" value={tierForm.loyalty_multiplier} onChange={(e) => setTierForm({ ...tierForm, loyalty_multiplier: e.target.value })} /></div>
-            <div className="flex flex-col gap-2 sm:col-span-2"><Label htmlFor="tier-benefits">Benefits (one per line)</Label><Textarea id="tier-benefits" rows={3} value={tierForm.benefits} onChange={(e) => setTierForm({ ...tierForm, benefits: e.target.value })} placeholder={'Priority booking\nMember-only promos'} /></div>
-            <div className="flex flex-col gap-2 sm:col-span-2"><Label htmlFor="tier-included">Included services (one per line)</Label><Textarea id="tier-included" rows={2} value={tierForm.included_services} onChange={(e) => setTierForm({ ...tierForm, included_services: e.target.value })} placeholder="Premium Car Wash" /></div>
+            <div className="flex flex-col gap-2 sm:col-span-2">
+              <Label htmlFor="tier-name">Name</Label>
+              <Input id="tier-name" required className="min-h-11" placeholder="e.g. Hakum Basic Member" value={tierForm.name} onChange={(e) => setTierForm({ ...tierForm, name: e.target.value })} />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="tier-min-visits">Min visits</Label>
+              <Input id="tier-min-visits" required type="number" min="0" step="1" className="min-h-11" placeholder="1" value={tierForm.min_visits} onChange={(e) => setTierForm({ ...tierForm, min_visits: e.target.value })} />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="tier-max-visits">Max visits (leave blank for unlimited)</Label>
+              <Input id="tier-max-visits" type="number" min="0" step="1" className="min-h-11" placeholder="e.g. 29" value={tierForm.max_visits} onChange={(e) => setTierForm({ ...tierForm, max_visits: e.target.value })} />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="tier-discount">Discount %</Label>
+              <Input id="tier-discount" type="number" min="0" max="100" step="0.1" className="min-h-11" value={tierForm.discount_percent} onChange={(e) => setTierForm({ ...tierForm, discount_percent: e.target.value })} />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="tier-mult">Loyalty multiplier</Label>
+              <Input id="tier-mult" type="number" min="0" max="10" step="0.1" className="min-h-11" value={tierForm.loyalty_multiplier} onChange={(e) => setTierForm({ ...tierForm, loyalty_multiplier: e.target.value })} />
+            </div>
+            <div className="flex flex-col gap-2 sm:col-span-2">
+              <Label htmlFor="tier-price">Starting price (₱) (optional)</Label>
+              <Input id="tier-price" type="number" min="0" step="0.01" className="min-h-11" value={tierForm.starting_price} onChange={(e) => setTierForm({ ...tierForm, starting_price: e.target.value })} placeholder="0" />
+            </div>
+            <div className="flex flex-col gap-2 sm:col-span-2">
+              <Label htmlFor="tier-benefits">Benefits (one per line)</Label>
+              <Textarea id="tier-benefits" rows={3} value={tierForm.benefits} onChange={(e) => setTierForm({ ...tierForm, benefits: e.target.value })} placeholder={'Priority booking\nMember-only promos'} />
+            </div>
+            <div className="flex flex-col gap-2 sm:col-span-2">
+              <Label htmlFor="tier-included">Included services (one per line)</Label>
+              <Textarea id="tier-included" rows={2} value={tierForm.included_services} onChange={(e) => setTierForm({ ...tierForm, included_services: e.target.value })} placeholder="Premium Car Wash" />
+            </div>
             <DialogFooter className="sm:col-span-2">
               <Button type="button" variant="outline" className="min-h-11" onClick={() => setCreateOpen('')}>Cancel</Button>
               <Button type="submit" className="min-h-11" disabled={saving}>{saving ? 'Saving…' : 'Create tier'}</Button>
@@ -769,17 +826,43 @@ export default function MembershipsPage() {
       </Dialog>
 
       <Dialog open={!!editingTier} onOpenChange={(open) => !open && setEditingTier(null)}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Edit tier</DialogTitle></DialogHeader>
+        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader><DialogTitle>Edit loyalty tier</DialogTitle></DialogHeader>
           {editingTier && (
-            <form onSubmit={onSaveTier} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2"><Label>Name</Label><Input required value={editingTier.name} onChange={(e) => setEditingTier({ ...editingTier, name: e.target.value })} /></div>
-              <div className="flex flex-col gap-2"><Label>Starting price (₱)</Label><Input required type="number" min="0" step="0.01" value={editingTier.starting_price} onChange={(e) => setEditingTier({ ...editingTier, starting_price: e.target.value })} /></div>
-              <div className="flex flex-col gap-2"><Label>Discount %</Label><Input type="number" min="0" max="100" value={editingTier.discount_percent} onChange={(e) => setEditingTier({ ...editingTier, discount_percent: e.target.value })} /></div>
-              <div className="flex flex-col gap-2"><Label>Loyalty multiplier</Label><Input type="number" min="0" max="10" step="0.1" value={editingTier.loyalty_multiplier} onChange={(e) => setEditingTier({ ...editingTier, loyalty_multiplier: e.target.value })} /></div>
-              <div className="flex flex-col gap-2"><Label>Benefits</Label><Textarea rows={3} value={editingTier.benefits} onChange={(e) => setEditingTier({ ...editingTier, benefits: e.target.value })} /></div>
-              <div className="flex flex-col gap-2"><Label>Included services</Label><Textarea rows={2} value={editingTier.included_services} onChange={(e) => setEditingTier({ ...editingTier, included_services: e.target.value })} /></div>
-              <label className="flex items-center gap-3 text-sm">
+            <form onSubmit={onSaveTier} className="grid gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-2 sm:col-span-2">
+                <Label>Tier name</Label>
+                <Input required value={editingTier.name} onChange={(e) => setEditingTier({ ...editingTier, name: e.target.value })} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Min visits</Label>
+                <Input required type="number" min="0" step="1" value={editingTier.min_visits} onChange={(e) => setEditingTier({ ...editingTier, min_visits: e.target.value })} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Max visits (blank for unlimited)</Label>
+                <Input type="number" min="0" step="1" placeholder="Leave empty for 100+" value={editingTier.max_visits} onChange={(e) => setEditingTier({ ...editingTier, max_visits: e.target.value })} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Discount %</Label>
+                <Input type="number" min="0" max="100" step="0.1" value={editingTier.discount_percent} onChange={(e) => setEditingTier({ ...editingTier, discount_percent: e.target.value })} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Loyalty multiplier</Label>
+                <Input type="number" min="0" max="10" step="0.1" value={editingTier.loyalty_multiplier} onChange={(e) => setEditingTier({ ...editingTier, loyalty_multiplier: e.target.value })} />
+              </div>
+              <div className="flex flex-col gap-2 sm:col-span-2">
+                <Label>Starting price (₱) (optional)</Label>
+                <Input type="number" min="0" step="0.01" value={editingTier.starting_price} onChange={(e) => setEditingTier({ ...editingTier, starting_price: e.target.value })} />
+              </div>
+              <div className="flex flex-col gap-2 sm:col-span-2">
+                <Label>Benefits (one per line)</Label>
+                <Textarea rows={3} value={editingTier.benefits} onChange={(e) => setEditingTier({ ...editingTier, benefits: e.target.value })} />
+              </div>
+              <div className="flex flex-col gap-2 sm:col-span-2">
+                <Label>Included services (one per line)</Label>
+                <Textarea rows={2} value={editingTier.included_services} onChange={(e) => setEditingTier({ ...editingTier, included_services: e.target.value })} />
+              </div>
+              <label className="flex items-center gap-3 text-sm sm:col-span-2">
                 <input
                   type="checkbox"
                   checked={!!editingTier.is_active}
@@ -787,7 +870,7 @@ export default function MembershipsPage() {
                 />
                 Active
               </label>
-              <DialogFooter>
+              <DialogFooter className="sm:col-span-2">
                 <Button type="button" variant="outline" onClick={() => setEditingTier(null)}>Cancel</Button>
                 <Button type="submit" disabled={saving}>Save changes</Button>
               </DialogFooter>

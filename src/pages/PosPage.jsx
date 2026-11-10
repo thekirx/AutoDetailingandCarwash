@@ -615,7 +615,7 @@ function PosCounterPage() {
       return
     }
     try {
-      const [settings, memRes] = await Promise.all([
+      const [settings, memRes, visitsRes, tiersRes] = await Promise.all([
         getLoyaltyProgramSettings(),
         supabase
           .from('customer_memberships')
@@ -627,21 +627,34 @@ function PosCounterPage() {
           .order('created_at', { ascending: false })
           .limit(1)
           .maybeSingle(),
+        supabase.from('bookings').select('id', { count: 'exact', head: true }).eq('customer_id', cid).eq('status', 'completed'),
+        supabase.from('membership_tiers').select('name, min_visits, max_visits, discount_percent, loyalty_multiplier, included_services, is_active').eq('is_active', true).order('min_visits'),
       ])
       const enabled = settings?.memberships_enabled !== false
       setMembershipsEnabled(enabled)
       const tier = memRes.data?.membership_tiers
       const today = getLocalCalendarDate()
       const expired = memRes.data?.ends_at && memRes.data.ends_at < today
-      const membership =
-        enabled && tier && tier.is_active !== false && !expired && !memRes.error
-          ? {
-              name: tier.name,
-              discount_percent: tier.discount_percent,
-              loyalty_multiplier: tier.loyalty_multiplier,
-              included_services: tier.included_services || [],
-            }
-          : null
+      let membership = null
+      if (enabled && tier && tier.is_active !== false && !expired && !memRes.error) {
+        membership = {
+          name: tier.name,
+          discount_percent: tier.discount_percent,
+          loyalty_multiplier: tier.loyalty_multiplier,
+          included_services: tier.included_services || [],
+        }
+      } else if (enabled) {
+        const count = visitsRes.error ? 0 : Number(visitsRes.count) || 0
+        const resolved = memberTier(count, tiersRes.data || null)
+        if (resolved) {
+          membership = {
+            name: resolved.name,
+            discount_percent: resolved.discount_percent,
+            loyalty_multiplier: resolved.loyalty_multiplier,
+            included_services: resolved.included_services || [],
+          }
+        }
+      }
       setActiveMembership(membership)
       const ctx = {
         membershipsEnabled: enabled && !!membership,

@@ -169,24 +169,36 @@ export function validateStaffUpdate({ id, full_name, role, branch_slug, phone })
 
 export function validateMembershipTierInput({
   name,
-  starting_price,
-  discount_percent,
-  loyalty_multiplier,
+  starting_price = 0,
+  min_visits = 0,
+  max_visits = null,
+  discount_percent = 0,
+  loyalty_multiplier = 1,
   benefits,
   included_services,
 }) {
   const trimmedName = String(name || '').trim()
   if (!trimmedName) throw new Error('Tier name is required.')
 
-  const priceNum = Number(starting_price)
+  const priceNum = starting_price !== '' && starting_price != null ? Number(starting_price) : 0
   if (!Number.isFinite(priceNum) || priceNum < 0) throw new Error('Starting price must be 0 or greater.')
 
-  const discount = Number(discount_percent)
+  const minV = Math.max(0, Math.floor(Number(min_visits) || 0))
+  let maxV = null
+  if (max_visits !== null && max_visits !== undefined && String(max_visits).trim() !== '') {
+    const parsed = Math.floor(Number(max_visits))
+    if (!Number.isFinite(parsed) || parsed < minV) {
+      throw new Error('Max visits must be equal to or greater than min visits.')
+    }
+    maxV = parsed
+  }
+
+  const discount = Number(discount_percent || 0)
   if (!Number.isFinite(discount) || discount < 0 || discount > 100) {
     throw new Error('Discount must be between 0 and 100.')
   }
 
-  const multiplier = Number(loyalty_multiplier)
+  const multiplier = Number(loyalty_multiplier != null && loyalty_multiplier !== '' ? loyalty_multiplier : 1)
   if (!Number.isFinite(multiplier) || multiplier < 0 || multiplier > 10) {
     throw new Error('Loyalty multiplier must be between 0 and 10.')
   }
@@ -208,6 +220,8 @@ export function validateMembershipTierInput({
   return {
     name: trimmedName,
     starting_price_minor: Math.round(priceNum * 100),
+    min_visits: minV,
+    max_visits: maxV,
     discount_percent: discount,
     loyalty_multiplier: multiplier,
     benefits: benefitList,
