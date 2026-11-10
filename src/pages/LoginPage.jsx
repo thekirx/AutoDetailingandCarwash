@@ -9,6 +9,8 @@ import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell, { TEAM_AUTH_BULLETS } from '../components/HakumAuthShell'
 import DemoAccountChips from '../components/DemoAccountChips'
 import { describeAuthError } from '../lib/authErrorMessage'
+import { isDemoLoginEnabled } from '../lib/demoLogin'
+import { OPS_DEMO_ACCOUNTS } from '../lib/demoAccounts'
 import { demoSignIn, unlockDemoLoginFromUrl } from '../lib/demoSignIn'
 
 export default function LoginPage() {
@@ -19,7 +21,7 @@ export default function LoginPage() {
   const [info, setInfo] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [resetting, setResetting] = useState(false)
-  const [demoAccounts, setDemoAccounts] = useState([])
+  const [demoAccounts, setDemoAccounts] = useState(() => (isDemoLoginEnabled() ? OPS_DEMO_ACCOUNTS : []))
   const { user, profile, loading, signOut, refreshProfile } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -30,9 +32,7 @@ export default function LoginPage() {
     let cancelled = false
     unlockDemoLoginFromUrl().then((on) => {
       if (!on || cancelled) return
-      import('../lib/demoAccounts').then((m) => {
-        if (!cancelled) setDemoAccounts(m.OPS_DEMO_ACCOUNTS)
-      })
+      setDemoAccounts(OPS_DEMO_ACCOUNTS)
     })
     return () => {
       cancelled = true

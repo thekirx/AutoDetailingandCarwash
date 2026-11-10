@@ -1,36 +1,36 @@
 # react-router-dom
 
-> God node · 89 connections · `package.json`
+> God node · 108 connections · `package.json`
 
-**Community:** [Src Appx](Src_Appx.md)
+**Community:** [PosPage.jsx](PosPage.jsx.md)
 
 ## Connections by Relation
 
 ### imports
-- package.json `EXTRACTED`
+- [package.json](package.json.md) `EXTRACTED`
 
 ### imports_from
-- PosPage.jsx `EXTRACTED`
+- [PosPage.jsx](PosPage.jsx.md) `EXTRACTED`
 - OperationsPages.jsx `EXTRACTED`
-- App.jsx `EXTRACTED`
-- BookingBoardPage.jsx `EXTRACTED`
-- CrewAttendancePanels.jsx `EXTRACTED`
-- CrmPage.jsx `EXTRACTED`
-- PayrollPage.jsx `EXTRACTED`
+- [App.jsx](App.jsx.md) `EXTRACTED`
+- [BookingBoardPage.jsx](BookingBoardPage.jsx.md) `EXTRACTED`
+- [CrewAttendancePanels.jsx](CrewAttendancePanels.jsx.md) `EXTRACTED`
 - FinancePage.jsx `EXTRACTED`
+- [CrmPage.jsx](CrmPage.jsx.md) `EXTRACTED`
 - PeopleManagePage.jsx `EXTRACTED`
 - KpiPage.jsx `EXTRACTED`
 - MembershipsPage.jsx `EXTRACTED`
-- OperationsLayout.jsx `EXTRACTED`
-- OpsRoadmapPage.jsx `EXTRACTED`
+- [OperationsLayout.jsx](OperationsLayout.jsx.md) `EXTRACTED`
+- [CustomerAccountPage.jsx](CustomerAccountPage.jsx.md) `EXTRACTED`
+- ProductsManagePage.jsx `EXTRACTED`
+- BranchesManagePage.jsx `EXTRACTED`
+- [CustomerMorePage.jsx](CustomerMorePage.jsx.md) `EXTRACTED`
+- MonthlyPayrollPage.jsx `EXTRACTED`
 - ServicesManagePage.jsx `EXTRACTED`
-- ContentAdminPage.jsx `EXTRACTED`
-- CustomerAccountPage.jsx `EXTRACTED`
-- CustomerMorePage.jsx `EXTRACTED`
+- [CustomerBookPage.jsx](CustomerBookPage.jsx.md) `EXTRACTED`
 - NotificationsPage.jsx `EXTRACTED`
 - PlanningBoardPage.jsx `EXTRACTED`
-- QueueTicketEditor.jsx `EXTRACTED`
-- *…and 68 more `imports_from` connection(s) not listed (lowest-degree first to go)*
+- *…and 87 more `imports_from` connection(s) not listed (lowest-degree first to go)*
 
 ---
 

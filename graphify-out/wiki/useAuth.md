@@ -1,59 +1,59 @@
 # useAuth()
 
-> God node · 116 connections · `src/auth/AuthProvider.jsx`
+> God node · 129 connections · `src/auth/AuthProvider.jsx`
 
-**Community:** [Server httpUtil Mjs](Server_httpUtil_Mjs.md)
+**Community:** [PosPage.jsx](PosPage.jsx.md)
 
 ## Connections by Relation
 
 ### calls
-- [PosPage()](PosPage.md) `EXTRACTED`
+- [PosCounterPage()](PosCounterPage_2.md) `EXTRACTED`
 - BookingBoardPage() `EXTRACTED`
-- PayrollPage() `EXTRACTED`
-- QueueTicketEditor() `EXTRACTED`
+- ProductsManagePage() `EXTRACTED`
+- PlanningFormsSmartPanel() `EXTRACTED`
 - MembershipsPage() `EXTRACTED`
 - PeopleManagePage() `EXTRACTED`
-- CrmPage() `EXTRACTED`
-- PlanningFormsSmartPanel() `EXTRACTED`
-- KpiPage() `EXTRACTED`
+- DailySheetPanel() `EXTRACTED`
 - FinancePage() `EXTRACTED`
+- MonthlyPayrollPage() `EXTRACTED`
 - ServicesManagePage() `EXTRACTED`
-- TaskModal() `EXTRACTED`
+- CrmPage() `EXTRACTED`
 - BranchesManagePage() `EXTRACTED`
-- OpsRoadmapPage() `EXTRACTED`
-- TeamLeadQueuePage() `EXTRACTED`
 - BranchInventoryPage() `EXTRACTED`
+- KpiPage() `EXTRACTED`
 - CustomerAccountPage() `EXTRACTED`
+- QueueTicketEditor() `EXTRACTED`
+- ContentAdminPage() `EXTRACTED`
 - CustomerBookPage() `EXTRACTED`
-- PlanningBoardPage() `EXTRACTED`
-- SuperAdminFloorBoard() `EXTRACTED`
-- *…and 42 more `calls` connection(s) not listed (lowest-degree first to go)*
+- OperationsQueueBoardPage() `EXTRACTED`
+- SmsPage() `EXTRACTED`
+- *…and 49 more `calls` connection(s) not listed (lowest-degree first to go)*
 
 ### contains
 - AuthProvider.jsx `EXTRACTED`
 
 ### imports
-- PosPage.jsx `EXTRACTED`
+- [PosPage.jsx](PosPage.jsx.md) `EXTRACTED`
 - OperationsPages.jsx `EXTRACTED`
-- BookingBoardPage.jsx `EXTRACTED`
-- CrmPage.jsx `EXTRACTED`
-- PayrollPage.jsx `EXTRACTED`
+- [BookingBoardPage.jsx](BookingBoardPage.jsx.md) `EXTRACTED`
 - FinancePage.jsx `EXTRACTED`
+- [CrmPage.jsx](CrmPage.jsx.md) `EXTRACTED`
 - PeopleManagePage.jsx `EXTRACTED`
 - KpiPage.jsx `EXTRACTED`
 - MembershipsPage.jsx `EXTRACTED`
 - PlanningFormsSmartPanel.jsx `EXTRACTED`
-- OperationsLayout.jsx `EXTRACTED`
-- OpsRoadmapPage.jsx `EXTRACTED`
-- ServicesManagePage.jsx `EXTRACTED`
-- ContentAdminPage.jsx `EXTRACTED`
-- CustomerAccountPage.jsx `EXTRACTED`
-- CustomerMorePage.jsx `EXTRACTED`
-- NotificationsPage.jsx `EXTRACTED`
-- PlanningBoardPage.jsx `EXTRACTED`
-- QueueTicketEditor.jsx `EXTRACTED`
+- [OperationsLayout.jsx](OperationsLayout.jsx.md) `EXTRACTED`
+- [CustomerAccountPage.jsx](CustomerAccountPage.jsx.md) `EXTRACTED`
+- ProductsManagePage.jsx `EXTRACTED`
+- DailySheetPanel.jsx `EXTRACTED`
 - BranchesManagePage.jsx `EXTRACTED`
-- *…and 33 more `imports` connection(s) not listed (lowest-degree first to go)*
+- [CustomerMorePage.jsx](CustomerMorePage.jsx.md) `EXTRACTED`
+- MonthlyPayrollPage.jsx `EXTRACTED`
+- ServicesManagePage.jsx `EXTRACTED`
+- [CustomerBookPage.jsx](CustomerBookPage.jsx.md) `EXTRACTED`
+- BranchInventoryPage.jsx `EXTRACTED`
+- NotificationsPage.jsx `EXTRACTED`
+- *…and 39 more `imports` connection(s) not listed (lowest-degree first to go)*
 
 ---
 

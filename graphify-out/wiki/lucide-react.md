@@ -1,36 +1,36 @@
 # lucide-react
 
-> God node · 92 connections · `package.json`
+> God node · 120 connections · `package.json`
 
-**Community:** [Src Appx](Src_Appx.md)
+**Community:** [react](react.md)
 
 ## Connections by Relation
 
 ### imports
-- package.json `EXTRACTED`
+- [package.json](package.json.md) `EXTRACTED`
 
 ### imports_from
-- PosPage.jsx `EXTRACTED`
+- [PosPage.jsx](PosPage.jsx.md) `EXTRACTED`
 - OperationsPages.jsx `EXTRACTED`
-- BookingBoardPage.jsx `EXTRACTED`
-- CrewAttendancePanels.jsx `EXTRACTED`
-- CrmPage.jsx `EXTRACTED`
-- PayrollPage.jsx `EXTRACTED`
+- [BookingBoardPage.jsx](BookingBoardPage.jsx.md) `EXTRACTED`
+- [CrewAttendancePanels.jsx](CrewAttendancePanels.jsx.md) `EXTRACTED`
 - FinancePage.jsx `EXTRACTED`
+- [CrmPage.jsx](CrmPage.jsx.md) `EXTRACTED`
 - PeopleManagePage.jsx `EXTRACTED`
 - KpiPage.jsx `EXTRACTED`
 - MembershipsPage.jsx `EXTRACTED`
 - PlanningFormsSmartPanel.jsx `EXTRACTED`
-- OperationsLayout.jsx `EXTRACTED`
-- OpsRoadmapPage.jsx `EXTRACTED`
-- ContentAdminPage.jsx `EXTRACTED`
-- CustomerAccountPage.jsx `EXTRACTED`
-- CustomerMorePage.jsx `EXTRACTED`
-- NotificationsPage.jsx `EXTRACTED`
-- PlanningBoardPage.jsx `EXTRACTED`
-- QueueTicketEditor.jsx `EXTRACTED`
+- [OperationsLayout.jsx](OperationsLayout.jsx.md) `EXTRACTED`
+- [CustomerAccountPage.jsx](CustomerAccountPage.jsx.md) `EXTRACTED`
+- ProductsManagePage.jsx `EXTRACTED`
+- DailySheetPanel.jsx `EXTRACTED`
 - BranchesManagePage.jsx `EXTRACTED`
-- *…and 71 more `imports_from` connection(s) not listed (lowest-degree first to go)*
+- [CustomerMorePage.jsx](CustomerMorePage.jsx.md) `EXTRACTED`
+- MonthlyPayrollPage.jsx `EXTRACTED`
+- ServicesManagePage.jsx `EXTRACTED`
+- [CustomerBookPage.jsx](CustomerBookPage.jsx.md) `EXTRACTED`
+- BranchInventoryPage.jsx `EXTRACTED`
+- *…and 99 more `imports_from` connection(s) not listed (lowest-degree first to go)*
 
 ---
 

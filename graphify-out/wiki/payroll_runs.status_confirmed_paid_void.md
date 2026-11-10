@@ -1,0 +1,25 @@
+# payroll_runs.status confirmed paid void
+
+> 1 nodes · cohesion 1.00
+
+## Key Concepts
+
+- **payroll_runs.status confirmed paid void** (0 connections) — `docs/GRAPHIFY_WORKFLOWS.md`
+
+## Relationships
+
+- No strong cross-community connections detected
+
+## Source Files
+
+- `docs/GRAPHIFY_WORKFLOWS.md`
+
+## Audit Trail
+
+- EXTRACTED: 0 (0%)
+- INFERRED: 0 (0%)
+- AMBIGUOUS: 0 (0%)
+
+---
+
+*Part of the graphify knowledge wiki. See [index](index.md) to navigate.*

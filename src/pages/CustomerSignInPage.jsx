@@ -11,6 +11,8 @@ import { classifyIdentifier, resolveLoginEmail } from '../lib/customerAuth'
 import { describeAuthError, describeCustomerAuthFailure } from '../lib/authErrorMessage'
 import { activateSignupHref, resolveCustomerAuthIntent } from '../lib/customerAccountLifecycle'
 import { canOfferPasswordEmailReset } from '../lib/uiDeadControls'
+import { isDemoLoginEnabled } from '../lib/demoLogin'
+import { CUSTOMER_DEMO_ACCOUNT } from '../lib/demoAccounts'
 import DemoAccountChips from '../components/DemoAccountChips'
 import { usePageMeta } from '../lib/pageMeta'
 
@@ -76,7 +78,7 @@ export default function CustomerSignInPage() {
   const [sendingSetup, setSendingSetup] = useState(false)
   const [sendingReset, setSendingReset] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [demoCustomer, setDemoCustomer] = useState(null)
+  const [demoCustomer, setDemoCustomer] = useState(() => (isDemoLoginEnabled() ? CUSTOMER_DEMO_ACCOUNT : null))
   const { user, profile, loading, signOut } = useAuth()
   const navigate = useNavigate()
 
@@ -84,9 +86,7 @@ export default function CustomerSignInPage() {
     let cancelled = false
     unlockDemoLoginFromUrl().then((on) => {
       if (!on || cancelled) return
-      import('../lib/demoAccounts').then((m) => {
-        if (!cancelled) setDemoCustomer(m.CUSTOMER_DEMO_ACCOUNT)
-      })
+      setDemoCustomer(CUSTOMER_DEMO_ACCOUNT)
     })
     return () => {
       cancelled = true
