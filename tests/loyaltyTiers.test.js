@@ -151,3 +151,4 @@ test('Loyalty Tiers - MembershipsPage and ops guide label tab as Loyalty tiers',
   assert.match(membershipsPageCode, /min_visits/)
   assert.match(membershipsPageCode, /max_visits/)
 })
+

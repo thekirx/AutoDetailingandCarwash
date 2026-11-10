@@ -67,3 +67,4 @@ on conflict (name) do update set
 
 -- Remove legacy single 'Platinum' ₱9,999 row if present
 delete from public.membership_tiers where name = 'Platinum' and starting_price_minor = 999900;
+
