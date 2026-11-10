@@ -7303,6 +7303,9 @@ a.planner-ticket:active {
   text-transform: uppercase;
   color: color-mix(in oklab, #052699 78%, #5c6578);
 }
+.command-nav-group [data-slot="sidebar-menu"] {
+  gap: 0.25rem;
+}
 .command-nav-btn {
   min-height: 2.75rem;
   height: auto;

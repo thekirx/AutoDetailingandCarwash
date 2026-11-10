@@ -39,7 +39,7 @@ import {
   TicketPercent,
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
-import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
 import {
   getDetailerDock,
@@ -500,6 +500,14 @@ function commandNavIsActive(pathname, search, to) {
     const tab = new URLSearchParams(search).get('tab')
     if (tab === 'bay' || tab === 'detailing') return false
   }
+  if (path === '/operations/finance') {
+    const tab = new URLSearchParams(search).get('tab')
+    if (tab === 'reports') return false
+  }
+  if (path === '/operations/planning') {
+    const tab = new URLSearchParams(search).get('tab')
+    if (tab === 'calendar') return false
+  }
   if (path.endsWith('/console') || path.endsWith('/dashboard')) return pathname === path
   return pathname === path || pathname.startsWith(`${path}/`)
 }
@@ -513,21 +521,20 @@ function CommandNavList({ items }) {
     <SidebarGroup key={group.id} className="command-nav-group">
       <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
       <SidebarGroupContent>
-        <SidebarMenu>
+        <SidebarMenu className="gap-1">
           {group.items.map(({ label: itemLabel, to, icon }) => {
             const Icon = iconMap[icon] || ClipboardList
-            const path = to.split('?')[0]
-            const end = path.endsWith('/console') || path.endsWith('/dashboard') || to.includes('?')
+            const isActive = commandNavIsActive(location.pathname, location.search, to)
             return (
               <SidebarMenuItem key={to}>
                 <SidebarMenuButton
                   className="command-nav-btn"
-                  isActive={commandNavIsActive(location.pathname, location.search, to)}
+                  isActive={isActive}
                   tooltip={itemLabel}
                   render={
-                    <NavLink
+                    <Link
                       to={to}
-                      end={end}
+                      aria-current={isActive ? 'page' : undefined}
                       onClick={() => setOpenMobile(false)}
                     />
                   }
@@ -562,7 +569,7 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
   const crumb = useMemo(() => {
     const match = navigation.find((item) => commandNavIsActive(location.pathname, location.search, item.to))
     return match?.label || label
-  }, [navigation, location.pathname, label])
+  }, [navigation, location.pathname, location.search, label])
 
   return (
     <SidebarProvider
