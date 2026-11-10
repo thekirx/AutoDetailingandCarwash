@@ -4,7 +4,7 @@ import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessMyPayslips } from '@/auth/permissions'
 import { formatAccounting } from '@/lib/dailySheet'
-import { payslipStatusLabel, payslipTakeHome } from '@/lib/payslip'
+import { payslipStatusLabel, payslipTakeHome, rangeLabel } from '@/lib/payslip'
 import { supabase } from '@/lib/supabase'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import { Button } from '@/components/ui/button'
@@ -67,7 +67,7 @@ export default function MyPayslipsPage() {
       className="hakum-my-payslips"
       eyebrow="Finance"
       title="Payslips"
-      description="Each slip covers 14 days. Salary plus any incentive Lucy or Super Admin typed. No tax. Mark it received, then sign with your name."
+      description="Each slip covers a half month (1st–15th or 16th–end of month). Salary plus any incentive Lucy or Super Admin typed. No tax. Mark it received, then sign with your name."
       actions={
         <Button type="button" variant="outline" className="min-h-11" asChild>
           <Link to="/operations/my-advances">My advances</Link>
@@ -83,10 +83,10 @@ export default function MyPayslipsPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="font-medium">
-                      {row.period_start} – {row.period_end}
+                      {rangeLabel(row.period_start, row.period_end)}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {row.branch} · {payslipStatusLabel(row.status)}
+                      {row.period_start} – {row.period_end} · {row.branch} · {payslipStatusLabel(row.status)}
                     </p>
                   </div>
                   <p className="shrink-0 text-right">

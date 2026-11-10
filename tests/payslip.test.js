@@ -12,25 +12,36 @@ describe('payslips', () => {
     assert.equal(payslipTakeHome(2000000), 2000000)
   })
 
-  it('uses 14-day periods from the Monday anchor', () => {
+  it('uses fixed semi-monthly periods (1st–15th and 16th–30th/31st)', () => {
     assert.deepEqual(payHalf('2026-01-05'), {
-      start: '2026-01-05',
-      end: '2026-01-18',
-      label: 'January 5–18',
+      start: '2026-01-01',
+      end: '2026-01-15',
+      label: 'January 1–15',
     })
-    assert.equal(payHalf('2026-01-19').start, '2026-01-19')
-    assert.equal(payHalf('2026-01-19').end, '2026-02-01')
+    assert.deepEqual(payHalf('2026-01-15'), {
+      start: '2026-01-01',
+      end: '2026-01-15',
+      label: 'January 1–15',
+    })
+    assert.equal(payHalf('2026-01-19').start, '2026-01-16')
+    assert.equal(payHalf('2026-01-19').end, '2026-01-31')
+    assert.equal(payHalf('2026-02-20').start, '2026-02-16')
+    assert.equal(payHalf('2026-02-20').end, '2026-02-28')
+    assert.equal(payHalf('2026-04-20').start, '2026-04-16')
+    assert.equal(payHalf('2026-04-20').end, '2026-04-30')
   })
 
   it('offers the current period and the one before it', () => {
     const choices = payHalfChoices('2026-01-10')
-    assert.equal(choices[0].start, '2026-01-05')
-    assert.equal(choices[1].end, '2026-01-04')
+    assert.equal(choices[0].start, '2026-01-01')
+    assert.equal(choices[0].end, '2026-01-15')
+    assert.equal(choices[1].start, '2025-12-16')
+    assert.equal(choices[1].end, '2025-12-31')
   })
 
-  it('lists four bi-weekly tabs with this period first', () => {
+  it('lists four semi-monthly tabs with this period first', () => {
     const periods = payPeriodList('2026-01-20', 4)
-    assert.deepEqual(periods.map((row) => row.start), ['2026-01-19', '2026-01-05', '2025-12-22', '2025-12-08'])
+    assert.deepEqual(periods.map((row) => row.start), ['2026-01-16', '2026-01-01', '2025-12-16', '2025-12-01'])
   })
 
   it('keeps crew off the office roster', () => {
@@ -42,17 +53,14 @@ describe('payslips', () => {
     assert.deepEqual(rows.map((row) => row.full_name), ['Branch'])
   })
 
-  it('the database chooses the 14-day block and will not store a made-up span', () => {
-    const sql = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../supabase/migrations/20261028150000_payroll_period_calendar.sql'), 'utf8')
+  it('the database chooses the fixed 15th and 30th/31st block and will not store a made-up span', () => {
+    const sql = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../supabase/migrations/20261110200000_payroll_fixed_15_and_end_of_month.sql'), 'utf8')
     const lib = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '../src/lib/payslip.js'), 'utf8')
     assert.match(sql, /payroll_period_containing/)
-    assert.match(sql, /date '2026-01-05'/)
-    assert.match(sql, /floor\(\(p_on - date '2026-01-05'\)::numeric \/ 14\)/)
-    assert.match(sql, /Use the 14-day payroll block/)
-    assert.match(sql, /payslips_branch_period_idx/)
-    assert.match(sql, /payslip_id/)
-    assert.match(lib, /Date\.UTC\(2026, 0, 5\)/)
-    assert.doesNotMatch(sql, /p_end - p_start\) > 16/)
+    assert.match(sql, /extract\(day from p_on\) <= 15/)
+    assert.match(sql, /date_trunc\('month', p_on\)/)
+    assert.match(sql, /Use the fixed 1st–15th or 16th–end-of-month payroll period/)
+    assert.match(lib, /lastDayOfMonth/)
   })
 
   it('does not turn a GCash slip into cash when the editor has not chosen a method', () => {

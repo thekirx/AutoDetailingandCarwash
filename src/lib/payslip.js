@@ -1,8 +1,4 @@
-/** Bi-weekly office pay. Day crew stay on the Daily Sheet. No tax. */
-
-/** Monday that starts the bi-weekly calendar. Periods are 14 days, inclusive. */
-const BIWEEK_ANCHOR_UTC = Date.UTC(2026, 0, 5)
-const DAY_MS = 86_400_000
+/** Semi-monthly office pay: fixed 1st–15th and 16th–end of month. Day crew stay on the Daily Sheet. No tax. */
 
 export const DAY_CREW_ROLES = Object.freeze(['staff', 'team_lead', 'detailer'])
 
@@ -18,11 +14,12 @@ export function payslipTakeHome(salaryMinor, incentiveMinor = 0) {
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
-function isoUtc(ms) {
-  return new Date(ms).toISOString().slice(0, 10)
+export function lastDayOfMonth(year, month) {
+  // month is 1-12. Day 0 of next month is the last day of month.
+  return new Date(Date.UTC(year, month, 0)).getUTCDate()
 }
 
-function rangeLabel(startIso, endIso) {
+export function rangeLabel(startIso, endIso) {
   const [, sm, sd] = startIso.split('-').map(Number)
   const [, em, ed] = endIso.split('-').map(Number)
   const startMonth = MONTHS[sm - 1]
@@ -31,23 +28,29 @@ function rangeLabel(startIso, endIso) {
   return `${startMonth} ${sd} – ${endMonth} ${ed}`
 }
 
-/** The 14-day pay period that contains isoDate. */
-export function payBiweek(isoDate) {
+/**
+ * Fixed semi-monthly pay period containing isoDate:
+ * - Days 1–15: from YYYY-MM-01 to YYYY-MM-15
+ * - Days 16–end: from YYYY-MM-16 to last day of month (30th/31st, or 28th/29th in Feb)
+ */
+export function payHalf(isoDate) {
   const [y, m, d] = String(isoDate || '').split('-').map(Number)
   if (!y || !m || !d) return null
-  const at = Date.UTC(y, m - 1, d)
-  if (!Number.isFinite(at)) return null
-  const index = Math.floor((at - BIWEEK_ANCHOR_UTC) / DAY_MS / 14)
-  const startMs = BIWEEK_ANCHOR_UTC + index * 14 * DAY_MS
-  const endMs = startMs + 13 * DAY_MS
-  const start = isoUtc(startMs)
-  const end = isoUtc(endMs)
+  const mm = String(m).padStart(2, '0')
+  if (d <= 15) {
+    const start = `${y}-${mm}-01`
+    const end = `${y}-${mm}-15`
+    return { start, end, label: rangeLabel(start, end) }
+  }
+  const lastDay = lastDayOfMonth(y, m)
+  const start = `${y}-${mm}-16`
+  const end = `${y}-${mm}-${String(lastDay).padStart(2, '0')}`
   return { start, end, label: rangeLabel(start, end) }
 }
 
-/** @deprecated name kept for callers. The period is bi-weekly, not a calendar half. */
-export function payHalf(isoDate) {
-  return payBiweek(isoDate)
+/** Alias for backward compatibility. */
+export function payBiweek(isoDate) {
+  return payHalf(isoDate)
 }
 
 /** Newest period first. `count` is how many period tabs the payroll page shows. */
@@ -55,14 +58,27 @@ export function payPeriodList(isoDate, count = 4) {
   const first = payHalf(isoDate)
   if (!first) return []
   const out = [first]
-  let cursor = first.start
+  let currentStart = first.start
   while (out.length < count) {
-    const prevDay = new Date(`${cursor}T12:00:00`)
-    prevDay.setDate(prevDay.getDate() - 1)
-    const prev = payHalf(prevDay.toISOString().slice(0, 10))
-    if (!prev || prev.start === cursor) break
+    const [y, m, d] = currentStart.split('-').map(Number)
+    let prevYear = y
+    let prevMonth = m
+    let prevDay
+    if (d > 1) {
+      prevDay = 1
+    } else {
+      prevMonth = m - 1
+      if (prevMonth < 1) {
+        prevMonth = 12
+        prevYear = y - 1
+      }
+      prevDay = 16
+    }
+    const prevIso = `${prevYear}-${String(prevMonth).padStart(2, '0')}-${String(prevDay).padStart(2, '0')}`
+    const prev = payHalf(prevIso)
+    if (!prev) break
     out.push(prev)
-    cursor = prev.start
+    currentStart = prev.start
   }
   return out
 }

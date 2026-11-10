@@ -224,6 +224,7 @@ export default function MonthlyPayrollPage() {
   const tabs = periods.map((row, index) => ({
     id: row.start,
     label: index === 0 ? 'This period' : row.label,
+    badge: index === 0 ? row.label : undefined,
   }))
 
   return (
@@ -231,7 +232,7 @@ export default function MonthlyPayrollPage() {
       className="hakum-monthly-payroll"
       eyebrow="Finance"
       title="Payroll"
-      description="Office and admin pay, 14 days at a time. Lucy or Super Admin types the salary and incentive by hand, in cash or GCash. No tax. The same amount posts to Finance. Crew stay on the Daily Sheet."
+      description="Office and admin pay, twice a month (1st–15th and 16th–end of month). Lucy or Super Admin types the salary and incentive by hand, in cash or GCash. No tax. The same amount posts to Finance. Crew stay on the Daily Sheet."
       actions={
         <Button type="button" variant="outline" className="min-h-11" asChild>
           <Link to="/operations/payslips">My payslips</Link>
