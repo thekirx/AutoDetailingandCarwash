@@ -233,12 +233,12 @@ export async function saveBranchOperatingHours(branchSlug, week) {
 }
 
 const STAFF_LIST_COLS =
-  'id, full_name, role, branch_slug, phone, is_active, is_archived, permission_grants, attendance_enabled, geofence_enabled, employment_type, is_supervisor, reports_to, date_of_birth, date_of_birth_locked_at, created_at, updated_at'
+  'id, full_name, role, branch_slug, phone, is_active, is_archived, permission_grants, attendance_enabled, geofence_enabled, employment_type, is_supervisor, reports_to, date_of_birth, date_of_birth_locked_at, monthly_salary_minor, created_at, updated_at'
 const STAFF_LIST_COLS_LEGACY =
   'id, full_name, role, branch_slug, phone, is_active, is_archived, permission_grants, attendance_enabled, geofence_enabled, employment_type, created_at, updated_at'
 
 function isMissingStaffColumn(error) {
-  return /is_supervisor|reports_to|date_of_birth|42703|column .* does not exist/i.test(error?.message || '')
+  return /is_supervisor|reports_to|date_of_birth|monthly_salary_minor|42703|column .* does not exist/i.test(error?.message || '')
 }
 
 export async function listStaffPeople({ includeInactive = false } = {}) {
@@ -457,6 +457,23 @@ export async function updateStaffAccountFields(payload) {
     },
   })
   return body
+}
+
+export async function setStaffMonthlySalary(staffId, monthlySalaryMinor) {
+  if (!staffId) throw new Error('Staff id is required.')
+  const minor = Math.max(0, Math.round(Number(monthlySalaryMinor) || 0))
+  const { data, error } = await supabase.rpc('set_staff_monthly_salary', {
+    p_staff_id: staffId,
+    p_monthly_salary_minor: minor,
+  })
+  if (error) throw mapDbError(error)
+  await writeAudit({
+    action: 'update',
+    entityType: 'staff_profile',
+    entityId: staffId,
+    summary: `Set monthly salary to ₱${(minor / 100).toLocaleString('en-PH', { minimumFractionDigits: 2 })}`,
+  })
+  return data
 }
 
 export async function listServices({ includeArchived = false } = {}) {

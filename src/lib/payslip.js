@@ -12,11 +12,48 @@ export function payslipTakeHome(salaryMinor, incentiveMinor = 0) {
   return salary + incentive
 }
 
-const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+export const MONTHS = Object.freeze([
+  'January', 'February', 'March', 'April', 'May', 'June',
+  'July', 'August', 'September', 'October', 'November', 'December'
+])
 
 export function lastDayOfMonth(year, month) {
   // month is 1-12. Day 0 of next month is the last day of month.
   return new Date(Date.UTC(year, month, 0)).getUTCDate()
+}
+
+export function getPeriodsForYearMonth(year, month = null) {
+  const y = Number(year) || new Date().getFullYear()
+  const m = month != null && month !== '' && month !== 'all' ? Number(month) : null
+  const periods = []
+  const months = m ? [m] : [12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1]
+  for (const mon of months) {
+    const mm = String(mon).padStart(2, '0')
+    const lastDay = lastDayOfMonth(y, mon)
+    // 2nd half
+    const start2 = `${y}-${mm}-16`
+    const end2 = `${y}-${mm}-${String(lastDay).padStart(2, '0')}`
+    periods.push({
+      start: start2,
+      end: end2,
+      year: y,
+      month: mon,
+      half: 2,
+      label: rangeLabel(start2, end2),
+    })
+    // 1st half
+    const start1 = `${y}-${mm}-01`
+    const end1 = `${y}-${mm}-15`
+    periods.push({
+      start: start1,
+      end: end1,
+      year: y,
+      month: mon,
+      half: 1,
+      label: rangeLabel(start1, end1),
+    })
+  }
+  return periods
 }
 
 export function rangeLabel(startIso, endIso) {
