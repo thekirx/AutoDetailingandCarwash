@@ -295,7 +295,25 @@ export default function FinanceDailySheetsTab({
                       <td className="num">{formatAccounting(t(r, 'salariesMinor'))}</td>
                       <td className="num">{formatAccounting(t(r, 'netProfitMinor'))}</td>
                       <td className={cn('num', gap && 'ds-alert')}>{gap == null ? '—' : formatAccounting(gap)}</td>
-                      <td><SheetStatusChip status={r.status} /></td>
+                      <td>
+                        <div className="flex items-center gap-2">
+                          <SheetStatusChip status={r.status} />
+                          {r.status === 'returned' ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="min-h-8 px-2 text-xs font-semibold text-amber-800 dark:text-amber-200"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onFilters?.({ sheet: r.id })
+                              }}
+                            >
+                              Edit &amp; correct
+                            </Button>
+                          ) : null}
+                        </div>
+                      </td>
                     </tr>
                   )
                 })}
@@ -308,7 +326,13 @@ export default function FinanceDailySheetsTab({
       <Sheet open={Boolean(openSheetId)} onOpenChange={(open) => !open && onFilters?.({ sheet: '' })}>
         <SheetContent className="overflow-y-auto data-[side=right]:w-full data-[side=right]:sm:max-w-5xl">
           <SheetHeader>
-            <SheetTitle>Review daily sheet</SheetTitle>
+            <SheetTitle>
+              {visible.find((r) => r.id === openSheetId)?.status === 'returned'
+                ? 'Edit & correct returned daily sheet'
+                : visible.find((r) => r.id === openSheetId)?.status === 'draft'
+                  ? 'Edit draft daily sheet'
+                  : 'Review daily sheet'}
+            </SheetTitle>
           </SheetHeader>
           {openSheetId ? (
             <div className="px-4 pb-6">

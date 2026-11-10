@@ -52,13 +52,15 @@ export function bookingCarPlateLine(booking) {
 
 /** Service name only — card headline for detailing type. */
 export function bookingDetailingTypeText(booking) {
-  const name = String(booking?.services?.name || booking?.service_name || '').trim()
+  const svc = Array.isArray(booking?.services) ? booking.services[0] : booking?.services
+  const name = String(svc?.name || booking?.service_name || '').trim()
   return name || 'Detailing TBD'
 }
 
 export function bookingServiceText(booking) {
-  const name = booking?.services?.name || booking?.service_name
-  const kind = booking?.services?.pay_category || booking?.service_pay_category
+  const svc = Array.isArray(booking?.services) ? booking.services[0] : booking?.services
+  const name = svc?.name || booking?.service_name
+  const kind = svc?.pay_category || booking?.service_pay_category
   if (!name && !kind) return null
   if (isBookingBoardRow(booking) || kind === 'detailing') {
     return name ? `${name} · Detailing` : 'Detailing'

@@ -243,9 +243,9 @@ function BookingStageTicket({
   onOpen,
 }) {
   const isList = variant === 'list'
-  const service = bookingDetailingTypeText(booking)
-  const carPlate = bookingCarPlateLine(booking)
-  const notes = String(booking.notes || '').trim()
+  const service = bookingDetailingTypeText(booking) || 'Detailing'
+  const carPlate = bookingCarPlateLine(booking) || 'Vehicle TBD'
+  const notes = String(booking?.notes || '').trim()
   const label = `${service}, ${carPlate}${notes ? ` · Note: ${notes}` : ''}`
   const className = cn(
     isList ? 'bk-card bk-ticket-compact planner-ticket' : 'floor-ticket bk-ticket-compact planner-ticket',
@@ -255,21 +255,23 @@ function BookingStageTicket({
 
   const body = (
     <>
-      <p className="bk-ticket-service">{service}</p>
-      <p className="bk-ticket-car-plate">{carPlate}</p>
-      {booking.reschedule_requested_at ? <p className="bk-ticket-status">Call to reschedule</p> : null}
+      <div className="bk-ticket-header flex flex-col gap-0.5">
+        <p className="bk-ticket-service font-bold text-sm text-primary tracking-tight leading-snug">{service}</p>
+        <p className="bk-ticket-car-plate text-xs text-muted-foreground font-medium leading-tight">{carPlate}</p>
+      </div>
+      {booking?.reschedule_requested_at ? <p className="bk-ticket-status text-amber-700 dark:text-amber-300">Call to reschedule</p> : null}
       {isList ? (
         <p className="bk-ticket-status">
-          {detailingBoardStatusLabel(booking.status) || STATUS_LABELS[booking.status] || booking.status}
+          {detailingBoardStatusLabel(booking?.status) || STATUS_LABELS[booking?.status] || booking?.status}
         </p>
       ) : null}
       {notes ? (
-        <div className="bk-ticket-notes" title={notes}>
+        <div className="bk-ticket-notes mt-1.5" title={notes}>
           <span className="bk-ticket-notes-tag">Note</span>
-          <span className="bk-ticket-notes-text">{notes}</span>
+          <span className="bk-ticket-notes-text line-clamp-2">{notes}</span>
         </div>
       ) : (
-        <p className="bk-ticket-notes-empty">No notes</p>
+        <p className="bk-ticket-notes-empty mt-1 text-xs text-muted-foreground/70">No notes</p>
       )}
     </>
   )
@@ -340,7 +342,8 @@ export default function BookingBoardPage() {
   const [services, setServices] = useState([])
   const [branchFilter, setBranchFilter] = useState(canSeeAllBranches(profile) ? 'all' : (getBranchScopeList(profile)?.[0] || 'all'))
   const linkedDay = /^\d{4}-\d{2}-\d{2}$/.test(searchParams.get('date') || '') ? searchParams.get('date') : ''
-  const [datePreset, setDatePreset] = useState(linkedDay ? 'custom' : 'week')
+  const [datePreset, setDatePreset] = useState(linkedDay ? 'specific' : 'week')
+  const [specificDate, setSpecificDate] = useState(linkedDay || todayISO())
   const [customStart, setCustomStart] = useState(linkedDay)
   const [customEnd, setCustomEnd] = useState(linkedDay)
   const [searchQuery, setSearchQuery] = useState('')
@@ -408,13 +411,17 @@ export default function BookingBoardPage() {
       const d = todayISO()
       return { start: d, end: d }
     }
+    if (datePreset === 'specific' || datePreset === 'date') {
+      const d = specificDate || todayISO()
+      return { start: d, end: d }
+    }
     const r = getDashboardDateRange(datePreset, customStart, customEnd)
     if (!r.start || !r.end) return { start: null, end: null }
     return {
       start: r.start.toLocaleDateString('en-CA'),
       end: r.end.toLocaleDateString('en-CA'),
     }
-  }, [datePreset, customStart, customEnd])
+  }, [datePreset, customStart, customEnd, specificDate])
 
   const branchScope = useMemo(() => resolveBranchFilter(profile, branchFilter), [profile, branchFilter])
 
@@ -1063,6 +1070,7 @@ export default function BookingBoardPage() {
   const datePresetItems = selectItems([
     { value: 'all', label: 'All dates' },
     { value: 'today', label: 'Today' },
+    { value: 'specific', label: 'Specific date' },
     { value: 'upcoming', label: 'Upcoming' },
     { value: 'week', label: 'This week' },
     { value: 'month', label: 'This month' },
@@ -1158,6 +1166,7 @@ export default function BookingBoardPage() {
             <SelectContent>
               <SelectItem value="all">All dates</SelectItem>
               <SelectItem value="today">Today</SelectItem>
+              <SelectItem value="specific">Specific date</SelectItem>
               <SelectItem value="upcoming">Upcoming</SelectItem>
               <SelectItem value="week">This week</SelectItem>
               <SelectItem value="month">This month</SelectItem>
@@ -1165,6 +1174,15 @@ export default function BookingBoardPage() {
               <SelectItem value="custom">Custom range</SelectItem>
             </SelectContent>
           </Select>
+          {datePreset === 'specific' && (
+            <Input
+              type="date"
+              className="min-h-11 w-full sm:w-40 cursor-pointer"
+              aria-label="Specific date"
+              value={specificDate}
+              onChange={(e) => setSpecificDate(e.target.value)}
+            />
+          )}
           {datePreset === 'custom' && (
             <>
               <Input type="date" className="min-h-11 w-full sm:w-36" aria-label="Start date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} />

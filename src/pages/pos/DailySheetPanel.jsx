@@ -14,6 +14,7 @@ import { parsePesosToMinor } from '@/lib/shiftClose'
 import { notifyOpsEvent } from '@/lib/opsEventNotify'
 import { ROLES } from '@/auth/permissions'
 import { useAuth } from '@/auth/AuthProvider'
+import { supabase } from '@/lib/supabase'
 import { downloadCsv, downloadExcel, printAsPdf } from '@/lib/financeData'
 import { listBranches } from '@/lib/adminApi'
 import { activeAccounts } from '@/lib/financeBooks'
@@ -21,6 +22,7 @@ import {
   METHOD_LABELS,
   SHEET_STATUS_LABELS,
   canApproveSheet,
+  canEditDailySheet,
   canReviewDailySheet,
   closeOfDaySlip,
   computeSheetTotals,
@@ -31,6 +33,7 @@ import {
   summarizeSheetSales,
 } from '@/lib/dailySheet'
 import {
+  loadAccounts,
   loadDaySales,
   loadCashAdvanceLedger,
   loadSheetById,
@@ -262,10 +265,15 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
       if (review) {
         const row = await loadSheetById(sheetId)
         if (!row) throw new Error('Sheet not found')
-        const sales = await loadDaySales(row.branch, row.business_date)
-        const caLedger = await loadCashAdvanceLedger(row.branch)
-        setCtx({ sales, accounts: [], staff: [], suggestions: [], caRequests: [], caLedger })
+        const [sales, accounts, staffRes, caLedger] = await Promise.all([
+          loadDaySales(row.branch, row.business_date),
+          loadAccounts(),
+          supabase.from('staff_profiles').select('id, full_name, role, branch_slug').eq('is_active', true).order('full_name'),
+          loadCashAdvanceLedger(row.branch),
+        ])
+        setCtx({ sales, accounts: accounts || [], staff: staffRes.data || [], suggestions: [], caRequests: [], caLedger })
         setSheet(row)
+        setDate(row.business_date)
         setLines((row.daily_sheet_lines || []).sort((a, b) => a.sort - b.sort).map(hydrateLine))
         setCountText(toText(row.counted_cash_minor))
         setNotes(row.notes || '')
@@ -296,7 +304,12 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
     onStatus?.(status)
   }, [onStatus, status])
 
-  const editable = !review && (!sheet || ['draft', 'returned'].includes(sheet.status))
+  const activeBranch = (review ? sheet?.branch : branch) || branch || sheet?.branch
+  const activeDate = (review ? sheet?.business_date : date) || date || sheet?.business_date
+  const canEdit = canEditDailySheet(profile)
+  const isReturned = status === 'returned'
+  const isDraft = !sheet || status === 'draft'
+  const editable = canEdit && (isDraft || isReturned)
   const sheetValues = {
     counted_cash_minor: parsePesosToMinor(countText),
     notes,
@@ -359,13 +372,13 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
 
   const persist = useCallback(async () => {
     for (const line of lines) {
-      const codeError = cashAdvanceReleaseError(line, ctx?.caRequests || [], { branch, lines })
+      const codeError = cashAdvanceReleaseError(line, ctx?.caRequests || [], { branch: activeBranch, lines })
       if (codeError) throw new Error(codeError)
     }
     const t = computeSheetTotals({ sales, lines, countedCashMinor: sheetValues.counted_cash_minor })
     const res = await saveSheet({
-      branch,
-      date,
+      branch: activeBranch,
+      date: activeDate,
       openingFloatMinor: null,
       countedCashMinor: sheetValues.counted_cash_minor,
       notes,
@@ -374,7 +387,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
     })
     setDirty(false)
     return res
-  }, [sales, lines, sheetValues.counted_cash_minor, notes, branch, date, ctx])
+  }, [sales, lines, sheetValues.counted_cash_minor, notes, activeBranch, activeDate, ctx])
 
   useEffect(() => {
     if (!editable || !dirty) return undefined
@@ -399,8 +412,13 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
       const saved = await persist()
       const res = await submitSheet(saved?.id || sheet?.id)
       notifyOpsEvent('sheet_submitted', res?.id)
-      toast.success('Sent for approval. The Super Admin and Assistant Super Admin were notified; you will get a push when it is approved.')
+      toast.success(
+        status === 'returned'
+          ? 'Corrections submitted for re-approval. The reviewer was notified.'
+          : 'Sent for approval. The Super Admin and Assistant Super Admin were notified; you will get a push when it is approved.',
+      )
       await load()
+      onReviewed?.(res)
     } catch (err) {
       toast.error(sheetErrorMessage(err))
     } finally {
@@ -504,12 +522,14 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
         </div>
       ) : null}
 
-      {status === 'returned' && sheet?.review_note ? (
+      {status === 'returned' ? (
         <div className="ds-banner ds-banner--warn" role="status">
           <CircleAlert aria-hidden className="size-5 shrink-0" />
           <div>
-            <p className="font-semibold">Returned — please fix and submit again</p>
-            <p className="text-sm">{sheet.review_note}</p>
+            <p className="font-semibold">Returned for correction — please edit and submit for re-approval</p>
+            {sheet?.review_note ? (
+              <p className="text-sm mt-0.5"><strong>Reviewer note:</strong> {sheet.review_note}</p>
+            ) : null}
           </div>
         </div>
       ) : null}
@@ -859,10 +879,36 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
                   ))}
                 </ul>
               ) : (
-                <p className="text-sm">Everything is filled in. You can submit any time — sales rung up after you submit are not on this sheet.</p>
+                <p className="text-sm">
+                  {status === 'returned'
+                    ? 'Corrections completed. You can submit for re-approval now.'
+                    : 'Everything is filled in. You can submit any time — sales rung up after you submit are not on this sheet.'}
+                </p>
               )}
+              {dirty ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="min-h-11 w-full"
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true)
+                    try {
+                      await persist()
+                      setSaveState('saved')
+                      toast.success('Changes saved')
+                    } catch (err) {
+                      toast.error(sheetErrorMessage(err))
+                    } finally {
+                      setBusy(false)
+                    }
+                  }}
+                >
+                  Save changes
+                </Button>
+              ) : null}
               <Button type="button" className="ds-submit min-h-12 w-full" disabled={!check.canSubmit || busy} onClick={submit}>
-                {busy ? 'Submitting…' : 'Submit for approval'}
+                {busy ? 'Submitting…' : status === 'returned' ? 'Submit for re-approval' : 'Submit for approval'}
               </Button>
             </div>
           ) : null}
@@ -923,7 +969,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
             <Money minor={totals.netProfitMinor} bold />
           </div>
           <Button type="button" className="ds-submit min-h-11" disabled={!check.canSubmit || busy} onClick={submit}>
-            {check.canSubmit ? 'Submit' : `${check.missing.length} to finish`}
+            {check.canSubmit ? (status === 'returned' ? 'Submit for re-approval' : 'Submit') : `${check.missing.length} to finish`}
           </Button>
         </div>
       ) : null}

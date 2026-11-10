@@ -7457,6 +7457,10 @@ button.bk-ticket-compact {
   box-shadow: 0 4px 14px rgba(5, 38, 153, 0.1);
   outline: none;
 }
+.bk-ticket-header {
+  width: 100%;
+  min-width: 0;
+}
 .bk-ticket-service {
   margin: 0;
   font-size: 0.8rem;
