@@ -2217,9 +2217,23 @@
   display: grid;
   gap: 14px;
 }
+/* One row from tablet up. When the cards don't all fit (about 780–970px),
+   the row scrolls sideways instead of leaving one card alone on a second row.
+   230px keeps the longest name (Dasmariñas) on one line; the top padding
+   leaves room for the hover lift. Phones keep the stacked list. */
 @media (min-width: 780px) {
   .bredesign .bd-branch-grid {
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(230px, 1fr);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(241, 241, 237, 0.25) transparent;
+    padding: 4px 0 12px;
+  }
+  .bredesign .bd-branch-grid > * {
+    scroll-snap-align: start;
   }
 }
 .bredesign .bd-branch {

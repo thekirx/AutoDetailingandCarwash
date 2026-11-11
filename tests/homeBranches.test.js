@@ -40,7 +40,21 @@ describe('homepage branch cards', () => {
 
   it('keeps production fallbacks when no branch rows are available', () => {
     const cards = buildHomeBranchCards([])
-    assert.deepEqual(cards.map(({ name }) => name), ['Bacoor', 'Batangas', 'Dasmariñas'])
+    assert.deepEqual(cards.map(({ name }) => name), ['Bacoor', 'Batangas', 'Dasmariñas', 'Imus'])
     assert.equal(countActiveHomeBranches(cards), 2)
+    assert.equal(comingSoonHomeCopy(cards), 'with Dasmariñas and Imus coming soon')
+  })
+
+  it('lists Imus beside Dasmariñas when both are coming soon in the branch table', () => {
+    const cards = buildHomeBranchCards([
+      { slug: 'bacoor', name: 'Hakum Auto Care Bacoor', address: 'RFC Molino' },
+      { slug: 'dasmarinas', name: 'Hakum Auto Care Dasmariñas', coming_soon: true },
+      { slug: 'imus', name: 'Hakum Auto Care Imus', coming_soon: true },
+    ])
+    assert.deepEqual(cards.filter((c) => c.isComingSoon).map(({ name, href }) => ({ name, href })), [
+      { name: 'Dasmariñas', href: null },
+      { name: 'Imus', href: null },
+    ])
+    assert.equal(comingSoonHomeCopy(cards), 'with Dasmariñas and Imus coming soon')
   })
 })

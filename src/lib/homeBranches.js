@@ -43,14 +43,10 @@ const FALLBACK_BRANCHES = [
   { slug: 'batangas', name: 'Batangas', address: 'PNP Batangas', href: '/branches' },
 ]
 
-const COMING_SOON_BRANCH = {
-  slug: 'dasmarinas-coming-soon',
-  name: 'Dasmariñas',
-  address: 'Dasmariñas, Cavite',
-  href: null,
-  isComingSoon: true,
-  status: 'Coming Soon',
-}
+const COMING_SOON_BRANCHES = [
+  { slug: 'dasmarinas-coming-soon', name: 'Dasmariñas', address: 'Dasmariñas, Cavite' },
+  { slug: 'imus-coming-soon', name: 'Imus', address: 'Imus, Cavite' },
+].map((branch) => ({ ...branch, href: null, isComingSoon: true, status: 'Coming Soon' }))
 
 export function publicBranchName(branch) {
   const name = String(branch.name || branch.slug || '')
@@ -89,7 +85,7 @@ function comingSoonCard(branch) {
 
 export function buildHomeBranchCards(branches = []) {
   if (!branches.length) {
-    return [...FALLBACK_BRANCHES.map(activeCard), COMING_SOON_BRANCH]
+    return [...FALLBACK_BRANCHES.map(activeCard), ...COMING_SOON_BRANCHES]
   }
   const coming = branches.filter(isComingSoonRow).map(comingSoonCard)
   const active = branches.filter((row) => !isComingSoonRow(row)).map(activeCard)
