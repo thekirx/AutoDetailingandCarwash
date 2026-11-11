@@ -94,12 +94,13 @@ describe('the demo sign-in endpoint', () => {
     assert.match(read('api/demo-login.js'), /demo-login/)
   })
 
-  it('opt-in is a value, never a hostname', () => {
-    // BUG-088 was `hostname.endsWith('vercel.app')`. It read as harmless and
-    // enabled itself on deploy. There must be no host logic in any code path.
-    // Matched on comment-stripped source: both files name the word in prose.
-    for (const p of ['src/lib/demoLogin.js', 'server/demoLoginApi.mjs']) {
-      assert.doesNotMatch(code(p), /hostname|location\.host/, `${p} decides from the host again`)
-    }
+  it('opt-in is a value; the site can only refuse', () => {
+    // BUG-088 was `hostname.endsWith('vercel.app')` turning demo login ON by
+    // itself. The site check that exists now may only AND in (hide on the real
+    // domain), never OR in, so the key stays the only way to switch it on.
+    const client = code('src/lib/demoLogin.js')
+    assert.doesNotMatch(client, /isDemoSite\([^)]*\)\s*\|\|/, 'a site check must never enable demo login')
+    assert.match(client, /!isDemoSite\(site\)\) return false/, 'the real domain must hide the chips')
+    assert.match(code('server/demoLoginApi.mjs'), /!isDemoSite\(site\)\) return json\(res, 404/, 'the real domain must refuse sign-in')
   })
 })

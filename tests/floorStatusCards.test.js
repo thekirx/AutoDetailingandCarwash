@@ -59,22 +59,15 @@ describe('Vercel demo login visibility', () => {
     assert.equal(isDemoLoginEnabled({ qaKey: 'k' }), true)
   })
 
-  it('the gate is a key, never a hostname', () => {
-    // Matched on comment-stripped source: these files explain at length WHY
-    // there is no hostname, and that prose contains the word.
+  it('the gate is the key; the site can only refuse', () => {
     const strip = (s) => s.replace(/^\s*\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '')
-    for (const p of ['src/lib/demoLogin.js', 'server/demoLoginApi.mjs']) {
-      assert.doesNotMatch(
-        strip(readFileSync(join(root, p), 'utf8')),
-        /hostname|location\.host/,
-        `${p} decides from the host again, which is how BUG-088 happened`,
-      )
-    }
-    assert.match(
-      strip(readFileSync(join(root, 'server/demoLoginApi.mjs'), 'utf8')),
-      /!qaKeyMatches\(body\?\.key\)\) return json\(res, 404/,
-      'the endpoint must refuse a caller without the QA key',
-    )
+    const server = strip(readFileSync(join(root, 'server/demoLoginApi.mjs'), 'utf8'))
+    assert.match(server, /!qaKeyMatches\(body\?\.key\)\) return json\(res, 404/, 'the endpoint must refuse a caller without the QA key')
+    assert.match(server, /!isDemoSite\(site\)\) return json\(res, 404/, 'the endpoint must refuse on the real domain')
+    // The client may only ever AND the site check in, never OR it.
+    const client = strip(readFileSync(join(root, 'src/lib/demoLogin.js'), 'utf8'))
+    assert.doesNotMatch(client, /isDemoSite\([^)]*\)\s*\|\|/, 'a site check must never be able to enable demo login')
+    assert.equal(isDemoLoginEnabled({ qaKey: '', site: 'x.vercel.app' }), false)
   })
 
   it('enabling them exposes buttons, never secrets', () => {

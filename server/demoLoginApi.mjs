@@ -10,11 +10,16 @@
  * The key is 32 random bytes; only its SHA-256 is in this public repo, which is
  * not reversible. Rotate by setting DEMO_LOGIN_KEY_SHA256 on Vercel or changing
  * QA_KEY_SHA256. DEMO_LOGIN_ENABLED=false turns the route off entirely.
+ *
+ * It also answers only on the Vercel test link (*.vercel.app): on hakumautocare.com
+ * the route is a 404 even with the key, because both addresses share one project
+ * and one set of settings. The address can only refuse, never stand in for the key.
  */
 import { createHash, timingSafeEqual } from 'node:crypto'
 import { createClient } from '@supabase/supabase-js'
 import { json, readJsonBody, setCors } from './httpUtil.mjs'
 import { OPS_DEMO_ACCOUNTS, CUSTOMER_DEMO_ACCOUNT } from '../src/lib/demoAccounts.js'
+import { isDemoSite } from '../src/lib/demoLogin.js'
 
 const QA_KEY_SHA256 = '24e914e1f6c13f47568d7676f8be96c5ede6f5acb64d788a58c5732f68feaae7'
 
@@ -56,6 +61,8 @@ export async function handleDemoLoginRequest(req, res, { localDev = false } = {}
 
   const body = await readJsonBody(req).catch(() => ({}))
   const trustedLocal = localDev && LOOPBACK.has(req.socket?.remoteAddress)
+  const site = req.headers?.['x-forwarded-host'] || req.headers?.host
+  if (!trustedLocal && !isDemoSite(site)) return json(res, 404, { error: 'Not found' })
   if (!trustedLocal && !qaKeyMatches(body?.key)) return json(res, 404, { error: 'Not found' })
   if (body?.check) return json(res, 200, { ok: true })
 

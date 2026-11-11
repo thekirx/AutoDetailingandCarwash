@@ -149,14 +149,12 @@ describe('demo login needs a QA key', () => {
     assert.equal(isDemoLoginEnabled({ qaKey: undefined }), false)
   })
 
-  it('a hostname can never enable or disable it — that was BUG-088', () => {
-    // The regression this row exists to prevent. A host rule reads as harmless
-    // in review and enables itself on deploy, which is how one-click Super Admin
-    // ended up on the live site with the passwords in a public bundle.
-    // Comment-stripped: this file's own prose is about that word.
-    const src = readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'src/lib/demoLogin.js'), 'utf8')
-      .replace(/^\s*\/\/.*$/gm, '')
-      .replace(/\/\*[\s\S]*?\*\//g, '')
-    assert.doesNotMatch(src, /hostname|location\.host/, 'the gate must not consult the host again')
+  it('the site can only turn it off, never on — BUG-088 was an address that turned it on', () => {
+    // No key: off on the test link too. A site rule must never stand in for the key.
+    assert.equal(isDemoLoginEnabled({ qaKey: '', dev: false, site: 'hakumauto.vercel.app' }), false)
+    // With the key: on the test link, off on the real domain.
+    assert.equal(isDemoLoginEnabled({ qaKey: 'k', dev: false, site: 'hakumauto.vercel.app' }), true)
+    assert.equal(isDemoLoginEnabled({ qaKey: 'k', dev: false, site: 'hakumautocare.com' }), false)
+    assert.equal(isDemoLoginEnabled({ qaKey: 'k', dev: true, site: 'www.hakumautocare.com' }), false)
   })
 })

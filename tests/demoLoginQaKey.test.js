@@ -7,7 +7,7 @@ import { unlockDemoLoginFromUrl } from '../src/lib/demoSignIn.js'
 
 const KEY = 'test-qa-key-not-the-real-one'
 
-async function call(body, { remoteAddress = '127.0.0.1', options } = {}) {
+async function call(body, { remoteAddress = '127.0.0.1', options, site = 'hakumauto.vercel.app' } = {}) {
   const res = {
     statusCode: 0,
     headers: {},
@@ -15,7 +15,7 @@ async function call(body, { remoteAddress = '127.0.0.1', options } = {}) {
     setHeader(k, v) { this.headers[k] = v },
     end(b = '') { this.body = b },
   }
-  await handleDemoLoginRequest({ method: 'POST', headers: {}, body, socket: { remoteAddress } }, res, options)
+  await handleDemoLoginRequest({ method: 'POST', headers: site ? { host: site } : {}, body, socket: { remoteAddress } }, res, options)
   return res
 }
 
@@ -66,6 +66,13 @@ describe('demo sign-in is locked behind the QA key', () => {
     assert.equal((await call({ check: true })).statusCode, 404)
   })
 
+  it('answers only on the Vercel test link, never on hakumautocare.com, even with the key', async () => {
+    assert.equal((await call({ check: true, key: KEY }, { site: 'hakumauto.vercel.app' })).statusCode, 200)
+    assert.equal((await call({ check: true, key: KEY }, { site: 'hakumautocare.com' })).statusCode, 404)
+    assert.equal((await call({ check: true, key: KEY }, { site: 'www.hakumautocare.com' })).statusCode, 404)
+    assert.equal((await call({ check: true, key: KEY }, { site: '' })).statusCode, 404)
+  })
+
   it('DEMO_LOGIN_ENABLED=false turns local dev off too', async () => {
     process.env.DEMO_LOGIN_ENABLED = 'false'
     assert.equal((await call({ check: true }, { options: { localDev: true } })).statusCode, 404)
@@ -82,6 +89,11 @@ describe('demo chips render only on a device holding a QA key', () => {
   })
   it('is on once a key is stored', () => {
     assert.equal(isDemoLoginEnabled({ qaKey: 'anything-the-server-accepted' }), true)
+  })
+  it('stays hidden on hakumautocare.com even with a key, shown on the test link', () => {
+    assert.equal(isDemoLoginEnabled({ qaKey: 'k', site: 'hakumautocare.com' }), false)
+    assert.equal(isDemoLoginEnabled({ qaKey: 'k', site: 'hakumauto.vercel.app' }), true)
+    assert.equal(isDemoLoginEnabled({ qaKey: '', dev: true, site: 'localhost' }), true)
   })
 
   it('shows chips on the first ?qa= visit even when React runs the unlock twice (dev StrictMode)', async () => {
