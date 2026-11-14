@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Known demo / seed accounts for one-click testing and the QA scripts.
  * Passwords are never in source: the repo is public. Each account names a
  * VITE_DEMO_PASSWORD_* var that the SERVER reads from process.env at the moment

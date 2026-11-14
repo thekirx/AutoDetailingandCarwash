@@ -7,11 +7,16 @@ import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
+  aggregateBranchStockMap,
   applyOwnerSetQty,
   applyReconLine,
   applyRestockQty,
   branchAssignmentRows,
   branchOnHand,
+  buildReconApprovalMutations,
+  countPendingRestocksForScope,
+  filterOperationalBranches,
+  filterOperationalStockRows,
   productIsResellable,
   reconUsageQty,
 } from '../src/lib/inventoryBranchStock.js'
@@ -66,6 +71,78 @@ describe('inventoryBranchStock helpers', () => {
     assert.equal(branchOnHand([{ branch_slug: 'bacoor', qty: 2 }], 'bacoor'), 2)
     assert.equal(branchOnHand([{ branch_slug: 'bacoor', qty: 0 }], 'bacoor'), 0)
     assert.equal(branchOnHand([{ branch_slug: 'bacoor', qty: 2 }], 'imus'), null)
+  })
+
+  it('filters operational branches and strips ghost stock from archived/coming-soon/test branches', () => {
+    const branches = [
+      { slug: 'bacoor', name: 'Hakum Auto Care Bacoor', is_active: true, is_archived: false, coming_soon: false, is_public: true },
+      { slug: 'batangas', name: 'Hakum Auto Care Batangas', is_active: true, is_archived: false, coming_soon: false, is_public: true },
+      { slug: 'dasmarinas', name: 'Hakum Auto Care Dasmariñas', is_active: false, is_archived: false, coming_soon: true, is_public: true },
+      { slug: 'imus', name: 'Hakum Auto Care Imus', is_active: true, is_archived: false, coming_soon: true, is_public: true },
+      { slug: 'hq', name: 'Hakum HQ / Office', is_active: true, is_archived: false, coming_soon: false, is_public: false },
+      { slug: 'crudtest-kbonkz', name: 'CRUD Test', is_active: false, is_archived: true, coming_soon: false, is_public: false },
+    ]
+    const opBranches = filterOperationalBranches(branches)
+    assert.deepEqual(opBranches.map((b) => b.slug), ['bacoor', 'batangas'])
+
+    const rawStock = [
+      { product_id: 'p1', branch_slug: 'bacoor', size_key: '', qty: 100 },
+      { product_id: 'p1', branch_slug: 'batangas', size_key: '', qty: 100 },
+      { product_id: 'p1', branch_slug: 'dasmarinas', size_key: '', qty: 100 },
+      { product_id: 'p1', branch_slug: 'hq', size_key: '', qty: 100 },
+      { product_id: 'p1', branch_slug: 'crudtest-kbonkz', size_key: '', qty: 100 },
+    ]
+    const cleanStock = filterOperationalStockRows(rawStock, opBranches)
+    assert.equal(cleanStock.length, 2)
+    assert.deepEqual(cleanStock.map((r) => r.branch_slug), ['bacoor', 'batangas'])
+  })
+
+  it('aggregates multi-size branch stock accurately instead of overwriting by last row, and plans batched recon upserts', () => {
+    const branchRows = [
+      { product_id: 'tee', branch_slug: 'bacoor', size_key: 's', qty: 10 },
+      { product_id: 'tee', branch_slug: 'bacoor', size_key: 'm', qty: 15 },
+      { product_id: 'tee', branch_slug: 'bacoor', size_key: 'xl', qty: 0 },
+      { product_id: 'kit', branch_slug: 'bacoor', size_key: '', qty: 40 },
+    ]
+    const agg = aggregateBranchStockMap(branchRows)
+    assert.equal(agg.totalsByProductId.tee, 25)
+    assert.equal(agg.totalsByProductId.kit, 40)
+    assert.equal(agg.unsizedByProductId.kit, 40)
+    assert.equal(agg.unsizedByProductId.tee, undefined)
+    assert.equal(agg.sizedRowsByProductId.tee.length, 3)
+
+    const plan = buildReconApprovalMutations(
+      [
+        { product_id: 'kit', previous_qty: 40, leftover_qty: 28 },
+        { product_id: 'soap', previous_qty: 10, leftover_qty: 6 },
+      ],
+      agg.unsizedByProductId,
+      { branchSlug: 'bacoor', userId: 'u-owner' },
+    )
+    assert.equal(plan.stockUpserts.length, 2)
+    assert.deepEqual(plan.stockUpserts[0], {
+      product_id: 'kit',
+      branch_slug: 'bacoor',
+      size_key: '',
+      qty: 28,
+    })
+    assert.equal(plan.movements.length, 2)
+    assert.equal(plan.movements[0].delta, -12)
+    assert.equal(plan.movements[0].movement_type, 'recon_adjust')
+  })
+
+  it('counts pending restock requests scoped to branch filter and admin branch scope list', () => {
+    const reqs = [
+      { id: 'r1', branch_slug: 'bacoor', status: 'pending' },
+      { id: 'r2', branch_slug: 'bacoor', status: 'pending' },
+      { id: 'r3', branch_slug: 'batangas', status: 'pending' },
+      { id: 'r4', branch_slug: 'batangas', status: 'approved' },
+      { id: 'r5', branch_slug: 'crudtest-x', status: 'pending' },
+    ]
+    assert.equal(countPendingRestocksForScope(reqs, 'all', ['bacoor', 'batangas']), 3)
+    assert.equal(countPendingRestocksForScope(reqs, 'bacoor', ['bacoor', 'batangas']), 2)
+    assert.equal(countPendingRestocksForScope(reqs, 'batangas', ['bacoor', 'batangas']), 1)
+    assert.equal(countPendingRestocksForScope(reqs, 'all', ['batangas']), 1)
   })
 })
 

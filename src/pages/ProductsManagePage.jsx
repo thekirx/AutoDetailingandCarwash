@@ -5,7 +5,13 @@ import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthProvider'
 import { canManageMerchShop, canManageServices, canModifyStock } from '@/auth/permissions'
 import { archiveProduct, createProduct, listBranches, listProducts, updateProduct } from '@/lib/adminApi'
-import { applyOwnerSetQty, applyRestockQty } from '@/lib/inventoryBranchStock'
+import {
+  applyOwnerSetQty,
+  applyRestockQty,
+  countPendingRestocksForScope,
+  filterOperationalBranches,
+  filterOperationalStockRows,
+} from '@/lib/inventoryBranchStock'
 import { formatBranchOnHandSummary, stockRowsByProductId } from '@/lib/inventoryLock'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
@@ -137,7 +143,7 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
   const [branchQtyDraft, setBranchQtyDraft] = useState({})
   const [restockDraft, setRestockDraft] = useState({})
   const [inlineQuickDraft, setInlineQuickDraft] = useState({})
-  const [pendingRestocksCount, setPendingRestocksCount] = useState(0)
+  const [pendingRestockRows, setPendingRestockRows] = useState([])
 
   const load = useCallback(async () => {
     try {
@@ -145,15 +151,16 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
         listProducts({ includeArchived: false }),
         listBranches(),
         supabase.from('product_branch_stock').select('product_id, branch_slug, qty, size_key'),
-        supabase.from('restock_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('restock_requests').select('id, branch_slug, status').eq('status', 'pending'),
       ])
       if (stockRes.error) throw stockRes.error
+      const opBranches = filterOperationalBranches(b || [])
       const catalog = merchShop ? p.filter((r) => r.usage_kind !== 'internal' && (Number(r.points_price) > 0 || r.show_in_app)) : p
       setProducts(catalog)
       onProductsLoaded?.(catalog)
-      setBranches(b)
-      setStockRows(stockRes.data || [])
-      setPendingRestocksCount(restockRes.error ? 0 : Number(restockRes.count) || 0)
+      setBranches(opBranches)
+      setStockRows(filterOperationalStockRows(stockRes.data || [], opBranches))
+      setPendingRestockRows(restockRes.error ? [] : restockRes.data || [])
     } catch (err) {
       toast.error(err.message)
     }
@@ -164,6 +171,10 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
   }, [load, profile, merchShop])
 
   const branchScope = merchShop ? shopBranch : selectedBranch
+  const pendingRestocksCount = useMemo(
+    () => countPendingRestocksForScope(pendingRestockRows, branchScope, branches.map((b) => b.slug)),
+    [pendingRestockRows, branchScope, branches],
+  )
 
   const stockByProduct = useMemo(() => stockRowsByProductId(stockRows), [stockRows])
   const branchNames = useMemo(() => Object.fromEntries((branches || []).map((b) => [b.slug, b.name])), [branches])

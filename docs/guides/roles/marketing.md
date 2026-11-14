@@ -1,4 +1,4 @@
-﻿# Marketing
+# Marketing
 
 **Home:** `/operations/crm`  
 **Shell:** FloorAppShell  

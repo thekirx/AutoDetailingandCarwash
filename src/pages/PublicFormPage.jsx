@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import BrandedOpsForm from '@/components/BrandedOpsForm'
-import { extractComplaintBranch, normalizeFields, validatePayload, withLiveBranchOptions } from '@/lib/opsForms'
+import {
+  extractComplaintBranch,
+  filterFormBranchSlugs,
+  normalizeFields,
+  validatePayload,
+  withLiveBranchOptions,
+} from '@/lib/opsForms'
 import { listBranches } from '@/lib/adminApi'
 import { supabase } from '@/lib/supabase'
 
@@ -29,10 +35,7 @@ export default function PublicFormPage() {
       if (e) setError(e.message)
       else if (!data) setError('This form is closed or not found.')
       else {
-        const slugs = (branches || [])
-          .filter((b) => b && !b.is_archived && b.is_active !== false)
-          .map((b) => b.slug)
-          .filter(Boolean)
+        const slugs = filterFormBranchSlugs(branches || [])
         setForm({ ...data, fields: withLiveBranchOptions(data.fields, slugs) })
       }
     })

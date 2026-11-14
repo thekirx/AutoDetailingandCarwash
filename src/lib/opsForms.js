@@ -186,6 +186,7 @@ export function templateFields(kind, { branchSlugs } = {}) {
       { key: 'name', label: 'Full name', type: 'text', required: true },
       { key: 'phone', label: 'Phone', type: 'phone', required: true },
       { key: 'email', label: 'Email', type: 'email', required: false },
+      { key: 'branch', label: 'Preferred branch', type: 'select', required: false, options: branches },
       { key: 'guests', label: 'Guests', type: 'number', required: false },
       { key: 'notes', label: 'Notes', type: 'textarea', required: false },
     ])
@@ -219,13 +220,51 @@ export function templateFields(kind, { branchSlugs } = {}) {
   return templateFields('complaint', { branchSlugs: branches })
 }
 
-/** Overlay live branch slugs onto any form's branch select (DB templates + defaults). */
+/** Overlay live branch slugs onto any form's branch field (upgrades legacy text branch fields to select). */
 export function withLiveBranchOptions(fields = [], branchSlugs = []) {
   const options = (branchSlugs || []).map((s) => String(s || '').trim()).filter(Boolean)
   if (!options.length) return normalizeFields(fields)
   return normalizeFields(fields).map((f) =>
-    f.key === 'branch' && f.type === 'select' ? { ...f, options } : f,
+    f.key === 'branch' ? { ...f, type: 'select', options } : f,
   )
+}
+
+const TEST_RESIDUE_BRANCH_RE = /^(crudtest|aud-|probe-)/i
+
+/**
+ * Return open operational store branch slugs for form dropdowns.
+ * Excludes archived, inactive, coming_soon, test residue, and back-office HQ rows.
+ */
+export function filterFormBranchSlugs(branches = [], { includeHq = false } = {}) {
+  return (branches || [])
+    .filter((b) => {
+      if (!b || !b.slug) return false
+      const slug = String(b.slug).trim().toLowerCase()
+      if (!slug || TEST_RESIDUE_BRANCH_RE.test(slug)) return false
+      if (b.is_archived === true) return false
+      if (b.is_active === false) return false
+      if (b.coming_soon === true) return false
+      if (!includeHq && (b.is_public === false || slug === 'hq')) return false
+      return true
+    })
+    .map((b) => String(b.slug).trim().toLowerCase())
+}
+
+/** Human-friendly display label for a branch slug in form dropdowns and submission tables. */
+export function formatBranchSlugLabel(slug, branches = []) {
+  const raw = String(slug || '').trim()
+  if (!raw) return '—'
+  const lower = raw.toLowerCase()
+  const match = (branches || []).find((b) => String(b?.slug || '').toLowerCase() === lower)
+  if (match?.name) {
+    return String(match.name).replace(/^hakum\s+auto\s+care\s+/i, '').trim() || match.name
+  }
+  if (lower === 'bacoor') return 'Bacoor'
+  if (lower === 'batangas') return 'Batangas'
+  if (lower === 'imus') return 'Imus'
+  if (lower === 'dasmarinas') return 'Dasmariñas'
+  if (lower === 'hq') return 'HQ / Office'
+  return raw.charAt(0).toUpperCase() + raw.slice(1)
 }
 
 export function defaultFormSettings(kind = 'complaint') {
@@ -339,8 +378,52 @@ export function submissionTitle(form, payload = {}) {
 }
 
 export function extractComplaintBranch(payload = {}) {
-  const raw = String(payload.branch || payload.branch_slug || '').trim().toLowerCase()
-  return raw || null
+  return extractSubmissionBranch(payload)
+}
+
+/**
+ * Extract and normalize the canonical branch slug from a submission row or payload object.
+ */
+export function extractSubmissionBranch(submissionOrPayload = {}) {
+  const payload =
+    submissionOrPayload && typeof submissionOrPayload === 'object' && submissionOrPayload.payload
+      ? submissionOrPayload.payload
+      : submissionOrPayload || {}
+  const raw = String(
+    payload.branch || payload.branch_slug || payload.preferred_branch || submissionOrPayload?.branch_slug || '',
+  )
+    .trim()
+    .toLowerCase()
+  if (!raw) return null
+  if (raw.includes('bacoor')) return 'bacoor'
+  if (raw.includes('batangas')) return 'batangas'
+  if (raw.includes('imus')) return 'imus'
+  if (raw.includes('dasma')) return 'dasmarinas'
+  return raw
+}
+
+/**
+ * Filter form submissions by an admin's allowed branch scope list and UI branch filter.
+ */
+export function filterSubmissionsByBranchScope(
+  submissions = [],
+  { branchFilter = 'all', scopeList = null } = {},
+) {
+  const filterSlug = String(branchFilter || 'all').trim().toLowerCase()
+  const allowedSet = Array.isArray(scopeList)
+    ? new Set(scopeList.map((s) => String(s || '').trim().toLowerCase()).filter(Boolean))
+    : null
+
+  return (submissions || []).filter((sub) => {
+    const branch = extractSubmissionBranch(sub)
+    if (allowedSet) {
+      if (branch && !allowedSet.has(branch)) return false
+    }
+    if (filterSlug !== 'all') {
+      return branch === filterSlug
+    }
+    return true
+  })
 }
 
 // Back-compat exports used by older planningPart6 imports

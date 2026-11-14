@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useId, useRef, useState } from 'react'
 import { answerRows, firstInvalidStep, isWizardForm, validateStep, wizardScreens, wizardSteps } from '@/lib/formWizard'
-import { formKindLabel, normalizeFields, normalizeFormSettings } from '@/lib/opsForms'
+import { formKindLabel, formatBranchSlugLabel, normalizeFields, normalizeFormSettings } from '@/lib/opsForms'
 
 /**
  * Branded Hakum customer form surface — used by /f/:slug and admin Preview.
@@ -121,7 +121,7 @@ function FormField({ field, value, onChange, preview, error = '' }) {
       ) : field.type === 'select' ? (
         <select {...props} value={value ?? ''} onChange={(e) => onChange(e.target.value)}>
           <option value="">Select…</option>
-          {(field.options || []).map(opt => <option key={opt} value={opt}>{opt}</option>)}
+          {(field.options || []).map(opt => <option key={opt} value={opt}>{field.key === 'branch' ? formatBranchSlugLabel(opt) : opt}</option>)}
         </select>
       ) : field.type === 'checkbox' ? (
         <span className="hakum-form-check"><input {...props} type="checkbox" checked={Boolean(value)} onChange={(e) => onChange(e.target.checked)} />Yes</span>

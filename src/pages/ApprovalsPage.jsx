@@ -1,37 +1,60 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessApprovals, canModifyStock } from '@/auth/permissions'
+import { listBranches } from '@/lib/adminApi'
+import { filterOperationalBranches } from '@/lib/inventoryBranchStock'
 import { supabase } from '@/lib/supabase'
 import OpsPageShell from '@/components/ops/OpsPageShell'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 
 export default function ApprovalsPage() {
   const { profile } = useAuth()
   const [rows, setRows] = useState([])
-  const [bills, setBills] = useState(0)
+  const [expenseRows, setExpenseRows] = useState([])
+  const [branches, setBranches] = useState([])
+  const [branchFilter, setBranchFilter] = useState('all')
   const [busyId, setBusyId] = useState('')
   const canDecide = canModifyStock(profile)
 
   const load = useCallback(async () => {
-    const [stock, expenses] = await Promise.all([
+    const [stock, expenses, brList] = await Promise.all([
       supabase
         .from('restock_requests')
         .select('id, add_qty, branch_slug, created_at, products(name)')
         .eq('status', 'pending')
         .order('created_at', { ascending: true }),
-      supabase.from('expenses').select('id', { count: 'exact', head: true }).eq('status', 'pending_approval'),
+      supabase.from('expenses').select('id, branch').eq('status', 'pending_approval'),
+      listBranches().catch(() => []),
     ])
     if (stock.error) throw stock.error
+    const opBranches = filterOperationalBranches(brList || [])
+    setBranches(opBranches)
     setRows(stock.data || [])
-    setBills(expenses.error ? 0 : Number(expenses.count) || 0)
+    setExpenseRows(expenses.error ? [] : expenses.data || [])
   }, [])
 
   useEffect(() => {
     if (!canAccessApprovals(profile)) return
     load().catch((err) => toast.error(err.message || 'Could not load approvals'))
   }, [load, profile])
+
+  const branchNameBySlug = useMemo(
+    () => Object.fromEntries((branches || []).map((b) => [b.slug, b.name])),
+    [branches],
+  )
+
+  const visibleRows = useMemo(() => {
+    if (branchFilter === 'all') return rows
+    return rows.filter((r) => String(r.branch_slug || '').toLowerCase() === branchFilter)
+  }, [rows, branchFilter])
+
+  const bills = useMemo(() => {
+    if (branchFilter === 'all') return expenseRows.length
+    return expenseRows.filter((e) => String(e.branch || '').toLowerCase() === branchFilter).length
+  }, [expenseRows, branchFilter])
 
   if (!canAccessApprovals(profile)) return <Navigate to="/operations/access-denied" replace />
 
@@ -60,13 +83,43 @@ export default function ApprovalsPage() {
         </Button>
       }
     >
-      <p className="text-sm text-muted-foreground">{bills} bill{bills === 1 ? '' : 's'} waiting for approval</p>
-      {rows.length ? (
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-sm text-muted-foreground">{bills} bill{bills === 1 ? '' : 's'} waiting for approval</p>
+        {branches.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter approvals by branch">
+            <Button
+              type="button"
+              size="sm"
+              variant={branchFilter === 'all' ? 'default' : 'outline'}
+              onClick={() => setBranchFilter('all')}
+            >
+              All Branches
+            </Button>
+            {branches.map((b) => (
+              <Button
+                key={b.slug}
+                type="button"
+                size="sm"
+                variant={branchFilter === b.slug ? 'default' : 'outline'}
+                onClick={() => setBranchFilter(b.slug)}
+              >
+                {b.name}
+              </Button>
+            ))}
+          </div>
+        ) : null}
+      </div>
+      {visibleRows.length ? (
         <ul className="flex flex-col gap-3" aria-label="Restock waiting">
-          {rows.map((row) => (
+          {visibleRows.map((row) => (
             <li key={row.id} className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="font-medium">{row.products?.name || 'Item'}</p>
+              <div className="flex flex-col gap-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="font-medium">{row.products?.name || 'Item'}</p>
+                  <Badge variant="outline" className="text-[11px]">
+                    {branchNameBySlug[row.branch_slug] || row.branch_slug}
+                  </Badge>
+                </div>
                 <p className="text-sm text-muted-foreground">
                   {row.branch_slug} · add {row.add_qty}
                 </p>

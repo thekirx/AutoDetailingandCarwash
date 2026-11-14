@@ -6,6 +6,10 @@ import {
   FORM_KINDS,
   extractCalendarAt,
   extractComplaintBranch,
+  extractSubmissionBranch,
+  filterFormBranchSlugs,
+  filterSubmissionsByBranchScope,
+  formatBranchSlugLabel,
   formQrDataUrl,
   formQrImageUrl,
   isDetailingFormKind,
@@ -87,6 +91,70 @@ describe('opsForms smart builder', () => {
     const live = withLiveBranchOptions(seeded, ['bacoor', 'batangas'])
     assert.deepEqual(live.find((f) => f.key === 'branch').options, ['bacoor', 'batangas'])
     assert.deepEqual(live.find((f) => f.key === 'service').options, ['Ceramic'])
+  })
+
+  it('upgrades legacy text branch fields to select with live operational branch slugs and filters out coming_soon/hq/archived branches', () => {
+    const rawBranches = [
+      { slug: 'bacoor', name: 'Hakum Auto Care Bacoor', is_active: true, is_archived: false, coming_soon: false, is_public: true },
+      { slug: 'batangas', name: 'Hakum Auto Care Batangas', is_active: true, is_archived: false, coming_soon: false, is_public: true },
+      { slug: 'dasmarinas', name: 'Hakum Auto Care Dasmariñas', is_active: false, is_archived: false, coming_soon: true, is_public: true },
+      { slug: 'imus', name: 'Hakum Auto Care Imus', is_active: true, is_archived: false, coming_soon: true, is_public: true },
+      { slug: 'hq', name: 'Hakum HQ / Office', is_active: true, is_archived: false, coming_soon: false, is_public: false },
+      { slug: 'crudtest-1', name: 'CRUD Test', is_active: false, is_archived: true, coming_soon: false, is_public: false },
+    ]
+    const slugs = filterFormBranchSlugs(rawBranches)
+    assert.deepEqual(slugs, ['bacoor', 'batangas'])
+
+    const legacyComplaintFields = [
+      { key: 'customer_name', type: 'text', label: 'Customer name', required: true },
+      { key: 'branch', type: 'text', label: 'Branch', required: true },
+    ]
+    const upgraded = withLiveBranchOptions(legacyComplaintFields, slugs)
+    const branchField = upgraded.find((f) => f.key === 'branch')
+    assert.equal(branchField.type, 'select')
+    assert.deepEqual(branchField.options, ['bacoor', 'batangas'])
+
+    const eventFields = templateFields('event', { branchSlugs: slugs })
+    const eventBranch = eventFields.find((f) => f.key === 'branch')
+    assert.ok(eventBranch)
+    assert.equal(eventBranch.type, 'select')
+    assert.equal(eventBranch.required, false)
+    assert.deepEqual(eventBranch.options, ['bacoor', 'batangas'])
+  })
+
+  it('extracts and filters form submissions by branch filter and admin branch scope list', () => {
+    const submissions = [
+      { id: 's1', form_id: 'f1', payload: { customer_name: 'Ana', branch: 'bacoor' } },
+      { id: 's2', form_id: 'f1', payload: { customer_name: 'Ben', branch: 'Hakum Auto Care Batangas' } },
+      { id: 's3', form_id: 'f2', payload: { name: 'Guest RSVP' } },
+    ]
+    assert.equal(extractSubmissionBranch(submissions[0]), 'bacoor')
+    assert.equal(extractSubmissionBranch(submissions[1]), 'batangas')
+    assert.equal(extractSubmissionBranch(submissions[2]), null)
+
+    assert.equal(formatBranchSlugLabel('bacoor'), 'Bacoor')
+    assert.equal(formatBranchSlugLabel('batangas'), 'Batangas')
+
+    // Super admin (scopeList: null) with 'all' sees all 3
+    assert.deepEqual(
+      filterSubmissionsByBranchScope(submissions, { branchFilter: 'all', scopeList: null }).map((s) => s.id),
+      ['s1', 's2', 's3'],
+    )
+    // Filter by 'bacoor' -> only s1
+    assert.deepEqual(
+      filterSubmissionsByBranchScope(submissions, { branchFilter: 'bacoor', scopeList: null }).map((s) => s.id),
+      ['s1'],
+    )
+    // Filter by 'batangas' -> only s2
+    assert.deepEqual(
+      filterSubmissionsByBranchScope(submissions, { branchFilter: 'batangas', scopeList: null }).map((s) => s.id),
+      ['s2'],
+    )
+    // Batangas-only site admin (scopeList: ['batangas']) with 'all' sees Batangas + unscoped RSVP, never Bacoor complaint
+    assert.deepEqual(
+      filterSubmissionsByBranchScope(submissions, { branchFilter: 'all', scopeList: ['batangas'] }).map((s) => s.id),
+      ['s2', 's3'],
+    )
   })
 })
 

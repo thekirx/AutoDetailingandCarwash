@@ -8,7 +8,16 @@ import OpsGuideCard from '@/components/ops/OpsGuideCard'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import OpsTabList from '@/components/ops/OpsTabBar'
 import { BRANCH_STOCK_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
-import { applyOwnerSetQty, applyReconLine, applyRestockQty, branchAssignmentRows, reconUsageQty } from '@/lib/inventoryBranchStock'
+import {
+  aggregateBranchStockMap,
+  applyOwnerSetQty,
+  applyReconLine,
+  applyRestockQty,
+  branchAssignmentRows,
+  buildReconApprovalMutations,
+  filterOperationalBranches,
+  reconUsageQty,
+} from '@/lib/inventoryBranchStock'
 import { LOW_STOCK_THRESHOLD, RESTOCK_POLICY_NOTICE, STOCK_CATEGORIES, materialRoleLabel, stockCategoryLabel } from '@/lib/inventoryCatalog'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { supabase } from '@/lib/supabase'
@@ -54,6 +63,7 @@ export default function BranchInventoryPage({
   const [branch, setBranch] = useState('')
   const [products, setProducts] = useState([])
   const [stockByProduct, setStockByProduct] = useState({})
+  const [unsizedStockByProduct, setUnsizedStockByProduct] = useState({})
   const [restockQty, setRestockQty] = useState({})
   const [pointPrice, setPointPrice] = useState({})
   const [ownerQty, setOwnerQty] = useState({})
@@ -79,7 +89,7 @@ export default function BranchInventoryPage({
           .eq('is_active', true)
           .eq('is_archived', false)
           .order('name'),
-        supabase.from('product_branch_stock').select('product_id, qty').eq('branch_slug', branch),
+        supabase.from('product_branch_stock').select('product_id, qty, size_key').eq('branch_slug', branch),
         supabase
           .from('inventory_recons')
           .select('id, branch_slug, week_of, status, submitted_at, notes, inventory_recon_lines(id, product_id, previous_qty, leftover_qty)')
@@ -104,9 +114,9 @@ export default function BranchInventoryPage({
         points[row.id] = row.points_price == null ? '' : String(row.points_price)
       }
       setPointPrice(points)
-      const map = {}
-      for (const row of stockRes.data || []) map[row.product_id] = Number(row.qty) || 0
-      setStockByProduct(map)
+      const agg = aggregateBranchStockMap(stockRes.data || [])
+      setStockByProduct(agg.totalsByProductId)
+      setUnsizedStockByProduct(agg.unsizedByProductId)
       setRecons(reconRes.data || [])
       setPendingRestocks(restockRes.data || [])
     } catch (err) {
@@ -118,10 +128,11 @@ export default function BranchInventoryPage({
     if (!canRestockInventory(profile)) return
     fetchBranches()
       .then((rows) => {
-        setBranches(rows || [])
+        const opRows = filterOperationalBranches(rows || [])
+        setBranches(opRows)
         setBranch((cur) => {
-          if (cur) return cur
-          const opts = scopeList === null ? rows : (rows || []).filter((b) => (scopeList || []).includes(b.slug))
+          if (cur && opRows.some((b) => b.slug === cur)) return cur
+          const opts = scopeList === null ? opRows : opRows.filter((b) => (scopeList || []).includes(b.slug))
           return opts[0]?.slug || ''
         })
       })
@@ -216,6 +227,7 @@ export default function BranchInventoryPage({
       const { error } = await supabase.from('product_branch_stock').insert({
         product_id: product.id,
         branch_slug: branch,
+        size_key: '',
         qty: 0,
       })
       if (error) throw error
@@ -283,12 +295,13 @@ export default function BranchInventoryPage({
 
     setSaving(true)
     try {
-      const current = stockByProduct[product.id]
+      const current = unsizedStockByProduct[product.id]
       const next = applyRestockQty(current ?? 0, add)
       if (current == null) {
         const { error } = await supabase.from('product_branch_stock').insert({
           product_id: product.id,
           branch_slug: branch,
+          size_key: '',
           qty: next,
         })
         if (error) throw error
@@ -298,11 +311,13 @@ export default function BranchInventoryPage({
           .update({ qty: next })
           .eq('product_id', product.id)
           .eq('branch_slug', branch)
+          .eq('size_key', '')
         if (error) throw error
       }
       const { error: movErr } = await supabase.from('product_stock_movements').insert({
         product_id: product.id,
         branch_slug: branch,
+        size_key: '',
         delta: add,
         reason: 'restock',
         movement_type: 'restock',
@@ -361,12 +376,13 @@ export default function BranchInventoryPage({
     const next = applyOwnerSetQty(ownerQty[product.id])
     setSaving(true)
     try {
-      const current = stockByProduct[product.id]
+      const current = unsizedStockByProduct[product.id]
       const prev = current ?? 0
       if (current == null) {
         const { error } = await supabase.from('product_branch_stock').insert({
           product_id: product.id,
           branch_slug: branch,
+          size_key: '',
           qty: next,
         })
         if (error) throw error
@@ -376,11 +392,13 @@ export default function BranchInventoryPage({
           .update({ qty: next })
           .eq('product_id', product.id)
           .eq('branch_slug', branch)
+          .eq('size_key', '')
         if (error) throw error
       }
       const { error: movErr } = await supabase.from('product_stock_movements').insert({
         product_id: product.id,
         branch_slug: branch,
+        size_key: '',
         delta: next - prev,
         reason: 'owner_set',
         movement_type: 'owner_set',
@@ -481,39 +499,20 @@ export default function BranchInventoryPage({
     setSaving(true)
     try {
       const lines = recon.inventory_recon_lines || []
-      for (const line of lines) {
-        const { nextQty, delta } = applyReconLine({
-          previousQty: line.previous_qty,
-          leftoverQty: line.leftover_qty,
-        })
-        const { data: existing } = await supabase
+      const { stockUpserts, movements } = buildReconApprovalMutations(lines, unsizedStockByProduct, {
+        branchSlug: recon.branch_slug,
+        userId: user?.id || profile?.id,
+      })
+      if (stockUpserts.length > 0) {
+        const { error: upStockErr } = await supabase
           .from('product_branch_stock')
-          .select('id, qty')
-          .eq('product_id', line.product_id)
-          .eq('branch_slug', recon.branch_slug)
-          .maybeSingle()
-        if (!existing) {
-          const { error } = await supabase.from('product_branch_stock').insert({
-            product_id: line.product_id,
-            branch_slug: recon.branch_slug,
-            qty: nextQty,
-          })
-          if (error) throw error
-        } else {
-          const { error } = await supabase
-            .from('product_branch_stock')
-            .update({ qty: nextQty })
-            .eq('id', existing.id)
-          if (error) throw error
-        }
-        const { error: movErr } = await supabase.from('product_stock_movements').insert({
-          product_id: line.product_id,
-          branch_slug: recon.branch_slug,
-          delta,
-          reason: 'recon_adjust',
-          movement_type: 'recon_adjust',
-          created_by: user?.id || profile?.id,
-        })
+          .upsert(stockUpserts, { onConflict: 'product_id,branch_slug,size_key' })
+        if (upStockErr) throw upStockErr
+      }
+      if (movements.length > 0) {
+        const { error: movErr } = await supabase
+          .from('product_stock_movements')
+          .insert(movements)
         if (movErr) throw movErr
       }
       const { error: upErr } = await supabase

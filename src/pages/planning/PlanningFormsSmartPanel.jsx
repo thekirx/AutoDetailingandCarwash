@@ -15,6 +15,7 @@ import {
   canApproveCashAdvance,
   canManageOpsFormTemplates,
   canSubmitOpsFormKind,
+  getBranchScopeList,
 } from '@/auth/permissions'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -44,6 +45,10 @@ import {
   SUBMISSION_STATUSES,
   extractCalendarAt,
   extractComplaintBranch,
+  extractSubmissionBranch,
+  filterFormBranchSlugs,
+  filterSubmissionsByBranchScope,
+  formatBranchSlugLabel,
   formKindLabel,
   formatFormPayloadDescription,
   isFormSlugLocked,
@@ -185,7 +190,10 @@ function DynamicFields({ fields, values, onChange }) {
               value={values[field.key] || ''}
               onChange={(v) => onChange({ ...values, [field.key]: v })}
               placeholder="Select…"
-              options={(field.options || []).map((opt) => ({ value: opt, label: opt }))}
+              options={(field.options || []).map((opt) => ({
+                value: opt,
+                label: field.key === 'branch' ? formatBranchSlugLabel(opt) : opt,
+              }))}
             />
           ) : field.type === 'checkbox' ? (
             <label className="flex min-h-11 items-center gap-2 text-sm">
@@ -256,6 +264,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
   const { profile } = useAuth()
   const manageTemplates = canEdit && canManageOpsFormTemplates(profile)
   const approveCash = canApproveCashAdvance(profile)
+  const scopeList = getBranchScopeList(profile)
   const [forms, setForms] = useState([])
   const [events, setEvents] = useState([])
   const [branchSlugs, setBranchSlugs] = useState([])
@@ -273,6 +282,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
   const [pushPlanning, setPushPlanning] = useState(true)
   const [saving, setSaving] = useState(false)
   const [statusFilter, setStatusFilter] = useState('all')
+  const [branchFilter, setBranchFilter] = useState('all')
 
   const load = useCallback(async () => {
     const [f, s, e, branches] = await Promise.all([
@@ -290,10 +300,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
       supabase.from('events').select('id, title, slug, starts_at').order('starts_at', { ascending: false }).limit(80),
       listBranches().catch(() => []),
     ])
-    const slugs = (branches || [])
-      .filter((b) => b && !b.is_archived && b.is_active !== false)
-      .map((b) => b.slug)
-      .filter(Boolean)
+    const slugs = filterFormBranchSlugs(branches || [])
     setBranchSlugs(slugs)
     if (f.error) toast.error(f.error.message)
     else {
@@ -344,27 +351,38 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
       setSelectedFormId(selectedTemplate.id)
     }
   }, [kindFilter, selectedTemplate, selectedFormId])
+  const availableBranchSlugs = useMemo(() => {
+    if (!Array.isArray(scopeList)) return branchSlugs
+    const allowed = new Set(scopeList.map((s) => String(s || '').toLowerCase()))
+    const filtered = branchSlugs.filter((s) => allowed.has(String(s || '').toLowerCase()))
+    return filtered.length ? filtered : branchSlugs
+  }, [branchSlugs, scopeList])
+
   const fillableForms = useMemo(
     () => forms.filter((f) => f.is_active && f.status !== 'archived' && canSubmitOpsFormKind(profile, f.kind)),
     [forms, profile],
   )
   const activeForm = fillableForms.find((f) => f.id === fillFormId) || fillableForms[0]
   const activeFormFields = useMemo(
-    () => withLiveBranchOptions(activeForm?.fields || [], branchSlugs),
-    [activeForm, branchSlugs],
+    () => withLiveBranchOptions(activeForm?.fields || [], availableBranchSlugs),
+    [activeForm, availableBranchSlugs],
+  )
+  const scopedSubmissions = useMemo(
+    () => filterSubmissionsByBranchScope(submissions, { branchFilter, scopeList }),
+    [submissions, branchFilter, scopeList],
   )
   const resultsForm = forms.find((f) => f.id === resultsFormId)
   const resultsRows = useMemo(() => {
-    let rows = submissions.filter((s) => s.form_id === resultsFormId)
+    let rows = scopedSubmissions.filter((s) => s.form_id === resultsFormId)
     if (statusFilter !== 'all') rows = rows.filter((s) => s.status === statusFilter)
     return rows
-  }, [submissions, resultsFormId, statusFilter])
+  }, [scopedSubmissions, resultsFormId, statusFilter])
 
   const countsByForm = useMemo(() => {
     const map = new Map()
-    for (const s of submissions) map.set(s.form_id, (map.get(s.form_id) || 0) + 1)
+    for (const s of scopedSubmissions) map.set(s.form_id, (map.get(s.form_id) || 0) + 1)
     return map
-  }, [submissions])
+  }, [scopedSubmissions])
 
   useEffect(() => {
     if (activeForm && fillFormId !== activeForm.id) setFillFormId(activeForm.id)
@@ -615,14 +633,33 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
         </p>
       </div>
 
-      <div className="flex flex-col gap-2 sm:max-w-sm">
-        <Label htmlFor="form-kind-filter">Which form</Label>
-        <NamedSelect
-          id="form-kind-filter"
-          value={kindFilter}
-          onChange={setKindFilter}
-          options={FORM_KINDS.map((k) => ({ value: k.value, label: k.label }))}
-        />
+      <div className="grid gap-3 sm:max-w-xl sm:grid-cols-2">
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="form-kind-filter">Which form</Label>
+          <NamedSelect
+            id="form-kind-filter"
+            value={kindFilter}
+            onChange={setKindFilter}
+            options={FORM_KINDS.map((k) => ({ value: k.value, label: k.label }))}
+          />
+        </div>
+        {availableBranchSlugs.length > 0 && (
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="form-branch-filter">Branch scope</Label>
+            <NamedSelect
+              id="form-branch-filter"
+              value={branchFilter}
+              onChange={setBranchFilter}
+              options={[
+                { value: 'all', label: 'All branches' },
+                ...availableBranchSlugs.map((slug) => ({
+                  value: slug,
+                  label: formatBranchSlugLabel(slug),
+                })),
+              ]}
+            />
+          </div>
+        )}
       </div>
 
       {manageTemplates && (
@@ -1050,12 +1087,25 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
                 {SUBMISSION_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
               </SelectContent>
             </Select>
+            {availableBranchSlugs.length > 0 && (
+              <Select value={branchFilter} onValueChange={setBranchFilter}>
+                <SelectTrigger className="w-44 cursor-pointer" aria-label="Filter by branch"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All branches</SelectItem>
+                  {availableBranchSlugs.map((slug) => (
+                    <SelectItem key={slug} value={slug}>{formatBranchSlugLabel(slug)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             {resultsForm?.slug && (
               <Button type="button" variant="outline" className="cursor-pointer" onClick={() => copyShare(resultsForm)}>Copy share link</Button>
             )}
           </div>
           <div className="planning-event-list">
-            {resultsRows.map((row) => (
+            {resultsRows.map((row) => {
+              const rowBranch = extractSubmissionBranch(row)
+              return (
               <article key={`m-${row.id}`} className="planning-event-card">
                 <div>
                   <h3>{row.respondent_label || 'No name'}</h3>
@@ -1063,6 +1113,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
                 </div>
                 <div className="planning-event-card-meta">
                   <Badge variant="secondary" className="capitalize">{row.source}</Badge>
+                  {rowBranch ? <Badge variant="outline">{formatBranchSlugLabel(rowBranch)}</Badge> : null}
                   {row.plan_card_id ? <Badge variant="secondary">On Tasks</Badge> : null}
                 </div>
                 <Select value={row.status || 'new'} onValueChange={(status) => setSubmissionStatus(row.id, status)} disabled={!manageTemplates}>
@@ -1082,7 +1133,8 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
                 ) : null}
                 <p className="whitespace-pre-wrap">{formatFormPayloadDescription(row.payload || {})}</p>
               </article>
-            ))}
+              )
+            })}
             {!resultsRows.length ? <p className="text-sm text-muted-foreground">No submissions for this filter.</p> : null}
           </div>
           <div className="planning-event-table">
@@ -1091,6 +1143,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
               <TableRow>
                 <TableHead>When</TableHead>
                 <TableHead>Who</TableHead>
+                <TableHead>Branch</TableHead>
                 <TableHead>Source</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Answers</TableHead>
@@ -1098,7 +1151,9 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
               </TableRow>
             </TableHeader>
             <TableBody>
-              {resultsRows.map((row) => (
+              {resultsRows.map((row) => {
+                const rowBranch = extractSubmissionBranch(row)
+                return (
                 <TableRow key={row.id}>
                   <TableCell className="whitespace-nowrap text-sm">
                     {new Date(row.created_at).toLocaleString()}
@@ -1109,6 +1164,13 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
                     )}
                   </TableCell>
                   <TableCell>{row.respondent_label || '—'}</TableCell>
+                  <TableCell>
+                    {rowBranch ? (
+                      <Badge variant="outline" className="text-xs">{formatBranchSlugLabel(rowBranch)}</Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
                   <TableCell className="capitalize">{row.source}</TableCell>
                   <TableCell>
                     <Select value={row.status || 'new'} onValueChange={(status) => setSubmissionStatus(row.id, status)} disabled={!manageTemplates}>
@@ -1132,9 +1194,10 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
                   </TableCell>
                   <TableCell>{row.plan_card_id ? <Badge variant="secondary">Card</Badge> : null}</TableCell>
                 </TableRow>
-              ))}
+                )
+              })}
               {!resultsRows.length && (
-                <TableRow><TableCell colSpan={6} className="text-muted-foreground">No submissions for this filter.</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-muted-foreground">No submissions for this filter.</TableCell></TableRow>
               )}
             </TableBody>
           </Table>
