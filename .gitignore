@@ -67,3 +67,5 @@ Brand Assets/**/*.pdf
 /list.title
 /tmp-*
 .vscode/
+
+graphify-out/.graph.tmp.json
