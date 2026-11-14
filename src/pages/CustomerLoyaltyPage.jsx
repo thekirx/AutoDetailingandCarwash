@@ -1,23 +1,23 @@
 import PointsShop from '@/components/customer/PointsShop'
 import { useEffect, useState } from 'react'
-import { Cake, Check, Gift, Percent, Star, Ticket } from 'lucide-react'
+import { Car, Check, Gift } from 'lucide-react'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
 import StampTrack from '@/components/customer/StampTrack'
 import { BirthdayPass } from '@/components/customer/BirthdayGreeting'
+import Sheet from '@/components/customer/Sheet'
 import ReferralCard from '@/components/customer/ReferralCard'
-import { BIRTHDAY_GIFT_LABEL, BIRTHDAY_PERK_DAYS } from '@/lib/birthdayPerk'
-import { memberTier, nextVisitReward, earnedVisitRewards, SERVICE_POINTS } from '@/lib/rewardsCatalog'
+import { memberTier } from '@/lib/rewardsCatalog'
 import { Row, SectionHead, Skeleton, Stat } from '@/components/customer/CustomerUi'
 import { fetchPortal } from '@/lib/customerPortalClient'
-import { CUSTOMER_LOYALTY_PATH, CUSTOMER_REFERRAL_PATH, CUSTOMER_VOUCHERS_PATH } from '@/lib/customerAccountNav'
-import { formatDiscountPercent, normalizeReferralProgram } from '@/lib/referralProgram'
+import { CUSTOMER_LOYALTY_PATH } from '@/lib/customerAccountNav'
 import { usePageMeta } from '@/lib/pageMeta'
 
-/** /account/loyalty — stamps, next reward, membership, points. All values from /api/customer-portal. */
+/** /account/loyalty — tier, stamps (tap a gift for its reward), how stamps work, points shop. All values from /api/customer-portal. */
 export default function CustomerLoyaltyPage() {
   usePageMeta({ title: 'Rewards', description: 'A stamp for every paid visit.', path: CUSTOMER_LOYALTY_PATH })
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
+  const [giftAt, setGiftAt] = useState(null)
 
   useEffect(() => {
     fetchPortal().then(setData).catch((err) => setError(err.message))
@@ -35,12 +35,13 @@ export default function CustomerLoyaltyPage() {
   const completed = Math.min(Number(loyalty?.completed) || 0, slots)
   const next = loyalty?.nextMilestone
   const nextAt = Number(next?.threshold_points) || slots
-  const nextPct = Math.min(100, Math.round((completed / Math.max(nextAt, 1)) * 100))
+  const milestones = loyalty?.milestones || []
+  const giftMilestone = milestones.find((m) => Number(m.threshold_points) === giftAt) || null
   const name = data?.profile?.full_name || ''
   const visits = Number(loyalty?.visitCount) || 0
   const tier = memberTier(visits)
-  const upcoming = nextVisitReward(visits)
-  const reached = earnedVisitRewards(visits)
+  const rewardStamps = milestones.map((m) => Number(m.threshold_points)).filter(Boolean)
+  const rewardNames = [...new Set(milestones.map((m) => m.reward_label).filter(Boolean))]
 
   return (
     <CustomerAppFrame title="Rewards" subtitle="A stamp for every paid visit." cols>
@@ -70,7 +71,7 @@ export default function CustomerLoyaltyPage() {
           <section className="capp-card capp-pass" aria-label="Your stamps">
             <div className="capp-pass-head">
               <img src="/branding/hakum-mark-ow.png" alt="" width="44" height="44" decoding="async" />
-              <span>Member</span>
+              <span className="capp-pass-tier">{loyalty.membership?.tier_name || tier.name}</span>
             </div>
             <h2 className="capp-title sr-only">Your stamps</h2>
             <p className="capp-count capp-pass-count">
@@ -81,11 +82,7 @@ export default function CustomerLoyaltyPage() {
                 ? `${Math.max(0, nextAt - completed)} more ${nextAt - completed === 1 ? 'visit' : 'visits'} to ${next.reward_label}`
                 : loyalty.encouragement || 'Every reward earned. Show this at the counter.'}
             </p>
-            <StampTrack
-              slots={slots}
-              completed={completed}
-              gifts={(loyalty.milestones || []).map((m) => m.threshold_points)}
-            />
+            <StampTrack slots={slots} completed={completed} gifts={rewardStamps} onGift={setGiftAt} />
             <div className="capp-pass-foot">
               <span>
                 <b>{name || 'Hakum member'}</b>
@@ -99,18 +96,38 @@ export default function CustomerLoyaltyPage() {
               ) : null}
             </div>
           </section>
-          {next ? (
-            <div className="capp-next">
-              <span className="capp-ring" style={{ '--p': nextPct }} aria-hidden>
-                <b>
-                  {completed}/{nextAt}
-                </b>
-              </span>
-              <Row icon={Gift} title={`Next reward: ${next.reward_label}`} sub={`at ${next.threshold_points} stamps`} />
+          <section className="capp-section" aria-label="How stamps work">
+            <SectionHead title="How stamps work" />
+            <div className="capp-group">
+              <Row icon={Check} title="1 paid visit = 1 stamp" sub="Stamped at the counter when you pay" />
+              <Row icon={Car} title="Any car on your account" sub="All your cars fill the same card" />
+              {rewardStamps.length ? (
+                <Row
+                  icon={Gift}
+                  title={`${rewardNames.join(' / ') || 'A reward'} at ${rewardStamps.join(' and ')}`}
+                  sub="Tap a gift on the card to see it"
+                />
+              ) : null}
             </div>
-          ) : (
-            <p className="capp-meta">{loyalty.encouragement}</p>
-          )}
+          </section>
+          <Sheet open={Boolean(giftMilestone)} onClose={() => setGiftAt(null)} title={giftMilestone ? `Stamp ${giftMilestone.threshold_points}` : ''}>
+            {giftMilestone ? (
+              <div className="capp-gift-sheet">
+                <span className="capp-row-icon capp-gift-sheet-icon" aria-hidden>
+                  <Gift size={30} strokeWidth={1.75} />
+                </span>
+                <h3 className="capp-title">{giftMilestone.reward_label}</h3>
+                <p className="capp-meta">
+                  {completed >= Number(giftMilestone.threshold_points)
+                    ? 'Earned. Ask the branch to use it on your next visit.'
+                    : `Unlocks at ${giftMilestone.threshold_points} stamps. You have ${completed}, so ${Number(giftMilestone.threshold_points) - completed} more paid ${Number(giftMilestone.threshold_points) - completed === 1 ? 'visit' : 'visits'}.`}
+                </p>
+                <button type="button" className="capp-btn capp-btn-fill capp-btn-block" onClick={() => setGiftAt(null)}>
+                  Got it
+                </button>
+              </div>
+            ) : null}
+          </Sheet>
         </>
       ) : data ? (
         <div className="capp-empty">
@@ -131,77 +148,6 @@ export default function CustomerLoyaltyPage() {
 
       {data?.referral ? <ReferralCard referral={data.referral} /> : null}
 
-      {loyalty ? (
-        <section className="capp-section" aria-label="Member benefits">
-          <SectionHead title="Member benefits" />
-          <div className="capp-group">
-            <Row icon={Star} title={tier.name} sub={`${visits} completed visits, any car`} />
-            {reached.map((row) => (
-              <Row key={row.visit} icon={Check} title={row.label} sub={`Reached at ${row.visit} visits. Ask the branch.`} />
-            ))}
-            {upcoming ? (
-              <Row icon={Gift} title={upcoming.label} sub={`${upcoming.visitsAway} more ${upcoming.visitsAway === 1 ? 'visit' : 'visits'}`} />
-            ) : (
-              <Row icon={Check} title="Visit rewards are unlocked" sub="Ask the branch which one you want" />
-            )}
-            {loyalty.membership?.discount_percent != null ? (
-              <Row icon={Percent} title={`${loyalty.membership.discount_percent}% member discount`} sub={loyalty.membership.ends_at ? `Until ${loyalty.membership.ends_at}` : 'Active'} />
-            ) : null}
-            {(loyalty.milestones || []).map((m) => {
-              const earned = completed >= Number(m.threshold_points)
-              return (
-                <Row
-                  key={m.id || m.threshold_points}
-                  icon={earned ? Check : Star}
-                  title={m.reward_label}
-                  sub={earned ? 'Earned' : `At ${m.threshold_points} stamps`}
-                />
-              )
-            })}
-            <Row
-              icon={Gift}
-              title="Your referral code"
-              sub={`Share it. You get ${formatDiscountPercent(normalizeReferralProgram(data?.rewards?.program).discount_rate)} off detailing when a friend uses it.`}
-              to={CUSTOMER_REFERRAL_PATH}
-              chevron
-            />
-            <Row
-              icon={Ticket}
-              title="Vouchers"
-              sub="Birthday car wash."
-              to={CUSTOMER_VOUCHERS_PATH}
-              chevron
-            />
-            <Row
-              icon={Cake}
-              title="Birthday carwash"
-              sub={
-                birthday?.perk
-                  ? `Your ${BIRTHDAY_GIFT_LABEL} is ready. Show the pass at any branch.`
-                  : birthday?.is_today
-                    ? 'Today is your birthday. Claim it on Vouchers.'
-                    : birthday?.date_of_birth
-                      ? `One ${BIRTHDAY_GIFT_LABEL}, good for ${BIRTHDAY_PERK_DAYS} days from your birthday.`
-                      : 'Add your birthday in Settings to unlock.'
-              }
-              to={CUSTOMER_VOUCHERS_PATH}
-              chevron
-            />
-          </div>
-          <details className="mt-3">
-            <summary className="min-h-11 cursor-pointer text-sm font-medium">Points table</summary>
-            <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
-              {SERVICE_POINTS.map((row) => (
-                <li key={row.name} className="flex justify-between gap-3">
-                  <span>{row.name}</span>
-                  <span className="tabular-nums">{row.points}</span>
-                </li>
-              ))}
-
-            </ul>
-          </details>
-        </section>
-      ) : null}
     </CustomerAppFrame>
   )
 }

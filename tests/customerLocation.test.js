@@ -90,9 +90,12 @@ describe('customer queue branch', () => {
   it('wires the pin into the live queue and the home preview', () => {
     const queue = read('src/pages/CustomerQueuePage.jsx')
     const home = read('src/pages/CustomerAccountPage.jsx')
-    assert.match(queue, /resolveCustomerQueueBranch/)
-    assert.match(queue, /CustomerPinControl/)
-    assert.match(home, /CustomerPinControl/)
+    // 14 Nov round: Queue finds the closest branch on open (shared hook), no pin buttons.
+    assert.match(queue, /useCustomerBranch/)
+    assert.match(queue, /locateNearest/)
+    assert.doesNotMatch(queue, /CustomerPinControl/)
+    assert.doesNotMatch(home, /CustomerPinControl/)
+    assert.match(home, /useCustomerBranch/)
     assert.match(read('src/components/customer/CustomerPinControl.jsx'), /Pin my location/)
     assert.match(read('src/styles-customer-app.css'), /\.capp-pin/)
   })

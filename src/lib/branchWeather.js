@@ -30,19 +30,23 @@ export function weatherLabelFromCode(code) {
   return WMO[n] || (n >= 50 && n < 70 ? 'Rain' : n >= 80 && n < 90 ? 'Showers' : 'Weather')
 }
 
-/** One line under the temperature. Empty when the code is unknown. */
-export function weatherForecastLine(code) {
+/**
+ * One line under the temperature. Empty when the code is unknown.
+ * `isDay` is Open-Meteo's `is_day` flag: after dark the line talks about tonight, never "sunny".
+ */
+export function weatherForecastLine(code, { isDay = true } = {}) {
   if (code == null || code === '') return ''
   const n = Number(code)
   if (!Number.isFinite(n)) return ''
-  if (n <= 1) return "It's sunny today."
-  if (n === 2) return "It's partly cloudy today."
-  if (n === 3) return "It's cloudy today."
-  if (n === 45 || n === 48) return "It's foggy today."
-  if (n >= 51 && n <= 67) return "It's raining today."
-  if (n >= 71 && n <= 77) return "It's snowing today."
-  if (n >= 80 && n <= 82) return 'Showers today.'
-  if (n >= 95) return 'Storms today — take it easy on the road.'
+  const when = isDay ? 'today' : 'tonight'
+  if (n <= 1) return isDay ? "It's sunny today." : 'Clear skies tonight.'
+  if (n === 2) return `It's partly cloudy ${when}.`
+  if (n === 3) return `It's cloudy ${when}.`
+  if (n === 45 || n === 48) return `It's foggy ${when}.`
+  if (n >= 51 && n <= 67) return `It's raining ${when}.`
+  if (n >= 71 && n <= 77) return `It's snowing ${when}.`
+  if (n >= 80 && n <= 82) return `Showers ${when}.`
+  if (n >= 95) return `Storms ${when} — take it easy on the road.`
   return ''
 }
 
@@ -86,7 +90,7 @@ export async function fetchBranchWeather(lat, lng, { fetchImpl = fetch, now = Da
       /* ignore bad cache */
     }
   }
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lng)}&current=temperature_2m,weather_code&timezone=Asia%2FManila`
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${encodeURIComponent(lat)}&longitude=${encodeURIComponent(lng)}&current=temperature_2m,weather_code,is_day&timezone=Asia%2FManila`
   const ctrl = typeof AbortController === 'function' ? new AbortController() : null
   const timer = ctrl ? setTimeout(() => ctrl.abort(), 8000) : null
   let res
@@ -103,7 +107,8 @@ export async function fetchBranchWeather(lat, lng, { fetchImpl = fetch, now = Da
   const data = {
     tempC: Math.round(temp),
     label: weatherLabelFromCode(code),
-    line: weatherForecastLine(code),
+    // Open-Meteo sends is_day as 1/0; a missing flag keeps the daytime wording.
+    line: weatherForecastLine(code, { isDay: body?.current?.is_day !== 0 }),
   }
   try {
     store?.setItem(key, JSON.stringify({ at: now, data }))

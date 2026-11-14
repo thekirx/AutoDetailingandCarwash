@@ -130,7 +130,8 @@ export default function PointsShop({ data, onRefresh }) {
             </div>
           ) : null}
 
-          <div className="capp-group">
+          {/* Store grid: picture, name, points, stock, Claim. */}
+          <div className="capp-shop-grid">
             {items.map((row) => {
               const atBranch = branchProductStockCount(row, pickup)
               const elsewhere = atBranch > 0 ? [] : otherBranchesInStock(row, pickup, branches)
@@ -138,21 +139,26 @@ export default function PointsShop({ data, onRefresh }) {
                 atBranch > 0
                   ? `${atBranch} in stock at ${branchLabel(branches, pickup)}`
                   : elsewhere.length > 0
-                    ? `Out at ${branchLabel(branches, pickup)} · Available at ${elsewhere.map((b) => branchLabel(branches, b.slug)).join(', ')}`
+                    ? `Out here · at ${elsewhere.map((b) => branchLabel(branches, b.slug)).join(', ')}`
                     : 'Out of stock'
               return (
-                <Row
-                  key={row.id}
-                  thumb={merchPhoto(row)}
-                  title={row.name}
-                  sub={`${row.points_price} points · ${stockNote}`}
-                  chevron
-                  onClick={() => open(row)}
-                />
+                <article key={row.id} className="capp-prod">
+                  <button type="button" className="capp-prod-img" onClick={() => open(row)} aria-label={`See ${row.name}`}>
+                    <img src={merchPhoto(row)} alt="" loading="lazy" />
+                  </button>
+                  <div className="capp-prod-in">
+                    <strong>{row.name}</strong>
+                    <b>{row.points_price} points</b>
+                    <em>{stockNote}</em>
+                    <button type="button" className="capp-btn capp-btn-fill capp-btn-block capp-prod-claim" onClick={() => open(row)}>
+                      Claim
+                    </button>
+                  </div>
+                </article>
               )
             })}
-            {!items.length ? <p className="capp-empty">Nothing is in the shop yet.</p> : null}
           </div>
+          {!items.length ? <p className="capp-empty">Nothing is in the shop yet.</p> : null}
         </section>
       ) : null}
 

@@ -2248,3 +2248,438 @@ html.capp-sheet-open {
   .capp-bday-card,
   .capp-profile-progress { padding: 1.6rem 1.75rem; }
 }
+
+/* ── 14 Nov 2026 client round ─────────────────────────────────────────────
+   Home weather on the right, gear → Settings, live-queue list, collapsible
+   activity, Queue closest-branch card, car-wash photo card, month calendar,
+   points-shop grid, Cars photo boxes, and the type pass (card headings in
+   the text face; the poster face stays for page titles and big numbers). */
+
+/* Home hero: bell + gear, weather under them on the right. */
+.capp-hero-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.7rem;
+  flex: 0 0 auto;
+  max-width: 48%;
+}
+.capp-weather.capp-weather--side {
+  align-items: flex-end;
+  text-align: right;
+}
+.capp-weather--side .capp-weather-now {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.capp-gear {
+  display: grid;
+  place-items: center;
+}
+@media (min-width: 861px) {
+  .capp-weather--side {
+    display: none;
+  }
+}
+
+/* Home live queue + activity as plain lists. */
+.capp-home-queue .capp-row-end b,
+.capp-activity .capp-row-end b {
+  font-weight: 700;
+  color: var(--capp-ink);
+}
+.capp-activity-toggle {
+  width: 100%;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 0;
+}
+.capp-activity-toggle .capp-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+.capp-activity-toggle .capp-link svg {
+  transition: transform 0.2s ease;
+}
+.capp-activity.is-open .capp-activity-toggle .capp-link svg {
+  transform: rotate(180deg);
+}
+.capp-activity-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.75rem 0;
+}
+.capp-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.5rem;
+  padding: 0 0.95rem;
+  border-radius: 999px;
+  border: 1px solid var(--capp-line-strong);
+  background: transparent;
+  color: var(--capp-ink);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.capp-chip.is-on {
+  background: var(--capp-surface);
+  border-color: var(--capp-accent);
+}
+.capp-activity-dates {
+  margin-bottom: 0.75rem;
+}
+
+/* Queue: closest branch with a dropdown underneath. */
+.capp-branch-card--closest {
+  display: block;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--capp-line);
+  border-radius: var(--capp-radius);
+  background: var(--capp-surface);
+}
+.capp-branch-card-top {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+}
+.capp-branch-card--closest .capp-eyebrow {
+  margin: 0 0 0.2rem;
+}
+.capp-branch-card--closest .capp-row-body strong {
+  display: block;
+  font-size: 1.05rem;
+}
+.capp-branch-card--closest .capp-row-body em {
+  display: block;
+  font-style: normal;
+  color: var(--capp-steel);
+  font-size: 0.88rem;
+}
+.capp-branch-card--closest .capp-field {
+  margin: 0.95rem 0 0;
+}
+
+/* Car-wash photo card (walk-in only). */
+.capp-svc--walkin .capp-svc-from b {
+  font-size: 0.95rem;
+  letter-spacing: 0.02em;
+}
+.capp-walkin-note {
+  margin: 0.4rem 0 0.1rem;
+}
+
+/* Booking: month calendar, spacing, summary total, voucher field. */
+.capp-cal {
+  margin: 0.4rem 0 1.2rem;
+}
+.capp-cal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.65rem;
+}
+.capp-cal-head strong {
+  font-size: 1.05rem;
+}
+.capp-cal-head span {
+  display: flex;
+  gap: 0.5rem;
+}
+.capp-cal-head button {
+  display: grid;
+  place-items: center;
+  width: 2.3rem;
+  height: 2.3rem;
+  border-radius: 999px;
+  border: 1px solid var(--capp-line-strong);
+  background: transparent;
+  color: var(--capp-ink);
+  cursor: pointer;
+}
+.capp-cal-head button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+.capp-cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.35rem;
+  text-align: center;
+}
+.capp-cal-grid b {
+  padding: 0.25rem 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--capp-steel);
+}
+.capp-cal-grid button {
+  aspect-ratio: 1;
+  min-height: 2.5rem;
+  border-radius: 0.65rem;
+  border: 1px solid var(--capp-line);
+  background: transparent;
+  color: var(--capp-ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+.capp-cal-grid button:disabled {
+  opacity: 0.28;
+  border-color: transparent;
+  cursor: default;
+}
+.capp-cal-grid button.is-on {
+  background: var(--capp-btn);
+  border-color: var(--capp-btn);
+  color: var(--capp-btn-ink);
+}
+.capp-flow-gap {
+  margin-top: 1.3rem;
+}
+.capp-sum .capp-sum-total dt {
+  font-weight: 700;
+  color: var(--capp-ink);
+}
+.capp-sum-price {
+  font: 800 1.2rem/1.2 inherit;
+  font-family: inherit;
+}
+.capp-voucher-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0 0.9rem;
+  border-radius: var(--capp-radius-sm);
+  border: 1px solid var(--capp-line-strong);
+  background: var(--capp-surface);
+  color: var(--capp-ink);
+  font: inherit;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.capp-voucher-input::placeholder {
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--capp-steel);
+}
+
+/* Rewards: tier first, tappable gift stamps, reward sheet. */
+.capp-pass-head .capp-pass-tier {
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  color: var(--capp-ink);
+}
+.capp-stamp-tap {
+  position: absolute;
+  inset: -4px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+}
+.capp-stamp-tap:focus-visible {
+  outline: 2px solid var(--capp-accent);
+}
+.capp-gift-sheet {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0 0.5rem;
+  text-align: center;
+}
+.capp-gift-sheet-icon {
+  width: 4rem;
+  height: 4rem;
+  margin-bottom: 0.35rem;
+}
+.capp-gift-sheet .capp-btn {
+  margin-top: 0.75rem;
+}
+
+/* Points shop as a store grid. */
+.capp-shop-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+@media (min-width: 861px) {
+  .capp-shop-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.capp-prod {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--capp-line);
+  border-radius: var(--capp-radius);
+  background: var(--capp-surface);
+}
+.capp-prod-img {
+  display: block;
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  background: var(--capp-panel);
+  cursor: pointer;
+}
+.capp-prod-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.capp-prod-in {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.7rem 0.8rem 0.85rem;
+}
+.capp-prod-in strong {
+  font-size: 0.95rem;
+  line-height: 1.25;
+}
+.capp-prod-in b {
+  font-size: 1rem;
+}
+.capp-prod-in em {
+  font-style: normal;
+  font-size: 0.78rem;
+  color: var(--capp-steel);
+}
+.capp-prod-claim {
+  margin-top: auto;
+  min-height: 2.4rem;
+  font-size: 0.75rem;
+}
+.capp-prod-in em + .capp-prod-claim {
+  margin-top: 0.65rem;
+}
+
+/* Cars tab: photo boxes. */
+.capp-cars {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+@media (min-width: 861px) {
+  .capp-cars {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.capp-car-box {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--capp-line);
+  border-radius: var(--capp-radius);
+  background: var(--capp-surface);
+  color: var(--capp-ink);
+}
+.capp-car-photo {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  border: 0;
+  overflow: hidden;
+  background: var(--capp-panel);
+  color: var(--capp-ink);
+  cursor: pointer;
+}
+.capp-car-photo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.capp-car-upload {
+  display: grid;
+  justify-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.capp-car-cam {
+  position: absolute;
+  right: 0.5rem;
+  bottom: 0.5rem;
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  background: rgba(2, 10, 49, 0.75);
+  color: #fff;
+}
+.capp-car-body {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.7rem 0.8rem 0.85rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.capp-car-body em {
+  font-style: normal;
+  font-size: 0.82rem;
+  color: var(--capp-steel);
+}
+.capp-car-add {
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 0.4rem;
+  min-height: 12rem;
+  border-style: dashed;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* Type pass: card headings in the text face. */
+.capp-live-title,
+.capp-title:not(.sr-only),
+.capp-sheet-title,
+.capp-flow-h,
+.capp-flow-done h3 {
+  font-family: inherit;
+  font-style: normal;
+  text-transform: none;
+  letter-spacing: -0.01em;
+  font-weight: 800;
+}
+.capp-live-title {
+  font-size: 1.55rem;
+  line-height: 1.2;
+}
+.capp-flow-h,
+.capp-flow-done h3 {
+  font-size: 1.75rem;
+  line-height: 1.15;
+}
+.capp-profile-progress .capp-eyebrow {
+  margin-bottom: 0.45rem;
+}
+.capp-home-queue .capp-row-end b {
+  font-family: inherit;
+  font-style: normal;
+  font-size: 0.95rem;
+}

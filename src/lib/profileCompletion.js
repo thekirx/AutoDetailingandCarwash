@@ -7,6 +7,7 @@ import { isSyntheticCustomerEmail } from './customerOnboarding.js'
 import { BIRTHDAY_GIFT_LABEL } from './birthdayPerk.js'
 
 const MORE = '/account/more'
+const CARS = '/account/cars'
 
 function hasText(value) {
   return String(value ?? '').trim().length > 0
@@ -67,10 +68,10 @@ function stepDone(id, profile, vehicles) {
 function stepLink(id, vehicles) {
   switch (id) {
     case 'car':
-      return `${MORE}?tab=garage&add=1`
+      return `${CARS}?add=1`
     case 'car_details': {
       const missing = vehicles.find((v) => !hasText(v.vehicle_make) || !hasText(v.vehicle_model))
-      return missing?.id ? `${MORE}?tab=garage&vehicle=${missing.id}` : `${MORE}?tab=garage`
+      return missing?.id ? `${CARS}?vehicle=${missing.id}` : CARS
     }
     case 'birthday':
       return `${MORE}?tab=account#birthday`

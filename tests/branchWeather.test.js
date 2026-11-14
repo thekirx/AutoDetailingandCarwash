@@ -44,4 +44,18 @@ describe('branch weather', () => {
     assert.equal(fallback.lng, 121.0583)
     assert.equal(fallback.source, 'branch')
   })
+
+  it('never says sunny after dark', async () => {
+    assert.equal(weatherForecastLine(0, { isDay: false }), 'Clear skies tonight.')
+    assert.equal(weatherForecastLine(1, { isDay: false }), 'Clear skies tonight.')
+    assert.equal(weatherForecastLine(3, { isDay: false }), "It's cloudy tonight.")
+    assert.equal(weatherForecastLine(61, { isDay: false }), "It's raining tonight.")
+    assert.equal(weatherForecastLine(0, { isDay: true }), "It's sunny today.")
+    const fetchImpl = async () => ({
+      ok: true,
+      json: async () => ({ current: { temperature_2m: 27.6, weather_code: 0, is_day: 0 } }),
+    })
+    const night = await fetchBranchWeather(14.459, 120.929, { fetchImpl, now: 1, storage: null })
+    assert.deepEqual(night, { tempC: 28, label: 'Clear', line: 'Clear skies tonight.' })
+  })
 })

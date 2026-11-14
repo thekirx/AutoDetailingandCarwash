@@ -39,6 +39,7 @@ const CustomerReferralPage = lazy(() => import('./pages/CustomerReferralPage'))
 const CustomerVouchersPage = lazy(() => import('./pages/CustomerVouchersPage'))
 const CustomerVisitPage = lazy(() => import('./pages/CustomerVisitPage'))
 const CustomerMorePage = lazy(() => import('./pages/CustomerMorePage'))
+const CustomerCarsPage = lazy(() => import('./pages/CustomerCarsPage'))
 const ContentAdminPage = lazy(() => import('./pages/ContentAdminPage'))
 
 const PeopleManagePage = lazy(() => import('./pages/PeopleManagePage'))
@@ -173,6 +174,7 @@ export default function App() {
             <Route path="/account/referral" element={<CustomerReferralPage />} />
             <Route path="/account/vouchers" element={<CustomerVouchersPage />} />
             <Route path="/account/more" element={<CustomerMorePage />} />
+            <Route path="/account/cars" element={<CustomerCarsPage />} />
             <Route path="/account/visit" element={<CustomerVisitPage />} />
             <Route path="/account/visit/:id" element={<CustomerVisitPage />} />
           </Route>

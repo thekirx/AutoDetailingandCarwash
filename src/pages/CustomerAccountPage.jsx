@@ -1,15 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
-import { CalendarDays, CalendarPlus, Car, ChevronRight, Radio, Receipt, ThumbsDown, ThumbsUp, Wrench } from 'lucide-react'
+import { CalendarDays, CalendarPlus, Check, ChevronDown, Clock, Droplets, MapPin, Radio, Receipt, Settings, ThumbsDown, ThumbsUp, Wrench } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { formatMoney } from '@/queue/queueApi'
 import { customerQueuePath, queueCountsFromRow } from '@/lib/liveQueuePath'
 import { usePublicQueueCounts } from '@/lib/usePublicQueueCounts'
 import { supabase } from '@/lib/supabase'
-import { CUSTOMER_BOOK_PATH, CUSTOMER_LOYALTY_PATH, CUSTOMER_MORE_PATH, customerVisitPath } from '@/lib/customerAccountNav'
-import CustomerPinControl from '@/components/customer/CustomerPinControl'
-import { branchDistanceKm } from '@/lib/branchGeo'
-import { branchLabel, fetchPortal, greeting, initials, portalAction } from '@/lib/customerPortalClient'
+import { CUSTOMER_BOOK_PATH, CUSTOMER_CARS_PATH, CUSTOMER_MORE_PATH, CUSTOMER_SETTINGS_PATH, customerVisitPath } from '@/lib/customerAccountNav'
+import { DAY_MS, activityInRange, isoDay } from '@/lib/customerActivity'
+import { branchLabel, fetchPortal, greeting, portalAction } from '@/lib/customerPortalClient'
 import { formatDistanceKm } from '@/lib/customerLocation'
 import { useCustomerBranch } from '@/lib/useCustomerBranch'
 import { buildThumbReview } from '@/lib/serviceReviews'
@@ -19,10 +18,9 @@ import CustomerAppFrame from '@/components/CustomerAppFrame'
 import NotificationBell from '@/components/NotificationBell'
 import ActiveVisitCard from '@/components/customer/ActiveVisitCard'
 import BranchWeather from '@/components/customer/BranchWeather'
-import StampTrack from '@/components/customer/StampTrack'
 import { BirthdayGreetingSheet, BirthdayHomeCard } from '@/components/customer/BirthdayGreeting'
 import { ProfileProgressCard } from '@/components/customer/ProfileProgress'
-import { Badge, Pills, QueueStats, Row, SectionHead, Skeleton } from '@/components/customer/CustomerUi'
+import { Badge, Pills, Row, SectionHead, Skeleton } from '@/components/customer/CustomerUi'
 import {
   Dialog,
   DialogContent,
@@ -39,6 +37,11 @@ import {
 } from '@/lib/vehicleTransfer'
 
 const EMPTY_LIST = []
+
+function carsLabel(n) {
+  const count = Number(n) || 0
+  return count === 1 ? '1 car' : `${count} cars`
+}
 
 function formatWhen(iso) {
   if (!iso) return '-'
@@ -77,37 +80,10 @@ function stagePhrase(visit) {
   return STAGE_PHRASES[label] || label || 'booked in'
 }
 
-const NUMBER_WORDS = ['Zero', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten',
-  'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen', 'Twenty']
-
-function numberWord(n) {
-  return NUMBER_WORDS[n] || String(n)
-}
-
-/* Desktop loyalty headline, e.g. "Six down. Nine to go." */
-function stampHeadline(completed = 0, slots = 10) {
-  const left = Math.max(0, slots - completed)
-  if (completed <= 0) return ['Your first stamp', 'is one visit away.']
-  if (left === 0) return ['Card full.', 'Claim your reward.']
-  return [`${numberWord(completed)} down.`, `${numberWord(left).toLowerCase()} to go.`]
-}
-
 const ACTIVITY_TABS = [
   { id: 'history', label: 'Past visits' },
   { id: 'purchases', label: 'Purchases' },
 ]
-
-/** One round shortcut in the phone's quick-action row. */
-function QuickAction({ icon: Icon, title, to }) {
-  return (
-    <Link className="capp-quick-item" to={to}>
-      <span className="capp-quick-icon" aria-hidden>
-        <Icon size={22} strokeWidth={1.75} />
-      </span>
-      {title}
-    </Link>
-  )
-}
 
 export default function CustomerAccountPage() {
   const location = useLocation()
@@ -126,6 +102,9 @@ export default function CustomerAccountPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [tab, setTab] = useState('history')
+  const [activityOpen, setActivityOpen] = useState(false)
+  const [picking, setPicking] = useState(false)
+  const [range, setRange] = useState(null)
   const [ratingOpen, setRatingOpen] = useState(false)
   const [ratingVote, setRatingVote] = useState('')
   const [ratingComment, setRatingComment] = useState('')
@@ -135,21 +114,13 @@ export default function CustomerAccountPage() {
   const [reviewNow, setReviewNow] = useState(() => Date.now())
   const { countsBySlug } = usePublicQueueCounts()
 
-  const {
-    branches,
-    selectedBranch,
-    nearestSlug,
-    pin,
-    locating,
-    selectBranch: setSelectedBranch,
-    updatePin,
-    locateNearest,
-  } = useCustomerBranch(data?.branches || EMPTY_LIST)
+  const { branches, selectedBranch, nearestSlug, nearestDistanceKm, pin, locating, locateNearest } = useCustomerBranch(
+    data?.branches || EMPTY_LIST,
+  )
   const bookings = data?.bookings || EMPTY_LIST
   const history = data?.history || EMPTY_LIST
-  const purchases = data?.purchases || []
+  const purchases = data?.purchases || EMPTY_LIST
   const vehicles = data?.vehicles || []
-  const loyalty = data?.loyalty
   const birthday = data?.birthday
   const dueMaintenance = data?.maintenanceDue || []
   const maintenanceSchedules = data?.maintenanceSchedules || dueMaintenance
@@ -190,10 +161,11 @@ export default function CustomerAccountPage() {
     branches.find((b) => b.slug === selectedBranch) ||
     branches.find((b) => b.slug === activeVisit?.branch) ||
     branches[0]
-  const stampsLine = useMemo(() => {
-    if (!loyalty || loyalty.stampsEnabled === false) return 'Rewards and perks'
-    return `${loyalty.completed ?? 0}/${loyalty.cardSlots ?? 10} stamps`
-  }, [loyalty])
+  const visitsShown = useMemo(
+    () => activityInRange(history, (row) => row.created_at || row.scheduled_start, range),
+    [history, range],
+  )
+  const purchasesShown = useMemo(() => activityInRange(purchases, (row) => row.occurred_at, range), [purchases, range])
 
   useEffect(() => {
     const remaining = reviewDelayRemainingMs([...history, ...bookings], reviewNow)
@@ -292,12 +264,6 @@ export default function CustomerAccountPage() {
               </div>
               <div className="capp-hero-greet">
                 <p className="capp-greet">{greeting()},</p>
-                <BranchWeather
-                  userCoords={pin}
-                  branch={weatherBranch}
-                  onLocate={() => locateNearest({ autoSelectNearest: true }).catch(() => {})}
-                  locating={locating}
-                />
               </div>
               <h1>{firstName || 'there'}</h1>
               <p className="capp-hero-sub">
@@ -306,11 +272,21 @@ export default function CustomerAccountPage() {
                   : 'Your car deserves a great day too.'}
               </p>
             </div>
-            <div className="capp-icon-row account-mobile-only">
-              <NotificationBell variant="capp" homeUrl={`${CUSTOMER_MORE_PATH}?tab=alerts`} homeLabel="Notifications" />
-              <Link className="capp-avatar" to={CUSTOMER_MORE_PATH} aria-label="Settings">
-                {initials(fullName) || <Car size={18} strokeWidth={1.75} aria-hidden />}
-              </Link>
+            {/* Right side: bell + gear (Settings), and the weather under them. */}
+            <div className="capp-hero-side">
+              <div className="capp-icon-row account-mobile-only">
+                <NotificationBell variant="capp" homeUrl={`${CUSTOMER_MORE_PATH}?tab=alerts`} homeLabel="Notifications" />
+                <Link className="capp-avatar capp-gear" to={CUSTOMER_SETTINGS_PATH} aria-label="Settings">
+                  <Settings size={20} strokeWidth={1.75} aria-hidden />
+                </Link>
+              </div>
+              <BranchWeather
+                userCoords={pin}
+                branch={weatherBranch}
+                onLocate={() => locateNearest({ autoSelectNearest: true }).catch(() => {})}
+                locating={locating}
+                className="capp-weather--side"
+              />
             </div>
           </div>
           {/* Desktop: the hero is the visit, like the site's own page heroes —
@@ -449,76 +425,6 @@ export default function CustomerAccountPage() {
 
       {!loading && data?.profile ? <ProfileProgressCard profile={data.profile} vehicles={vehicles} /> : null}
 
-      {/* Adding a car lives inside My cars; with none saved, the shortcut opens
-          straight on the add form ("Add your first car"). */}
-      <nav className="capp-quick capp-span capp-phone-only" aria-label="Shortcuts">
-        <QuickAction icon={CalendarPlus} title="Book" to={CUSTOMER_BOOK_PATH} />
-        <QuickAction icon={Radio} title="Queue" to={queueHref} />
-        <QuickAction
-          icon={Car}
-          title="My cars"
-          to={vehicles.length ? `${CUSTOMER_MORE_PATH}?tab=garage` : `${CUSTOMER_MORE_PATH}?tab=garage&add=1`}
-        />
-        <QuickAction icon={CalendarDays} title="Events" to="/account/events" />
-      </nav>
-      {!vehicles.length && !loading ? <p className="capp-quick-note capp-span capp-phone-only">Add your first car in My cars and booking is one tap.</p> : null}
-
-      {loyalty && loyalty.stampsEnabled !== false ? (
-        <section className="capp-section capp-span capp-phone-only" aria-label="Rewards">
-          <SectionHead title="Rewards" to={CUSTOMER_LOYALTY_PATH} linkLabel="See all" />
-          <Link className="capp-pass-mini" to={CUSTOMER_LOYALTY_PATH}>
-            <span className="capp-pass-mini-n">
-              {loyalty.completed ?? 0}
-              <small> / {loyalty.cardSlots ?? 10} stamps</small>
-            </span>
-            <ChevronRight className="capp-pass-mini-chev" size={20} strokeWidth={2} aria-hidden />
-            <span className="capp-pass-mini-p">
-              {loyalty.nextMilestone
-                ? `${Math.max(0, Number(loyalty.nextMilestone.threshold_points) - Number(loyalty.completed || 0))} more to ${loyalty.nextMilestone.reward_label}`
-                : loyalty.encouragement || 'Thanks for coming back.'}
-            </span>
-            <span className="capp-pass-mini-segs" style={{ '--n': loyalty.cardSlots ?? 10 }} aria-hidden>
-              {Array.from({ length: Number(loyalty.cardSlots) || 10 }, (_, i) => {
-                const gift = (loyalty.milestones || []).some((m) => Number(m.threshold_points) === i + 1)
-                return <i key={i} className={`${i < (loyalty.completed ?? 0) ? 'is-on' : ''}${gift ? ' is-gift' : ''}`} />
-              })}
-            </span>
-          </Link>
-        </section>
-      ) : null}
-
-      {loyalty && loyalty.stampsEnabled !== false ? (
-        <Link className="capp-card capp-loyalty-home capp-span capp-desk-only" to={CUSTOMER_LOYALTY_PATH}>
-          <div className="capp-card-row">
-            <div className="min-w-0">
-              <p className="capp-eyebrow">Loyalty</p>
-              <h2 className="capp-title">Loyalty program</h2>
-              <p className="capp-meta">{stampsLine}</p>
-              {loyalty.pointsEnabled !== false ? (
-                <p className="capp-meta">{loyalty.loyaltyPoints ?? 0} points</p>
-              ) : null}
-              <p className="capp-desk-section-title" aria-hidden="true">
-                {stampHeadline(loyalty.completed ?? 0, loyalty.cardSlots ?? 10)[0]}{' '}
-                <em>{stampHeadline(loyalty.completed ?? 0, loyalty.cardSlots ?? 10)[1]}</em>
-              </p>
-
-            </div>
-          </div>
-          <StampTrack
-            slots={loyalty.cardSlots}
-            completed={loyalty.completed}
-            gifts={(loyalty.milestones || []).map((m) => m.threshold_points)}
-          />
-          <span className="capp-loyalty-link">View rewards <span aria-hidden="true">↗</span></span>
-        </Link>
-      ) : (
-        <Link className="capp-card capp-span capp-desk-only" to={CUSTOMER_LOYALTY_PATH}>
-          <p className="capp-eyebrow">Loyalty</p>
-          <h2 className="capp-title">Loyalty program</h2>
-          <p className="capp-meta">Rewards and perks</p>
-        </Link>
-      )}
-
       {/* Desktop: the garage gets its own section, as on the site's pages.
           Adding a car still happens inside My cars. */}
       <section className="capp-desk-garage capp-span" aria-label="Your garage">
@@ -530,7 +436,7 @@ export default function CustomerAccountPage() {
               <em>{vehicles.length ? 'saved.' : 'yet.'}</em>
             </h2>
           </div>
-          <Link className="capp-btn capp-btn-ghost" to={vehicles.length ? `${CUSTOMER_MORE_PATH}?tab=garage` : `${CUSTOMER_MORE_PATH}?tab=garage&add=1`}>
+          <Link className="capp-btn capp-btn-ghost" to={vehicles.length ? CUSTOMER_CARS_PATH : `${CUSTOMER_CARS_PATH}?add=1`}>
             Open My cars
           </Link>
         </div>
@@ -549,47 +455,25 @@ export default function CustomerAccountPage() {
         )}
       </section>
 
-      <section className="capp-section capp-span" aria-label="Your branch and live queue">
-        <SectionHead
-          title="Your branch & live queue"
-          note={selectedBranch ? (nearestSlug === selectedBranch ? `Nearest · ${branchLabel(branches, selectedBranch)}` : branchLabel(branches, selectedBranch)) : 'Choose a branch'}
-          to={selectedBranch ? queueHref : undefined}
-        />
-        <label className="capp-field">
-          <span>Active branch for booking &amp; pickup</span>
-          <select
-            className="capp-select"
-            aria-label="Choose a branch to check the live queue"
-            value={selectedBranch}
-            onChange={(e) => setSelectedBranch(e.target.value)}
-          >
-            {pin ? null : <option value="">Select a branch first</option>}
-            {branches.map((b) => {
-              const km = pin ? branchDistanceKm(pin, b) : null
-              const away = km == null ? '' : ` · ${formatDistanceKm(km)}`
-              const tag = nearestSlug === b.slug ? ' (Nearest)' : ''
-              return (
-                <option key={b.slug} value={b.slug}>
-                  {b.name}{away}{tag}
-                </option>
-              )
-            })}
-          </select>
-        </label>
-        <CustomerPinControl
-          branches={branches}
-          currentSlug={selectedBranch}
-          pin={pin}
-          onPin={(nextPin) => updatePin(nextPin, { autoSelectNearest: false })}
-          onChoose={setSelectedBranch}
-        />
-        {selectedBranch ? (
-          <QueueStats counts={selectedCounts} />
-        ) : (
-          <p className="capp-meta">Pick a branch to see waiting, in-progress, and checking counts.</p>
-        )}
+      <section className="capp-section capp-span capp-home-queue" aria-label="Live queue">
+        <SectionHead title="Live queue" to={queueHref} linkLabel="Open" />
+        <div className="capp-group">
+          <Row
+            icon={MapPin}
+            title={branchLabel(branches, selectedBranch) || 'Choose a branch'}
+            sub={
+              selectedBranch && nearestSlug === selectedBranch
+                ? `Closest branch to you${nearestDistanceKm != null ? ` · ${formatDistanceKm(nearestDistanceKm)}` : ''}`
+                : 'Change it on the Queue tab'
+            }
+            to={queueHref}
+            chevron
+          />
+          <Row icon={Clock} title="Waiting" end={<b>{carsLabel(selectedCounts.waiting)}</b>} />
+          <Row icon={Droplets} title="In wash" end={<b>{carsLabel(selectedCounts.in_progress)}</b>} />
+          <Row icon={Check} title="Final check" end={<b>{carsLabel(selectedCounts.final_checking)}</b>} />
+        </div>
       </section>
-
 
       {!loading && !ratingDone && reviewVisit ? (
         <section className="capp-card capp-span" aria-label="Rate your last visit">
@@ -666,53 +550,111 @@ export default function CustomerAccountPage() {
         </section>
       ) : null}
 
-      <section className="capp-section capp-span" aria-labelledby="activity-heading">
-        <SectionHead title={<span id="activity-heading">Recent activity</span>} />
-        <Pills items={ACTIVITY_TABS} value={tab} onChange={setTab} label="Activity" />
-        <div className="capp-list">
-          {loading ? (
-            <Skeleton n={2} />
-          ) : tab === 'history' ? (
-            history.length === 0 ? (
-              <div className="capp-empty">
-                <strong>No past visits yet</strong>
-                Completed services show up here.
-              </div>
-            ) : (
-              history.slice(0, 8).map((row) => (
-                <Row
-                  key={row.id}
-                  to={customerVisitPath(row.id)}
-                  icon={CalendarDays}
-                  title={row.vehicle_plate || 'Visit'}
-                  sub={`${formatWhen(row.created_at || row.scheduled_start)} · ${branchLabel(branches, row.branch) || row.branch}`}
-                  end={
-                    <>
-                      <b>{formatMoney(row.final_price_minor)}</b>
-                      <Badge status={row.status} label={row.status} />
-                    </>
-                  }
-                />
-              ))
-            )
-          ) : purchases.length === 0 ? (
-            <div className="capp-empty">
-              <strong>No store purchases linked</strong>
-              Ask the shop to search your name or plate at checkout.
+      <section className={`capp-section capp-span capp-activity${activityOpen ? ' is-open' : ''}`} aria-labelledby="activity-heading">
+        <button
+          type="button"
+          className="capp-sect capp-activity-toggle"
+          aria-expanded={activityOpen}
+          aria-controls="activity-panel"
+          onClick={() => setActivityOpen((v) => !v)}
+        >
+          <h2 id="activity-heading">
+            Recent activity
+            <small>{range ? 'Picked dates' : 'Last month'}</small>
+          </h2>
+          <span className="capp-link">
+            {activityOpen ? 'Hide' : 'Show'}
+            <ChevronDown size={16} strokeWidth={2} aria-hidden />
+          </span>
+        </button>
+        {activityOpen ? (
+          <div id="activity-panel">
+            <Pills items={ACTIVITY_TABS} value={tab} onChange={setTab} label="Activity" />
+            <div className="capp-activity-filter" role="group" aria-label="Dates">
+              <button
+                type="button"
+                className={`capp-chip${!range && !picking ? ' is-on' : ''}`}
+                onClick={() => {
+                  setRange(null)
+                  setPicking(false)
+                }}
+              >
+                <CalendarDays size={15} strokeWidth={1.9} aria-hidden />
+                Last month
+              </button>
+              <button type="button" className={`capp-chip${range || picking ? ' is-on' : ''}`} onClick={() => setPicking(true)}>
+                Pick dates
+              </button>
             </div>
-          ) : (
-            purchases.slice(0, 8).map((row) => (
-              <Row
-                key={row.id}
-                as="article"
-                icon={Receipt}
-                title="Store purchase"
-                sub={`${formatWhen(row.occurred_at)}${row.branch ? ` · ${branchLabel(branches, row.branch)}` : ''} · ${row.payment_method || 'paid'}`}
-                end={<b>{formatMoney(row.total_minor)}</b>}
-              />
-            ))
-          )}
-        </div>
+            {picking ? (
+              <div className="capp-two capp-activity-dates">
+                <label className="capp-field">
+                  <span>From</span>
+                  <input
+                    type="date"
+                    max={isoDay(Date.now())}
+                    value={range?.from || isoDay(Date.now() - 30 * DAY_MS)}
+                    onChange={(e) => setRange((r) => ({ to: r?.to || isoDay(Date.now()), from: e.target.value }))}
+                  />
+                </label>
+                <label className="capp-field">
+                  <span>To</span>
+                  <input
+                    type="date"
+                    max={isoDay(Date.now())}
+                    value={range?.to || isoDay(Date.now())}
+                    onChange={(e) => setRange((r) => ({ from: r?.from || isoDay(Date.now() - 30 * DAY_MS), to: e.target.value }))}
+                  />
+                </label>
+              </div>
+            ) : null}
+            <div className="capp-group">
+              {loading ? (
+                <Skeleton n={2} />
+              ) : tab === 'history' ? (
+                visitsShown.length === 0 ? (
+                  <div className="capp-empty">
+                    <strong>{history.length ? 'No visits in these dates' : 'No past visits yet'}</strong>
+                    {history.length ? 'Pick other dates to see older visits.' : 'Completed services show up here.'}
+                  </div>
+                ) : (
+                  visitsShown.map((row) => (
+                    <Row
+                      key={row.id}
+                      to={customerVisitPath(row.id)}
+                      icon={CalendarDays}
+                      title={[row.service_name || row.services?.name, row.vehicle_plate].filter(Boolean).join(' · ') || 'Visit'}
+                      sub={`${formatWhen(row.created_at || row.scheduled_start)} · ${branchLabel(branches, row.branch) || row.branch}`}
+                      end={
+                        <>
+                          <b>{formatMoney(row.final_price_minor)}</b>
+                          <Badge status={row.status} label={row.status} />
+                        </>
+                      }
+                      chevron
+                    />
+                  ))
+                )
+              ) : purchasesShown.length === 0 ? (
+                <div className="capp-empty">
+                  <strong>{purchases.length ? 'No purchases in these dates' : 'No store purchases linked'}</strong>
+                  {purchases.length ? 'Pick other dates to see older purchases.' : 'Ask the shop to search your name or plate at checkout.'}
+                </div>
+              ) : (
+                purchasesShown.map((row) => (
+                  <Row
+                    key={row.id}
+                    as="article"
+                    icon={Receipt}
+                    title="Store purchase"
+                    sub={`${formatWhen(row.occurred_at)}${row.branch ? ` · ${branchLabel(branches, row.branch)}` : ''} · ${row.payment_method || 'paid'}`}
+                    end={<b>{formatMoney(row.total_minor)}</b>}
+                  />
+                ))
+              )}
+            </div>
+          </div>
+        ) : null}
       </section>
     </CustomerAppFrame>
   )

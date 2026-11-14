@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from 'react'
-import { CalendarPlus, Gift, Home, Radio, UserRound } from 'lucide-react'
+import { CalendarPlus, Car, Gift, Home, Radio } from 'lucide-react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { customerAccountTabId, getCustomerAccountTabs } from '@/lib/customerAccountNav'
 import { ACTIVE_VISIT_EVENT, hasActiveVisit } from '@/lib/customerPortalClient'
@@ -9,7 +9,7 @@ const ICONS = {
   queue: Radio,
   book: CalendarPlus,
   rewards: Gift,
-  me: UserRound,
+  cars: Car,
 }
 
 function subscribe(cb) {

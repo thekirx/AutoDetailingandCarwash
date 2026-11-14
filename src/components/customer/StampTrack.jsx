@@ -1,7 +1,8 @@
 import { Gift } from 'lucide-react'
 
 /** Bounded Hakum logo stamps; labels preserve earned and reward states without relying on color. */
-export default function StampTrack({ slots = 10, completed = 0, gifts = [], compact = false }) {
+/** `onGift(n)` makes reward stamps tappable (Rewards opens a sheet for that reward). */
+export default function StampTrack({ slots = 10, completed = 0, gifts = [], compact = false, onGift }) {
   const total = Math.min(24, Math.max(1, Number(slots) || 10))
   const earned = Math.min(Number(completed) || 0, total)
   const giftAt = new Set((gifts || []).map((n) => Number(n)))
@@ -21,6 +22,9 @@ export default function StampTrack({ slots = 10, completed = 0, gifts = [], comp
             <span className="capp-stamp-mark" aria-hidden="true" />
             <span className="capp-stamp-number" aria-hidden="true">{n}</span>
             {gift ? <Gift className="capp-stamp-gift" size={compact ? 11 : 13} strokeWidth={2} aria-hidden="true" /> : null}
+            {gift && onGift ? (
+              <button type="button" className="capp-stamp-tap" onClick={() => onGift(n)} aria-label={`See the reward at stamp ${n}`} />
+            ) : null}
           </li>
         )
       })}

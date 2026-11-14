@@ -1,12 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import {
   Bell,
   Cake,
   CalendarDays,
   Camera,
-  Car,
-  ChevronRight,
   Gift,
   KeyRound,
   LifeBuoy,
@@ -31,10 +29,10 @@ import { getAccessTokenFresh } from '@/lib/authToken'
 import { loadUserSettings, saveSmsOptIn } from '@/lib/userSettings'
 import { isSyntheticCustomerEmail } from '@/lib/customerOnboarding'
 import { isValidCustomerPlate, plateValidationError, PLATE_FIELD_HINT, safeVehiclePhotoUrl } from '@/lib/customerAuth'
-import { VEHICLE_ICON_PRESETS, normalizeVehicleIcon, vehicleIconGlyph } from '@/lib/ownerRevisionsPhase7'
+import { VEHICLE_ICON_PRESETS, normalizeVehicleIcon } from '@/lib/ownerRevisionsPhase7'
 import { normalizePricingSize, PRICING_SIZES } from '@/lib/servicePricing'
 import { fetchPortal, initials, portalAction } from '@/lib/customerPortalClient'
-import { CUSTOMER_BOOK_PATH, CUSTOMER_LOYALTY_PATH, CUSTOMER_MORE_PATH, CUSTOMER_REFERRAL_PATH, CUSTOMER_VOUCHERS_PATH } from '@/lib/customerAccountNav'
+import { CUSTOMER_BOOK_PATH, CUSTOMER_CARS_PATH, CUSTOMER_LOYALTY_PATH, CUSTOMER_MORE_PATH, CUSTOMER_REFERRAL_PATH, CUSTOMER_VOUCHERS_PATH } from '@/lib/customerAccountNav'
 import { notificationHref } from '@/lib/notificationUrl'
 import { usePageMeta } from '@/lib/pageMeta'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
@@ -47,7 +45,6 @@ import { ProfileChecklist } from '@/components/customer/ProfileProgress'
 
 const TAB_TITLES = {
   account: ['My profile', 'Email, phone, birthday, and password.'],
-  garage: ['My cars', 'Plates saved to your account.'],
   alerts: ['Notifications', 'Push, text messages, and your inbox.'],
 }
 
@@ -58,9 +55,9 @@ function formatWhen(iso) {
   return new Date(iso).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
-/** /account/more — settings hub. `?tab=account|garage|alerts` opens a section; `&vehicle=<id>` edits a car. */
+/** /account/more — Settings (opened from the gear on Home). `?tab=account|alerts` opens a section. My cars lives at /account/cars. */
 export default function CustomerMorePage() {
-  const [params, setParams] = useSearchParams()
+  const [params] = useSearchParams()
   const tab = params.get('tab') || ''
   const navigate = useNavigate()
   const { user, profile: authProfile, signOut } = useAuth()
@@ -85,37 +82,19 @@ export default function CustomerMorePage() {
   const fullName = profile.full_name || ''
   const email = isSyntheticCustomerEmail(profile.email) ? '' : profile.email || ''
 
+  // Old "My cars" links (?tab=garage) now open the Cars tab.
+  if (tab === 'garage') {
+    const next = new URLSearchParams()
+    if (params.get('vehicle')) next.set('vehicle', params.get('vehicle'))
+    if (params.get('add')) next.set('add', params.get('add'))
+    const qs = next.toString()
+    return <Navigate to={qs ? `${CUSTOMER_CARS_PATH}?${qs}` : CUSTOMER_CARS_PATH} replace />
+  }
+
   if (tab && meta) {
     return (
-      <CustomerAppFrame
-        title={meta[0]}
-        subtitle={meta[1]}
-        backTo={CUSTOMER_MORE_PATH}
-        backLabel="Me"
-        actions={
-          tab === 'garage' ? (
-            <button
-              type="button"
-              className="capp-icon-btn"
-              aria-label="Add a car"
-              onClick={() => setParams({ tab: 'garage', add: '1' }, { replace: true })}
-            >
-              <Plus size={20} strokeWidth={2} aria-hidden />
-            </button>
-          ) : null
-        }
-      >
+      <CustomerAppFrame title={meta[0]} subtitle={meta[1]} backTo={CUSTOMER_MORE_PATH} backLabel="Settings">
         {tab === 'account' ? <AccountSection profile={profile} onUpdated={load} /> : null}
-        {tab === 'garage' ? (
-          <GarageSection
-            vehicles={vehicles}
-            loaded={Boolean(portal)}
-            editId={params.get('vehicle') || ''}
-            startAdding={params.get('add') === '1'}
-            onEdit={(id) => setParams(id ? { tab: 'garage', vehicle: id } : { tab: 'garage' }, { replace: true })}
-            onUpdated={load}
-          />
-        ) : null}
         {tab === 'alerts' ? <AlertsSection phone={profile.phone} smsOptIn={smsOptIn} setSmsOptIn={setSmsOptIn} /> : null}
       </CustomerAppFrame>
     )
@@ -123,8 +102,10 @@ export default function CustomerMorePage() {
 
   return (
     <CustomerAppFrame
-      title="Me"
-      navTitle={fullName || 'Me'}
+      title="Settings"
+      navTitle="Settings"
+      backTo="/account"
+      backLabel="Home"
       actions={<NotificationBell variant="capp" homeUrl={`${CUSTOMER_MORE_PATH}?tab=alerts`} homeLabel="Notifications" />}
       cols
     >
@@ -143,13 +124,6 @@ export default function CustomerMorePage() {
       </Link>
 
       {portal ? <ProfileChecklist profile={profile} vehicles={vehicles} /> : null}
-
-      <section className="capp-section" aria-label="Garage">
-        <SectionHead title="Garage" />
-        <div className="capp-group">
-          <Row icon={Car} title="My cars" end={vehicles.length ? `${vehicles.length}` : ''} chevron to={`${CUSTOMER_MORE_PATH}?tab=garage`} />
-        </div>
-      </section>
 
       <section className="capp-section" aria-label="Account">
         <SectionHead title="Account" />
@@ -416,11 +390,41 @@ function AccountSection({ profile, onUpdated }) {
   )
 }
 
-function GarageSection({ vehicles, loaded, editId, onEdit, onUpdated, startAdding = false }) {
+/** Upload a car photo to the vehicle-photos bucket and return its public URL (null when it fails). */
+async function uploadCarPhoto(file) {
+  if (!file) return null
+  if (!file.type.startsWith('image/')) {
+    toast.error('Please select an image file')
+    return null
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    toast.error('Image must be under 5 MB')
+    return null
+  }
+  const ext = file.name.split('.').pop() || 'jpg'
+  const path = `vehicles/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
+  const { error } = await supabase.storage.from('vehicle-photos').upload(path, file, { upsert: false })
+  if (error) {
+    toast.warning('Upload failed. Try again, or paste a photo URL in Edit details.')
+    return null
+  }
+  const { data: urlData } = supabase.storage.from('vehicle-photos').getPublicUrl(path)
+  return urlData?.publicUrl || null
+}
+
+function sizeLabel(slug) {
+  return PRICING_SIZES.find((sz) => sz.slug === normalizePricingSize(slug))?.label || ''
+}
+
+/** My cars as photo boxes. Tap the photo to upload one; tap the plate for Book / Edit / Remove. */
+export function GarageSection({ vehicles, loaded, editId, onEdit, onUpdated, startAdding = false }) {
   const navigate = useNavigate()
   const [adding, setAdding] = useState(startAdding)
   const [picked, setPicked] = useState(null)
   const [confirming, setConfirming] = useState(false)
+  const [uploadingId, setUploadingId] = useState('')
+  const photoInput = useRef(null)
+  const photoFor = useRef(null)
   const editing = vehicles.find((v) => v.id === editId) || null
   const showForm = adding || Boolean(editing)
 
@@ -444,36 +448,44 @@ function GarageSection({ vehicles, loaded, editId, onEdit, onUpdated, startAddin
     }
   }
 
+  function pickPhoto(v) {
+    photoFor.current = v
+    photoInput.current?.click()
+  }
+
+  async function savePhoto(e) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    const v = photoFor.current
+    if (!file || !v) return
+    setUploadingId(v.id)
+    try {
+      const url = await uploadCarPhoto(file)
+      if (!url) return
+      await portalAction('update-vehicle', {
+        vehicle_id: v.id,
+        plate_number: v.plate_number,
+        vehicle_make: v.vehicle_make || '',
+        vehicle_model: v.vehicle_model || '',
+        vehicle_type: v.vehicle_type || '',
+        color: v.color || '',
+        icon: v.icon || '',
+        photo_url: url,
+      })
+      toast.success('Photo saved')
+      onUpdated?.()
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setUploadingId('')
+    }
+  }
+
   if (!loaded) return <Skeleton n={2} />
 
   return (
     <>
-      {vehicles.length && !showForm ? (
-        <div className="capp-group capp-garage">
-          {vehicles.map((v) => (
-            <button key={v.id} type="button" className="capp-row" onClick={() => setPicked(v)}>
-              {v.photo_url ? (
-                <img className="capp-thumb" src={v.photo_url} alt="" />
-              ) : (
-                <span className="capp-row-icon" aria-hidden>
-                  {v.icon ? vehicleIconGlyph(v.icon) : <Car size={18} strokeWidth={1.75} />}
-                </span>
-              )}
-              <span className="capp-row-body">
-                <strong className="capp-plate">{v.plate_number}</strong>
-                <em>{[v.vehicle_make, v.vehicle_model, v.color].filter(Boolean).join(' · ') || 'Saved vehicle'}</em>
-              </span>
-              <ChevronRight className="capp-row-chevron" size={18} strokeWidth={1.75} aria-hidden />
-            </button>
-          ))}
-        </div>
-      ) : !showForm ? (
-        <div className="capp-empty">
-          <strong>No cars on file yet</strong>
-          Save a plate so booking and queue tracking are one tap.
-        </div>
-      ) : null}
-
+      <input ref={photoInput} type="file" accept="image/jpeg,image/png,image/webp,image/gif" hidden onChange={savePhoto} />
       {showForm ? (
         <CarForm
           key={editing?.id || 'new'}
@@ -489,11 +501,43 @@ function GarageSection({ vehicles, loaded, editId, onEdit, onUpdated, startAddin
           }}
         />
       ) : (
-        <button type="button" className="capp-btn capp-btn-accent capp-btn-block" onClick={() => setAdding(true)}>
-          <Plus size={16} strokeWidth={2} aria-hidden />
-          Add a car
-        </button>
+        <div className="capp-cars capp-span">
+          {vehicles.map((v) => (
+            <article key={v.id} className="capp-car-box">
+              <button
+                type="button"
+                className="capp-car-photo"
+                onClick={() => pickPhoto(v)}
+                disabled={uploadingId === v.id}
+                aria-label={v.photo_url ? `Change the photo of ${v.plate_number}` : `Upload a photo of ${v.plate_number}`}
+              >
+                {v.photo_url && safeVehiclePhotoUrl(v.photo_url) ? (
+                  <img src={v.photo_url} alt="" loading="lazy" />
+                ) : (
+                  <span className="capp-car-upload">
+                    <Camera size={24} strokeWidth={1.75} aria-hidden />
+                    {uploadingId === v.id ? 'Uploading…' : 'Upload photo'}
+                  </span>
+                )}
+                {v.photo_url ? (
+                  <span className="capp-car-cam" aria-hidden>
+                    <Camera size={15} strokeWidth={2} />
+                  </span>
+                ) : null}
+              </button>
+              <button type="button" className="capp-car-body" onClick={() => setPicked(v)}>
+                <strong className="capp-plate">{v.plate_number}</strong>
+                <em>{[[v.vehicle_make, v.vehicle_model].filter(Boolean).join(' '), sizeLabel(v.vehicle_type)].filter(Boolean).join(' · ') || 'Saved car'}</em>
+              </button>
+            </article>
+          ))}
+          <button type="button" className="capp-car-box capp-car-add" onClick={() => setAdding(true)}>
+            <Plus size={24} strokeWidth={2} aria-hidden />
+            Add a car
+          </button>
+        </div>
       )}
+      {!showForm && !vehicles.length ? <p className="capp-meta capp-span">Save a plate so booking and queue tracking are one tap.</p> : null}
 
       <Sheet open={Boolean(picked)} onClose={closeSheet} label={picked ? `${picked.plate_number} actions` : 'Car actions'}>
         {picked ? (
@@ -534,7 +578,7 @@ function GarageSection({ vehicles, loaded, editId, onEdit, onUpdated, startAddin
   )
 }
 
-function CarForm({ vehicle, onDone, onCancel }) {
+export function CarForm({ vehicle, onDone, onCancel }) {
   const [car, setCar] = useState(
     vehicle
       ? {
@@ -559,17 +603,10 @@ function CarForm({ vehicle, onDone, onCancel }) {
     if (!file.type.startsWith('image/')) return toast.error('Please select an image file')
     if (file.size > 5 * 1024 * 1024) return toast.error('Image must be under 5 MB')
     setPhotoUploading(true)
-    const ext = file.name.split('.').pop() || 'jpg'
-    const path = `vehicles/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`
-    const { error } = await supabase.storage.from('vehicle-photos').upload(path, file, { upsert: false })
+    const url = await uploadCarPhoto(file)
     setPhotoUploading(false)
-    if (error) {
-      // ponytail: storage bucket may not exist; fall back to manual URL
-      toast.warning('Upload failed. Paste a URL instead.')
-      return
-    }
-    const { data: urlData } = supabase.storage.from('vehicle-photos').getPublicUrl(path)
-    setCar((c) => ({ ...c, photo_url: urlData?.publicUrl || '' }))
+    if (!url) return
+    setCar((c) => ({ ...c, photo_url: url }))
     toast.success('Photo uploaded')
   }
 

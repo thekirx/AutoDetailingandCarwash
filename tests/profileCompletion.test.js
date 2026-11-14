@@ -37,7 +37,7 @@ describe('profileCompletion', () => {
     )
     assert.equal(p.percent, 80)
     assert.equal(p.next.id, 'car_details')
-    assert.equal(p.next.to, '/account/more?tab=garage&vehicle=v2')
+    assert.equal(p.next.to, '/account/cars?vehicle=v2')
   })
 
   it('make & model is not done without a car', () => {
@@ -48,7 +48,7 @@ describe('profileCompletion', () => {
   it('orders next as birthday, email, car, make & model', () => {
     assert.equal(profileCompletion({ ...base, date_of_birth: '1994-08-11' }, []).next.id, 'email')
     assert.equal(profileCompletion({ ...base, date_of_birth: '1994-08-11', email: 'a@b.co' }, []).next.id, 'car')
-    assert.equal(profileCompletion({ ...base, date_of_birth: '1994-08-11', email: 'a@b.co' }, []).next.to, '/account/more?tab=garage&add=1')
+    assert.equal(profileCompletion({ ...base, date_of_birth: '1994-08-11', email: 'a@b.co' }, []).next.to, '/account/cars?add=1')
   })
 
   it('tolerates a missing profile', () => {

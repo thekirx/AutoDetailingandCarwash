@@ -9,34 +9,36 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const read = (p) => readFileSync(join(root, p), 'utf8')
 
 describe('customer account bottom nav', () => {
-  it('ships the five-tab floating dock: Home, Queue, Book, Rewards, Me', () => {
+  it('ships the five-tab floating dock: Home, Queue, Book, Rewards, Cars', () => {
     const tabs = getCustomerAccountTabs()
-    assert.deepEqual(tabs.map((t) => t.label), ['Home', 'Queue', 'Book', 'Rewards', 'Me'])
+    assert.deepEqual(tabs.map((t) => t.label), ['Home', 'Queue', 'Book', 'Rewards', 'Cars'])
     assert.equal(tabs.find((t) => t.id === 'queue').to, '/account/queue')
     assert.equal(tabs.find((t) => t.id === 'book').to, '/account/book')
     assert.equal(tabs.find((t) => t.id === 'rewards').to, '/account/loyalty')
-    assert.equal(tabs.find((t) => t.id === 'me').to, '/account/more')
+    assert.equal(tabs.find((t) => t.id === 'cars').to, '/account/cars')
   })
 
-  it('maps account routes to the active tab (blog + events live under Me, a visit under Home)', () => {
+  it('maps account routes to the active tab (settings, blog + events sit behind the gear, a visit under Home)', () => {
     assert.equal(customerAccountTabId('/account'), 'home')
     assert.equal(customerAccountTabId('/account/book'), 'book')
-    assert.equal(customerAccountTabId('/account/blog'), 'me')
-    assert.equal(customerAccountTabId('/account/events'), 'me')
+    assert.equal(customerAccountTabId('/account/blog'), '')
+    assert.equal(customerAccountTabId('/account/events'), '')
     assert.equal(customerAccountTabId('/account/loyalty'), 'rewards')
     assert.equal(customerAccountTabId('/account/referral'), 'rewards')
     assert.equal(customerAccountTabId('/account/vouchers'), 'rewards')
-    assert.equal(customerAccountTabId('/account/more'), 'me')
+    assert.equal(customerAccountTabId('/account/more'), '')
+    assert.equal(customerAccountTabId('/account/cars'), 'cars')
     assert.equal(customerAccountTabId('/account/queue'), 'queue')
     assert.equal(customerAccountTabId('/queue/bacoor'), 'queue')
     assert.equal(customerAccountTabId('/account/visit/b1'), 'home')
   })
 
   it('knows tab screens from pushed screens, so pushes slide in and tabs only fade', () => {
-    for (const path of ['/account', '/account/queue', '/account/book', '/account/loyalty', '/account/more']) {
+    for (const path of ['/account', '/account/queue', '/account/book', '/account/loyalty', '/account/cars']) {
       assert.equal(customerScreenDepth(path, ''), 0, path)
     }
-    assert.equal(customerScreenDepth('/account/more', '?tab=garage'), 1)
+    assert.equal(customerScreenDepth('/account/more', ''), 1)
+    assert.equal(customerScreenDepth('/account/cars', '?vehicle=v1'), 1)
     assert.equal(customerScreenDepth('/account/events', ''), 1)
     assert.equal(customerScreenDepth('/account/referral', ''), 1)
     assert.equal(customerScreenDepth('/account/vouchers', ''), 1)
@@ -50,7 +52,7 @@ describe('customer account bottom nav', () => {
     assert.match(read('src/App.jsx'), /path="\/account\/visit\/:id"/)
   })
 
-  it('the app opens in the website colours, with Light and Dark in Me', () => {
+  it('the app opens in the website colours, with Light and Dark in Settings', () => {
     assert.match(read('src/lib/customerAppTheme.js'), /=== 'light' \? 'light' : 'dark'/)
     assert.match(read('src/components/CustomerAppFrame.jsx'), /data-app-theme=\{theme\}/)
     assert.match(read('src/pages/CustomerMorePage.jsx'), /AppearanceRow/)

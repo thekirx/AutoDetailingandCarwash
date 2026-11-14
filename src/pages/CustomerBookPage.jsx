@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { CalendarDays, Car, Check, CheckCircle2, ChevronLeft, ChevronRight, Droplets, MapPin, Plus } from 'lucide-react'
+import { Check, CheckCircle2, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
 import { supabase } from '@/lib/supabase'
@@ -13,35 +13,30 @@ import { packagesForService, bookedDetailingServiceId } from '@/lib/detailingPac
 import { pointsLabel } from '@/lib/loyaltyPoints'
 import { seedBookingFromVehicle } from '@/lib/uiDeadControls'
 import { plateValidationError, PLATE_FIELD_HINT } from '@/lib/customerAuth'
-import { bookableDayDates, earliestBookableDay } from '@/lib/bookingLead'
+import { earliestBookableDay } from '@/lib/bookingLead'
 import { branchDistanceKm } from '@/lib/branchGeo'
 import { formatDistanceKm, loadCustomerBranch, loadCustomerPin, resolveCustomerBranchChoice } from '@/lib/customerLocation'
 import { useCustomerBranch } from '@/lib/useCustomerBranch'
 import ReferralSourceFields, { useReferralStaff } from '@/components/bookings/ReferralSourceFields'
-import { friendCodeAccountError, referralRequiredError } from '@/lib/referralSource'
+import { friendCodeAccountError, referralRequiredError, referralSourceLabel } from '@/lib/referralSource'
 import { usePageMeta } from '@/lib/pageMeta'
-import { CUSTOMER_BOOK_PATH, customerVisitPath } from '@/lib/customerAccountNav'
+import { CUSTOMER_BOOK_PATH } from '@/lib/customerAccountNav'
 import { CUSTOMER_QUEUE_PATH } from '@/lib/liveQueuePath'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
 import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
-import { Row, SectionHead, Skeleton } from '@/components/customer/CustomerUi'
+import { Skeleton } from '@/components/customer/CustomerUi'
+import BookingCalendar from '@/components/customer/BookingCalendar'
 import Sheet from '@/components/customer/Sheet'
 import ceramicPhoto from '@/assets/services/ceramic.webp'
 import maintenancePhoto from '@/assets/services/detailing.webp'
 import tintPhoto from '@/assets/services/ceramic-tint.webp'
 import ppfPhoto from '@/assets/services/ppf-clearpro-install.webp'
+import carwashPhoto from '@/assets/services/carwash.webp'
 
 const SERVICE_PHOTOS = { 'ceramic-coating': ceramicPhoto, 'paint-maintenance': maintenancePhoto, 'nano-ceramic-tint': tintPhoto, 'ceramic-tint': tintPhoto, 'paint-protection-film': ppfPhoto, ppf: ppfPhoto }
 
 function formatPeso(minor) {
   return `₱${(Number(minor || 0) / 100).toLocaleString('en-PH', { minimumFractionDigits: 0 })}`
-}
-
-function isoDay(date) {
-  const y = date.getFullYear()
-  const m = String(date.getMonth() + 1).padStart(2, '0')
-  const d = String(date.getDate()).padStart(2, '0')
-  return `${y}-${m}-${d}`
 }
 
 /* Hourly slots for the When step; "Another time" keeps the free time field. */
@@ -51,10 +46,6 @@ function slotLabel(hhmm) {
   const [h, m] = hhmm.split(':').map(Number)
   const d = new Date(2000, 0, 1, h, m)
   return d.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' })
-}
-
-function nextDays() {
-  return bookableDayDates(14)
 }
 
 const EMPTY_FORM = {
@@ -97,19 +88,10 @@ export default function CustomerBookPage() {
   const [flowOpen, setFlowOpen] = useState(false)
   const [step, setStep] = useState(0)
   const [sent, setSent] = useState(false)
-  const [branchOpen, setBranchOpen] = useState(false)
   const [otherCar, setOtherCar] = useState(false)
   const openedFromLink = useRef(false)
-  const days = useMemo(() => nextDays(7), [])
 
-  const {
-    branches,
-    nearestSlug,
-    pin,
-    locating,
-    selectBranch,
-    locateNearest,
-  } = useCustomerBranch(portal?.branches || [], { wanted: params.get('branch') || '' })
+  const { branches, nearestSlug, pin, selectBranch } = useCustomerBranch(portal?.branches || [], { wanted: params.get('branch') || '' })
   const vehicles = portal?.vehicles || []
 
   useEffect(() => {
@@ -209,10 +191,10 @@ export default function CustomerBookPage() {
   const branchRow = branches.find((b) => b.slug === form.branch)
   const savedCar = vehicles.find((v) => v.plate_number === form.vehicle_plate) || null
   const showCarFields = otherCar || !vehicles.length || !savedCar
-  const bookings = portal?.bookings || []
 
-  /* The steps this service needs: a package only when it has them. */
-  const steps = [...(packages.length ? ['package'] : []), 'car', 'when', 'review']
+  /* Car first (size comes from My cars), a package only when the service has them, then the
+     schedule, the branch + where they heard about us, and the summary with the price last. */
+  const steps = ['car', ...(packages.length ? ['package'] : []), 'when', 'details', 'review']
   const stepId = steps[Math.min(step, steps.length - 1)]
   const stepReady =
     stepId === 'package'
@@ -221,7 +203,9 @@ export default function CustomerBookPage() {
         ? !plateValidationError(form.vehicle_plate)
         : stepId === 'when'
           ? Boolean(day && time)
-          : Boolean(form.customer_first_name && form.customer_phone) && !referralRequiredError(form) && !friendCodeAccountError(form, authProfile?.role === 'customer' ? user?.id : null)
+          : stepId === 'details'
+            ? Boolean(form.branch) && !referralRequiredError(form) && !friendCodeAccountError(form, authProfile?.role === 'customer' ? user?.id : null)
+            : Boolean(form.customer_first_name && form.customer_phone)
 
   async function applyVoucherDirect(rawCode) {
     const code = normalizePromoCode(rawCode)
@@ -315,29 +299,13 @@ export default function CustomerBookPage() {
     }
   }
 
-  const stepTitles = { package: 'Pick a package', car: 'Which car?', when: 'When?', review: 'Check and send' }
+  const stepTitles = { package: 'Pick a package', car: 'Which car?', when: 'Book your schedule', details: 'Branch and last details', review: 'Summary' }
+  const branchName = branchRow ? branchRow.name.replace(/^Hakum Auto Care\s*/i, '') : ''
+  const carLine = [form.vehicle_plate, [form.vehicle_make, form.vehicle_model].filter(Boolean).join(' '), sizeLabel].filter(Boolean).join(' · ')
+  const whenLine = `${new Date(`${day}T00:00`).toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric' })} · ${slotLabel(time)}`
 
   return (
     <CustomerAppFrame title="Book" subtitle="Protection services are booked ahead. Pick one to start." navTitle="Book">
-      <button type="button" className="capp-row capp-branch-pick" onClick={() => setBranchOpen(true)} disabled={!branches.length}>
-        <span className="capp-row-icon" aria-hidden>
-          <MapPin size={18} strokeWidth={1.75} />
-        </span>
-        <span className="capp-row-body">
-          <strong>
-            {branchRow ? branchRow.name.replace(/^Hakum Auto Care\s*/i, '') : 'Branch'}
-            {branchRow && nearestSlug === branchRow.slug ? ' · Nearest' : ''}
-          </strong>
-          <em>
-            {branchRow?.address || 'Choose where to bring your car'}
-            {branchRow && pin && branchDistanceKm(pin, branchRow) != null
-              ? ` · ${formatDistanceKm(branchDistanceKm(pin, branchRow))} away`
-              : ''}
-          </em>
-        </span>
-        <span className="capp-row-end">Change</span>
-      </button>
-
       <div className="capp-sect">
         <h2>Select a detailing service</h2>
       </div>
@@ -367,95 +335,22 @@ export default function CustomerBookPage() {
         </div>
       )}
 
-      <div className="capp-walkin">
-        <span className="capp-row-icon" aria-hidden>
-          <Droplets size={18} strokeWidth={1.75} />
-        </span>
-        <span>
-          <strong>Washing or detailing?</strong>
-          Those are walk-in only. <Link to={CUSTOMER_QUEUE_PATH}>See the live queue →</Link>
-        </span>
+      <p className="capp-meta capp-walkin-note">Washing or detailing? Walk in, no booking needed.</p>
+      <div className="capp-svc-list">
+        <Link className="capp-svc capp-svc--walkin" to={CUSTOMER_QUEUE_PATH}>
+          <img className="capp-svc-bg" src={carwashPhoto} alt="" loading="lazy" />
+          <span className="capp-svc-in">
+            <span className="min-w-0">
+              <strong>Car wash</strong>
+              <em>Walk-in only</em>
+            </span>
+            <span className="capp-svc-from">
+              Live queue
+              <b>See the live queue →</b>
+            </span>
+          </span>
+        </Link>
       </div>
-
-      <section className="capp-section" aria-label="Your bookings">
-        <SectionHead title="Your bookings" />
-        <div className="capp-group">
-          {bookings.length ? (
-            bookings.map((b) => (
-              <Row
-                key={b.id}
-                icon={CalendarDays}
-                title={[b.service_name, b.vehicle_plate].filter(Boolean).join(' · ') || 'Booking'}
-                sub={
-                  b.reschedule_requested_at
-                    ? 'We’ll call you to set a new time'
-                    : b.visit?.label || b.status
-                }
-                chevron
-                to={customerVisitPath(b.id)}
-              />
-            ))
-          ) : (
-            <Row icon={CalendarDays} title="No upcoming bookings" sub="Bookings you request show up here." />
-          )}
-        </div>
-      </section>
-
-      {!vehicles.length && !loading ? (
-        <Row icon={Car} title="Save this car to your garage" sub="Next time it is one tap." chevron to="/account/more?tab=garage" />
-      ) : null}
-
-      <Sheet open={branchOpen} onClose={() => setBranchOpen(false)} title="Branch">
-        <div className="mb-3">
-          <button
-            type="button"
-            className="capp-btn capp-btn-ghost capp-btn-block"
-            disabled={locating}
-            onClick={async () => {
-              try {
-                const res = await locateNearest()
-                if (res?.nearest?.slug) {
-                  set('branch', res.nearest.slug)
-                  setBranchOpen(false)
-                  toast.success(`Nearest branch: ${res.nearest.name || res.nearest.slug}`)
-                }
-              } catch (err) {
-                toast.error(err?.message || 'Unable to read your location.')
-              }
-            }}
-          >
-            <MapPin size={16} strokeWidth={1.75} aria-hidden />
-            {locating ? 'Finding nearest branch…' : 'Use nearest branch'}
-          </button>
-        </div>
-        <div className="capp-opts" role="radiogroup" aria-label="Branch">
-          {branches.map((b) => {
-            const km = pin ? branchDistanceKm(pin, b) : null
-            const dist = km != null ? ` · ${formatDistanceKm(km)}` : ''
-            const tag = nearestSlug === b.slug ? ' · Nearest' : ''
-            return (
-              <button
-                key={b.slug}
-                type="button"
-                role="radio"
-                aria-checked={b.slug === form.branch}
-                className="capp-opt"
-                onClick={() => {
-                  set('branch', b.slug)
-                  selectBranch(b.slug)
-                  setBranchOpen(false)
-                }}
-              >
-                <span className="capp-opt-rd" aria-hidden />
-                <span className="capp-row-body">
-                  <strong>{b.name.replace(/^Hakum Auto Care\s*/i, '')}{tag}</strong>
-                  {b.address || dist ? <em>{[b.address, dist ? dist.replace(/^ · /, '') : ''].filter(Boolean).join(' · ')}</em> : null}
-                </span>
-              </button>
-            )
-          })}
-        </div>
-      </Sheet>
 
       <Sheet
         open={flowOpen}
@@ -466,7 +361,7 @@ export default function CustomerBookPage() {
         footer={
           sent ? (
             <button type="button" className="capp-btn capp-btn-fill capp-btn-block" onClick={closeFlow}>
-              Done
+              Back to Home
             </button>
           ) : (
             <div className="capp-flow-cta">
@@ -499,10 +394,12 @@ export default function CustomerBookPage() {
             <span className="capp-flow-check" aria-hidden>
               <Check size={40} strokeWidth={2.6} />
             </span>
-            <h3>Request sent</h3>
+            <h3>Thank you for submitting!</h3>
             <p>
-              {branchRow ? branchRow.name.replace(/^Hakum Auto Care\s*/i, '') : 'The branch'} will confirm by text. You&apos;ll find it under Book → Your bookings.
+              Your {selected?.name || 'booking'} request{form.vehicle_plate ? ` for ${form.vehicle_plate}` : ''} is now with the {branchName || 'branch'} team. They&apos;ll
+              text you to confirm the final day.
             </p>
+            <p className="capp-meta">{[whenLine, branchName, quote].filter(Boolean).join(' · ')}</p>
           </div>
         ) : (
           <form id="capp-book-form" className="capp-flow" onSubmit={submit} noValidate={false}>
@@ -557,7 +454,11 @@ export default function CustomerBookPage() {
                         <span className="capp-opt-rd" aria-hidden />
                         <span className="capp-row-body">
                           <strong className="capp-plate">{v.plate_number}</strong>
-                          <em>{[v.vehicle_make, v.vehicle_model, v.color].filter(Boolean).join(' · ') || 'Saved car'}</em>
+                          <em>
+                            {[[v.vehicle_make, v.vehicle_model].filter(Boolean).join(' '), PRICING_SIZES.find((sz) => sz.slug === normalizePricingSize(v.vehicle_type))?.label]
+                              .filter(Boolean)
+                              .join(' · ') || 'Saved car'}
+                          </em>
                         </span>
                       </button>
                     ))}
@@ -606,56 +507,30 @@ export default function CustomerBookPage() {
                     />
                   </div>
                 ) : null}
-                <label className="capp-field">
-                  <span>Car size</span>
-                  <select required value={form.vehicle_type} onChange={(e) => set('vehicle_type', e.target.value)}>
-                    {PRICING_SIZES.map((sz) => (
-                      <option key={sz.slug} value={sz.slug}>
-                        {sz.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {selected ? (
-                  <p className="capp-meta">
-                    {selected.name}
-                    {selectedPackage ? ` · ${selectedPackage.name}` : ''} for {sizeLabel}: <b>{quote}</b>
-                  </p>
-                ) : null}
+                {showCarFields ? (
+                  <label className="capp-field">
+                    <span>Car size</span>
+                    <select required value={form.vehicle_type} onChange={(e) => set('vehicle_type', e.target.value)}>
+                      {PRICING_SIZES.map((sz) => (
+                        <option key={sz.slug} value={sz.slug}>
+                          {sz.label}
+                        </option>
+                      ))}
+                    </select>
+                    <p className="capp-field-hint">Fills in from the model. Save the car in My cars and next time it is one tap.</p>
+                  </label>
+                ) : (
+                  <p className="capp-meta">Car size comes from My cars. Wrong size? Change it in the Cars tab.</p>
+                )}
               </>
             ) : null}
 
             {stepId === 'when' ? (
               <>
                 <p className="capp-flow-sub">
-                  {branchRow ? branchRow.name.replace(/^Hakum Auto Care\s*/i, '') : 'Pick a branch'}.{' '}
-                  <button type="button" className="capp-link" onClick={() => setBranchOpen(true)}>
-                    Change
-                  </button>
-                </p>
-                <p className="capp-flow-sub">
                   Today and tomorrow stay closed so the branch can check the bay. Your request is tentative until they call to confirm the final day.
                 </p>
-                <div className="capp-days" role="radiogroup" aria-label="Date">
-                  {days.map((d) => {
-                    const id = isoDay(d)
-                    const active = id === day
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        role="radio"
-                        aria-checked={active}
-                        className={`capp-day${active ? ' is-active' : ''}`}
-                        onClick={() => setDay(id)}
-                      >
-                        <small>{d.toLocaleDateString('en-PH', { weekday: 'short' })}</small>
-                        <b>{d.getDate()}</b>
-                        <small>{d.toLocaleDateString('en-PH', { month: 'short' })}</small>
-                      </button>
-                    )
-                  })}
-                </div>
+                <BookingCalendar value={day} onChange={setDay} />
                 <div className="capp-sect">
                   <h2>Time</h2>
                 </div>
@@ -694,6 +569,49 @@ export default function CustomerBookPage() {
               </>
             ) : null}
 
+            {stepId === 'details' ? (
+              <>
+                <p className="capp-flow-sub">Where will you bring your car?</p>
+                <div className="capp-opts" role="radiogroup" aria-label="Branch">
+                  {branches.map((b) => {
+                    const km = pin ? branchDistanceKm(pin, b) : null
+                    return (
+                      <button
+                        key={b.slug}
+                        type="button"
+                        role="radio"
+                        aria-checked={b.slug === form.branch}
+                        className="capp-opt"
+                        onClick={() => {
+                          set('branch', b.slug)
+                          selectBranch(b.slug)
+                        }}
+                      >
+                        <span className="capp-opt-rd" aria-hidden />
+                        <span className="capp-row-body">
+                          <strong>{b.name.replace(/^Hakum Auto Care\s*/i, '')}</strong>
+                          <em>
+                            {[nearestSlug === b.slug ? 'Closest to you' : '', km != null ? formatDistanceKm(km) : '', b.address].filter(Boolean).join(' · ')}
+                          </em>
+                        </span>
+                      </button>
+                    )
+                  })}
+                </div>
+                <div className="capp-flow-gap">
+                  <ReferralSourceFields
+                    variant="capp"
+                    source={form.referral_source}
+                    name={form.referred_by_name}
+                    staffId={form.referred_by_staff_id}
+                    staff={referralStaff}
+                    accountError={friendCodeAccountError(form, authProfile?.role === 'customer' ? user?.id : null)}
+                    onChange={(patch) => setForm((current) => ({ ...current, ...patch }))}
+                  />
+                </div>
+              </>
+            ) : null}
+
             {stepId === 'review' ? (
               <>
                 <p className="capp-flow-sub">We&apos;ll text you once the branch confirms.</p>
@@ -710,19 +628,23 @@ export default function CustomerBookPage() {
                   ) : null}
                   <div>
                     <dt>Car</dt>
-                    <dd>{[form.vehicle_plate, sizeLabel].filter(Boolean).join(' · ')}</dd>
+                    <dd>{carLine || '—'}</dd>
                   </div>
                   <div>
-                    <dt>When</dt>
-                    <dd>
-                      {new Date(`${day}T00:00`).toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric' })} · {slotLabel(time)}
-                    </dd>
+                    <dt>Schedule</dt>
+                    <dd>{whenLine}</dd>
                   </div>
                   <div>
                     <dt>Branch</dt>
-                    <dd>{branchRow ? branchRow.name.replace(/^Hakum Auto Care\s*/i, '') : '—'}</dd>
+                    <dd>{branchName || '—'}</dd>
                   </div>
-                  <div>
+                  {form.referral_source ? (
+                    <div>
+                      <dt>Heard about us</dt>
+                      <dd>{[referralSourceLabel(form.referral_source), form.referred_by_name].filter(Boolean).join(' · ')}</dd>
+                    </div>
+                  ) : null}
+                  <div className="capp-sum-total">
                     <dt>Price</dt>
                     <dd className={appliedVoucher ? 'line-through text-muted-foreground' : 'capp-sum-price'}>
                       {quote || '—'}
@@ -789,7 +711,7 @@ export default function CustomerBookPage() {
                             setVoucherError('')
                           }}
                           placeholder="Voucher code (e.g. SUMMER10)"
-                          className="min-h-11 flex-1 font-mono uppercase tracking-wider px-3.5 py-2 rounded-xl border border-border bg-background text-sm text-foreground placeholder:normal-case placeholder:tracking-normal focus:outline-none focus:ring-2 focus:ring-primary"
+                          className="capp-voucher-input"
                           autoCapitalize="characters"
                           autoComplete="off"
                           maxLength={16}
@@ -854,15 +776,6 @@ export default function CustomerBookPage() {
                     <span>Mobile</span>
                     <input required inputMode="tel" value={form.customer_phone} onChange={(e) => set('customer_phone', e.target.value)} />
                   </label>
-                  <ReferralSourceFields
-                    variant="capp"
-                    source={form.referral_source}
-                    name={form.referred_by_name}
-                    staffId={form.referred_by_staff_id}
-                    staff={referralStaff}
-                    accountError={friendCodeAccountError(form, authProfile?.role === 'customer' ? user?.id : null)}
-                    onChange={(patch) => setForm((current) => ({ ...current, ...patch }))}
-                  />
                 </div>
               </>
             ) : null}
