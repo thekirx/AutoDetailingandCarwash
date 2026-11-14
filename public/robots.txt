@@ -15,4 +15,4 @@ Disallow: /404
 # The in-store shop-floor TV board renders a live count for a wall display.
 Disallow: /queue/*/tv
 
-Sitemap: https://auto-detailingand-carwash.vercel.app/sitemap.xml
+Sitemap: https://www.hakumautocare.com/sitemap.xml
