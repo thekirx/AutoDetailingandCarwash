@@ -1,6 +1,10 @@
 import { createGateway } from '../server/apiGateway.mjs'
 import { readJsonBody, setCors } from '../server/httpUtil.mjs'
-import { handleProvisionStaffRequest, handleUpdateStaffRequest } from '../server/provisionStaff.mjs'
+import {
+  handleManageContentRequest,
+  handleProvisionStaffRequest,
+  handleUpdateStaffRequest,
+} from '../server/provisionStaff.mjs'
 
 export const operations = Object.freeze({
   'provision-staff': (req, res) => {
@@ -19,6 +23,16 @@ export const operations = Object.freeze({
   'update-staff': (req, res) => {
     setCors(res, 'POST, OPTIONS')
     return handleUpdateStaffRequest(req, res, {
+      getBody: () => readJsonBody(req),
+      getAccessToken: () => {
+        const header = req.headers.authorization || ''
+        return header.startsWith('Bearer ') ? header.slice(7) : null
+      },
+    })
+  },
+  'manage-content': (req, res) => {
+    setCors(res, 'POST, OPTIONS')
+    return handleManageContentRequest(req, res, {
       getBody: () => readJsonBody(req),
       getAccessToken: () => {
         const header = req.headers.authorization || ''

@@ -172,6 +172,7 @@ describe('RBAC Part 1 matrix', () => {
         '/operations/bookings',
         '/operations/planning',
         '/operations/crm',
+        '/operations/content',
         '/operations/payslips',
         '/operations/notifications',
         '/operations/history',

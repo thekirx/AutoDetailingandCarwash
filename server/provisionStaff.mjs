@@ -422,3 +422,201 @@ export async function handleUpdateStaffRequest(req, res, { getBody, getAccessTok
     res.end(JSON.stringify({ error: err.message || String(err) }))
   }
 }
+
+async function assertContentManagerCaller(admin, accessToken, { forEvents = false } = {}) {
+  if (!accessToken) throw Object.assign(new Error('Unauthorized'), { status: 401 })
+  const { data: userData, error: userError } = await admin.auth.getUser(accessToken)
+  if (userError || !userData?.user) throw Object.assign(new Error('Unauthorized'), { status: 401 })
+
+  const { data: staff, error } = await admin
+    .from('staff_profiles')
+    .select('id, role, full_name, login_email, is_active, permission_grants')
+    .eq('id', userData.user.id)
+    .eq('is_active', true)
+    .maybeSingle()
+
+  if (error) throw error
+  if (!staff) throw Object.assign(new Error('Forbidden'), { status: 403 })
+
+  const role = staff.role
+  const grants = staff.permission_grants || {}
+  const name = String(staff.full_name || '').toLowerCase()
+  const email = String(staff.login_email || userData.user.email || '').toLowerCase()
+  const isNamedAsa =
+    role === ASSISTANT &&
+    (name.includes('lucy') ||
+      name.includes('luci') ||
+      name.includes('robert') ||
+      email.includes('lucy') ||
+      email.includes('assistant') ||
+      email.includes('robert'))
+
+  const canContent =
+    role === SUPER ||
+    role === 'marketing' ||
+    isNamedAsa ||
+    (role === ASSISTANT && grants.content !== false)
+
+  const canEvents =
+    canContent ||
+    role === ADMIN ||
+    role === 'operations_lead' ||
+    (role === ASSISTANT && grants.planning_edit === true)
+
+  if (forEvents ? !canEvents : !canContent) {
+    throw Object.assign(
+      new Error('Only Super Admin, Lucy, Robert, or Marketing may manage site content.'),
+      { status: 403 },
+    )
+  }
+
+  return { user: userData.user, staff }
+}
+
+export async function manageSiteContent({ accessToken, body }) {
+  const admin = adminClient()
+  const action = String(body?.action || '').trim()
+  const forEvents = action.includes('event') || action === 'upload-media'
+  const { user } = await assertContentManagerCaller(admin, accessToken, { forEvents })
+
+  if (action === 'list-blogs') {
+    const { data, error } = await admin
+      .from('blogs')
+      .select('*')
+      .order('updated_at', { ascending: false })
+      .limit(100)
+    if (error) throw Object.assign(new Error(error.message), { status: 400 })
+    return { data: data || [] }
+  }
+
+  if (action === 'save-blog') {
+    const row = body?.row || {}
+    if (!row.title || !row.slug) {
+      throw Object.assign(new Error('Blog title and slug are required.'), { status: 400 })
+    }
+    const payload = {
+      id: row.id || crypto.randomUUID(),
+      title: String(row.title).trim(),
+      slug: String(row.slug).trim(),
+      excerpt: row.excerpt || null,
+      cover_url: row.cover_url || null,
+      author_label: row.author_label || 'Hakum Auto Care',
+      status: ['draft', 'published', 'archived'].includes(row.status) ? row.status : 'draft',
+      is_published: Boolean(row.is_published),
+      published_at: row.is_published ? row.published_at || new Date().toISOString() : null,
+      content_blocks: Array.isArray(row.content_blocks) ? row.content_blocks : [],
+      updated_at: new Date().toISOString(),
+    }
+    if (!row.id) payload.created_by = user.id
+    const { data, error } = await admin
+      .from('blogs')
+      .upsert(payload, { onConflict: 'slug' })
+      .select('*')
+      .maybeSingle()
+    if (error) throw Object.assign(new Error(error.message), { status: 400 })
+    return { data }
+  }
+
+  if (action === 'delete-blog') {
+    const id = body?.id
+    const slug = body?.slug
+    if (!id && !slug) throw Object.assign(new Error('Blog id or slug is required.'), { status: 400 })
+    let q = admin.from('blogs').delete()
+    q = id ? q.eq('id', id) : q.eq('slug', slug)
+    const { error } = await q
+    if (error) throw Object.assign(new Error(error.message), { status: 400 })
+    return { ok: true }
+  }
+
+  if (action === 'list-events') {
+    const { data, error } = await admin
+      .from('events')
+      .select('id, title, description, branch, starts_at, ends_at, is_published, is_date_tba, slug, form_id, banner_url, content_blocks, ops_forms!form_id ( id, name, slug, public_enabled, status )')
+      .order('starts_at', { ascending: false })
+      .limit(80)
+    if (error) throw Object.assign(new Error(error.message), { status: 400 })
+    return { data: data || [] }
+  }
+
+  if (action === 'save-event') {
+    const row = body?.row || {}
+    if (!row.title || !row.slug) {
+      throw Object.assign(new Error('Event title and slug are required.'), { status: 400 })
+    }
+    const payload = {
+      id: row.id || crypto.randomUUID(),
+      title: String(row.title).trim(),
+      slug: String(row.slug).trim(),
+      description: row.description || null,
+      branch: row.branch || null,
+      starts_at: row.starts_at || new Date().toISOString(),
+      ends_at: row.ends_at || null,
+      banner_url: row.banner_url || null,
+      is_published: Boolean(row.is_published),
+      is_date_tba: Boolean(row.is_date_tba),
+      form_id: row.form_id || null,
+      content_blocks: Array.isArray(row.content_blocks) ? row.content_blocks : [],
+      updated_at: new Date().toISOString(),
+    }
+    const { data, error } = await admin
+      .from('events')
+      .upsert(payload, { onConflict: 'id' })
+      .select('id, title, description, branch, starts_at, ends_at, is_published, is_date_tba, slug, form_id, banner_url, content_blocks, ops_forms!form_id ( id, name, slug, public_enabled, status )')
+      .maybeSingle()
+    if (error) throw Object.assign(new Error(error.message), { status: 400 })
+    return { data }
+  }
+
+  if (action === 'delete-event') {
+    const id = body?.id
+    if (!id) throw Object.assign(new Error('Event id is required.'), { status: 400 })
+    const { error } = await admin.from('events').delete().eq('id', id)
+    if (error) throw Object.assign(new Error(error.message), { status: 400 })
+    return { ok: true }
+  }
+
+  if (action === 'upload-media') {
+    const fileName = String(body?.fileName || 'photo.jpg')
+    const contentType = String(body?.contentType || 'image/jpeg')
+    const base64 = String(body?.base64 || '')
+    if (!base64) throw Object.assign(new Error('Missing file payload.'), { status: 400 })
+    const ext = fileName.split('.').pop()?.toLowerCase()?.replace(/[^a-z0-9]/g, '') || 'jpg'
+    const path = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`
+    const buffer = Buffer.from(base64, 'base64')
+    const { error: upErr } = await admin.storage.from('content-media').upload(path, buffer, {
+      cacheControl: '3600',
+      upsert: false,
+      contentType,
+    })
+    if (upErr) throw Object.assign(new Error(upErr.message), { status: 400 })
+    const { data } = admin.storage.from('content-media').getPublicUrl(path)
+    return { publicUrl: data?.publicUrl || '' }
+  }
+
+  throw Object.assign(new Error(`Unknown content action: ${action}`), { status: 400 })
+}
+
+export async function handleManageContentRequest(req, res, { getBody, getAccessToken }) {
+  try {
+    if (req.method === 'OPTIONS') {
+      res.statusCode = 204
+      res.end()
+      return
+    }
+    if (req.method !== 'POST') {
+      res.statusCode = 405
+      res.setHeader('Content-Type', 'application/json')
+      res.end(JSON.stringify({ error: 'Method not allowed' }))
+      return
+    }
+    const body = await getBody()
+    const result = await manageSiteContent({ accessToken: getAccessToken(), body })
+    res.statusCode = 200
+    res.setHeader('Content-Type', 'application/json')
+    res.end(JSON.stringify(result))
+  } catch (err) {
+    res.statusCode = err.status || 500
+    res.setHeader('Content-Type', 'application/json')
+    res.end(JSON.stringify({ error: err.message || String(err) }))
+  }
+}

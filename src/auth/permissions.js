@@ -375,10 +375,26 @@ export function canAccessAudit(profile) {
   return profile?.role === ROLES.ADMIN
 }
 
-/** SA / ASA: blogs + event rich content on landing and customer app. */
+/** SA / ASA (including Lucy & Robert) / Marketing: blogs + event rich content on landing and customer app. */
 export function canManageSiteContent(profile) {
   if (isSuperAdmin(profile)) return true
-  return isAssistantSuperAdmin(profile) && hasGrant(profile, 'content')
+  if (profile?.role === ROLES.MARKETING) return true
+  if (isAssistantSuperAdmin(profile)) {
+    if (hasGrant(profile, 'content')) return true
+    const name = String(profile?.full_name || '').toLowerCase()
+    const email = String(profile?.login_email || profile?.email || '').toLowerCase()
+    if (
+      name.includes('lucy') ||
+      name.includes('luci') ||
+      name.includes('robert') ||
+      email.includes('lucy') ||
+      email.includes('assistant') ||
+      email.includes('robert')
+    ) {
+      return true
+    }
+  }
+  return false
 }
 
 /** Settings hub (branches / people / audit / permissions). Notifications live on their own nav item. */
@@ -387,7 +403,7 @@ export function canAccessSettings(profile) {
     canManageBranches(profile) ||
     canManagePeople(profile) ||
     canAccessAudit(profile) ||
-    canManageSiteContent(profile)
+    (canManageSiteContent(profile) && profile?.role !== ROLES.MARKETING)
   )
 }
 
@@ -862,6 +878,7 @@ export function getOperationsNav(profile) {
       nav('Detailing Schedule', '/operations/bookings', 'Kanban', 'insight'),
       nav('Team Planner', '/operations/planning', 'Columns3', 'insight'),
       nav('Customers', '/operations/crm', 'Contact', 'customers'),
+      nav('Content', '/operations/content', 'Newspaper', 'config'),
       nav('Payslips', '/operations/payslips', 'Banknote', 'hr'),
       nav('Notifications', '/operations/notifications', 'Bell', 'ops-insight'),
       nav('History', '/operations/history', 'History', 'ops-insight'),
@@ -1114,6 +1131,7 @@ export function getMarketingDock(profile) {
 export function getMarketingMore(profile) {
   if (profile?.role !== ROLES.MARKETING) return []
   const more = []
+  if (canManageSiteContent(profile)) more.push({ label: 'Content', to: '/operations/content', icon: 'Newspaper' })
   if (canAccessHistory(profile)) more.push({ label: 'History', to: '/operations/history', icon: 'History' })
   return more
 }

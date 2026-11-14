@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Plus } from 'lucide-react'
+import { Edit3, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -17,9 +17,15 @@ import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { NamedSelect } from '@/components/ui/named-select'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import ContentStudioModal from '@/components/content/ContentStudioModal'
 import { supabase } from '@/lib/supabase'
 import { listBranches } from '@/lib/adminApi'
 import { slugifyEventTitle } from '@/lib/planningPart6'
+import {
+  deleteCmsEvent,
+  prepareEventForEditor,
+  saveCmsEvent,
+} from '@/lib/contentCmsApi'
 import { toast } from 'sonner'
 
 export { default as PlanningFormsPanel } from './PlanningFormsSmartPanel'
@@ -29,6 +35,8 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
   const [opsForms, setOpsForms] = useState([])
   const [branchOptions, setBranchOptions] = useState([])
   const [createOpen, setCreateOpen] = useState(false)
+  const [studioOpen, setStudioOpen] = useState(false)
+  const [studioDraft, setStudioDraft] = useState(null)
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -42,7 +50,7 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
   const load = useCallback(async () => {
     let eventsQ = supabase
       .from('events')
-      .select('id, title, description, branch, starts_at, ends_at, is_published, slug, form_id, ops_forms!form_id ( id, name, slug )')
+      .select('id, title, description, branch, starts_at, ends_at, banner_url, is_published, slug, form_id, content_blocks, ops_forms!form_id ( id, name, slug )')
       .order('starts_at', { ascending: false })
       .limit(50)
     if (!canEdit) eventsQ = eventsQ.eq('is_published', true)
@@ -70,6 +78,40 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
     load()
   }, [load])
 
+  useEffect(() => {
+    const channel = supabase
+      ?.channel?.('planning-events-live')
+      ?.on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => {
+        load()
+      })
+      ?.subscribe?.()
+    return () => {
+      if (channel) supabase?.removeChannel?.(channel)
+    }
+  }, [load])
+
+  function openEditEvent(ev) {
+    setStudioDraft(prepareEventForEditor(ev))
+    setStudioOpen(true)
+  }
+
+  function openStudioCreate() {
+    setStudioDraft(prepareEventForEditor(null))
+    setStudioOpen(true)
+  }
+
+  async function handleDeleteEvent(ev) {
+    if (!canEdit || !ev?.id) return
+    if (!window.confirm(`Delete event "${ev.title}"?`)) return
+    const res = await deleteCmsEvent(ev.id)
+    if (!res.ok) {
+      toast.error(res.error || 'Could not delete event')
+      return
+    }
+    toast.success('Event deleted')
+    load()
+  }
+
   async function createEvent(e) {
     e.preventDefault()
     if (!canEdit) return
@@ -77,18 +119,21 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
     if (!title || !form.starts_at) return toast.error('Title and start required')
     const tempId = crypto.randomUUID()
     const slug = slugifyEventTitle(title, tempId)
-    const { error } = await supabase.from('events').insert({
-      id: tempId,
-      title,
-      description: form.description.trim() || null,
-      branch: form.branch.trim() || null,
-      starts_at: new Date(form.starts_at).toISOString(),
-      ends_at: form.ends_at ? new Date(form.ends_at).toISOString() : null,
-      is_published: Boolean(form.is_published),
-      slug,
-      form_id: form.form_id || null,
-    })
-    if (error) toast.error(error.message)
+    const res = await saveCmsEvent(
+      {
+        id: tempId,
+        title,
+        description: form.description.trim() || null,
+        branch: form.branch.trim() || null,
+        starts_at: new Date(form.starts_at).toISOString(),
+        ends_at: form.ends_at ? new Date(form.ends_at).toISOString() : null,
+        is_published: Boolean(form.is_published),
+        slug,
+        form_id: form.form_id || null,
+      },
+      { publish: Boolean(form.is_published) },
+    )
+    if (!res.ok) toast.error(res.error)
     else {
       toast.success('Event created')
       setForm({
@@ -107,8 +152,11 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
 
   async function assignForm(ev, formId) {
     if (!canEdit) return
-    const { error } = await supabase.from('events').update({ form_id: formId || null }).eq('id', ev.id)
-    if (error) toast.error(error.message)
+    const res = await saveCmsEvent(
+      prepareEventForEditor({ ...ev, form_id: formId || '' }),
+      { publish: Boolean(ev.is_published) },
+    )
+    if (!res.ok) toast.error(res.error)
     else {
       toast.success(formId ? 'Form attached' : 'Form cleared')
       load()
@@ -117,8 +165,12 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
 
   async function togglePublish(ev) {
     if (!canEdit) return
-    const { error } = await supabase.from('events').update({ is_published: !ev.is_published }).eq('id', ev.id)
-    if (error) toast.error(error.message)
+    const nextPublished = !ev.is_published
+    const res = await saveCmsEvent(
+      prepareEventForEditor({ ...ev, is_published: nextPublished }),
+      { publish: nextPublished },
+    )
+    if (!res.ok) toast.error(res.error)
     else load()
   }
 
@@ -207,13 +259,17 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
         <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 flex-col gap-1.5">
             <CardTitle>Events</CardTitle>
-            <CardDescription>Share links and optional attached smart forms.</CardDescription>
+            <CardDescription>Share links, photo blocks, and optional attached smart forms.</CardDescription>
           </div>
           {canEdit ? (
             <div className="flex flex-wrap gap-2">
               {onCreateForm ? (
                 <Button type="button" variant="outline" className="min-h-11" onClick={onCreateForm}>Create event form</Button>
               ) : null}
+              <Button type="button" variant="outline" className="min-h-11" onClick={openStudioCreate}>
+                <Edit3 size={16} className="mr-1.5" aria-hidden />
+                Studio Editor
+              </Button>
               <Button type="button" className="min-h-11" onClick={() => setCreateOpen(true)}>
                 <Plus size={16} className="mr-1.5" aria-hidden />
                 New event
@@ -235,19 +291,31 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
                   </Badge>
                   {ev.ops_forms?.name ? <span>{ev.ops_forms.name}</span> : null}
                 </div>
-                {ev.slug ? (
-                  <div className="flex flex-wrap gap-2">
-                    <Button size="sm" variant="outline" className="max-xl:min-h-11" asChild>
-                      <a href={`/events/${ev.slug}`} target="_blank" rel="noreferrer">Open page</a>
-                    </Button>
-                    <Button size="sm" variant="ghost" className="max-xl:min-h-11" onClick={() => copyLink(ev)}>Copy link</Button>
-                    {canEdit ? (
+                <div className="flex flex-wrap gap-2">
+                  {ev.slug ? (
+                    <>
+                      <Button size="sm" variant="outline" className="max-xl:min-h-11" asChild>
+                        <a href={`/events/${ev.slug}`} target="_blank" rel="noreferrer">Open page</a>
+                      </Button>
+                      <Button size="sm" variant="ghost" className="max-xl:min-h-11" onClick={() => copyLink(ev)}>Copy link</Button>
+                    </>
+                  ) : null}
+                  {canEdit ? (
+                    <>
+                      <Button size="sm" variant="outline" className="max-xl:min-h-11" onClick={() => openEditEvent(ev)}>
+                        <Edit3 size={14} className="mr-1" aria-hidden />
+                        Edit
+                      </Button>
                       <Button size="sm" variant="ghost" className="max-xl:min-h-11" onClick={() => togglePublish(ev)}>
                         {ev.is_published ? 'Unpublish' : 'Publish'}
                       </Button>
-                    ) : null}
-                  </div>
-                ) : null}
+                      <Button size="sm" variant="ghost" className="text-red-500 max-xl:min-h-11" onClick={() => handleDeleteEvent(ev)}>
+                        <Trash2 size={14} className="mr-1" aria-hidden />
+                        Delete
+                      </Button>
+                    </>
+                  ) : null}
+                </div>
               </article>
             ))}
             {!visibleEvents.length ? <p className="text-sm text-muted-foreground">{canEdit ? 'No events yet.' : 'No published events yet.'}</p> : null}
@@ -260,7 +328,7 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
                 <TableHead>When</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Form</TableHead>
-                <TableHead>Share</TableHead>
+                <TableHead>Share &amp; Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -295,14 +363,27 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
                     )}
                   </TableCell>
                   <TableCell>
-                    {ev.slug ? (
-                      <div className="flex flex-wrap gap-2">
-                        <a className="inline-flex items-center text-sm text-primary underline max-xl:min-h-11" href={`/events/${ev.slug}`} target="_blank" rel="noreferrer">
-                          /events/{ev.slug}
-                        </a>
-                        <Button size="sm" variant="outline" className="cursor-pointer max-xl:min-h-11" onClick={() => copyLink(ev)}>Copy</Button>
-                      </div>
-                    ) : '—'}
+                    <div className="flex flex-wrap items-center gap-2">
+                      {ev.slug ? (
+                        <>
+                          <a className="inline-flex items-center text-sm text-primary underline max-xl:min-h-11" href={`/events/${ev.slug}`} target="_blank" rel="noreferrer">
+                            /events/{ev.slug}
+                          </a>
+                          <Button size="sm" variant="outline" className="cursor-pointer max-xl:min-h-11" onClick={() => copyLink(ev)}>Copy</Button>
+                        </>
+                      ) : null}
+                      {canEdit ? (
+                        <>
+                          <Button size="sm" variant="outline" className="cursor-pointer max-xl:min-h-11" onClick={() => openEditEvent(ev)}>
+                            <Edit3 size={13} className="mr-1" aria-hidden />
+                            Edit
+                          </Button>
+                          <Button size="sm" variant="ghost" className="cursor-pointer text-red-500 max-xl:min-h-11" onClick={() => handleDeleteEvent(ev)}>
+                            <Trash2 size={13} aria-hidden />
+                          </Button>
+                        </>
+                      ) : null}
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -314,6 +395,19 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
           </div>
         </CardContent>
       </Card>
+
+      {canEdit ? (
+        <ContentStudioModal
+          open={studioOpen}
+          onOpenChange={setStudioOpen}
+          kind="event"
+          initialData={studioDraft}
+          opsForms={opsForms}
+          branchOptions={branchOptions}
+          onSaved={() => load()}
+          onDeleted={() => load()}
+        />
+      ) : null}
     </div>
   )
 }

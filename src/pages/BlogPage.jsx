@@ -1,6 +1,18 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { Pencil, Plus, Settings2, Trash2 } from 'lucide-react'
+import { useAuth } from '@/auth/AuthProvider'
+import { canManageSiteContent } from '@/auth/permissions'
+import ContentStudioModal from '@/components/content/ContentStudioModal'
+import {
+  createEmptyBlogDraft,
+  deleteCmsBlog,
+  fetchAllCmsBlogs,
+  prepareBlogForEditor,
+  saveCmsBlog,
+} from '@/lib/contentCmsApi'
 import { supabase } from '@/lib/supabase'
+import { toast } from 'sonner'
 import BdPageHero from '../components/public/bredesign/BdPageHero'
 import useReveal from '../components/public/bredesign/useReveal'
 import {
@@ -20,29 +32,80 @@ const REGION_FILTERS = [
 ]
 
 export function BlogListSection() {
+  const { profile } = useAuth()
+  const canEdit = canManageSiteContent(profile)
   const [dbPosts, setDbPosts] = useState([])
   const [error, setError] = useState('')
   const [activeRegion, setActiveRegion] = useState('all')
+  const [showDrafts, setShowDrafts] = useState(false)
+  const [editorPost, setEditorPost] = useState(null)
 
-  useEffect(() => {
-    supabase
+  const loadBlogs = useCallback(async () => {
+    if (canEdit) {
+      const rows = await fetchAllCmsBlogs()
+      setDbPosts(rows || [])
+      return
+    }
+    const { data, error: e } = await supabase
       .from('blogs')
-      .select('id, title, slug, excerpt, cover_url, author_label, published_at')
+      .select('id, title, slug, excerpt, cover_url, author_label, published_at, status, is_published, content_blocks')
       .eq('is_published', true)
       .eq('status', 'published')
       .order('published_at', { ascending: false })
-      .then(({ data, error: e }) => {
-        if (e) setError('')
-        setDbPosts(data || [])
-      })
-  }, [])
+    if (e) setError('')
+    setDbPosts(data || [])
+  }, [canEdit])
 
-  const allPosts = useMemo(() => mergeBlogPostsWithGuides(dbPosts), [dbPosts])
+  useEffect(() => {
+    loadBlogs()
+    const channel = supabase
+      .channel('public-blogs-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'blogs' }, () => loadBlogs())
+      .subscribe()
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [loadBlogs])
+
+  const allPosts = useMemo(
+    () => mergeBlogPostsWithGuides(dbPosts, { includeDrafts: canEdit && showDrafts }),
+    [dbPosts, canEdit, showDrafts],
+  )
 
   const visiblePosts = useMemo(() => {
     if (activeRegion === 'all') return allPosts
     return allPosts.filter((p) => (p.region || 'craft') === activeRegion)
   }, [allPosts, activeRegion])
+
+  async function handleQuickDelete(post) {
+    if (!window.confirm(`Delete "${post.title}"?`)) return
+    try {
+      await deleteCmsBlog(post, profile)
+      toast.success('Blog post deleted')
+      loadBlogs()
+    } catch (err) {
+      toast.error(err?.message || 'Delete failed')
+    }
+  }
+
+  async function handleQuickTogglePublish(post) {
+    try {
+      const prepared = prepareBlogForEditor(post)
+      const nextPublished = !prepared.is_published
+      await saveCmsBlog(
+        {
+          ...prepared,
+          status: nextPublished ? 'published' : 'draft',
+          is_published: nextPublished,
+        },
+        profile,
+      )
+      toast.success(nextPublished ? 'Published live' : 'Moved to drafts')
+      loadBlogs()
+    } catch (err) {
+      toast.error(err?.message || 'Update failed')
+    }
+  }
 
   return (
     <>
@@ -58,6 +121,34 @@ export function BlogListSection() {
               Bacoor, Batangas City, Imus, and across Cavite.
             </p>
           </div>
+
+          {canEdit && (
+            <div className="bd-cms-toolbar" role="region" aria-label="Blog CMS Controls">
+              <div className="bd-cms-toolbar-info">
+                <span className="bd-post-badge">CMS Studio Mode</span>
+                <span>Signed in with Blog &amp; Events editing permissions.</span>
+              </div>
+              <div className="bd-cms-toolbar-actions">
+                <button
+                  type="button"
+                  className="bd-btn bd-btn-primary"
+                  onClick={() => setEditorPost(createEmptyBlogDraft())}
+                >
+                  <Plus size={15} aria-hidden="true" /> New Blog Post
+                </button>
+                <button
+                  type="button"
+                  className="bd-btn bd-btn-quiet"
+                  onClick={() => setShowDrafts((v) => !v)}
+                >
+                  {showDrafts ? 'Showing Drafts & Published' : 'Show Drafts'}
+                </button>
+                <Link className="bd-btn bd-btn-quiet" to="/operations/content">
+                  <Settings2 size={15} aria-hidden="true" /> Full Studio
+                </Link>
+              </div>
+            </div>
+          )}
 
           <div className="bd-blog-filters bd-reveal" role="tablist" aria-label="Filter blog guides by location or topic">
             {REGION_FILTERS.map((filter) => {
@@ -83,49 +174,80 @@ export function BlogListSection() {
                 {error}
               </p>
             ) : null}
-            {visiblePosts.map((post) => (
-              <article key={post.id || post.slug} className="bd-post bd-reveal">
-                {post.cover_url ? (
-                  <Link to={`/blog/${post.slug}`} className="bd-post-media">
-                    <img src={post.cover_url} alt={post.title} loading="lazy" />
-                  </Link>
-                ) : null}
-                <div className="bd-post-body">
-                  <div className="bd-post-meta-row">
-                    {post.regionLabel || post.category ? (
-                      <span className="bd-post-badge">{post.regionLabel || post.category}</span>
-                    ) : null}
-                    <p className="bd-event-date">
-                      {post.author_label || 'Hakum Auto Care'}
-                      {post.read_minutes
-                        ? ` · ${post.read_minutes} min read`
-                        : post.published_at
-                          ? ` · ${new Date(post.published_at).toLocaleDateString()}`
-                          : ''}
-                    </p>
-                  </div>
-                  <h2>
-                    <Link to={`/blog/${post.slug}`}>{post.title}</Link>
-                  </h2>
-                  {post.excerpt ? <p className="bd-post-excerpt">{post.excerpt}</p> : null}
-                  {post.highlights?.length ? (
-                    <ul className="bd-post-highlights">
-                      {post.highlights.slice(0, 2).map((item, idx) => (
-                        <li key={idx}>{item}</li>
-                      ))}
-                    </ul>
+            {visiblePosts.map((post) => {
+              const isPublished = Boolean(post.is_published ?? true) && post.status !== 'archived'
+              return (
+                <article key={post.id || post.slug} className="bd-post bd-reveal">
+                  {post.cover_url ? (
+                    <Link to={`/blog/${post.slug}`} className="bd-post-media">
+                      <img src={post.cover_url} alt={post.title} loading="lazy" />
+                    </Link>
                   ) : null}
-                  <div className="bd-post-actions">
-                    <Link className="bd-card-go" to={`/blog/${post.slug}`}>
-                      Read full guide
-                    </Link>
-                    <Link className="bd-post-book-link" to={post.branch_info?.bookHref || '/book'}>
-                      Book slot
-                    </Link>
+                  <div className="bd-post-body">
+                    <div className="bd-post-meta-row">
+                      {post.regionLabel || post.category ? (
+                        <span className="bd-post-badge">{post.regionLabel || post.category}</span>
+                      ) : null}
+                      {!isPublished && (
+                        <span className="bd-post-badge is-draft">{post.status || 'Draft'}</span>
+                      )}
+                      <p className="bd-event-date">
+                        {post.author_label || 'Hakum Auto Care'}
+                        {post.read_minutes
+                          ? ` · ${post.read_minutes} min read`
+                          : post.published_at
+                            ? ` · ${new Date(post.published_at).toLocaleDateString()}`
+                            : ''}
+                      </p>
+                    </div>
+                    <h2>
+                      <Link to={`/blog/${post.slug}`}>{post.title}</Link>
+                    </h2>
+                    {post.excerpt ? <p className="bd-post-excerpt">{post.excerpt}</p> : null}
+                    {post.highlights?.length ? (
+                      <ul className="bd-post-highlights">
+                        {post.highlights.slice(0, 2).map((item, idx) => (
+                          <li key={idx}>{item}</li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    <div className="bd-post-actions">
+                      <Link className="bd-card-go" to={`/blog/${post.slug}`}>
+                        Read full guide
+                      </Link>
+                      <Link className="bd-post-book-link" to={post.branch_info?.bookHref || '/book'}>
+                        Book slot
+                      </Link>
+                    </div>
+                    {canEdit && (
+                      <div className="bd-cms-card-actions">
+                        <button
+                          type="button"
+                          className="bd-cms-inline-btn"
+                          onClick={() => setEditorPost(prepareBlogForEditor(post))}
+                        >
+                          <Pencil size={13} aria-hidden="true" /> Edit
+                        </button>
+                        <button
+                          type="button"
+                          className="bd-cms-inline-btn"
+                          onClick={() => handleQuickTogglePublish(post)}
+                        >
+                          {isPublished ? 'Unpublish' : 'Publish'}
+                        </button>
+                        <button
+                          type="button"
+                          className="bd-cms-inline-btn is-danger"
+                          onClick={() => handleQuickDelete(post)}
+                        >
+                          <Trash2 size={13} aria-hidden="true" /> Delete
+                        </button>
+                      </div>
+                    )}
                   </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              )
+            })}
           </div>
         </div>
       </section>
@@ -246,6 +368,18 @@ export function BlogListSection() {
           </div>
         </div>
       </section>
+
+      {canEdit && (
+        <ContentStudioModal
+          open={Boolean(editorPost)}
+          onOpenChange={(open) => !open && setEditorPost(null)}
+          kind="blog"
+          initialValue={editorPost}
+          profile={profile}
+          onSaved={() => loadBlogs()}
+          onDeleted={() => loadBlogs()}
+        />
+      )}
     </>
   )
 }

@@ -1,9 +1,17 @@
 import { Link } from 'react-router-dom'
 import { normalizeBlocks, resolveVideoEmbed } from '@/lib/contentBlocks'
 
+const CALLOUT_LABELS = {
+  tip: 'Studio Tip',
+  summary: 'Executive Summary',
+  pricing: 'Pricing & Package Guide',
+  note: 'Technical Note',
+}
+
 /**
- * Renders blog/event content blocks for public + account surfaces.
- * Reading this as: branded editorial content for Hakum customers, blue accent, existing public DS.
+ * Renders blog/event content blocks for public + account + live preview surfaces.
+ * Supports WordPress-style blocks: heading, paragraph, image (normal/wide/full),
+ * gallery (2-4 column responsive photo grid), callout box, video, quote, list, divider, and CTA.
  */
 export default function ContentBlockRenderer({
   blocks = [],
@@ -32,11 +40,64 @@ export default function ContentBlockRenderer({
           )
         }
         if (block.type === 'image' && block.url) {
+          const layoutCls = block.layout && block.layout !== 'normal' ? `is-layout-${block.layout}` : ''
+          const aspectCls = block.aspect && block.aspect !== 'auto' ? `is-aspect-${block.aspect.replace(':', '-')}` : ''
           return (
-            <figure key={block.id} className="hakum-block-figure">
-              <img src={block.url} alt={block.alt || ''} loading="lazy" />
+            <figure
+              key={block.id}
+              className={`hakum-block-figure ${layoutCls} ${aspectCls}`.trim()}
+            >
+              <img src={block.url} alt={block.alt || block.caption || 'Hakum Auto Care'} loading="lazy" />
               {block.caption ? <figcaption>{block.caption}</figcaption> : null}
             </figure>
+          )
+        }
+        if (block.type === 'gallery' && Array.isArray(block.images) && block.images.length > 0) {
+          const cols = [2, 3, 4].includes(Number(block.columns)) ? Number(block.columns) : 2
+          return (
+            <figure key={block.id} className={`hakum-block-gallery cols-${cols}`}>
+              <div
+                className="hakum-block-gallery-grid"
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: mobile
+                    ? '1fr'
+                    : `repeat(auto-fit, minmax(${cols >= 3 ? '180px' : '240px'}, 1fr))`,
+                  gap: '14px',
+                }}
+              >
+                {block.images.map((img) => (
+                  <div key={img.id || img.url} className="hakum-block-gallery-item">
+                    <img
+                      src={img.url}
+                      alt={img.alt || img.caption || 'Hakum Auto Care gallery photo'}
+                      loading="lazy"
+                      style={{
+                        width: '100%',
+                        aspectRatio: '4 / 3',
+                        objectFit: 'cover',
+                        borderRadius: '10px',
+                        display: 'block',
+                      }}
+                    />
+                    {img.caption ? (
+                      <span className="hakum-block-gallery-item-cap">{img.caption}</span>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+              {block.caption ? <figcaption>{block.caption}</figcaption> : null}
+            </figure>
+          )
+        }
+        if (block.type === 'callout') {
+          const tone = block.tone || 'tip'
+          const label = block.title || CALLOUT_LABELS[tone] || 'Studio Note'
+          return (
+            <aside key={block.id} className={`hakum-block-callout is-${tone}`}>
+              <p className="hakum-block-callout-title">{label}</p>
+              {block.text ? <p className="hakum-block-callout-body">{block.text}</p> : null}
+            </aside>
           )
         }
         if (block.type === 'video' && block.url) {

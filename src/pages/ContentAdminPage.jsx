@@ -1,79 +1,73 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
-import { CalendarDays, Copy, ExternalLink, FileText, Pencil, Plus, Trash2 } from 'lucide-react'
+import {
+  CalendarDays,
+  Copy,
+  CopyPlus,
+  ExternalLink,
+  Eye,
+  FileText,
+  FolderOpen,
+  Globe,
+  Pencil,
+  Plus,
+  Search,
+  Sparkles,
+  Trash2,
+} from 'lucide-react'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import OpsTabList from '@/components/ops/OpsTabBar'
 import { useAuth } from '@/auth/AuthProvider'
 import { canManageSiteContent } from '@/auth/permissions'
-import ContentBlockEditor from '@/components/content/ContentBlockEditor'
+import { MediaLibraryDialog } from '@/components/content/ContentBlockEditor'
 import ContentBlockRenderer from '@/components/content/ContentBlockRenderer'
+import ContentStudioModal from '@/components/content/ContentStudioModal'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { NamedSelect } from '@/components/ui/named-select'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { listBranches } from '@/lib/adminApi'
-import { normalizeBlocks, slugifyContentTitle } from '@/lib/contentBlocks'
-import { slugifyEventTitle } from '@/lib/planningPart6'
+import {
+  createEmptyBlogDraft,
+  createEmptyEventDraft,
+  deleteCmsBlog,
+  deleteCmsEvent,
+  fetchAllCmsBlogs,
+  fetchAllCmsEvents,
+  prepareBlogForEditor,
+  prepareEventForEditor,
+  saveCmsBlog,
+  saveCmsEvent,
+} from '@/lib/contentCmsApi'
+import { mergeBlogPostsWithGuides } from '@/lib/seoLocalGuides'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
-
-function emptyBlog() {
-  return {
-    id: null,
-    title: '',
-    slug: '',
-    excerpt: '',
-    cover_url: '/branding/hakum-lw-blue.png',
-    author_label: 'Hakum Auto Care',
-    status: 'draft',
-    is_published: false,
-    content_blocks: [normalizeBlocks([{ type: 'paragraph', text: '' }])[0]],
-  }
-}
-
-function emptyEvent(defaultBranch = '') {
-  return {
-    id: null,
-    title: '',
-    slug: '',
-    description: '',
-    branch: defaultBranch,
-    starts_at: '',
-    ends_at: '',
-    banner_url: '/branding/hakum-lw-ow.png',
-    is_published: false,
-    form_id: '',
-    content_blocks: [],
-  }
-}
 
 export default function ContentAdminPage() {
   const { profile } = useAuth()
   const canEdit = canManageSiteContent(profile)
   const [tab, setTab] = useState('blogs')
-  const [blogs, setBlogs] = useState([])
+  const [dbBlogs, setDbBlogs] = useState([])
   const [events, setEvents] = useState([])
   const [forms, setForms] = useState([])
-  const [blogEditor, setBlogEditor] = useState(null)
-  const [eventEditor, setEventEditor] = useState(null)
-  const [preview, setPreview] = useState(null)
-  const [saving, setSaving] = useState(false)
   const [branchOptions, setBranchOptions] = useState([])
+  const [blogSearch, setBlogSearch] = useState('')
+  const [blogStatusFilter, setBlogStatusFilter] = useState('all')
+  const [eventSearch, setEventSearch] = useState('')
+  const [eventStatusFilter, setEventStatusFilter] = useState('all')
+  const [studioModal, setStudioModal] = useState(null) // { kind: 'blog' | 'event', data }
+  const [preview, setPreview] = useState(null)
+  const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false)
 
   const load = useCallback(async () => {
+    // Disambiguate events -> ops_forms relationship via ops_forms!form_id:
+    // supabase.from('events').select('id, title, description, branch, starts_at, ends_at, banner_url, slug, is_published, form_id, content_blocks, ops_forms!form_id ( id, name, slug )')
     const [b, e, f, branches] = await Promise.all([
-      supabase.from('blogs').select('*').order('updated_at', { ascending: false }).limit(100),
-      supabase
-        .from('events')
-        .select('id, title, description, branch, starts_at, ends_at, is_published, slug, form_id, banner_url, content_blocks, ops_forms!form_id ( id, name, slug )')
-        .order('starts_at', { ascending: false })
-        .limit(80),
+      fetchAllCmsBlogs(),
+      fetchAllCmsEvents(),
       supabase
         .from('ops_forms')
         .select('id, name, slug, status, public_enabled, kind')
@@ -82,10 +76,8 @@ export default function ContentAdminPage() {
         .order('name'),
       listBranches().catch(() => []),
     ])
-    if (b.error) toast.error(b.error.message)
-    else setBlogs(b.data || [])
-    if (e.error) toast.error(e.error.message)
-    else setEvents(e.data || [])
+    setDbBlogs(b || [])
+    setEvents(e || [])
     if (!f.error) setForms(f.data || [])
     setBranchOptions(
       (branches || [])
@@ -97,8 +89,65 @@ export default function ContentAdminPage() {
   const defaultBranchSlug = branchOptions[0]?.value || ''
 
   useEffect(() => {
-    if (canEdit) load()
+    if (!canEdit) return undefined
+    load()
+
+    // Real-time subscription for live updates across tabs/users
+    const channel = supabase
+      .channel('cms-admin-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'blogs' }, () => load())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, () => load())
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [canEdit, load])
+
+  const allBlogs = useMemo(
+    () => mergeBlogPostsWithGuides(dbBlogs, { includeDrafts: true }),
+    [dbBlogs],
+  )
+
+  const filteredBlogs = useMemo(() => {
+    const q = blogSearch.trim().toLowerCase()
+    return allBlogs.filter((post) => {
+      if (blogStatusFilter === 'published' && (!post.is_published || post.status === 'archived')) {
+        return false
+      }
+      if (blogStatusFilter === 'draft' && (post.is_published || post.status === 'archived')) {
+        return false
+      }
+      if (blogStatusFilter === 'archived' && post.status !== 'archived') {
+        return false
+      }
+      if (blogStatusFilter === 'seo-guides' && !post.is_builtin_guide && !post.region) {
+        return false
+      }
+      if (!q) return true
+      return (
+        String(post.title || '').toLowerCase().includes(q) ||
+        String(post.slug || '').toLowerCase().includes(q) ||
+        String(post.category || '').toLowerCase().includes(q) ||
+        String(post.region || '').toLowerCase().includes(q)
+      )
+    })
+  }, [allBlogs, blogSearch, blogStatusFilter])
+
+  const filteredEvents = useMemo(() => {
+    const q = eventSearch.trim().toLowerCase()
+    return events.filter((ev) => {
+      if (eventStatusFilter === 'published' && !ev.is_published) return false
+      if (eventStatusFilter === 'draft' && ev.is_published) return false
+      if (!q) return true
+      return (
+        String(ev.title || '').toLowerCase().includes(q) ||
+        String(ev.slug || '').toLowerCase().includes(q) ||
+        String(ev.branch || '').toLowerCase().includes(q) ||
+        String(ev.description || '').toLowerCase().includes(q)
+      )
+    })
+  }, [events, eventSearch, eventStatusFilter])
 
   const formsById = useMemo(() => {
     const map = {}
@@ -108,90 +157,89 @@ export default function ContentAdminPage() {
 
   if (!canEdit) return <Navigate to="/operations/access-denied" replace />
 
-  async function saveBlog(e) {
-    e.preventDefault()
-    const title = blogEditor.title.trim()
-    if (!title) return toast.error('Title is required')
-    const blocks = normalizeBlocks(blogEditor.content_blocks)
-    setSaving(true)
-    const id = blogEditor.id || crypto.randomUUID()
-    const slug = (blogEditor.slug || '').trim() || slugifyContentTitle(title, id)
-    const published = blogEditor.status === 'published'
-    const row = {
-      id,
-      title,
-      slug,
-      excerpt: blogEditor.excerpt.trim() || null,
-      cover_url: blogEditor.cover_url.trim() || null,
-      author_label: blogEditor.author_label.trim() || 'Hakum Auto Care',
-      status: blogEditor.status,
-      is_published: published,
-      published_at: published ? (blogEditor.published_at || new Date().toISOString()) : null,
-      content_blocks: blocks,
-      updated_at: new Date().toISOString(),
-    }
-    const { error } = blogEditor.id
-      ? await supabase.from('blogs').update(row).eq('id', blogEditor.id)
-      : await supabase.from('blogs').insert({ ...row, created_by: profile?.id || null })
-    setSaving(false)
-    if (error) toast.error(error.message)
-    else {
-      toast.success(blogEditor.id ? 'Blog saved' : 'Blog created')
-      setBlogEditor(null)
+  async function handleQuickToggleBlogPublish(post) {
+    try {
+      const prepared = prepareBlogForEditor(post)
+      const nextPublished = !prepared.is_published
+      await saveCmsBlog(
+        {
+          ...prepared,
+          status: nextPublished ? 'published' : 'draft',
+          is_published: nextPublished,
+        },
+        profile,
+      )
+      toast.success(nextPublished ? 'Blog published live' : 'Blog moved to drafts')
       load()
+    } catch (err) {
+      toast.error(err?.message || 'Status update failed')
     }
   }
 
-  async function deleteBlog(id) {
-    if (!window.confirm('Delete this blog post?')) return
-    const { error } = await supabase.from('blogs').delete().eq('id', id)
-    if (error) toast.error(error.message)
-    else {
-      toast.success('Deleted')
+  async function handleDuplicateBlog(post) {
+    const prepared = prepareBlogForEditor(post)
+    setStudioModal({
+      kind: 'blog',
+      data: {
+        ...prepared,
+        id: null,
+        is_builtin_guide: false,
+        title: `${prepared.title} (Copy)`,
+        slug: `${prepared.slug}-copy-${Date.now().toString(36).slice(-4)}`,
+        status: 'draft',
+        is_published: false,
+      },
+    })
+  }
+
+  async function handleDeleteBlogRow(post) {
+    if (!window.confirm(`Delete "${post.title}"?`)) return
+    try {
+      await deleteCmsBlog(post, profile)
+      toast.success('Blog deleted')
       load()
+    } catch (err) {
+      toast.error(err?.message || 'Delete failed')
     }
   }
 
-  async function saveEvent(e) {
-    e.preventDefault()
-    const title = eventEditor.title.trim()
-    if (!title || !eventEditor.starts_at) return toast.error('Title and start required')
-    setSaving(true)
-    const id = eventEditor.id || crypto.randomUUID()
-    const slug = (eventEditor.slug || '').trim() || slugifyEventTitle(title, id)
-    const row = {
-      id,
-      title,
-      slug,
-      description: eventEditor.description.trim() || null,
-      branch: eventEditor.branch.trim() || null,
-      starts_at: new Date(eventEditor.starts_at).toISOString(),
-      ends_at: eventEditor.ends_at ? new Date(eventEditor.ends_at).toISOString() : null,
-      banner_url: eventEditor.banner_url.trim() || null,
-      is_published: Boolean(eventEditor.is_published),
-      form_id: eventEditor.form_id || null,
-      content_blocks: normalizeBlocks(eventEditor.content_blocks),
-      updated_at: new Date().toISOString(),
-    }
-    const { error } = eventEditor.id
-      ? await supabase.from('events').update(row).eq('id', eventEditor.id)
-      : await supabase.from('events').insert(row)
-    setSaving(false)
-    if (error) toast.error(error.message)
-    else {
-      toast.success(eventEditor.id ? 'Event saved' : 'Event created')
-      setEventEditor(null)
+  async function handleQuickToggleEventPublish(ev) {
+    try {
+      const prepared = prepareEventForEditor(ev, defaultBranchSlug)
+      const nextPublished = !prepared.is_published
+      await saveCmsEvent({
+        ...prepared,
+        is_published: nextPublished,
+      })
+      toast.success(nextPublished ? 'Event published live' : 'Event moved to drafts')
       load()
+    } catch (err) {
+      toast.error(err?.message || 'Status update failed')
     }
   }
 
-  async function deleteEvent(id) {
-    if (!window.confirm('Delete this event?')) return
-    const { error } = await supabase.from('events').delete().eq('id', id)
-    if (error) toast.error(error.message)
-    else {
-      toast.success('Deleted')
+  async function handleDuplicateEvent(ev) {
+    const prepared = prepareEventForEditor(ev, defaultBranchSlug)
+    setStudioModal({
+      kind: 'event',
+      data: {
+        ...prepared,
+        id: null,
+        title: `${prepared.title} (Copy)`,
+        slug: `${prepared.slug}-copy-${Date.now().toString(36).slice(-4)}`,
+        is_published: false,
+      },
+    })
+  }
+
+  async function handleDeleteEventRow(ev) {
+    if (!window.confirm(`Delete event "${ev.title}"?`)) return
+    try {
+      await deleteCmsEvent(ev.id)
+      toast.success('Event deleted')
       load()
+    } catch (err) {
+      toast.error(err?.message || 'Delete failed')
     }
   }
 
@@ -205,304 +253,439 @@ export default function ContentAdminPage() {
     }
   }
 
-  function toLocalInput(iso) {
-    if (!iso) return ''
-    const d = new Date(iso)
-    if (Number.isNaN(d.getTime())) return ''
-    const pad = (n) => String(n).padStart(2, '0')
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
-  }
+  const publishedBlogsCount = allBlogs.filter((b) => b.is_published && b.status !== 'archived').length
+  const draftBlogsCount = allBlogs.filter((b) => !b.is_published && b.status !== 'archived').length
+  const publishedEventsCount = events.filter((e) => e.is_published).length
+  const draftEventsCount = events.filter((e) => !e.is_published).length
 
   return (
     <OpsPageShell
       className="hakum-content"
-      eyebrow="Content"
+      eyebrow="WordPress-Style Content Studio"
       title="Blogs & Events"
-      description="WordPress-style blocks: headings, images, videos, lists, quotes, and optional form buttons on events."
+      description="Create, edit, autosave, preview, upload photos, and publish blog articles, regional SEO guides, and community events in real time."
+      actions={
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="cursor-pointer"
+            onClick={() => setMediaLibraryOpen(true)}
+          >
+            <FolderOpen className="mr-1.5 size-4" /> Media Library
+          </Button>
+          <Button type="button" variant="outline" size="sm" asChild className="cursor-pointer">
+            <Link to="/events" target="_blank">
+              <Globe className="mr-1.5 size-4" /> View Live /events
+            </Link>
+          </Button>
+        </div>
+      }
     >
+      {/* Quick Studio KPI Strip */}
+      <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="rounded-xl border border-border bg-card p-3">
+          <p className="text-xs text-muted-foreground">Published Blogs &amp; Guides</p>
+          <p className="mt-1 text-2xl font-bold text-foreground">{publishedBlogsCount}</p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-3">
+          <p className="text-xs text-muted-foreground">Blog Drafts</p>
+          <p className="mt-1 text-2xl font-bold text-foreground">{draftBlogsCount}</p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-3">
+          <p className="text-xs text-muted-foreground">Published Events</p>
+          <p className="mt-1 text-2xl font-bold text-foreground">{publishedEventsCount}</p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-3">
+          <p className="text-xs text-muted-foreground">Event Drafts</p>
+          <p className="mt-1 text-2xl font-bold text-foreground">{draftEventsCount}</p>
+        </div>
+      </div>
+
       <Tabs value={tab} onValueChange={setTab}>
         <OpsTabList
           aria-label="Content sections"
           tabs={[
-            { id: 'blogs', label: 'Blogs', icon: FileText },
-            { id: 'events', label: 'Events', icon: CalendarDays },
+            { id: 'blogs', label: `Blogs (${allBlogs.length})`, icon: FileText },
+            { id: 'events', label: `Events (${events.length})`, icon: CalendarDays },
           ]}
         />
 
+        {/* BLOGS TAB */}
         <TabsContent value="blogs" className="mt-4 space-y-4">
-          <div className="flex justify-end">
-            <Button type="button" className="cursor-pointer" onClick={() => setBlogEditor(emptyBlog())}>
-              <Plus className="size-4" /> New blog
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-1 flex-wrap items-center gap-2">
+              <div className="relative min-w-[220px] flex-1 sm:max-w-xs">
+                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={blogSearch}
+                  onChange={(e) => setBlogSearch(e.target.value)}
+                  placeholder="Search blog title, slug, city…"
+                  className="pl-9"
+                />
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {[
+                  { id: 'all', label: 'All' },
+                  { id: 'published', label: 'Published' },
+                  { id: 'draft', label: 'Drafts' },
+                  { id: 'seo-guides', label: 'Regional SEO Guides' },
+                  { id: 'archived', label: 'Archived' },
+                ].map((f) => (
+                  <Button
+                    key={f.id}
+                    type="button"
+                    size="sm"
+                    variant={blogStatusFilter === f.id ? 'default' : 'outline'}
+                    className="h-8 cursor-pointer text-xs"
+                    onClick={() => setBlogStatusFilter(f.id)}
+                  >
+                    {f.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <Button
+              type="button"
+              className="cursor-pointer"
+              onClick={() =>
+                setStudioModal({ kind: 'blog', data: createEmptyBlogDraft() })
+              }
+            >
+              <Plus className="mr-1.5 size-4" /> New Blog Post
             </Button>
           </div>
+
           <Card>
             <CardHeader>
-              <CardTitle>Blog posts</CardTitle>
-              <CardDescription>Published posts appear on /blog and in the customer app.</CardDescription>
+              <CardTitle>Blog Posts &amp; Regional SEO Guides</CardTitle>
+              <CardDescription>
+                Published posts appear immediately on /events#blog, /blog/:slug, and in the customer portal.
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Updated</TableHead>
-                    <TableHead />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {blogs.map((post) => (
-                    <TableRow key={post.id}>
-                      <TableCell>
-                        <div className="font-medium">{post.title}</div>
-                        <div className="text-xs text-muted-foreground">/blog/{post.slug}</div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={post.is_published ? 'default' : 'secondary'}>
-                          {post.is_published ? 'Published' : post.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm">{new Date(post.updated_at).toLocaleString()}</TableCell>
-                      <TableCell className="flex flex-wrap justify-end gap-1">
-                        <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => setPreview({ kind: 'blog', ...post })}>Preview</Button>
-                        <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => setBlogEditor({
-                          ...post,
-                          content_blocks: normalizeBlocks(post.content_blocks),
-                        })}>
-                          <Pencil className="size-3.5" /> Edit
-                        </Button>
-                        {post.is_published && (
-                          <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => copyUrl(`/blog/${post.slug}`)}>
-                            <Copy className="size-3.5" />
-                          </Button>
-                        )}
-                        <Button size="sm" variant="ghost" className="cursor-pointer text-destructive" onClick={() => deleteBlog(post.id)}>
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Article</TableHead>
+                      <TableHead>Region / Category</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Updated</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                  {!blogs.length && (
-                    <TableRow><TableCell colSpan={4} className="text-muted-foreground">No blogs yet.</TableCell></TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredBlogs.map((post) => {
+                      const isPublished = Boolean(post.is_published) && post.status !== 'archived'
+                      return (
+                        <TableRow key={post.id || post.slug}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              {post.cover_url ? (
+                                <img
+                                  src={post.cover_url}
+                                  alt=""
+                                  className="hidden h-11 w-16 shrink-0 rounded-md border border-border object-cover sm:block"
+                                />
+                              ) : null}
+                              <div className="min-w-0">
+                                <div className="font-medium text-foreground">{post.title}</div>
+                                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                  <span>/blog/{post.slug}</span>
+                                  {post.is_builtin_guide && (
+                                    <span className="inline-flex items-center gap-0.5 text-primary">
+                                      <Sparkles className="size-3" /> Built-in SEO Guide
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-xs">
+                            <div className="font-medium capitalize">{post.regionLabel || post.region || 'All'}</div>
+                            <div className="text-muted-foreground">{post.category || 'Guide'}</div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={isPublished ? 'default' : 'secondary'}>
+                              {isPublished ? 'Published' : post.status || 'Draft'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {post.updated_at || post.published_at
+                              ? new Date(post.updated_at || post.published_at).toLocaleDateString()
+                              : '—'}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap justify-end gap-1">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="cursor-pointer"
+                                onClick={() => setPreview({ kind: 'blog', ...post })}
+                              >
+                                <Eye className="mr-1 size-3.5" /> Preview
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="cursor-pointer"
+                                onClick={() =>
+                                  setStudioModal({
+                                    kind: 'blog',
+                                    data: prepareBlogForEditor(post),
+                                  })
+                                }
+                              >
+                                <Pencil className="mr-1 size-3.5" /> Edit
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="cursor-pointer text-xs"
+                                onClick={() => handleQuickToggleBlogPublish(post)}
+                              >
+                                {isPublished ? 'Unpublish' : 'Publish'}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="cursor-pointer"
+                                title="Duplicate post"
+                                onClick={() => handleDuplicateBlog(post)}
+                              >
+                                <CopyPlus className="size-3.5" />
+                              </Button>
+                              {isPublished && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="cursor-pointer"
+                                  title="Copy public link"
+                                  onClick={() => copyUrl(`/blog/${post.slug}`)}
+                                >
+                                  <Copy className="size-3.5" />
+                                </Button>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="cursor-pointer text-destructive"
+                                title="Delete post"
+                                onClick={() => handleDeleteBlogRow(post)}
+                              >
+                                <Trash2 className="size-3.5" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                    {!filteredBlogs.length && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                          No matching blog posts found.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
 
+        {/* EVENTS TAB */}
         <TabsContent value="events" className="mt-4 space-y-4">
-          <div className="flex justify-end">
-            <Button type="button" className="cursor-pointer" onClick={() => setEventEditor(emptyEvent(defaultBranchSlug))}>
-              <Plus className="size-4" /> New event
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-1 flex-wrap items-center gap-2">
+              <div className="relative min-w-[220px] flex-1 sm:max-w-xs">
+                <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={eventSearch}
+                  onChange={(e) => setEventSearch(e.target.value)}
+                  placeholder="Search event title, branch…"
+                  className="pl-9"
+                />
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {[
+                  { id: 'all', label: 'All' },
+                  { id: 'published', label: 'Published' },
+                  { id: 'draft', label: 'Drafts' },
+                ].map((f) => (
+                  <Button
+                    key={f.id}
+                    type="button"
+                    size="sm"
+                    variant={eventStatusFilter === f.id ? 'default' : 'outline'}
+                    className="h-8 cursor-pointer text-xs"
+                    onClick={() => setEventStatusFilter(f.id)}
+                  >
+                    {f.label}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <Button
+              type="button"
+              className="cursor-pointer"
+              onClick={() =>
+                setStudioModal({
+                  kind: 'event',
+                  data: createEmptyEventDraft(defaultBranchSlug),
+                })
+              }
+            >
+              <Plus className="mr-1.5 size-4" /> New Event
             </Button>
           </div>
+
           <Card>
             <CardHeader>
-              <CardTitle>Events</CardTitle>
-              <CardDescription>Attach a form globally and/or add form buttons inside content sections.</CardDescription>
+              <CardTitle>Events &amp; Community Meets</CardTitle>
+              <CardDescription>
+                Attach an RSVP form globally and/or add WordPress photo galleries, videos, and CTA buttons inside event sections.
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Title</TableHead>
-                    <TableHead>When</TableHead>
-                    <TableHead>Form</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {events.map((ev) => (
-                    <TableRow key={ev.id}>
-                      <TableCell>
-                        <div className="font-medium">{ev.title}</div>
-                        <div className="text-xs text-muted-foreground">/events/{ev.slug}</div>
-                      </TableCell>
-                      <TableCell className="text-sm">{new Date(ev.starts_at).toLocaleString()}</TableCell>
-                      <TableCell className="text-sm">{ev.ops_forms?.name || '—'}</TableCell>
-                      <TableCell>
-                        <Badge variant={ev.is_published ? 'default' : 'secondary'}>
-                          {ev.is_published ? 'Published' : 'Draft'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="flex flex-wrap justify-end gap-1">
-                        <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => setPreview({ kind: 'event', ...ev })}>Preview</Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="cursor-pointer"
-                          onClick={() => setEventEditor({
-                            ...ev,
-                            starts_at: toLocalInput(ev.starts_at),
-                            ends_at: toLocalInput(ev.ends_at),
-                            form_id: ev.form_id || '',
-                            content_blocks: normalizeBlocks(ev.content_blocks),
-                          })}
-                        >
-                          <Pencil className="size-3.5" /> Edit
-                        </Button>
-                        {ev.is_published && (
-                          <Button size="sm" variant="ghost" className="cursor-pointer" asChild>
-                            <a href={`/events/${ev.slug}`} target="_blank" rel="noreferrer"><ExternalLink className="size-3.5" /></a>
-                          </Button>
-                        )}
-                        <Button size="sm" variant="ghost" className="cursor-pointer text-destructive" onClick={() => deleteEvent(ev.id)}>
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      </TableCell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Event</TableHead>
+                      <TableHead>When &amp; Branch</TableHead>
+                      <TableHead>RSVP Form</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
-                  ))}
-                  {!events.length && (
-                    <TableRow><TableCell colSpan={5} className="text-muted-foreground">No events yet.</TableCell></TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredEvents.map((ev) => (
+                      <TableRow key={ev.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-3">
+                            {ev.banner_url ? (
+                              <img
+                                src={ev.banner_url}
+                                alt=""
+                                className="hidden h-11 w-16 shrink-0 rounded-md border border-border object-cover sm:block"
+                              />
+                            ) : null}
+                            <div className="min-w-0">
+                              <div className="font-medium text-foreground">{ev.title}</div>
+                              <div className="text-xs text-muted-foreground">/events/{ev.slug}</div>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-xs">
+                          <div className="font-medium">
+                            {ev.is_date_tba
+                              ? 'To be announced'
+                              : ev.starts_at
+                                ? new Date(ev.starts_at).toLocaleString()
+                                : '—'}
+                          </div>
+                          <div className="capitalize text-muted-foreground">{ev.branch || 'All branches'}</div>
+                        </TableCell>
+                        <TableCell className="text-xs">{ev.ops_forms?.name || 'Built-in Registration'}</TableCell>
+                        <TableCell>
+                          <Badge variant={ev.is_published ? 'default' : 'secondary'}>
+                            {ev.is_published ? 'Published' : 'Draft'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap justify-end gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="cursor-pointer"
+                              onClick={() => setPreview({ kind: 'event', ...ev })}
+                            >
+                              <Eye className="mr-1 size-3.5" /> Preview
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="cursor-pointer"
+                              onClick={() =>
+                                setStudioModal({
+                                  kind: 'event',
+                                  data: prepareEventForEditor(ev, defaultBranchSlug),
+                                })
+                              }
+                            >
+                              <Pencil className="mr-1 size-3.5" /> Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="cursor-pointer text-xs"
+                              onClick={() => handleQuickToggleEventPublish(ev)}
+                            >
+                              {ev.is_published ? 'Unpublish' : 'Publish'}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="cursor-pointer"
+                              title="Duplicate event"
+                              onClick={() => handleDuplicateEvent(ev)}
+                            >
+                              <CopyPlus className="size-3.5" />
+                            </Button>
+                            {ev.is_published && (
+                              <Button size="sm" variant="ghost" className="cursor-pointer" asChild title="Open public event page">
+                                <a href={`/events/${ev.slug}`} target="_blank" rel="noreferrer">
+                                  <ExternalLink className="size-3.5" />
+                                </a>
+                              </Button>
+                            )}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              className="cursor-pointer text-destructive"
+                              title="Delete event"
+                              onClick={() => handleDeleteEventRow(ev)}
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {!filteredEvents.length && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="py-8 text-center text-muted-foreground">
+                          No events yet. Click &ldquo;New Event&rdquo; to create one.
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
       </Tabs>
 
-      <Dialog open={Boolean(blogEditor)} onOpenChange={(open) => !open && setBlogEditor(null)}>
-        <DialogContent className="max-h-[94vh] overflow-y-auto sm:max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>{blogEditor?.id ? 'Edit blog' : 'New blog'}</DialogTitle>
-          </DialogHeader>
-          {blogEditor && (
-            <form onSubmit={saveBlog} className="grid gap-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="flex flex-col gap-2 sm:col-span-2">
-                  <Label>Title</Label>
-                  <Input required value={blogEditor.title} onChange={(e) => setBlogEditor({ ...blogEditor, title: e.target.value })} />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label>Slug</Label>
-                  <Input value={blogEditor.slug} onChange={(e) => setBlogEditor({ ...blogEditor, slug: e.target.value })} placeholder="auto from title" />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label>Status</Label>
-                  <NamedSelect
-                    value={blogEditor.status}
-                    onChange={(status) => setBlogEditor({ ...blogEditor, status, is_published: status === 'published' })}
-                    options={[
-                      { value: 'draft', label: 'Draft' },
-                      { value: 'published', label: 'Published' },
-                      { value: 'archived', label: 'Archived' },
-                    ]}
-                  />
-                </div>
-                <div className="flex flex-col gap-2 sm:col-span-2">
-                  <Label>Excerpt</Label>
-                  <Textarea value={blogEditor.excerpt} onChange={(e) => setBlogEditor({ ...blogEditor, excerpt: e.target.value })} />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label>Cover URL</Label>
-                  <Input value={blogEditor.cover_url} onChange={(e) => setBlogEditor({ ...blogEditor, cover_url: e.target.value })} />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label>Author label</Label>
-                  <Input value={blogEditor.author_label} onChange={(e) => setBlogEditor({ ...blogEditor, author_label: e.target.value })} />
-                </div>
-              </div>
-              <div>
-                <p className="mb-2 text-sm font-medium">Content blocks</p>
-                <ContentBlockEditor
-                  blocks={blogEditor.content_blocks}
-                  onChange={(content_blocks) => setBlogEditor({ ...blogEditor, content_blocks })}
-                />
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" className="cursor-pointer" onClick={() => setPreview({ kind: 'blog', ...blogEditor })}>Preview</Button>
-                <Button type="button" variant="outline" className="cursor-pointer" onClick={() => setBlogEditor(null)}>Cancel</Button>
-                <Button type="submit" className="cursor-pointer" disabled={saving}>{saving ? 'Saving…' : 'Save blog'}</Button>
-              </DialogFooter>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* WordPress Content Studio Modal (Blogs & Events) */}
+      <ContentStudioModal
+        open={Boolean(studioModal)}
+        onOpenChange={(open) => !open && setStudioModal(null)}
+        kind={studioModal?.kind || 'blog'}
+        initialValue={studioModal?.data || null}
+        profile={profile}
+        forms={forms}
+        branchOptions={branchOptions}
+        onSaved={() => load()}
+        onDeleted={() => load()}
+      />
 
-      <Dialog open={Boolean(eventEditor)} onOpenChange={(open) => !open && setEventEditor(null)}>
-        <DialogContent className="max-h-[94vh] overflow-y-auto sm:max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>{eventEditor?.id ? 'Edit event' : 'New event'}</DialogTitle>
-          </DialogHeader>
-          {eventEditor && (
-            <form onSubmit={saveEvent} className="grid gap-4">
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="flex flex-col gap-2 sm:col-span-2">
-                  <Label>Title</Label>
-                  <Input required value={eventEditor.title} onChange={(e) => setEventEditor({ ...eventEditor, title: e.target.value })} />
-                </div>
-                <div className="flex flex-col gap-2 sm:col-span-2">
-                  <Label>Short description</Label>
-                  <Textarea value={eventEditor.description} onChange={(e) => setEventEditor({ ...eventEditor, description: e.target.value })} />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label>Branch</Label>
-                  <NamedSelect
-                    value={eventEditor.branch || ''}
-                    onChange={(branch) => setEventEditor({ ...eventEditor, branch })}
-                    options={[{ value: '', label: 'All / none' }, ...branchOptions]}
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label>Published</Label>
-                  <NamedSelect
-                    value={eventEditor.is_published ? 'yes' : 'no'}
-                    onChange={(v) => setEventEditor({ ...eventEditor, is_published: v === 'yes' })}
-                    options={[
-                      { value: 'yes', label: 'Published' },
-                      { value: 'no', label: 'Draft' },
-                    ]}
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label>Starts</Label>
-                  <Input type="datetime-local" required value={eventEditor.starts_at} onChange={(e) => setEventEditor({ ...eventEditor, starts_at: e.target.value })} />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label>Ends</Label>
-                  <Input type="datetime-local" value={eventEditor.ends_at} onChange={(e) => setEventEditor({ ...eventEditor, ends_at: e.target.value })} />
-                </div>
-                <div className="flex flex-col gap-2 sm:col-span-2">
-                  <Label>Banner URL</Label>
-                  <Input value={eventEditor.banner_url} onChange={(e) => setEventEditor({ ...eventEditor, banner_url: e.target.value })} />
-                </div>
-                <div className="flex flex-col gap-2 sm:col-span-2">
-                  <Label>Default event form</Label>
-                  <NamedSelect
-                    value={eventEditor.form_id || ''}
-                    onChange={(form_id) => setEventEditor({ ...eventEditor, form_id })}
-                    emptyLabel="No form"
-                    options={forms.map((f) => ({ value: f.id, label: f.name }))}
-                  />
-                </div>
-              </div>
-              <div>
-                <p className="mb-2 text-sm font-medium">Content sections</p>
-                <p className="mb-3 text-xs text-muted-foreground">
-                  Add a Button / CTA block and pick a form to place an RSVP button inside any section.
-                </p>
-                <ContentBlockEditor
-                  allowFormCta
-                  forms={forms}
-                  blocks={eventEditor.content_blocks}
-                  onChange={(content_blocks) => setEventEditor({ ...eventEditor, content_blocks })}
-                />
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" className="cursor-pointer" onClick={() => setPreview({ kind: 'event', ...eventEditor })}>Preview</Button>
-                <Button type="button" variant="outline" className="cursor-pointer" onClick={() => setEventEditor(null)}>Cancel</Button>
-                <Button type="submit" className="cursor-pointer" disabled={saving}>{saving ? 'Saving…' : 'Save event'}</Button>
-              </DialogFooter>
-            </form>
-          )}
-        </DialogContent>
-      </Dialog>
-
+      {/* Quick Preview Modal */}
       <Dialog open={Boolean(preview)} onOpenChange={(open) => !open && setPreview(null)}>
-        <DialogContent className="max-h-[94vh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent className="max-h-[94vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Preview · {preview?.title}</DialogTitle>
           </DialogHeader>
@@ -512,22 +695,61 @@ export default function ContentAdminPage() {
                 <img
                   src={preview.cover_url || preview.banner_url}
                   alt=""
-                  className="max-h-48 w-full rounded-xl object-cover"
+                  className="max-h-56 w-full rounded-xl object-cover"
                 />
               ) : null}
               <ContentBlockRenderer
                 blocks={preview.content_blocks}
                 formsById={formsById}
               />
-              {preview.kind === 'blog' && preview.slug ? (
-                <Button asChild variant="outline" className="cursor-pointer">
-                  <Link to={`/blog/${preview.slug}`} target="_blank">Open live</Link>
+              <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border pt-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="cursor-pointer"
+                  onClick={() => {
+                    const item = preview
+                    setPreview(null)
+                    setStudioModal({
+                      kind: item.kind,
+                      data:
+                        item.kind === 'blog'
+                          ? prepareBlogForEditor(item)
+                          : prepareEventForEditor(item, defaultBranchSlug),
+                    })
+                  }}
+                >
+                  <Pencil className="mr-1.5 size-3.5" /> Edit in Studio
                 </Button>
-              ) : null}
+                {preview.kind === 'blog' && preview.slug ? (
+                  <Button asChild className="cursor-pointer">
+                    <Link to={`/blog/${preview.slug}`} target="_blank">
+                      Open Live Article
+                    </Link>
+                  </Button>
+                ) : null}
+                {preview.kind === 'event' && preview.slug ? (
+                  <Button asChild className="cursor-pointer">
+                    <Link to={`/events/${preview.slug}`} target="_blank">
+                      Open Live Event
+                    </Link>
+                  </Button>
+                ) : null}
+              </div>
             </div>
           )}
         </DialogContent>
       </Dialog>
+
+      <MediaLibraryDialog
+        open={mediaLibraryOpen}
+        onOpenChange={setMediaLibraryOpen}
+        title="Hakum Auto Care Media Library"
+        onSelect={(item) => {
+          navigator.clipboard?.writeText(item.url)
+          toast.success('Photo URL copied to clipboard')
+        }}
+      />
     </OpsPageShell>
   )
 }

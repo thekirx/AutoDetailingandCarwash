@@ -613,11 +613,33 @@ export function findBuiltInBlogPost(slug) {
 }
 
 /** Merge database blog posts with built-in SEO guides, avoiding duplicate slugs. */
-export function mergeBlogPostsWithGuides(dbPosts = []) {
+export function mergeBlogPostsWithGuides(dbPosts = [], { includeDrafts = false } = {}) {
   const safeDb = Array.isArray(dbPosts) ? dbPosts : []
   const seenSlugs = new Set(safeDb.map((p) => String(p?.slug || '').toLowerCase()).filter(Boolean))
-  const remainingGuides = SEO_LOCAL_GUIDES.filter((g) => !seenSlugs.has(g.slug.toLowerCase()))
-  return [...safeDb, ...remainingGuides]
+  const enrichedDb = safeDb
+    .filter((p) => (includeDrafts ? true : Boolean(p?.is_published) && (p?.status || 'published') === 'published'))
+    .map((p) => {
+      const builtIn = findBuiltInBlogPost(p?.slug)
+      const firstMeta = p?.content_blocks?.[0]?.post_meta || {}
+      return {
+        ...(builtIn || {}),
+        ...p,
+        region: p?.region || firstMeta.region || builtIn?.region || 'all',
+        regionLabel: p?.regionLabel || firstMeta.regionLabel || builtIn?.regionLabel || '',
+        category: p?.category || firstMeta.category || builtIn?.category || 'Studio Guide',
+        ai_summary: p?.ai_summary || firstMeta.ai_summary || builtIn?.ai_summary || p?.excerpt || '',
+        read_minutes: Number(p?.read_minutes || firstMeta.read_minutes || builtIn?.read_minutes) || 4,
+        is_featured: Boolean(p?.is_featured ?? firstMeta.is_featured ?? false),
+        is_db_row: true,
+      }
+    })
+  const remainingGuides = SEO_LOCAL_GUIDES.filter((g) => !seenSlugs.has(g.slug.toLowerCase())).map((g) => ({
+    ...g,
+    status: 'published',
+    is_published: true,
+    is_builtin_guide: true,
+  }))
+  return [...enrichedDb, ...remainingGuides]
 }
 
 export function buildEventsBlogSeoJsonLd(origin = 'https://www.hakumautocare.com') {
