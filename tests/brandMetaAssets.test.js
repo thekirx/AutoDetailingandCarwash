@@ -31,7 +31,7 @@ describe('Browser and social brand assets', () => {
 
   it('publishes crawler-safe social metadata and official favicon references', async () => {
     const html = await readFile(projectFile('index.html'), 'utf8')
-    const imageUrl = 'https://auto-detailingand-carwash.vercel.app/og-image.png'
+    const imageUrl = 'https://www.hakumautocare.com/og-image.png'
 
     assert.match(html, new RegExp(`<meta property="og:image" content="${imageUrl.replaceAll('.', '\\.')}`))
     assert.match(html, /<meta property="og:image:type" content="image\/png"/)
@@ -40,6 +40,8 @@ describe('Browser and social brand assets', () => {
     assert.match(html, /<meta property="og:image:alt" content="Hakum Auto Care official logo"/)
     assert.match(html, new RegExp(`<meta name="twitter:image" content="${imageUrl.replaceAll('.', '\\.')}`))
     assert.match(html, /<link rel="icon" href="\/favicon\.png" type="image\/png" sizes="64x64"/)
+    assert.match(html, /<link rel="icon" href="\/icon-192\.png" type="image\/png" sizes="192x192"/)
+    assert.match(html, /<link rel="icon" href="\/icon-512\.png" type="image\/png" sizes="512x512"/)
     assert.doesNotMatch(html, /favicon\.svg/)
   })
 

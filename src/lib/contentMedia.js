@@ -109,7 +109,7 @@ export async function uploadContentMedia(file) {
     const token = sessionData?.session?.access_token
     const { base64, dataUrl } = await fileToBase64(file)
     if (token) {
-      const resp = await fetch('/api/staff?op=manage-content', {
+      const resp = await fetch('/api/staff?operation=manage-content', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

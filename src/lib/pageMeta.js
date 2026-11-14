@@ -142,7 +142,14 @@ export function buildSiteJsonLd({ areaServed = ['Bacoor', 'Batangas'] } = {}) {
         name: SITE,
         url: absoluteUrl('/'),
         areaServed,
-        logo: absoluteUrl('/og-image.png'),
+        logo: {
+          '@type': 'ImageObject',
+          url: absoluteUrl('/icon-512.png'),
+          contentUrl: absoluteUrl('/icon-512.png'),
+          width: 512,
+          height: 512,
+        },
+        image: absoluteUrl('/og-image.png'),
       },
       {
         '@type': 'WebSite',

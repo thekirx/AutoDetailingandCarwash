@@ -262,12 +262,27 @@ async function main() {
 
   if (secondary) {
     const tl2 = await ensureAuthUser({
-      email: 'teamlead2@hakumautocare.com',
+      email: 'tl.batangas@hakumautocare.com',
       password: demoPassword('VITE_DEMO_PASSWORD_TL'),
-      full_name: 'TL Second Branch',
+      full_name: 'Batangas Team Lead',
     })
-    await upsertStaffProfile(tl2, { full_name: 'TL Second Branch', role: 'team_lead', branch_slug: secondary })
-    console.log('Team Lead 2', tl2.id, secondary)
+    await upsertStaffProfile(tl2, { full_name: 'Batangas Team Lead', role: 'team_lead', branch_slug: secondary })
+    console.log('Team Lead (Batangas)', tl2.id, secondary)
+
+    const admin2 = await ensureAuthUser({
+      email: 'admin2@hakumautocare.com',
+      password: demoPassword('VITE_DEMO_PASSWORD_ADMIN'),
+      full_name: 'Site Admin',
+    })
+    await upsertStaffProfile(admin2, {
+      full_name: 'Site Admin',
+      role: 'admin',
+      branch_slug: secondary,
+      phone: '09170000011',
+    })
+    await admin.from('staff_branch_assignments').delete().eq('staff_id', admin2.id)
+    await admin.from('staff_branch_assignments').insert([{ staff_id: admin2.id, branch_slug: secondary }])
+    console.log('Admin (Batangas)', admin2.id, secondary)
   }
 
   const salesUser = await ensureAuthUser({
@@ -325,7 +340,11 @@ async function main() {
     branch_slug: primary,
     phone: '09170000021',
   })
-  console.log('Marketing', marketing.id)
+  await admin.from('staff_branch_assignments').delete().eq('staff_id', marketing.id)
+  await admin
+    .from('staff_branch_assignments')
+    .insert(branches.map((slug) => ({ staff_id: marketing.id, branch_slug: slug })))
+  console.log('Marketing', marketing.id, 'branches', branches.join(','))
 
   const asa = await ensureAuthUser({
     email: 'assistant@hakumautocare.com',
@@ -340,6 +359,20 @@ async function main() {
     permission_grants: setAssistantGrantsPreset('all'),
   })
   console.log('Assistant Super Admin (Luci)', asa.id)
+
+  const robert = await ensureAuthUser({
+    email: 'robert@hakumautocare.com',
+    password: demoPassword('VITE_DEMO_PASSWORD_ASA'),
+    full_name: 'Robert',
+  })
+  await upsertStaffProfile(robert, {
+    full_name: 'Robert',
+    role: 'assistant_super_admin',
+    branch_slug: null,
+    phone: '09170000032',
+    permission_grants: setAssistantGrantsPreset('all'),
+  })
+  console.log('Assistant Super Admin (Robert)', robert.id)
 
   const opsLead = await ensureAuthUser({
     email: 'opslead@hakumautocare.com',

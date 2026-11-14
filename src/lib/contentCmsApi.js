@@ -20,7 +20,7 @@ async function callManageContentApi(body) {
   const { data: sessionData } = await supabase.auth.getSession()
   const token = sessionData?.session?.access_token
   if (!token) throw new Error('Please sign in to manage site content.')
-  const resp = await fetch('/api/staff?op=manage-content', {
+  const resp = await fetch('/api/staff?operation=manage-content', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -161,9 +161,12 @@ export async function fetchAllCmsEvents() {
   }
 }
 
-export async function saveCmsBlog(editorState, profile = null) {
+export async function saveCmsBlog(editorState, profileOrOptions = null) {
   const title = String(editorState?.title || '').trim()
   if (!title) throw new Error('Blog title is required.')
+
+  const isPublishOpt = typeof profileOrOptions?.publish === 'boolean'
+  const profile = isPublishOpt ? null : profileOrOptions
 
   const stats = estimateReadingStats(editorState.content_blocks, title, editorState.excerpt)
   const blocksWithMeta = attachContentMeta(editorState.content_blocks, {
@@ -188,11 +191,18 @@ export async function saveCmsBlog(editorState, profile = null) {
 
   const id = existingId || crypto.randomUUID()
   const slug = rawSlug || slugifyContentTitle(title, id)
-  const status = ['draft', 'published', 'archived'].includes(editorState.status)
-    ? editorState.status
-    : editorState.is_published
-      ? 'published'
-      : 'draft'
+  const status =
+    editorState.status === 'archived'
+      ? 'archived'
+      : isPublishOpt
+        ? profileOrOptions.publish
+          ? 'published'
+          : 'draft'
+        : ['draft', 'published', 'archived'].includes(editorState.status)
+          ? editorState.status
+          : editorState.is_published
+            ? 'published'
+            : 'draft'
   const published = status === 'published'
 
   const row = {
@@ -223,22 +233,26 @@ export async function saveCmsBlog(editorState, profile = null) {
 
   const { data, error } = await query
   if (!error) {
+    const saved = data || row
     clearAutosaveDraft('blog', existingId || slug || 'new')
     clearAutosaveDraft('blog', 'new')
-    return data || row
+    return { ...saved, ok: true, data: saved }
   }
 
   // Fallback to authenticated server endpoint
   const res = await callManageContentApi({ action: 'save-blog', row })
+  const saved = res.data || row
   clearAutosaveDraft('blog', existingId || slug || 'new')
   clearAutosaveDraft('blog', 'new')
-  return res.data || row
+  return { ...saved, ok: true, data: saved }
 }
 
-export async function deleteCmsBlog(post, profile = null) {
-  const id = isValidUuid(post?.id) ? post.id : null
-  const slug = String(post?.slug || '').trim()
-  const isBuiltIn = Boolean(findBuiltInBlogPost(slug))
+export async function deleteCmsBlog(postOrId, profile = null) {
+  const isStringArg = typeof postOrId === 'string'
+  const rawId = isStringArg ? postOrId : postOrId?.id
+  const id = isValidUuid(rawId) ? rawId : null
+  const slug = isStringArg ? (id ? '' : postOrId.trim()) : String(postOrId?.slug || '').trim()
+  const isBuiltIn = Boolean(slug && findBuiltInBlogPost(slug))
 
   // If this is a built-in guide with no DB row yet, or if deleting a built-in guide,
   // archive it in the DB so it is hidden from public pages unless restored.
@@ -260,10 +274,11 @@ export async function deleteCmsBlog(post, profile = null) {
     if (!error) return { ok: true }
   }
 
-  return callManageContentApi({ action: 'delete-blog', id, slug })
+  const res = await callManageContentApi({ action: 'delete-blog', id, slug })
+  return { ...res, ok: true }
 }
 
-export async function saveCmsEvent(editorState) {
+export async function saveCmsEvent(editorState, options = null) {
   const title = String(editorState?.title || '').trim()
   if (!title) throw new Error('Event title is required.')
   if (!editorState?.starts_at && !editorState?.is_date_tba) {
@@ -277,6 +292,8 @@ export async function saveCmsEvent(editorState) {
     ? new Date(editorState.starts_at).toISOString()
     : new Date().toISOString()
   const endsIso = editorState.ends_at ? new Date(editorState.ends_at).toISOString() : null
+  const published =
+    typeof options?.publish === 'boolean' ? options.publish : Boolean(editorState.is_published)
 
   const row = {
     id,
@@ -287,7 +304,7 @@ export async function saveCmsEvent(editorState) {
     starts_at: startsIso,
     ends_at: endsIso,
     banner_url: String(editorState.banner_url || '').trim() || null,
-    is_published: Boolean(editorState.is_published),
+    is_published: published,
     is_date_tba: Boolean(editorState.is_date_tba),
     form_id: editorState.form_id || null,
     content_blocks: normalizeBlocks(editorState.content_blocks),
@@ -300,22 +317,25 @@ export async function saveCmsEvent(editorState) {
 
   const { data, error } = await query
   if (!error) {
+    const saved = data || row
     clearAutosaveDraft('event', existingId || slug || 'new')
     clearAutosaveDraft('event', 'new')
-    return data || row
+    return { ...saved, ok: true, data: saved }
   }
 
   const res = await callManageContentApi({ action: 'save-event', row })
+  const saved = res.data || row
   clearAutosaveDraft('event', existingId || slug || 'new')
   clearAutosaveDraft('event', 'new')
-  return res.data || row
+  return { ...saved, ok: true, data: saved }
 }
 
 export async function deleteCmsEvent(id) {
   if (!id) throw new Error('Event ID is required.')
   const { error } = await supabase.from('events').delete().eq('id', id)
   if (!error) return { ok: true }
-  return callManageContentApi({ action: 'delete-event', id })
+  const res = await callManageContentApi({ action: 'delete-event', id })
+  return { ...res, ok: true }
 }
 
 // ── LocalStorage Autosave Helpers ──────────────────────────────────────────

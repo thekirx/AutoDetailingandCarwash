@@ -210,6 +210,10 @@ test('the site graph names the org and links the publisher', async () => {
   const site = graph.find((n) => n['@type'] === 'WebSite')
   assert.equal(org.name, SITE)
   assert.equal(site.publisher['@id'], org['@id'], 'the website must name a publisher, not float free')
+  assert.equal(org.logo['@type'], 'ImageObject')
+  assert.match(org.logo.url, /\/icon-512\.png$/)
+  assert.equal(org.logo.width, 512)
+  assert.equal(org.logo.height, 512)
 })
 
 test('the public surfaces actually publish those graphs', () => {
