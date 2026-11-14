@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { createPublicFormGuard, validatePublicFormGuard } from '@/lib/publicFormGuard'
@@ -7,6 +7,7 @@ import FormLegalNotice from '@/components/FormLegalNotice'
 import BdPageHero from '../components/public/bredesign/BdPageHero'
 import useReveal from '../components/public/bredesign/useReveal'
 import { usePageMeta } from '../lib/pageMeta'
+import { buildEventsBlogSeoJsonLd } from '../lib/seoLocalGuides'
 import { BlogListSection } from './BlogPage'
 
 export default function EventsPage() {
@@ -17,12 +18,18 @@ export default function EventsPage() {
   const [form, setForm] = useState({ name: '', phone: '', email: '' })
   const [status, setStatus] = useState('idle')
   const [guard, setGuard] = useState(() => createPublicFormGuard())
+  const eventsSeoJsonLd = useMemo(
+    () => buildEventsBlogSeoJsonLd(typeof window !== 'undefined' ? window.location.origin : 'https://www.hakumautocare.com'),
+    [],
+  )
 
   usePageMeta({
-    title: 'Events & Blog',
+    title: 'Events, Blog & Local Detailing Guides (Bacoor, Batangas City, Imus & Cavite)',
     description:
-      'Hakum Auto Care events, registrations, car care stories, and blog posts in Bacoor and Batangas.',
+      'Hakum Auto Care events, car care blog, and local guides for the best car wash, auto detailing, ceramic coating, and PPF in Bacoor, Batangas City, Imus, and Cavite.',
     path: '/events',
+    jsonLd: eventsSeoJsonLd,
+    jsonLdId: 'hakum-events-seo-jsonld',
   })
 
   useEffect(() => {

@@ -63,6 +63,36 @@
   <url>
     <loc>https://www.hakumautocare.com/events</loc>
     <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.hakumautocare.com/blog/best-car-wash-detailing-bacoor</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.hakumautocare.com/blog/best-car-wash-detailing-batangas-city</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.hakumautocare.com/blog/best-car-wash-detailing-imus</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.hakumautocare.com/blog/best-auto-detailing-ceramic-coating-ppf-cavite</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.hakumautocare.com/blog/ceramic-coating-vs-ppf-philippine-climate</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
+    <loc>https://www.hakumautocare.com/blog/why-two-bucket-ph-neutral-wash-matters</loc>
+    <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>

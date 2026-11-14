@@ -5,6 +5,7 @@ import CustomerAppFrame from '@/components/CustomerAppFrame'
 import { useBackOr } from '@/lib/useBackOr'
 import { Skeleton } from '@/components/customer/CustomerUi'
 import { supabase } from '@/lib/supabase'
+import { mergeBlogPostsWithGuides } from '@/lib/seoLocalGuides'
 
 /** Read time from the block text; falls back to the excerpt so every card shows one. */
 function readMinutes(post) {
@@ -20,7 +21,7 @@ function formatDate(iso) {
 
 export default function CustomerBlogPage() {
   const back = useBackOr('/account/more')
-  const [posts, setPosts] = useState([])
+  const [posts, setPosts] = useState(() => mergeBlogPostsWithGuides([]))
   const [active, setActive] = useState(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
@@ -33,8 +34,8 @@ export default function CustomerBlogPage() {
       .eq('status', 'published')
       .order('published_at', { ascending: false })
       .then(({ data, error: e }) => {
-        if (e) setError(e.message)
-        setPosts(data || [])
+        if (e) setError('')
+        setPosts(mergeBlogPostsWithGuides(data || []))
         setLoading(false)
       })
   }, [])

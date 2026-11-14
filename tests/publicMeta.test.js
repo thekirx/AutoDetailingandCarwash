@@ -300,3 +300,57 @@ test('a page title is never overwritten by the public layout defaults', () => {
   assert.match(lib, /export function useLayoutPageMeta[\s\S]*?useLayoutEffect\(/, 'useLayoutPageMeta must use useLayoutEffect')
   assert.match(lib, /export function usePageMeta[\s\S]*?useEffect\(/, 'page meta stays a passive effect so it applies after the layout')
 })
+
+// ── H5: Regional SEO Guides & AI Search Structured Data ─────────────────
+
+test('regional SEO guides cover Bacoor, Batangas City, Imus, and Cavite separately', async () => {
+  const {
+    SEO_LOCAL_GUIDES,
+    SEO_REGIONAL_PILLARS,
+    SEO_COMPARISON_ROWS,
+    SEO_LOCAL_FAQS,
+    findBuiltInBlogPost,
+    mergeBlogPostsWithGuides,
+    buildEventsBlogSeoJsonLd,
+    buildBlogPostJsonLd,
+  } = await import('../src/lib/seoLocalGuides.js')
+
+  const slugs = SEO_LOCAL_GUIDES.map((g) => g.slug)
+  assert.ok(slugs.includes('best-car-wash-detailing-bacoor'), 'Bacoor dedicated guide must exist')
+  assert.ok(slugs.includes('best-car-wash-detailing-batangas-city'), 'Batangas City dedicated guide must exist')
+  assert.ok(slugs.includes('best-car-wash-detailing-imus'), 'Imus dedicated guide must exist')
+  assert.ok(slugs.includes('best-auto-detailing-ceramic-coating-ppf-cavite'), 'Cavite province guide must exist')
+
+  const pillarIds = SEO_REGIONAL_PILLARS.map((p) => p.id)
+  assert.deepEqual(pillarIds, ['seo-bacoor', 'seo-batangas-city', 'seo-imus', 'seo-cavite'])
+  assert.ok(SEO_COMPARISON_ROWS.length >= 5, 'competitor comparison matrix must include core criteria')
+  assert.ok(SEO_LOCAL_FAQS.length >= 4, 'local SEO FAQ list must include core questions')
+
+  const bacoorGuide = findBuiltInBlogPost('best-car-wash-detailing-bacoor')
+  assert.ok(bacoorGuide, 'findBuiltInBlogPost must resolve Bacoor guide')
+  assert.ok(Array.isArray(bacoorGuide.content_blocks) && bacoorGuide.content_blocks.length >= 5)
+
+  const merged = mergeBlogPostsWithGuides([])
+  assert.equal(merged.length, SEO_LOCAL_GUIDES.length, 'empty DB list still yields all built-in SEO guides')
+
+  const eventsGraph = buildEventsBlogSeoJsonLd()
+  const types = eventsGraph['@graph'].map((n) => n['@type'])
+  assert.ok(types.includes('ItemList'), 'events/blog JSON-LD must include ItemList')
+  assert.ok(types.includes('FAQPage'), 'events/blog JSON-LD must include FAQPage for AI Overviews')
+
+  const articleLd = buildBlogPostJsonLd(bacoorGuide)
+  assert.equal(articleLd['@type'], 'BlogPosting')
+  assert.equal(articleLd.mainEntityOfPage, 'https://www.hakumautocare.com/blog/best-car-wash-detailing-bacoor')
+  assert.equal('aggregateRating' in articleLd, false, 'BlogPosting must never fabricate star ratings')
+
+  const sitemap = read('public/sitemap.xml')
+  for (const slug of [
+    'best-car-wash-detailing-bacoor',
+    'best-car-wash-detailing-batangas-city',
+    'best-car-wash-detailing-imus',
+    'best-auto-detailing-ceramic-coating-ppf-cavite',
+  ]) {
+    assert.match(sitemap, new RegExp(`https://www\\.hakumautocare\\.com/blog/${slug}<`))
+  }
+})
+
