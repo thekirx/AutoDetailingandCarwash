@@ -8,7 +8,7 @@ import CustomerPinControl from '@/components/customer/CustomerPinControl'
 import { usePublicBranches } from '@/lib/branches'
 import { branchDistanceKm } from '@/lib/branchGeo'
 import { fetchPortal } from '@/lib/customerPortalClient'
-import { formatDistanceKm, loadCustomerPin, resolveCustomerQueueBranch } from '@/lib/customerLocation'
+import { formatDistanceKm, loadCustomerPin, resolveCustomerQueueBranch, saveCustomerBranch } from '@/lib/customerLocation'
 import { CUSTOMER_QUEUE_PATH, queueCountsFromRow } from '@/lib/liveQueuePath'
 import { customerVisitPath } from '@/lib/customerAccountNav'
 import { usePageMeta } from '@/lib/pageMeta'
@@ -66,6 +66,7 @@ export default function CustomerQueuePage() {
 
   function selectBranch(slug) {
     if (!slug || slug === selectedSlug) return
+    saveCustomerBranch(slug)
     setParams({ branch: slug }, { replace: true })
   }
 

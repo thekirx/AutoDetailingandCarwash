@@ -10,7 +10,8 @@ import { CUSTOMER_BOOK_PATH, CUSTOMER_LOYALTY_PATH, CUSTOMER_MORE_PATH, customer
 import CustomerPinControl from '@/components/customer/CustomerPinControl'
 import { branchDistanceKm } from '@/lib/branchGeo'
 import { branchLabel, fetchPortal, greeting, initials, portalAction } from '@/lib/customerPortalClient'
-import { formatDistanceKm, loadCustomerPin, resolveCustomerQueueBranch } from '@/lib/customerLocation'
+import { formatDistanceKm } from '@/lib/customerLocation'
+import { useCustomerBranch } from '@/lib/useCustomerBranch'
 import { buildThumbReview } from '@/lib/serviceReviews'
 import { COMPLAINT_CATEGORIES, thumbDownComplaintPayload } from '@/lib/opsForms'
 import { latestFinishedVisit, latestReviewableVisit, reviewDelayRemainingMs } from '@/lib/visitReviewDelay'
@@ -122,8 +123,6 @@ export default function CustomerAccountPage() {
   }, [])
   const { profile: authProfile, user, session, loading: authLoading } = useAuth()
   const [data, setData] = useState(null)
-  const [selectedBranch, setSelectedBranch] = useState('')
-  const [pin, setPin] = useState(() => loadCustomerPin())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [tab, setTab] = useState('history')
@@ -136,7 +135,16 @@ export default function CustomerAccountPage() {
   const [reviewNow, setReviewNow] = useState(() => Date.now())
   const { countsBySlug } = usePublicQueueCounts()
 
-  const branches = data?.branches || EMPTY_LIST
+  const {
+    branches,
+    selectedBranch,
+    nearestSlug,
+    pin,
+    locating,
+    selectBranch: setSelectedBranch,
+    updatePin,
+    locateNearest,
+  } = useCustomerBranch(data?.branches || EMPTY_LIST)
   const bookings = data?.bookings || EMPTY_LIST
   const history = data?.history || EMPTY_LIST
   const purchases = data?.purchases || []
@@ -159,12 +167,6 @@ export default function CustomerAccountPage() {
       } else {
         setRatingDone(false)
       }
-      setSelectedBranch((current) => {
-        const list = next.branches || []
-        if (current && list.some((b) => b.slug === current)) return current
-        const resolved = resolveCustomerQueueBranch({ pin: loadCustomerPin(), branches: list })
-        return resolved.source === 'nearest' ? resolved.slug : ''
-      })
     } catch (err) {
       setError(err.message)
     } finally {
@@ -192,11 +194,6 @@ export default function CustomerAccountPage() {
     if (!loyalty || loyalty.stampsEnabled === false) return 'Rewards and perks'
     return `${loyalty.completed ?? 0}/${loyalty.cardSlots ?? 10} stamps`
   }, [loyalty])
-  const nearestSlug = useMemo(() => {
-    if (!pin) return ''
-    const resolved = resolveCustomerQueueBranch({ pin, branches })
-    return resolved.source === 'nearest' ? resolved.slug : ''
-  }, [pin, branches])
 
   useEffect(() => {
     const remaining = reviewDelayRemainingMs([...history, ...bookings], reviewNow)
@@ -204,11 +201,6 @@ export default function CustomerAccountPage() {
     const id = window.setTimeout(() => setReviewNow(Date.now()), remaining + 250)
     return () => window.clearTimeout(id)
   }, [history, bookings, reviewNow])
-
-  useEffect(() => {
-    if (selectedBranch || !nearestSlug) return
-    setSelectedBranch(nearestSlug)
-  }, [selectedBranch, nearestSlug])
 
   if (authLoading) {
     return (
@@ -300,7 +292,12 @@ export default function CustomerAccountPage() {
               </div>
               <div className="capp-hero-greet">
                 <p className="capp-greet">{greeting()},</p>
-                <BranchWeather branch={weatherBranch} />
+                <BranchWeather
+                  userCoords={pin}
+                  branch={weatherBranch}
+                  onLocate={() => locateNearest({ autoSelectNearest: true }).catch(() => {})}
+                  locating={locating}
+                />
               </div>
               <h1>{firstName || 'there'}</h1>
               <p className="capp-hero-sub">
@@ -320,9 +317,18 @@ export default function CustomerAccountPage() {
               the title on the left, the live ticket on the right. */}
           <div className="capp-hero-desk">
             <div className="capp-hero-desk-copy">
-              <p className="capp-desk-eyebrow">
-                {greeting()}, {firstName || 'there'}
-              </p>
+              <div className="capp-desk-top-row">
+                <p className="capp-desk-eyebrow">
+                  {greeting()}, {firstName || 'there'}
+                </p>
+                <BranchWeather
+                  userCoords={pin}
+                  branch={weatherBranch}
+                  onLocate={() => locateNearest({ autoSelectNearest: true }).catch(() => {})}
+                  locating={locating}
+                  className="capp-weather--desk"
+                />
+              </div>
               <h1 className="capp-desk-title">
                 {activeVisit ? 'Your car is' : 'Ready when'}
                 <em>{activeVisit ? `${stagePhrase(activeVisit)}.` : 'you are.'}</em>
@@ -543,14 +549,14 @@ export default function CustomerAccountPage() {
         )}
       </section>
 
-      <section className="capp-section capp-desk-only" aria-label="Live queue">
+      <section className="capp-section capp-span" aria-label="Your branch and live queue">
         <SectionHead
-          title="Live queue"
-          note={selectedBranch ? (nearestSlug === selectedBranch ? 'Nearest to you' : branchLabel(branches, selectedBranch)) : 'Choose a branch'}
+          title="Your branch & live queue"
+          note={selectedBranch ? (nearestSlug === selectedBranch ? `Nearest · ${branchLabel(branches, selectedBranch)}` : branchLabel(branches, selectedBranch)) : 'Choose a branch'}
           to={selectedBranch ? queueHref : undefined}
         />
         <label className="capp-field">
-          <span>Branch</span>
+          <span>Active branch for booking &amp; pickup</span>
           <select
             className="capp-select"
             aria-label="Choose a branch to check the live queue"
@@ -561,9 +567,10 @@ export default function CustomerAccountPage() {
             {branches.map((b) => {
               const km = pin ? branchDistanceKm(pin, b) : null
               const away = km == null ? '' : ` · ${formatDistanceKm(km)}`
+              const tag = nearestSlug === b.slug ? ' (Nearest)' : ''
               return (
                 <option key={b.slug} value={b.slug}>
-                  {b.name}{away}
+                  {b.name}{away}{tag}
                 </option>
               )
             })}
@@ -573,7 +580,7 @@ export default function CustomerAccountPage() {
           branches={branches}
           currentSlug={selectedBranch}
           pin={pin}
-          onPin={setPin}
+          onPin={(nextPin) => updatePin(nextPin, { autoSelectNearest: false })}
           onChoose={setSelectedBranch}
         />
         {selectedBranch ? (
@@ -700,7 +707,7 @@ export default function CustomerAccountPage() {
                 as="article"
                 icon={Receipt}
                 title="Store purchase"
-                sub={`${formatWhen(row.occurred_at)} · ${row.payment_method || 'paid'}`}
+                sub={`${formatWhen(row.occurred_at)}${row.branch ? ` · ${branchLabel(branches, row.branch)}` : ''} · ${row.payment_method || 'paid'}`}
                 end={<b>{formatMoney(row.total_minor)}</b>}
               />
             ))

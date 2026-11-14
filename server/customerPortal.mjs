@@ -1,5 +1,6 @@
 import { sendShopMessage } from './pointsShop.mjs'
 import { shopItems } from '../src/lib/pointsShop.js'
+import { filterOperationalBranches, filterOperationalStockRows } from '../src/lib/inventoryBranchStock.js'
 /**
  * Customer portal data (service role) — JWT customer → history / garage / queue / loyalty.
  * POST actions: add-vehicle | update-vehicle | archive-vehicle | sync-email | update-phone | update-birthday | submit-review | request-reschedule | claim-birthday | redeem-accessory | check-voucher | apply-booking-voucher
@@ -104,7 +105,14 @@ export async function loadCustomerPortal({ accessToken, origin = '' }) {
 
   const [branches, history, purchases, active, queue, loyaltySettings, loyaltyMilestones, customerRow, vehicles, membershipRow, maint, visitCountRes, membershipTiersRes] =
     await Promise.all([
-      admin.from('branches').select('slug, name, address, is_active, latitude, longitude, google_review_url').eq('is_active', true).eq('is_archived', false).order('name'),
+      admin
+        .from('branches')
+        .select('slug, name, address, is_active, coming_soon, is_public, latitude, longitude, google_review_url')
+        .eq('is_active', true)
+        .eq('is_archived', false)
+        .eq('coming_soon', false)
+        .eq('is_public', true)
+        .order('name'),
       admin
         .from('bookings')
         .select('id, branch, status, vehicle_plate, vehicle_make, vehicle_model, final_price_minor, scheduled_start, created_at, customer_name, service_id, visit_group_id, for_payment_at, completed_at, services(name, slug, pay_category)')
@@ -353,9 +361,15 @@ export async function loadCustomerPortal({ accessToken, origin = '' }) {
           })
     : null
 
+  const openBranches = filterOperationalBranches(branches.data || [])
+  const cleanShopRows = (shop.data || []).map((row) => ({
+    ...row,
+    product_branch_stock: filterOperationalStockRows(row.product_branch_stock || [], openBranches),
+  }))
+
   return {
     profile,
-    branches: branches.data || [],
+    branches: openBranches,
     history: withPhotos(historyRows.map(decorateVisit)),
     purchases: purchases.data || [],
     bookings: withPhotos(activeBookings),
@@ -385,7 +399,7 @@ export async function loadCustomerPortal({ accessToken, origin = '' }) {
       referral_code: profile.referral_code,
       available_discounts: (credits.data || []).length,
       program: normalizeReferralProgram(Array.isArray(programRow.data) ? programRow.data[0] : programRow.data),
-      shop: shopItems(shop.data || []),
+      shop: shopItems(cleanShopRows),
       redemptions: redemptions.data || [],
     },
     maintenanceDue: (maint.data || []).filter((row) => maintenanceNeedsOpsAttention(row)),

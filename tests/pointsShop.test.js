@@ -1,6 +1,13 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { claimState, pickupDaysLeft, shopItems, pickupCodeMatches } from '../src/lib/pointsShop.js'
+import {
+  branchProductStockCount,
+  claimState,
+  otherBranchesInStock,
+  pickupCodeMatches,
+  pickupDaysLeft,
+  shopItems,
+} from '../src/lib/pointsShop.js'
 const item = { id:'tee', show_in_app:true, is_active:true, points_price:50, size_options:[{label:'M'},{label:'L'}], product_branch_stock:[{branch_slug:'bacoor',size_key:'m',qty:1},{branch_slug:'bacoor',size_key:'l',qty:0},{branch_slug:'imus',size_key:'l',qty:2}] }
 test('shop mapping excludes hidden/free/inactive/internal items and preserves size stock', () => {
  assert.deepEqual(shopItems([item,{...item,show_in_app:false},{...item,points_price:0},{...item,is_active:false},{...item,usage_kind:'internal'}]),[item])
@@ -41,4 +48,29 @@ test('staff can type the pickup code with or without HK-, spaces or a dash', asy
   }
   assert.equal(normalizePickupCode('hk-1a2'), 'HK-1A2')
   assert.equal(normalizePickupCode(''), '')
+})
+
+test('multi-branch stock helpers sum sized/unsized stock at a branch and list other branches in stock', () => {
+  const branches = [
+    { slug: 'bacoor', name: 'Hakum Auto Care Bacoor', is_active: true, coming_soon: false, is_public: true },
+    { slug: 'batangas', name: 'Hakum Auto Care Batangas', is_active: true, coming_soon: false, is_public: true },
+    { slug: 'dasmarinas', name: 'Dasmariñas', is_active: false, coming_soon: true, is_public: true },
+  ]
+  const sized = {
+    id: 'tee',
+    size_options: [{ label: 'S' }, { label: 'M' }, { label: 'L' }],
+    product_branch_stock: [
+      { branch_slug: 'bacoor', size_key: 's', qty: 0 },
+      { branch_slug: 'bacoor', size_key: 'm', qty: 0 },
+      { branch_slug: 'batangas', size_key: 'm', qty: 4 },
+      { branch_slug: 'batangas', size_key: 'l', qty: 3 },
+      { branch_slug: 'dasmarinas', size_key: 's', qty: 99 },
+    ],
+  }
+  assert.equal(branchProductStockCount(sized, 'bacoor'), 0)
+  assert.equal(branchProductStockCount(sized, 'batangas'), 7)
+  assert.deepEqual(
+    otherBranchesInStock(sized, 'bacoor', branches).map((b) => b.slug),
+    ['batangas'],
+  )
 })

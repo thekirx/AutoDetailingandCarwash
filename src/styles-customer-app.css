@@ -163,9 +163,36 @@ html.dark .capp-brand-logo--dark {
 
 .capp-weather-now {
   display: inline-flex;
-  align-items: baseline;
+  align-items: center;
+  flex-wrap: wrap;
   gap: 0.4rem;
-  white-space: nowrap;
+}
+
+.capp-weather-tag,
+.capp-weather-loc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.14rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  opacity: 0.85;
+}
+
+.capp-weather-loc-btn {
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.capp-weather-loc-btn:hover:not(:disabled) {
+  opacity: 1;
+}
+
+.capp-shop-branch-list {
+  border-top: 1px solid var(--capp-line);
 }
 
 .capp-weather-line {
@@ -2360,6 +2387,24 @@ html.dark .capp-pin-error {
     font-weight: 500;
   }
 
+  .capp-desk-top-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem 1.5rem;
+  }
+
+  .capp-weather--desk {
+    align-items: flex-end;
+    text-align: right;
+    color: #fff;
+  }
+
+  .capp-weather--desk .capp-weather-line {
+    max-width: none;
+  }
+
   .capp-hero h1,
   .capp-hero .capp-greet,
   .capp-hero .capp-hero-sub,
@@ -2648,6 +2693,24 @@ form.capp-section > .capp-sect > h2::before {
   .capp-hero .capp-weather-line {
     color: #d3dbf5;
     font-weight: 500;
+  }
+
+  .capp-desk-top-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 1rem 1.5rem;
+  }
+
+  .capp-weather--desk {
+    align-items: flex-end;
+    text-align: right;
+    color: #fff;
+  }
+
+  .capp-weather--desk .capp-weather-line {
+    max-width: none;
   }
 
   .capp-desk-eyebrow,

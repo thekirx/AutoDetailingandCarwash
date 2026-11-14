@@ -5,11 +5,15 @@ import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 import { nearestBranchSlug } from '../src/lib/branchGeo.js'
 import {
-  formatDistanceKm,
-  loadCustomerPin,
-  resolveCustomerQueueBranch,
-  saveCustomerPin,
+  CUSTOMER_BRANCH_KEY,
   CUSTOMER_PIN_KEY,
+  formatDistanceKm,
+  loadCustomerBranch,
+  loadCustomerPin,
+  resolveCustomerBranchChoice,
+  resolveCustomerQueueBranch,
+  saveCustomerBranch,
+  saveCustomerPin,
 } from '../src/lib/customerLocation.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -91,5 +95,47 @@ describe('customer queue branch', () => {
     assert.match(home, /CustomerPinControl/)
     assert.match(read('src/components/customer/CustomerPinControl.jsx'), /Pin my location/)
     assert.match(read('src/styles-customer-app.css'), /\.capp-pin/)
+  })
+
+  it('persists manual branch choice and resolves url > saved > nearest > default', () => {
+    const store = new Map()
+    globalThis.localStorage = {
+      getItem: (key) => (store.has(key) ? store.get(key) : null),
+      setItem: (key, value) => store.set(key, String(value)),
+      removeItem: (key) => store.delete(key),
+    }
+    assert.equal(loadCustomerBranch(), '')
+    assert.equal(saveCustomerBranch('batangas'), 'batangas')
+    assert.equal(store.get(CUSTOMER_BRANCH_KEY), 'batangas')
+    assert.equal(loadCustomerBranch(), 'batangas')
+
+    // Saved manual choice wins over nearest pin when no URL override is present
+    const savedChoice = resolveCustomerBranchChoice({
+      savedSlug: 'batangas',
+      pin: { lat: 14.459, lng: 120.929 },
+      branches,
+    })
+    assert.equal(savedChoice.slug, 'batangas')
+    assert.equal(savedChoice.source, 'saved')
+    assert.equal(savedChoice.nearestSlug, 'bacoor')
+
+    // Explicit URL choice overrides saved
+    const urlChoice = resolveCustomerBranchChoice({
+      wanted: 'bacoor',
+      savedSlug: 'batangas',
+      pin: { lat: 13.76, lng: 121.05 },
+      branches,
+    })
+    assert.equal(urlChoice.slug, 'bacoor')
+    assert.equal(urlChoice.source, 'url')
+
+    // Ignores coming_soon saved slug and falls back to nearest
+    const fallbackToNearest = resolveCustomerBranchChoice({
+      savedSlug: 'soon',
+      pin: { lat: 13.76, lng: 121.05 },
+      branches,
+    })
+    assert.equal(fallbackToNearest.slug, 'batangas')
+    assert.equal(fallbackToNearest.source, 'nearest')
   })
 })

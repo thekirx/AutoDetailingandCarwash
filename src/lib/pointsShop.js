@@ -1,4 +1,4 @@
-import { branchOnHand } from './inventoryBranchStock.js'
+import { branchOnHand, filterOperationalBranches } from './inventoryBranchStock.js'
 import { productSizeKey, productStockSizeKeys } from './productSizes.js'
 
 export const PICKUP_MASK = 'HK-••••'
@@ -19,6 +19,24 @@ export function claimState(item, branch, size, points, busy = false) {
   const stock = branchOnHand(item?.product_branch_stock, branch, key) || 0
   const left = Number(points || 0) - cost
   return { stock, left, canClaim: Boolean(item && branch && validSize && stock > 0 && cost > 0 && left >= 0 && !busy) }
+}
+
+/** Total claimable stock of an item at a specific branch (summing valid sizes or unsized row). */
+export function branchProductStockCount(item, branchSlug) {
+  if (!item || !branchSlug) return 0
+  const keys = productStockSizeKeys(item)
+  let total = 0
+  for (const key of keys) {
+    total += branchOnHand(item.product_branch_stock, branchSlug, key) || 0
+  }
+  return total
+}
+
+/** Open operational branches (excluding `excludeBranchSlug`) that currently have >0 stock of `item`. */
+export function otherBranchesInStock(item, excludeBranchSlug, branches = []) {
+  return filterOperationalBranches(branches).filter(
+    (b) => b.slug !== excludeBranchSlug && branchProductStockCount(item, b.slug) > 0,
+  )
 }
 export function pickupDaysLeft(expiresAt, now = new Date()) {
   const delta = new Date(expiresAt).getTime() - new Date(now).getTime()

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { fetchBranchWeather, weatherForecastLine, weatherLabelFromCode } from '../src/lib/branchWeather.js'
+import { fetchBranchWeather, resolveWeatherTarget, weatherForecastLine, weatherLabelFromCode } from '../src/lib/branchWeather.js'
 
 describe('branch weather', () => {
   it('maps WMO codes and caches Open-Meteo current temp', async () => {
@@ -28,5 +28,20 @@ describe('branch weather', () => {
     assert.deepEqual(first, { tempC: 29, label: 'Partly cloudy', line: "It's partly cloudy today." })
     assert.deepEqual(second, first)
     assert.equal(calls, 1)
+  })
+
+  it('prefers the user current location over the selected branch for weather', () => {
+    const batangas = { slug: 'batangas', name: 'Hakum Auto Care Batangas', latitude: 13.7563, longitude: 121.0583 }
+    const userInManila = { lat: 14.5995, lng: 120.9842 }
+
+    const target = resolveWeatherTarget({ userCoords: userInManila, branch: batangas })
+    assert.equal(target.lat, 14.5995)
+    assert.equal(target.lng, 120.9842)
+    assert.equal(target.source, 'user')
+
+    const fallback = resolveWeatherTarget({ userCoords: null, branch: batangas })
+    assert.equal(fallback.lat, 13.7563)
+    assert.equal(fallback.lng, 121.0583)
+    assert.equal(fallback.source, 'branch')
   })
 })

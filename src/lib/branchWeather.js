@@ -57,6 +57,24 @@ export function coordsForWeather(branch, fallback = { lat: 14.459, lng: 120.929 
   return fallback
 }
 
+/**
+ * Resolve weather coordinates: always prefer the user's current location (GPS or saved pin)
+ * so weather reflects where the customer actually is, not whichever branch they pick.
+ */
+export function resolveWeatherTarget({ userCoords = null, branch = null, fallback = { lat: 14.459, lng: 120.929 } } = {}) {
+  const uLat = Number(userCoords?.lat)
+  const uLng = Number(userCoords?.lng)
+  if (Number.isFinite(uLat) && Number.isFinite(uLng) && uLat >= -90 && uLat <= 90 && uLng >= -180 && uLng <= 180) {
+    return { lat: uLat, lng: uLng, source: 'user' }
+  }
+  const bLat = Number(branch?.latitude)
+  const bLng = Number(branch?.longitude)
+  if (Number.isFinite(bLat) && Number.isFinite(bLng)) {
+    return { lat: bLat, lng: bLng, source: 'branch' }
+  }
+  return { ...fallback, source: 'fallback' }
+}
+
 export async function fetchBranchWeather(lat, lng, { fetchImpl = fetch, now = Date.now(), storage } = {}) {
   const key = weatherCacheKey(lat, lng)
   const store = storage ?? (typeof sessionStorage === 'undefined' ? null : sessionStorage)

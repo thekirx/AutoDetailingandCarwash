@@ -14,6 +14,9 @@ import { pointsLabel } from '@/lib/loyaltyPoints'
 import { seedBookingFromVehicle } from '@/lib/uiDeadControls'
 import { plateValidationError, PLATE_FIELD_HINT } from '@/lib/customerAuth'
 import { bookableDayDates, earliestBookableDay } from '@/lib/bookingLead'
+import { branchDistanceKm } from '@/lib/branchGeo'
+import { formatDistanceKm, loadCustomerBranch, loadCustomerPin, resolveCustomerBranchChoice } from '@/lib/customerLocation'
+import { useCustomerBranch } from '@/lib/useCustomerBranch'
 import ReferralSourceFields, { useReferralStaff } from '@/components/bookings/ReferralSourceFields'
 import { friendCodeAccountError, referralRequiredError } from '@/lib/referralSource'
 import { usePageMeta } from '@/lib/pageMeta'
@@ -99,7 +102,14 @@ export default function CustomerBookPage() {
   const openedFromLink = useRef(false)
   const days = useMemo(() => nextDays(7), [])
 
-  const branches = portal?.branches || []
+  const {
+    branches,
+    nearestSlug,
+    pin,
+    locating,
+    selectBranch,
+    locateNearest,
+  } = useCustomerBranch(portal?.branches || [], { wanted: params.get('branch') || '' })
   const vehicles = portal?.vehicles || []
 
   useEffect(() => {
@@ -133,6 +143,12 @@ export default function CustomerBookPage() {
         : null
       const pick = pickById || pickByPlate || (!wantedPlate && !wantedVehicle ? data?.vehicles?.[0] : null) || null
       const wantedBranch = params.get('branch')
+      const resolvedBranch = resolveCustomerBranchChoice({
+        wanted: wantedBranch,
+        savedSlug: loadCustomerBranch(),
+        pin: loadCustomerPin(),
+        branches: data?.branches || [],
+      })
       const serviceId = wantedService ? detailing.find((s) => String(s.slug || '').toLowerCase() === wantedService)?.id || '' : ''
       setForm((f) =>
         seedBookingFromVehicle(
@@ -141,10 +157,7 @@ export default function CustomerBookPage() {
             customer_first_name: parts[0] || '',
             customer_last_name: parts.slice(1).join(' ') || '',
             customer_phone: data?.profile?.phone || authProfile?.phone || user?.phone || '',
-            branch:
-              (wantedBranch && data?.branches?.some((b) => b.slug === wantedBranch) && wantedBranch) ||
-              data?.branches?.[0]?.slug ||
-              '',
+            branch: resolvedBranch.slug || f.branch || '',
             service_id: serviceId || f.service_id,
             vehicle_plate: wantedPlate || f.vehicle_plate,
           },
@@ -311,8 +324,16 @@ export default function CustomerBookPage() {
           <MapPin size={18} strokeWidth={1.75} />
         </span>
         <span className="capp-row-body">
-          <strong>{branchRow ? branchRow.name.replace(/^Hakum Auto Care\s*/i, '') : 'Branch'}</strong>
-          <em>{branchRow?.address || 'Choose where to bring your car'}</em>
+          <strong>
+            {branchRow ? branchRow.name.replace(/^Hakum Auto Care\s*/i, '') : 'Branch'}
+            {branchRow && nearestSlug === branchRow.slug ? ' · Nearest' : ''}
+          </strong>
+          <em>
+            {branchRow?.address || 'Choose where to bring your car'}
+            {branchRow && pin && branchDistanceKm(pin, branchRow) != null
+              ? ` · ${formatDistanceKm(branchDistanceKm(pin, branchRow))} away`
+              : ''}
+          </em>
         </span>
         <span className="capp-row-end">Change</span>
       </button>
@@ -385,26 +406,54 @@ export default function CustomerBookPage() {
       ) : null}
 
       <Sheet open={branchOpen} onClose={() => setBranchOpen(false)} title="Branch">
+        <div className="mb-3">
+          <button
+            type="button"
+            className="capp-btn capp-btn-ghost capp-btn-block"
+            disabled={locating}
+            onClick={async () => {
+              try {
+                const res = await locateNearest()
+                if (res?.nearest?.slug) {
+                  set('branch', res.nearest.slug)
+                  setBranchOpen(false)
+                  toast.success(`Nearest branch: ${res.nearest.name || res.nearest.slug}`)
+                }
+              } catch (err) {
+                toast.error(err?.message || 'Unable to read your location.')
+              }
+            }}
+          >
+            <MapPin size={16} strokeWidth={1.75} aria-hidden />
+            {locating ? 'Finding nearest branch…' : 'Use nearest branch'}
+          </button>
+        </div>
         <div className="capp-opts" role="radiogroup" aria-label="Branch">
-          {branches.map((b) => (
-            <button
-              key={b.slug}
-              type="button"
-              role="radio"
-              aria-checked={b.slug === form.branch}
-              className="capp-opt"
-              onClick={() => {
-                set('branch', b.slug)
-                setBranchOpen(false)
-              }}
-            >
-              <span className="capp-opt-rd" aria-hidden />
-              <span className="capp-row-body">
-                <strong>{b.name.replace(/^Hakum Auto Care\s*/i, '')}</strong>
-                {b.address ? <em>{b.address}</em> : null}
-              </span>
-            </button>
-          ))}
+          {branches.map((b) => {
+            const km = pin ? branchDistanceKm(pin, b) : null
+            const dist = km != null ? ` · ${formatDistanceKm(km)}` : ''
+            const tag = nearestSlug === b.slug ? ' · Nearest' : ''
+            return (
+              <button
+                key={b.slug}
+                type="button"
+                role="radio"
+                aria-checked={b.slug === form.branch}
+                className="capp-opt"
+                onClick={() => {
+                  set('branch', b.slug)
+                  selectBranch(b.slug)
+                  setBranchOpen(false)
+                }}
+              >
+                <span className="capp-opt-rd" aria-hidden />
+                <span className="capp-row-body">
+                  <strong>{b.name.replace(/^Hakum Auto Care\s*/i, '')}{tag}</strong>
+                  {b.address || dist ? <em>{[b.address, dist ? dist.replace(/^ · /, '') : ''].filter(Boolean).join(' · ')}</em> : null}
+                </span>
+              </button>
+            )
+          })}
         </div>
       </Sheet>
 

@@ -1,6 +1,8 @@
 import { nearestBranchSlug } from './branchGeo.js'
+import { filterOperationalBranches } from './inventoryBranchStock.js'
 
 export const CUSTOMER_PIN_KEY = 'hakum-customer-pin'
+export const CUSTOMER_BRANCH_KEY = 'hakum-customer-branch'
 
 export function formatDistanceKm(km) {
   const n = Number(km)
@@ -52,4 +54,66 @@ export function resolveCustomerQueueBranch({ wanted = '', pin = null, branches =
     }
   }
   return { slug: list[0]?.slug || '', source: 'default' }
+}
+
+export function loadCustomerBranch() {
+  try {
+    if (typeof localStorage === 'undefined') return ''
+    return String(localStorage.getItem(CUSTOMER_BRANCH_KEY) || '').trim()
+  } catch {
+    return ''
+  }
+}
+
+export function saveCustomerBranch(slug) {
+  const next = String(slug || '').trim()
+  try {
+    if (typeof localStorage === 'undefined') return next
+    if (next) localStorage.setItem(CUSTOMER_BRANCH_KEY, next)
+    else localStorage.removeItem(CUSTOMER_BRANCH_KEY)
+  } catch {
+    /* ignore quota */
+  }
+  return next
+}
+
+/**
+ * Unified customer branch resolver across Home, Queue, Book, and Points Shop.
+ * Priority: explicit URL `wanted` > saved manual `savedSlug` > nearest open branch from `pin` > first open branch.
+ */
+export function resolveCustomerBranchChoice({ wanted = '', savedSlug = '', pin = null, branches = [] } = {}) {
+  const list = filterOperationalBranches(branches)
+  const nearest = pin ? nearestBranchSlug(pin, list) : null
+  const explicit = String(wanted || '').trim()
+  if (explicit && list.some((row) => row.slug === explicit)) {
+    return {
+      slug: explicit,
+      source: 'url',
+      nearestSlug: nearest?.slug || '',
+      nearestDistanceKm: nearest?.distanceKm ?? null,
+    }
+  }
+  const saved = String(savedSlug || '').trim()
+  if (saved && list.some((row) => row.slug === saved)) {
+    return {
+      slug: saved,
+      source: 'saved',
+      nearestSlug: nearest?.slug || '',
+      nearestDistanceKm: nearest?.distanceKm ?? null,
+    }
+  }
+  if (nearest?.slug) {
+    return {
+      slug: nearest.slug,
+      source: 'nearest',
+      nearestSlug: nearest.slug,
+      nearestDistanceKm: nearest.distanceKm,
+    }
+  }
+  return {
+    slug: list[0]?.slug || '',
+    source: 'default',
+    nearestSlug: '',
+    nearestDistanceKm: null,
+  }
 }
