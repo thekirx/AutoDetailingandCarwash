@@ -154,19 +154,19 @@ async function runBrowserSuite() {
     assert.ok(/Bacoor/i.test(blogTitle), `Expected Bacoor guide title, got ${blogTitle}`)
     record('Regional SEO Authority Article (/blog/best-car-wash-detailing-bacoor)', 'PASS', blogTitle)
 
-    // 6. Verify Main Domain hides Quick Login cards
+    // 6. Verify Main Domain hides Quick Login / Demo chips
     await page.goto(`${MAIN_ORIGIN}/operations/login`, { waitUntil: 'domcontentloaded', timeout: 45000 })
-    await sleep(1200)
-    const mainBody = await page.evaluate(() => document.body.innerText)
-    assert.ok(!/Quick login \(all roles\)/i.test(mainBody), 'Main domain /operations/login MUST hide Quick login cards')
-    record('Main Domain Security: Quick Login Hidden on www.hakumautocare.com', 'PASS')
+    await sleep(1500)
+    const mainChipCount = await page.$$eval('.hakum-demo-chip', (els) => els.length)
+    assert.equal(mainChipCount, 0, 'Main domain /operations/login MUST hide Demo team account chips')
+    record('Main Domain Security: Quick Login Chips Hidden on www.hakumautocare.com', 'PASS', '0 chips rendered')
 
-    // 7. Verify Vercel Test Link shows Quick Login cards
+    // 7. Verify Vercel Test Link shows Quick Login / Demo chips
     await page.goto(`${VERCEL_ORIGIN}/operations/login`, { waitUntil: 'domcontentloaded', timeout: 45000 })
-    await sleep(1200)
-    const vercelBody = await page.evaluate(() => document.body.innerText)
-    assert.ok(/Quick login \(all roles\)/i.test(vercelBody), 'Vercel test domain /operations/login MUST show Quick login cards')
-    record('Vercel Test Link: Quick Login Visible on hakumauto.vercel.app', 'PASS')
+    await sleep(1500)
+    const vercelChipCount = await page.$$eval('.hakum-demo-chip', (els) => els.length)
+    assert.ok(vercelChipCount >= 14, `Vercel test domain /operations/login MUST show Demo team account chips, got ${vercelChipCount}`)
+    record('Vercel Test Link: Quick Login Chips Visible on hakumauto.vercel.app', 'PASS', `${vercelChipCount} chips rendered`)
 
     // 8. Test WordPress-Style Blog & Events CMS Studio with Marketing account
     const marketingAcc = OPS_DEMO_ACCOUNTS.find((a) => a.id === 'marketing')
@@ -211,16 +211,16 @@ async function runBrowserSuite() {
     await page.type(titleSelector, testTitle)
     await sleep(500)
 
-    // Click "Save Draft"
+    // Click "Save as Draft"
     const clickedSave = await page.evaluate(() => {
-      const btn = [...document.querySelectorAll('button')].find((b) => /Save Draft/i.test(b.textContent || ''))
+      const btn = [...document.querySelectorAll('button')].find((b) => /Save as Draft|Save Draft/i.test(b.textContent || ''))
       if (btn) {
         btn.click()
         return true
       }
       return false
     })
-    assert.ok(clickedSave, 'Should find and click Save Draft button')
+    assert.ok(clickedSave, 'Should find and click Save as Draft button')
     await sleep(2500)
 
     const sbAdmin = createClient(process.env.VITE_SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
