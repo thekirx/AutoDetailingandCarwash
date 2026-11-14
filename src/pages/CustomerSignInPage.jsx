@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../lib/supabase'
-import { demoSignIn, unlockDemoLoginFromUrl } from '../lib/demoSignIn'
+import { demoSignIn, unlockDemoLoginFromUrl, isDemoLoginVisible } from '../lib/demoSignIn'
 import { useAuth } from '../auth/AuthProvider'
 import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell, { CUSTOMER_AUTH_BULLETS } from '../components/HakumAuthShell'
@@ -78,15 +78,15 @@ export default function CustomerSignInPage() {
   const [sendingSetup, setSendingSetup] = useState(false)
   const [sendingReset, setSendingReset] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [demoCustomer, setDemoCustomer] = useState(() => (isDemoLoginEnabled() ? CUSTOMER_DEMO_ACCOUNT : null))
+  const [demoCustomer, setDemoCustomer] = useState(() => (isDemoLoginVisible() ? CUSTOMER_DEMO_ACCOUNT : null))
   const { user, profile, loading, signOut } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => {
     let cancelled = false
     unlockDemoLoginFromUrl().then((on) => {
-      if (!on || cancelled) return
-      setDemoCustomer(CUSTOMER_DEMO_ACCOUNT)
+      if (cancelled) return
+      setDemoCustomer(on ? CUSTOMER_DEMO_ACCOUNT : null)
     })
     return () => {
       cancelled = true

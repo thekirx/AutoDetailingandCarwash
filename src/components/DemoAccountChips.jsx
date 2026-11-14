@@ -1,8 +1,9 @@
 import { isDemoLoginEnabled } from '../lib/demoLogin'
+import { isDemoLoginVisible } from '../lib/demoSignIn'
 
-/** Compact demo account chips for ops / customer login, only on a device holding a QA key. */
+/** Compact demo account chips for ops / customer login, only on a device holding a QA key or test hosts. */
 export default function DemoAccountChips({ accounts, onPick, title = 'Demo accounts', disabled = false }) {
-  if (!isDemoLoginEnabled()) return null
+  if (!isDemoLoginVisible()) return null
   if (!accounts?.length) return null
   return (
     <div className="hakum-demo">

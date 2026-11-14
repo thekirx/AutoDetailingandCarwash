@@ -11,7 +11,7 @@ import DemoAccountChips from '../components/DemoAccountChips'
 import { describeAuthError } from '../lib/authErrorMessage'
 import { isDemoLoginEnabled } from '../lib/demoLogin'
 import { OPS_DEMO_ACCOUNTS } from '../lib/demoAccounts'
-import { demoSignIn, unlockDemoLoginFromUrl } from '../lib/demoSignIn'
+import { demoSignIn, unlockDemoLoginFromUrl, isDemoLoginVisible } from '../lib/demoSignIn'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -21,7 +21,7 @@ export default function LoginPage() {
   const [info, setInfo] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [resetting, setResetting] = useState(false)
-  const [demoAccounts, setDemoAccounts] = useState(() => (isDemoLoginEnabled() ? OPS_DEMO_ACCOUNTS : []))
+  const [demoAccounts, setDemoAccounts] = useState(() => (isDemoLoginVisible() ? OPS_DEMO_ACCOUNTS : []))
   const { user, profile, loading, signOut, refreshProfile } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
@@ -31,8 +31,8 @@ export default function LoginPage() {
   useEffect(() => {
     let cancelled = false
     unlockDemoLoginFromUrl().then((on) => {
-      if (!on || cancelled) return
-      setDemoAccounts(OPS_DEMO_ACCOUNTS)
+      if (cancelled) return
+      setDemoAccounts(on ? OPS_DEMO_ACCOUNTS : [])
     })
     return () => {
       cancelled = true

@@ -2,8 +2,8 @@ import assert from 'node:assert/strict'
 import { describe, it, beforeEach, afterEach } from 'node:test'
 import { createHash } from 'node:crypto'
 import { handleDemoLoginRequest } from '../server/demoLoginApi.mjs'
-import { isDemoLoginEnabled } from '../src/lib/demoLogin.js'
-import { unlockDemoLoginFromUrl } from '../src/lib/demoSignIn.js'
+import { isDemoLoginEnabled, QA_KEY_STORAGE, DEFAULT_QA_KEY } from '../src/lib/demoLogin.js'
+import { unlockDemoLoginFromUrl, isDemoLoginVisible } from '../src/lib/demoSignIn.js'
 
 const KEY = 'test-qa-key-not-the-real-one'
 
@@ -109,6 +109,42 @@ describe('demo chips render only on a device holding a QA key', () => {
       const first = unlockDemoLoginFromUrl()
       const second = unlockDemoLoginFromUrl()
       assert.deepEqual(await Promise.all([first, second]), [true, true])
+    } finally {
+      Object.assign(globalThis, globals)
+    }
+  })
+
+  it('shows easy login cards on hakumauto.vercel.app', async () => {
+    const store = new Map()
+    const globals = { window: globalThis.window, localStorage: globalThis.localStorage }
+    globalThis.localStorage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v), removeItem: (k) => store.delete(k) }
+    globalThis.window = {
+      location: { hostname: 'hakumauto.vercel.app', href: 'https://hakumauto.vercel.app/operations/login' },
+    }
+    try {
+      assert.equal(isDemoLoginVisible(), true)
+      await unlockDemoLoginFromUrl()
+      assert.equal(store.get(QA_KEY_STORAGE), DEFAULT_QA_KEY)
+      assert.equal(isDemoLoginVisible(), true)
+    } finally {
+      Object.assign(globalThis, globals)
+    }
+  })
+
+  it('hides easy login cards on www.hakumautocare.com main domain and removes default demo key', async () => {
+    const store = new Map()
+    store.set(QA_KEY_STORAGE, DEFAULT_QA_KEY)
+    const globals = { window: globalThis.window, localStorage: globalThis.localStorage }
+    globalThis.localStorage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v), removeItem: (k) => store.delete(k) }
+    globalThis.window = {
+      location: { hostname: 'www.hakumautocare.com', href: 'https://www.hakumautocare.com/operations/login' },
+    }
+    try {
+      assert.equal(isDemoLoginVisible(), false)
+      assert.equal(store.has(QA_KEY_STORAGE), false, 'residual DEFAULT_QA_KEY was stripped')
+      const result = await unlockDemoLoginFromUrl()
+      assert.equal(result, false)
+      assert.equal(isDemoLoginVisible(), false)
     } finally {
       Object.assign(globalThis, globals)
     }
