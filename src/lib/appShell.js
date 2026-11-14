@@ -1,26 +1,15 @@
-import { isStandaloneDisplay, isIosDevice, isAndroidDevice } from './installApp.js'
+import { isStandaloneDisplay } from './installApp.js'
 import { OPS_LOGIN_ROLES } from '../auth/permissions.js'
 import { resolvePostLoginPath } from '../auth/authRedirect.js'
 
 /**
- * Prefer native-app shell (sign-in / account) over marketing landing.
- * - Installed PWA / standalone / fullscreen
- * - Phone-sized touch browsers (mobile web that should feel like the app)
- * Desktop browser keeps the marketing site.
+ * Prefer the app shell (customer / team sign-in) over the marketing landing
+ * only inside the installed app (PWA standalone / fullscreen).
+ * Phone and desktop browsers both land on the marketing site first; the
+ * sign-in gate stays reachable at /app and via the site's sign-in links.
  */
-export function prefersAppShell({
-  standalone = isStandaloneDisplay(),
-  mobileUa = isIosDevice() || isAndroidDevice(),
-  narrow = typeof window !== 'undefined'
-    ? window.matchMedia('(max-width: 900px)').matches
-    : false,
-  touch = typeof navigator !== 'undefined' ? navigator.maxTouchPoints > 0 : false,
-} = {}) {
-  if (standalone) return true
-  // Mobile browser: phone UA or narrow+touch viewport
-  if (mobileUa) return true
-  if (narrow && touch) return true
-  return false
+export function prefersAppShell({ standalone = isStandaloneDisplay() } = {}) {
+  return Boolean(standalone)
 }
 
 /** Where a signed-in user lands inside the app shell. */

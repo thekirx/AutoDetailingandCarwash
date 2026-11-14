@@ -8,17 +8,12 @@ describe('prefersAppShell', () => {
     assert.equal(prefersAppShell({ standalone: true, mobileUa: false, narrow: false, touch: false }), true)
   })
 
-  it('opens app shell for phone UA', () => {
-    assert.equal(prefersAppShell({ standalone: false, mobileUa: true, narrow: false, touch: false }), true)
-  })
-
-  it('opens app shell for narrow touch viewport', () => {
-    assert.equal(prefersAppShell({ standalone: false, mobileUa: false, narrow: true, touch: true }), true)
+  it('keeps marketing site for phone browsers (not installed)', () => {
+    assert.equal(prefersAppShell({ standalone: false, mobileUa: true, narrow: true, touch: true }), false)
   })
 
   it('keeps marketing site on desktop browser', () => {
-    assert.equal(prefersAppShell({ standalone: false, mobileUa: false, narrow: false, touch: false }), false)
-    assert.equal(prefersAppShell({ standalone: false, mobileUa: false, narrow: true, touch: false }), false)
+    assert.equal(prefersAppShell({ standalone: false }), false)
   })
 })
 

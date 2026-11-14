@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom'
 import { prefersAppShell, APP_SHELL_PATH, MARKETING_HOME_PATH } from '@/lib/appShell'
 
 /**
- * `/` — desktop web → marketing home; PWA / mobile → app shell.
+ * `/` — browsers (phone or desktop) → marketing home; installed app → app shell.
  */
 export default function RootEntry() {
   if (prefersAppShell()) {
