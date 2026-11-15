@@ -123,7 +123,13 @@ async function runBrowserSuite() {
     // 3. Multi-Branch Live Queue Pages (/queue/bacoor & /queue/batangas)
     for (const slug of ['bacoor', 'batangas']) {
       await page.goto(`${LOCAL_ORIGIN}/queue/${slug}`, { waitUntil: 'domcontentloaded', timeout: 45000 })
-      await sleep(1000)
+      await page
+        .waitForFunction(
+          (branchSlug) => new RegExp(branchSlug, 'i').test(document.body?.innerText || ''),
+          { timeout: 15000 },
+          slug,
+        )
+        .catch(() => null)
       const qText = await page.evaluate(() => document.body.innerText)
       assert.ok(new RegExp(slug, 'i').test(qText), `Live queue page for ${slug} must render branch queue`)
     }
@@ -131,40 +137,53 @@ async function runBrowserSuite() {
 
     // 4. Public Services (/services), Tint Finder (/tint-finder), & Multi-Branch Booking (/book)
     await page.goto(`${LOCAL_ORIGIN}/services`, { waitUntil: 'domcontentloaded', timeout: 45000 })
-    await sleep(1200)
+    await page
+      .waitForFunction(() => /Ceramic|Detailing|PPF|Wash/i.test(document.body?.innerText || ''), { timeout: 15000 })
+      .catch(() => null)
     const servicesText = await page.evaluate(() => document.body.innerText)
     assert.ok(/Ceramic|Detailing|PPF|Wash/i.test(servicesText), '/services page must render services catalog')
     record('Public Services Catalog (/services)', 'PASS')
 
     await page.goto(`${LOCAL_ORIGIN}/book`, { waitUntil: 'domcontentloaded', timeout: 45000 })
-    await sleep(1200)
+    await page
+      .waitForFunction(() => /Bacoor|Batangas|Book/i.test(document.body?.innerText || ''), { timeout: 15000 })
+      .catch(() => null)
     const bookText = await page.evaluate(() => document.body.innerText)
     assert.ok(/Bacoor|Batangas|Book/i.test(bookText), '/book page must render multi-branch booking flow')
     record('Multi-Branch Public Booking Page (/book)', 'PASS')
 
     // 5. Events & Blog Page (/events) + Regional SEO Authority Guides
     await page.goto(`${LOCAL_ORIGIN}/events`, { waitUntil: 'domcontentloaded', timeout: 45000 })
-    await sleep(1500)
+    await page
+      .waitForFunction(
+        () => {
+          const t = document.body?.innerText || ''
+          return /Bacoor/i.test(t) && /Batangas/i.test(t) && /Imus/i.test(t) && /Cavite/i.test(t)
+        },
+        { timeout: 15000 },
+      )
+      .catch(() => null)
     const eventsText = await page.evaluate(() => document.body.innerText)
     assert.ok(/Bacoor/i.test(eventsText) && /Batangas/i.test(eventsText) && /Imus/i.test(eventsText) && /Cavite/i.test(eventsText))
     record('Events & Blog Page (/events) Regional SEO Hub (Bacoor, Batangas City, Imus, Cavite)', 'PASS')
 
     await page.goto(`${LOCAL_ORIGIN}/blog/best-car-wash-detailing-bacoor`, { waitUntil: 'domcontentloaded', timeout: 45000 })
-    await sleep(1200)
+    await page.waitForFunction(() => /Bacoor/i.test(document.title || ''), { timeout: 15000 }).catch(() => null)
     const blogTitle = await page.title()
     assert.ok(/Bacoor/i.test(blogTitle), `Expected Bacoor guide title, got ${blogTitle}`)
     record('Regional SEO Authority Article (/blog/best-car-wash-detailing-bacoor)', 'PASS', blogTitle)
 
     // 6. Verify Main Domain hides Quick Login / Demo chips
     await page.goto(`${MAIN_ORIGIN}/operations/login`, { waitUntil: 'domcontentloaded', timeout: 45000 })
-    await sleep(1500)
+    await page.waitForSelector('input[type="email"], input[name="email"]', { timeout: 15000 }).catch(() => null)
+    await sleep(800)
     const mainChipCount = await page.$$eval('.hakum-demo-chip', (els) => els.length)
     assert.equal(mainChipCount, 0, 'Main domain /operations/login MUST hide Demo team account chips')
     record('Main Domain Security: Quick Login Chips Hidden on www.hakumautocare.com', 'PASS', '0 chips rendered')
 
     // 7. Verify Vercel Test Link shows Quick Login / Demo chips
     await page.goto(`${VERCEL_ORIGIN}/operations/login`, { waitUntil: 'domcontentloaded', timeout: 45000 })
-    await sleep(1500)
+    await page.waitForSelector('.hakum-demo-chip', { timeout: 15000 }).catch(() => null)
     const vercelChipCount = await page.$$eval('.hakum-demo-chip', (els) => els.length)
     assert.ok(vercelChipCount >= 14, `Vercel test domain /operations/login MUST show Demo team account chips, got ${vercelChipCount}`)
     record('Vercel Test Link: Quick Login Chips Visible on hakumauto.vercel.app', 'PASS', `${vercelChipCount} chips rendered`)
@@ -172,7 +191,6 @@ async function runBrowserSuite() {
     // 8. Test WordPress-Style Blog & Events CMS Studio with Marketing account
     const marketingAcc = OPS_DEMO_ACCOUNTS.find((a) => a.id === 'marketing')
     await page.goto(`${LOCAL_ORIGIN}/operations/login`, { waitUntil: 'domcontentloaded', timeout: 45000 })
-    await sleep(1000)
 
     const emailSel = 'input[type="email"], input[name="email"]'
     await page.waitForSelector(emailSel, { timeout: 15000 })
@@ -184,10 +202,15 @@ async function runBrowserSuite() {
     await page.type(passSel, marketingAcc.password)
 
     await page.click('button[type="submit"]')
-    await sleep(3000)
+    await page.waitForFunction(() => !location.pathname.startsWith('/operations/login'), { timeout: 25000 }).catch(() => null)
 
     await page.goto(`${LOCAL_ORIGIN}/operations/content`, { waitUntil: 'domcontentloaded', timeout: 45000 })
-    await sleep(2000)
+    await page
+      .waitForFunction(
+        () => /Blog & Events Studio|New Blog Post|New Event/i.test(document.body?.innerText || ''),
+        { timeout: 20000 },
+      )
+      .catch(() => null)
     const cmsBody = await page.evaluate(() => document.body.innerText)
     assert.ok(
       /Blog & Events Studio|New Blog Post|New Event/i.test(cmsBody),
