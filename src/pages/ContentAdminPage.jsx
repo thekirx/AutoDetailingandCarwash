@@ -9,16 +9,22 @@ import {
   FileText,
   FolderOpen,
   Globe,
+  Laptop,
+  Maximize2,
+  Minimize2,
   Pencil,
   Plus,
   Search,
+  Smartphone,
   Sparkles,
+  Tablet,
   Trash2,
 } from 'lucide-react'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import OpsTabList from '@/components/ops/OpsTabBar'
 import { useAuth } from '@/auth/AuthProvider'
 import { canManageSiteContent } from '@/auth/permissions'
+import BlogArticlePreview from '@/components/content/BlogArticlePreview'
 import { MediaLibraryDialog } from '@/components/content/ContentBlockEditor'
 import ContentBlockRenderer from '@/components/content/ContentBlockRenderer'
 import ContentStudioModal from '@/components/content/ContentStudioModal'
@@ -58,8 +64,10 @@ export default function ContentAdminPage() {
   const [blogStatusFilter, setBlogStatusFilter] = useState('all')
   const [eventSearch, setEventSearch] = useState('')
   const [eventStatusFilter, setEventStatusFilter] = useState('all')
-  const [studioModal, setStudioModal] = useState(null) // { kind: 'blog' | 'event', data }
+  const [studioModal, setStudioModal] = useState(null) // { kind: 'blog' | 'event', data, viewMode?, fullscreen? }
   const [preview, setPreview] = useState(null)
+  const [previewFullscreen, setPreviewFullscreen] = useState(false)
+  const [previewViewport, setPreviewViewport] = useState('desktop')
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false)
 
   const load = useCallback(async () => {
@@ -676,6 +684,8 @@ export default function ContentAdminPage() {
         onOpenChange={(open) => !open && setStudioModal(null)}
         kind={studioModal?.kind || 'blog'}
         initialValue={studioModal?.data || null}
+        initialViewMode={studioModal?.viewMode || 'write'}
+        initialFullscreen={Boolean(studioModal?.fullscreen)}
         profile={profile}
         forms={forms}
         branchOptions={branchOptions}
@@ -683,59 +693,187 @@ export default function ContentAdminPage() {
         onDeleted={() => load()}
       />
 
-      {/* Quick Preview Modal */}
-      <Dialog open={Boolean(preview)} onOpenChange={(open) => !open && setPreview(null)}>
-        <DialogContent className="max-h-[94vh] overflow-y-auto sm:max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Preview · {preview?.title}</DialogTitle>
-          </DialogHeader>
-          {preview && (
-            <div className="space-y-4">
-              {preview.cover_url || preview.banner_url ? (
-                <img
-                  src={preview.cover_url || preview.banner_url}
-                  alt=""
-                  className="max-h-56 w-full rounded-xl object-cover"
-                />
-              ) : null}
-              <ContentBlockRenderer
-                blocks={preview.content_blocks}
-                formsById={formsById}
-              />
-              <div className="flex flex-wrap items-center justify-end gap-2 border-t border-border pt-3">
-                <Button
+      {/* Real-Time Full-Screen Capable Quick Preview Modal */}
+      <Dialog
+        open={Boolean(preview)}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPreview(null)
+            setPreviewFullscreen(false)
+          }
+        }}
+      >
+        <DialogContent
+          className={
+            previewFullscreen
+              ? 'fixed inset-0 top-0 left-0 z-50 flex h-[100dvh] max-h-[100dvh] w-screen max-w-none sm:max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none border-0 p-0'
+              : 'flex max-h-[94vh] w-[96vw] flex-col overflow-hidden p-0 sm:max-w-5xl'
+          }
+        >
+          <div className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2 border-b border-border bg-background/95 px-4 py-3 backdrop-blur">
+            <DialogHeader className="text-left">
+              <DialogTitle className="text-base font-semibold">
+                Preview · {preview?.title}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex rounded-lg border border-border bg-muted/40 p-0.5">
+                <button
                   type="button"
-                  variant="outline"
-                  className="cursor-pointer"
-                  onClick={() => {
-                    const item = preview
-                    setPreview(null)
-                    setStudioModal({
-                      kind: item.kind,
-                      data:
-                        item.kind === 'blog'
-                          ? prepareBlogForEditor(item)
-                          : prepareEventForEditor(item, defaultBranchSlug),
-                    })
-                  }}
+                  onClick={() => setPreviewViewport('desktop')}
+                  title="Desktop preview"
+                  className={`cursor-pointer rounded-md p-1.5 text-xs ${
+                    previewViewport === 'desktop'
+                      ? 'bg-background text-foreground shadow-xs'
+                      : 'text-muted-foreground'
+                  }`}
                 >
-                  <Pencil className="mr-1.5 size-3.5" /> Edit in Studio
-                </Button>
-                {preview.kind === 'blog' && preview.slug ? (
-                  <Button asChild className="cursor-pointer">
-                    <Link to={`/blog/${preview.slug}`} target="_blank">
-                      Open Live Article
-                    </Link>
-                  </Button>
-                ) : null}
-                {preview.kind === 'event' && preview.slug ? (
-                  <Button asChild className="cursor-pointer">
-                    <Link to={`/events/${preview.slug}`} target="_blank">
-                      Open Live Event
-                    </Link>
-                  </Button>
-                ) : null}
+                  <Laptop className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewViewport('tablet')}
+                  title="Tablet preview (768px)"
+                  className={`cursor-pointer rounded-md p-1.5 text-xs ${
+                    previewViewport === 'tablet'
+                      ? 'bg-background text-foreground shadow-xs'
+                      : 'text-muted-foreground'
+                  }`}
+                >
+                  <Tablet className="size-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPreviewViewport('mobile')}
+                  title="Mobile preview (390px)"
+                  className={`cursor-pointer rounded-md p-1.5 text-xs ${
+                    previewViewport === 'mobile'
+                      ? 'bg-background text-foreground shadow-xs'
+                      : 'text-muted-foreground'
+                  }`}
+                >
+                  <Smartphone className="size-3.5" />
+                </button>
               </div>
+              <Button
+                type="button"
+                size="sm"
+                variant={previewFullscreen ? 'default' : 'outline'}
+                className="h-8 cursor-pointer text-xs"
+                onClick={() => setPreviewFullscreen((f) => !f)}
+              >
+                {previewFullscreen ? (
+                  <>
+                    <Minimize2 className="mr-1 size-3.5" /> Exit Full Screen
+                  </>
+                ) : (
+                  <>
+                    <Maximize2 className="mr-1 size-3.5" /> Full Screen
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          {preview && (
+            <div className="bredesign bd-article-preview-canvas min-h-0 flex-1 overflow-y-auto">
+              <div
+                className={
+                  previewViewport === 'mobile'
+                    ? 'mx-auto max-w-[390px]'
+                    : previewViewport === 'tablet'
+                      ? 'mx-auto max-w-[768px]'
+                      : 'w-full'
+                }
+              >
+                {preview.kind === 'blog' ? (
+                  <BlogArticlePreview
+                    post={preview}
+                    formsById={formsById}
+                    isPreview
+                    mobile={previewViewport === 'mobile'}
+                  />
+                ) : (
+                  <div className="bredesign bd-article-shell is-studio-preview">
+                    <section className="bd-page-hero bd-article-hero is-preview">
+                      <div
+                        className="bd-page-hero-media"
+                        style={
+                          preview.banner_url ? { backgroundImage: `url("${preview.banner_url}")` } : undefined
+                        }
+                        aria-hidden="true"
+                      />
+                      <div className="bd-page-hero-scrim" aria-hidden="true" />
+                      <div className="bd-wrap bd-page-hero-in">
+                        <span className="bd-eyebrow">
+                          Event{preview.branch ? ` · ${preview.branch}` : ' · Hakum Auto Care'}
+                        </span>
+                        <h1>{preview.title}</h1>
+                        {preview.description ? (
+                          <p className="bd-page-hero-copy">{preview.description}</p>
+                        ) : null}
+                      </div>
+                    </section>
+                    <section className="bd-sec bd-article-body-sec">
+                      <div className="bd-wrap">
+                        <article className="bd-article-prose">
+                          {preview.banner_url ? (
+                            <figure className="bd-article-cover-frame">
+                              <img src={preview.banner_url} alt={preview.title || ''} />
+                            </figure>
+                          ) : null}
+                          <ContentBlockRenderer
+                            blocks={preview.content_blocks}
+                            formsById={formsById}
+                            className="is-editorial-dark"
+                            mobile={previewViewport === 'mobile'}
+                          />
+                        </article>
+                      </div>
+                    </section>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {preview && (
+            <div className="sticky bottom-0 z-20 flex flex-wrap items-center justify-end gap-2 border-t border-border bg-background/95 px-4 py-3 backdrop-blur">
+              <Button
+                type="button"
+                variant="outline"
+                className="cursor-pointer"
+                onClick={() => {
+                  const item = preview
+                  setPreview(null)
+                  setPreviewFullscreen(false)
+                  setStudioModal({
+                    kind: item.kind,
+                    data:
+                      item.kind === 'blog'
+                        ? prepareBlogForEditor(item)
+                        : prepareEventForEditor(item, defaultBranchSlug),
+                    viewMode: 'split',
+                    fullscreen: true,
+                  })
+                }}
+              >
+                <Pencil className="mr-1.5 size-3.5" /> Edit Live in Split Studio
+              </Button>
+              {preview.kind === 'blog' && preview.slug ? (
+                <Button asChild className="cursor-pointer">
+                  <Link to={`/blog/${preview.slug}`} target="_blank">
+                    Open Live Article
+                  </Link>
+                </Button>
+              ) : null}
+              {preview.kind === 'event' && preview.slug ? (
+                <Button asChild className="cursor-pointer">
+                  <Link to={`/events/${preview.slug}`} target="_blank">
+                    Open Live Event
+                  </Link>
+                </Button>
+              ) : null}
             </div>
           )}
         </DialogContent>

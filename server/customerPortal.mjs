@@ -830,7 +830,14 @@ export async function mutateCustomerPortal({ accessToken, body }) {
     }
 
     if (body.service_id) {
-      const { data: svc } = await admin.from('services').select('id, name, pay_category, slug, parent_service_id').eq('id', body.service_id).maybeSingle()
+      const { data: svc } = await admin
+        .from('services')
+        .select('id, name, pay_category, slug, parent_service_id, is_active, is_archived')
+        .eq('id', body.service_id)
+        .maybeSingle()
+      if (svc && (svc.is_active === false || svc.is_archived === true)) {
+        throw Object.assign(new Error('Service not found or inactive.'), { status: 400 })
+      }
       if (svc && !promoAppliesToService(voucher, svc.pay_category, svc.slug, svc.id, svc.parent_service_id)) {
         const scope = voucherScopeLabel(voucher, voucher.services?.name || svc.name)
         throw Object.assign(new Error(`That voucher is for ${scope}.`), { status: 400 })
@@ -871,7 +878,7 @@ export async function mutateCustomerPortal({ accessToken, body }) {
 
     const { data: booking, error: bErr } = await admin
       .from('bookings')
-      .select('id, branch, status, customer_id, service_id, price_minor, final_price_minor, promo_voucher_id, services(pay_category, slug)')
+      .select('id, branch, status, customer_id, service_id, price_minor, final_price_minor, promo_voucher_id, services(name, pay_category, slug, parent_service_id)')
       .eq('id', bookingId)
       .eq('customer_id', userId)
       .maybeSingle()
@@ -915,7 +922,7 @@ export async function mutateCustomerPortal({ accessToken, body }) {
       throw Object.assign(new Error('You have already used that voucher the maximum number of times.'), { status: 400 })
     }
 
-    if (!promoAppliesToService(voucher, booking.services?.pay_category, booking.services?.slug, booking.service_id)) {
+    if (!promoAppliesToService(voucher, booking.services?.pay_category, booking.services?.slug, booking.service_id, booking.services?.parent_service_id)) {
       const scope = voucherScopeLabel(voucher, voucher.services?.name || booking.services?.name)
       throw Object.assign(new Error(`That voucher is for ${scope}.`), { status: 400 })
     }

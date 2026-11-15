@@ -116,29 +116,29 @@ export default function EventSharePage() {
   async function handleTogglePublish() {
     if (!event) return
     const nextPublished = !event.is_published
-    const prepared = prepareEventForEditor({
-      ...event,
-      is_published: nextPublished,
-    })
-    const res = await saveCmsEvent(prepared, { publish: nextPublished })
-    if (!res.ok) {
-      toast.error(res.error || 'Could not update event status')
-      return
+    try {
+      const prepared = prepareEventForEditor({
+        ...event,
+        is_published: nextPublished,
+      })
+      await saveCmsEvent(prepared, { publish: nextPublished })
+      toast.success(nextPublished ? 'Event published' : 'Event moved to draft')
+      await loadEvent()
+    } catch (err) {
+      toast.error(err?.message || 'Could not update event status')
     }
-    toast.success(nextPublished ? 'Event published' : 'Event moved to draft')
-    await loadEvent()
   }
 
   async function handleDeleteEvent() {
     if (!event?.id) return
     if (!window.confirm(`Delete event "${event.title}"?`)) return
-    const res = await deleteCmsEvent(event.id)
-    if (!res.ok) {
-      toast.error(res.error || 'Could not delete event')
-      return
+    try {
+      await deleteCmsEvent(event.id)
+      toast.success('Event deleted')
+      navigate('/events')
+    } catch (err) {
+      toast.error(err?.message || 'Could not delete event')
     }
-    toast.success('Event deleted')
-    navigate('/events')
   }
 
   async function register(e) {
@@ -290,8 +290,9 @@ export default function EventSharePage() {
           open={studioOpen}
           onOpenChange={setStudioOpen}
           kind="event"
-          initialData={studioDraft}
-          opsForms={forms}
+          profile={profile}
+          initialValue={studioDraft}
+          forms={forms}
           branchOptions={branchOptions}
           onSaved={(saved) => {
             if (saved?.slug && saved.slug !== slug) {

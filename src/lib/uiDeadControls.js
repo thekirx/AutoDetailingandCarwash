@@ -41,16 +41,32 @@ export function applyPublicBookPrefill(form, locationState) {
   return next
 }
 
-/** Match service_id from loaded catalog using prefill name (fuzzy contains). */
-export function matchServiceIdByPrefillName(services, prefName) {
+/** Match service_id from loaded catalog using prefill name or package slug. */
+export function matchServiceIdByPrefillName(services, prefName, prefPackage = '') {
+  const pkgNeedle = String(prefPackage || '').trim().toLowerCase()
   const needle = String(prefName || '')
     .trim()
     .toLowerCase()
-  if (!needle || !Array.isArray(services)) return ''
-  const exact = services.find((s) => String(s.name || '').trim().toLowerCase() === needle)
+  if ((!needle && !pkgNeedle) || !Array.isArray(services)) return ''
+  if (pkgNeedle) {
+    const pkgHit = services.find((s) => {
+      const slug = String(s.slug || '').trim().toLowerCase()
+      return slug === pkgNeedle || slug === `ppf-${pkgNeedle}` || slug.includes(pkgNeedle)
+    })
+    if (pkgHit) return pkgHit.id
+  }
+  if (!needle) return ''
+  const exact = services.find((s) => String(s.name || '').trim().toLowerCase() === needle || String(s.slug || '').trim().toLowerCase() === needle)
   if (exact) return exact.id
   const partial = services.find((s) => String(s.name || '').toLowerCase().includes(needle) || needle.includes(String(s.name || '').toLowerCase()))
-  return partial?.id || ''
+  if (partial) return partial.id
+  if (needle.includes('paint protection') || needle === 'ppf') {
+    return services.find((s) => String(s.slug || '').toLowerCase().includes('ppf'))?.id || ''
+  }
+  if (needle.includes('ceramic')) {
+    return services.find((s) => String(s.slug || '').toLowerCase().includes('ceramic'))?.id || ''
+  }
+  return ''
 }
 
 /** Seed booking modal from a specific garage vehicle (not always vehicles[0]). */

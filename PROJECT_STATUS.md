@@ -1,7 +1,14 @@
 # Project Status
 
-**Last Updated:** 2026-11-15 (Asia/Manila) — Full UAT + Real Catalog & Staff Cutover  
-**Overall Status:** Verified local & Supabase UAT complete; ready to deploy to `origin/main`.
+**Last Updated:** 2026-11-15 (Asia/Manila) — Blog Editorial Redesign, Full CRUD, Full-Screen Preview & Services Backend Hardening  
+**Overall Status:** Verified locally & against live Supabase (`lybxhpzzqqyqswvuwpxv`); ready to deploy cleanly to `origin/main`.
+
+## Executive Summary (2026-11-15 — Blog Redesign, Full-Screen Studio & Services Hardening)
+
+- **Services / Packages / Detailing Hardening (`20261115223000_services_packages_detailing_backend_hardening.sql`)**: Enforced `package_components` integrity + `catalog_line_kind` separation across `server/customerPortal.mjs`, `server/publicBook.mjs`, `src/lib/serviceKinds.js`, `src/lib/uiDeadControls.js`, `src/pages/CustomerBookPage.jsx`, and `src/pages/PublicUtilityPage.jsx`.
+- **Blog Editorial Redesign & WCAG AAA Contrast (`BlogArticlePreview.jsx`, `BlogPage.jsx`, `BlogPostPage.jsx`, `CustomerBlogPage.jsx`)**: Unified `/blog` and `/blog/:slug` onto Hakum's native `.bredesign` obsidian-navy palette (`#020A31` / `#08133F` / `#F1F1ED` / `#9DB4FF` / `#052699`), fixed CSS specificity clobber on CTAs (`12.04:1`) & related cards (`15.78:1`), fixed Customer dark/light block rendering, and added search + featured lead post + mobile realtime sync.
+- **Full CRUD & Full-Screen Real-Time Live Preview (`ContentStudioModal.jsx`, `ContentAdminPage.jsx`, `server/provisionStaff.mjs`, `src/lib/contentCmsApi.js`)**: Fixed `initialData` → `initialValue` prop mismatch on `BlogPostPage.jsx` & `EventSharePage.jsx`, replaced unsafe slug `upsert` with explicit slug-conflict checks (`409`) and `update().eq('id', ...)`, and shipped edge-to-edge Full-Screen (`100dvh`) Split/Preview rendering exact Hakum typography/blocks in real time.
+- **Blog/Events DB Optimization (`20261115233000_blogs_events_realtime_grants_and_optimization.sql`)**: Enabled `supabase_realtime` for `blogs` & `events`, trimmed `anon` grants to `SELECT` only, added `blogs_updated_at_idx` & `events_updated_at_idx`, added `sync_cms_content_row()` normalization/status-sync triggers & constraints, and backfilled structured blocks on `toyota-innova-zenix-premium-ceramic-coating`.
 
 ## Executive Summary (2026-11-15 — UAT, Real Catalog & Staff Cutover)
 

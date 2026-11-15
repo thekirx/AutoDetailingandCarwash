@@ -147,6 +147,7 @@ export function BookingPage() {
   const [plateHint, setPlateHint] = useState('')
   const [packageNote, setPackageNote] = useState('')
   const [prefServiceName, setPrefServiceName] = useState('')
+  const [prefPackageId, setPrefPackageId] = useState('')
   const [step, setStep] = useState(0)
   // Lowest size price per service: the customer no longer picks a size, so options say "From".
   // Anonymous visitors can't read the size table, so this comes from the public RPC.
@@ -187,6 +188,7 @@ export function BookingPage() {
     const prefilled = applyPublicBookPrefill({}, location.state)
     if (prefilled._prefNotes) setPackageNote(prefilled._prefNotes)
     if (prefilled._prefServiceName) setPrefServiceName(prefilled._prefServiceName)
+    if (prefilled._prefPackageId) setPrefPackageId(prefilled._prefPackageId)
     if (prefilled.service_id) setForm((f) => ({ ...f, service_id: prefilled.service_id }))
   }, [location.state])
 
@@ -195,6 +197,7 @@ export function BookingPage() {
       .from('services')
       .select('id, name, slug, pay_category, price_minor, parent_service_id, display_order')
       .eq('is_active', true)
+      .eq('is_archived', false)
       .order('display_order')
       .then(({ data, error: e }) => {
         if (e) {
@@ -206,11 +209,11 @@ export function BookingPage() {
         setCatalog(rows)
         setForm((f) => {
           if (f.service_id && parents.some((s) => s.id === f.service_id)) return f
-          const matched = matchServiceIdByPrefillName(parents, prefServiceName)
+          const matched = matchServiceIdByPrefillName(parents, prefServiceName, prefPackageId)
           return matched ? { ...f, service_id: matched } : { ...f, service_id: '' }
         })
       })
-  }, [prefServiceName])
+  }, [prefServiceName, prefPackageId])
 
   useEffect(() => {
     if (!form.branch && branches[0]?.slug) {

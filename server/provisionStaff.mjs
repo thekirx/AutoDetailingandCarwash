@@ -487,28 +487,78 @@ export async function manageSiteContent({ accessToken, body }) {
 
   if (action === 'save-blog') {
     const row = body?.row || {}
-    if (!row.title || !row.slug) {
-      throw Object.assign(new Error('Blog title and slug are required.'), { status: 400 })
+    const title = String(row.title || '').trim()
+    if (!title) {
+      throw Object.assign(new Error('Blog title is required.'), { status: 400 })
     }
+
+    const rowId = typeof row.id === 'string' && row.id.trim() ? row.id.trim() : ''
+    let existing = null
+    if (rowId) {
+      const { data: foundById } = await admin
+        .from('blogs')
+        .select('id, published_at, created_by')
+        .eq('id', rowId)
+        .maybeSingle()
+      existing = foundById || null
+    }
+
+    const rawSlug = String(row.slug || '').trim()
+    const cleanSlug =
+      (rawSlug || title)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || `post-${(rowId || crypto.randomUUID()).slice(0, 8)}`
+
+    const { data: slugOwner } = await admin
+      .from('blogs')
+      .select('id, published_at, created_by')
+      .eq('slug', cleanSlug)
+      .maybeSingle()
+
+    if (slugOwner && (!existing || slugOwner.id !== existing.id)) {
+      if (!existing && row.adoptBySlug) {
+        existing = slugOwner
+      } else {
+        throw Object.assign(
+          new Error(`A blog post with URL slug "${cleanSlug}" already exists. Choose a different slug.`),
+          { status: 409 },
+        )
+      }
+    }
+
+    const status = ['draft', 'published', 'archived'].includes(row.status)
+      ? row.status
+      : row.is_published
+        ? 'published'
+        : 'draft'
+    const isPublished = status === 'published'
+    const targetId = existing?.id || rowId || crypto.randomUUID()
+
     const payload = {
-      id: row.id || crypto.randomUUID(),
-      title: String(row.title).trim(),
-      slug: String(row.slug).trim(),
-      excerpt: row.excerpt || null,
-      cover_url: row.cover_url || null,
-      author_label: row.author_label || 'Hakum Auto Care',
-      status: ['draft', 'published', 'archived'].includes(row.status) ? row.status : 'draft',
-      is_published: Boolean(row.is_published),
-      published_at: row.is_published ? row.published_at || new Date().toISOString() : null,
+      title,
+      slug: cleanSlug,
+      excerpt: String(row.excerpt || '').trim() || null,
+      cover_url: String(row.cover_url || '').trim() || null,
+      author_label: String(row.author_label || '').trim() || 'Hakum Auto Care',
+      status,
+      is_published: isPublished,
+      published_at: isPublished
+        ? row.published_at || existing?.published_at || new Date().toISOString()
+        : existing?.published_at || null,
       content_blocks: Array.isArray(row.content_blocks) ? row.content_blocks : [],
       updated_at: new Date().toISOString(),
     }
-    if (!row.id) payload.created_by = user.id
-    const { data, error } = await admin
-      .from('blogs')
-      .upsert(payload, { onConflict: 'slug' })
-      .select(BLOG_SELECT_COLS)
-      .maybeSingle()
+
+    const mutation = existing
+      ? admin.from('blogs').update(payload).eq('id', targetId).select(BLOG_SELECT_COLS).maybeSingle()
+      : admin
+          .from('blogs')
+          .insert({ id: targetId, ...payload, created_by: user.id })
+          .select(BLOG_SELECT_COLS)
+          .maybeSingle()
+
+    const { data, error } = await mutation
     if (error) throw Object.assign(new Error(error.message), { status: 400 })
     return { data }
   }
@@ -536,29 +586,68 @@ export async function manageSiteContent({ accessToken, body }) {
 
   if (action === 'save-event') {
     const row = body?.row || {}
-    if (!row.title || !row.slug) {
-      throw Object.assign(new Error('Event title and slug are required.'), { status: 400 })
+    const title = String(row.title || '').trim()
+    if (!title) {
+      throw Object.assign(new Error('Event title is required.'), { status: 400 })
     }
+
+    const rowId = typeof row.id === 'string' && row.id.trim() ? row.id.trim() : ''
+    let existing = null
+    if (rowId) {
+      const { data: foundById } = await admin.from('events').select('id').eq('id', rowId).maybeSingle()
+      existing = foundById || null
+    }
+
+    const rawSlug = String(row.slug || '').trim()
+    const cleanSlug =
+      (rawSlug || title)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '') || `event-${(rowId || crypto.randomUUID()).slice(0, 8)}`
+
+    const { data: slugOwner } = await admin
+      .from('events')
+      .select('id')
+      .eq('slug', cleanSlug)
+      .maybeSingle()
+
+    if (slugOwner && (!existing || slugOwner.id !== existing.id)) {
+      throw Object.assign(
+        new Error(`An event with URL slug "${cleanSlug}" already exists. Choose a different slug.`),
+        { status: 409 },
+      )
+    }
+
+    const targetId = existing?.id || rowId || crypto.randomUUID()
     const payload = {
-      id: row.id || crypto.randomUUID(),
-      title: String(row.title).trim(),
-      slug: String(row.slug).trim(),
-      description: row.description || null,
-      branch: row.branch || null,
+      title,
+      slug: cleanSlug,
+      description: String(row.description || '').trim() || null,
+      branch: String(row.branch || '').trim() || null,
       starts_at: row.starts_at || new Date().toISOString(),
       ends_at: row.ends_at || null,
-      banner_url: row.banner_url || null,
+      banner_url: String(row.banner_url || '').trim() || null,
       is_published: Boolean(row.is_published),
       is_date_tba: Boolean(row.is_date_tba),
       form_id: row.form_id || null,
       content_blocks: Array.isArray(row.content_blocks) ? row.content_blocks : [],
       updated_at: new Date().toISOString(),
     }
-    const { data, error } = await admin
-      .from('events')
-      .upsert(payload, { onConflict: 'id' })
-      .select('id, title, description, branch, starts_at, ends_at, is_published, is_date_tba, slug, form_id, banner_url, content_blocks, ops_forms!form_id ( id, name, slug, public_enabled, status )')
-      .maybeSingle()
+
+    const mutation = existing
+      ? admin
+          .from('events')
+          .update(payload)
+          .eq('id', targetId)
+          .select('id, title, description, branch, starts_at, ends_at, is_published, is_date_tba, slug, form_id, banner_url, content_blocks, ops_forms!form_id ( id, name, slug, public_enabled, status )')
+          .maybeSingle()
+      : admin
+          .from('events')
+          .insert({ id: targetId, ...payload })
+          .select('id, title, description, branch, starts_at, ends_at, is_published, is_date_tba, slug, form_id, banner_url, content_blocks, ops_forms!form_id ( id, name, slug, public_enabled, status )')
+          .maybeSingle()
+
+    const { data, error } = await mutation
     if (error) throw Object.assign(new Error(error.message), { status: 400 })
     return { data }
   }

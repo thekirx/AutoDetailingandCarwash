@@ -1,6 +1,14 @@
 # System Audit
 
-## Latest Refresh (2026-11-15 — UAT, Real Catalog & Staff Cutover)
+## Latest Refresh (2026-11-15 — Blog Redesign, Full CRUD & Services Hardening)
+
+| Check | Result |
+|-------|--------|
+| Live Supabase migrations | **APPLIED & VERIFIED** — `20261115223000` (services/packages/detailing hardening) + `20261115233000` (`supabase_realtime` on `blogs`/`events`, least-privilege `anon` `SELECT` grants, `blogs_updated_at_idx`/`events_updated_at_idx`, `sync_cms_content_row()` triggers & constraints) |
+| Blog contrast & live CRUD browser check (`verify_blogs_ui_e2e.mjs`) | **PASS** — `12.04:1` CTA button, `9.54:1` eyebrow, `15.78:1` related cards, `17.01:1` body prose; Full-Screen Live Preview (`1366x900`); full Create → Read → Update → Delete lifecycle; `0` console/page errors |
+| Knowledge graph (`graphify-out/`) | **Updated** — `11,082` nodes, `29,592` edges, `911` communities |
+
+## Prior Snapshot (2026-11-15 — UAT, Real Catalog & Staff Cutover)
 
 | Check | Result |
 |-------|--------|

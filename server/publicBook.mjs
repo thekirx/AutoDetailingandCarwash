@@ -86,10 +86,12 @@ export async function handlePublicBookRequest(req, res) {
 
     const { data: svc } = await db
       .from('services')
-      .select('id, slug, pay_category, price_minor, is_active, service_size_prices(size_slug, price_minor)')
+      .select('id, name, slug, pay_category, price_minor, is_active, is_archived, parent_service_id, service_size_prices(size_slug, price_minor)')
       .eq('id', service_id)
       .maybeSingle()
-    if (!svc || svc.is_active === false) return json(res, 400, { error: 'Service not found.' })
+    if (!svc || svc.is_active === false || svc.is_archived === true) {
+      return json(res, 400, { error: 'Service not found.' })
+    }
     // Online /book is the detailing pipeline only — wash & packages use the shop queue.
     if (!isBookingBoardService(svc)) {
       return json(res, 400, {

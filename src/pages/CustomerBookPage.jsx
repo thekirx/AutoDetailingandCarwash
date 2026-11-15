@@ -124,6 +124,7 @@ export default function CustomerBookPage() {
         .from('services')
         .select('id, name, description, slug, pay_category, price_minor, points_award, parent_service_id, service_size_prices(size_slug, price_minor)')
         .eq('is_active', true)
+        .eq('is_archived', false)
         .order('display_order'),
     ]).then(([data, svc]) => {
       if (cancelled) return
@@ -153,7 +154,10 @@ export default function CustomerBookPage() {
         pin: loadCustomerPin(),
         branches: data?.branches || [],
       })
-      const serviceId = wantedService ? detailing.find((s) => String(s.slug || '').toLowerCase() === wantedService)?.id || '' : ''
+      const serviceId = wantedService
+        ? (detailing.find((s) => String(s.slug || '').toLowerCase() === wantedService)
+            || detailing.find((s) => String(s.slug || '').toLowerCase().includes(wantedService)))?.id || ''
+        : ''
       setForm((f) =>
         seedBookingFromVehicle(
           {
