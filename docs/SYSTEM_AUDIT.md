@@ -1,6 +1,26 @@
 # System Audit
 
-## Summary
+## Latest Refresh (2026-11-15 — UAT, Real Catalog & Staff Cutover)
+
+| Check | Result |
+|-------|--------|
+| Lint (`npm run lint`) | **PASS** — `0` errors, `0` warnings |
+| Unit suite (`npm test`) | **PASS** — **2,618 / 2,618** across **587** suites (`0` failed, `0` skipped) |
+| Static checks (`npm run check`) | **PASS** — planning, portal-actions (`12`), settings-auth, customer-regression, live-queue-path |
+| `/api/*` auth audit (`npm run audit:api-auth`) | **PASS** — `36` handlers scanned, `0` unauthenticated, `0` unscoped |
+| Production build (`npm run build`) | **PASS** — 465 PWA precache entries |
+| Role matrix (`e2e-role-qa-wave.mjs`) | **PASS** — **206 / 206** |
+| Money / P0 / Forms UI (`e2e-ui-money`, `e2e-ui-p0`, `e2e-ui-forms`) | **PASS** — **5 / 5**, **9 / 9**, **10 / 10** |
+| Money / Sales / Queue RPC (`e2e-daily-sheet-money`, `e2e-sales-bookings`, `e2e-plate-vehicle-queue`) | **PASS** — **38 / 38**, **14 / 14**, **13 / 13** |
+| Responsive (`responsive-validation.mjs`) | **PASS** — `fail=0, conditional=0` across 9 viewports |
+| Live domain (`e2e-main-domain-and-system-verify.mjs`) | **PASS** — **12 / 12** (`18/18` auth accounts, `10/10` GSC/SEO endpoints, CMS Studio draft round-trip) |
+| Live real-data & staff probe (`/services`, `/book`, `/operations/pos`, 15 real staff logins) | **PASS** — `15/15` Supabase Auth logins, `0` console errors, `0` HTTP `4xx/5xx`, Coffees & Sellables verified on `/operations/pos` |
+| Deep DB audit (`npm run audit:db`) | **Reconciled** (`1,309 / 1,309` sales); exits `1` only on known pre-existing items (`BUG-061` 2026-09-29 test handoffs, `0/34` push opt-in) |
+| Knowledge graph (`graphify-out/`) | **Updated** — `11,046` nodes, `28,501` edges, `911` communities |
+
+---
+
+## Summary (2026-10-16 historical)
 
 | Field | Value |
 |-------|-------|
