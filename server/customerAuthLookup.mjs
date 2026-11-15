@@ -3,7 +3,6 @@
  * Resolves email / phone / plate → login email + whether TL-provisioned account still needs a password.
  * Indexed lookups only (plate unique, phone/email on customers) — no Auth listUsers scans.
  */
-import { createClient } from '@supabase/supabase-js'
 import {
   classifyIdentifier,
   canonicalPhMobile,
@@ -14,6 +13,7 @@ import {
 import { publicAuthLookupPayload } from './customerAuthPublic.mjs'
 import { signInCustomerWithPassword } from './customerSignIn.mjs'
 import { clientIp, rateLimit } from './httpUtil.mjs'
+import { adminClient } from './supabaseAdmin.mjs'
 
 function phoneLookupVariants(identifier) {
   const digits = phoneDigits(identifier)
@@ -23,13 +23,6 @@ function phoneLookupVariants(identifier) {
   if (digits.startsWith('0') && digits.length >= 11) variants.add(`63${digits.slice(1)}`)
   if (digits.startsWith('9') && digits.length === 10) variants.add(`0${digits}`)
   return [...variants]
-}
-
-function adminClient() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
 async function findCustomerByIdentifier(admin, identifier) {

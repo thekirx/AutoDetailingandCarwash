@@ -2,18 +2,11 @@
  * Ops form (complaint) push + inbox fan-out.
  * Targets: Super Admin + ASA (all) + Branch Admin for the complaint branch only (none when unbranched).
  */
-import { createClient } from '@supabase/supabase-js'
 import { applyTemplateText } from '../src/lib/notificationTemplates.js'
 import { GLOBAL_NOTIFY_ROLES, NOTIFY_EVENTS } from '../src/lib/notifyRouting.js'
 import { loadTemplateMap, templateEnabled } from './notificationTemplatesDb.mjs'
+import { adminClient as admin } from './supabaseAdmin.mjs'
 import { notifyRecipients, resolveStaffRecipients } from './webPush.mjs'
-
-function admin() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-}
 
 export function buildComplaintNotifyCopy({ formName, payload = {}, submissionId, template = null }) {
   const who = payload.customer_name || payload.name || 'Customer'

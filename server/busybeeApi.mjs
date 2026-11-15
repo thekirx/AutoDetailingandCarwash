@@ -1,6 +1,6 @@
-import { createClient } from '@supabase/supabase-js'
 import { busybeeBalance, busybeeSendSms } from './busybee.mjs'
 import { bearer, clientIp, json, rateLimit, readJsonBody, setCors } from './httpUtil.mjs'
+import { adminClient } from './supabaseAdmin.mjs'
 
 export async function handleBusybeeRequest(req, res) {
   setCors(res, 'GET, POST, OPTIONS')
@@ -15,9 +15,7 @@ export async function handleBusybeeRequest(req, res) {
     if (req.method === 'GET' || req.method === 'POST') {
       const token = bearer(req)
       if (!token) return json(res, 401, { error: 'Unauthorized' })
-      const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-      const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-      const db = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
+      const db = adminClient()
       const { data: userData } = await db.auth.getUser(token)
       const { data: staff } = await db
         .from('staff_profiles')

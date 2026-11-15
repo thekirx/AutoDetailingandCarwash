@@ -2,16 +2,9 @@
  * POST /api/notify-ops-event — crew assigned, end of shift submitted, payroll posted, cash advance request / decision.
  * Body: { event, id } — recipients come from the record, never from the client.
  */
-import { createClient } from '@supabase/supabase-js'
 import { OPS_EVENTS, notifyOpsEvent } from './notifyOpsEvent.mjs'
 import { bearer, json, readJsonBody, setCors, clientIp, rateLimit } from './httpUtil.mjs'
-
-function admin() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-}
+import { adminClient as admin } from './supabaseAdmin.mjs'
 
 const UUID = /^[0-9a-f-]{36}$/i
 

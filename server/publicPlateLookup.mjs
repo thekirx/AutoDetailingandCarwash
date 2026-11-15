@@ -1,21 +1,14 @@
 /**
  * Public plate soft-lookup — returns vehicle make/model/type only (no customer PII).
  */
-import { createClient } from '@supabase/supabase-js'
 import { isValidCustomerPlate } from '../src/lib/customerAuth.js'
 import { clientIp, rateLimit } from './httpUtil.mjs'
+import { adminClient as admin } from './supabaseAdmin.mjs'
 
 function normalizePlate(value) {
   return String(value || '')
     .toUpperCase()
     .replace(/[^A-Z0-9]/g, '')
-}
-
-function admin() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing Supabase admin env')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
 export async function handlePublicPlateLookup(req, res) {

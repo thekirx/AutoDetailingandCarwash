@@ -2,18 +2,11 @@
  * Day-of staff birthday inbox + web push. No SMS (BusyBee stays customer-only; no owner SMS).
  * Idempotent per staff/year via user_notifications.tag.
  */
-import { createClient } from '@supabase/supabase-js'
 import { birthdayQueryDays, isBirthdayToday } from '../src/lib/birthdayPerk.js'
+import { adminClient as admin } from './supabaseAdmin.mjs'
 import { sendWebPushToUsers } from './webPush.mjs'
 
 // ponytail: scan active staff with DOB; Manila day via isBirthdayToday. Ceiling ~few hundred staff rows.
-
-function admin() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-}
 
 async function writeInbox(db, userId, payload) {
   if (!userId) return { inserted: 0 }

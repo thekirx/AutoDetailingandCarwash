@@ -3,8 +3,8 @@
  * BossMich may create admin + assistant_super_admin + crew; admin/assistant may create TL/staff;
  * team_lead may create staff for their own branch.
  */
-import { createClient } from '@supabase/supabase-js'
 import { isStaffAssignableBranch } from '../src/lib/branchAssignable.js'
+import { adminClient } from './supabaseAdmin.mjs'
 
 const SUPER = 'BossMich'
 const ASSISTANT = 'assistant_super_admin'
@@ -34,13 +34,6 @@ export function creatableRolesFor(callerRole) {
     return ['staff']
   }
   return []
-}
-
-function adminClient() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
 function randomTempPassword() {
@@ -473,6 +466,9 @@ async function assertContentManagerCaller(admin, accessToken, { forEvents = fals
   return { user: userData.user, staff }
 }
 
+const BLOG_SELECT_COLS =
+  'id, title, slug, excerpt, cover_url, author_label, status, is_published, published_at, content_blocks, created_at, updated_at, created_by'
+
 export async function manageSiteContent({ accessToken, body }) {
   const admin = adminClient()
   const action = String(body?.action || '').trim()
@@ -482,7 +478,7 @@ export async function manageSiteContent({ accessToken, body }) {
   if (action === 'list-blogs') {
     const { data, error } = await admin
       .from('blogs')
-      .select('*')
+      .select(BLOG_SELECT_COLS)
       .order('updated_at', { ascending: false })
       .limit(100)
     if (error) throw Object.assign(new Error(error.message), { status: 400 })
@@ -511,7 +507,7 @@ export async function manageSiteContent({ accessToken, body }) {
     const { data, error } = await admin
       .from('blogs')
       .upsert(payload, { onConflict: 'slug' })
-      .select('*')
+      .select(BLOG_SELECT_COLS)
       .maybeSingle()
     if (error) throw Object.assign(new Error(error.message), { status: 400 })
     return { data }

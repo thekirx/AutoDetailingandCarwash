@@ -2,17 +2,10 @@
  * POST /api/notify-pos — SA/ASA/BA inbox after POS sale or expense.
  * Body: { event, branch, amount_minor?, title?, entity_id? }
  */
-import { createClient } from '@supabase/supabase-js'
 import { canAccessPos } from '../src/auth/permissions.js'
 import { notifyPosEvent } from './notifyPos.mjs'
 import { bearer, json, readJsonBody, setCors, clientIp, rateLimit } from './httpUtil.mjs'
-
-function admin() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-}
+import { adminClient as admin } from './supabaseAdmin.mjs'
 
 const EVENTS = new Set(['sale', 'expense'])
 

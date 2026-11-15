@@ -2,7 +2,6 @@
  * Booking notification builders + BusyBee SMS + inbox/push fan-out.
  * Best-effort: never throw to callers after durable booking writes.
  */
-import { createClient } from '@supabase/supabase-js'
 import { applyTemplateText, bookingNotifyVars, bookingTemplateKey, templateByKey } from '../src/lib/notificationTemplates.js'
 import { preferStoredCustomerName, renderQueueStatusSms } from '../src/lib/queueStatusSms.js'
 import { isWalkInCustomerName } from '../src/lib/queueCustomerName.js'
@@ -14,14 +13,8 @@ import { applyPaintMaintenanceOnComplete } from './paintMaintenanceSchedule.mjs'
 import { NOTIFY_EVENTS, bookingOpsEvent, branchLabel } from '../src/lib/notifyRouting.js'
 import { isBookingBoardRow } from '../src/lib/serviceKinds.js'
 import { renderDetailingBookingSms } from '../src/lib/detailingBookingSms.js'
+import { adminClient as admin } from './supabaseAdmin.mjs'
 import { notifyRecipients, resolveStaffRecipients, sendWebPushToUsers } from './webPush.mjs'
-
-function admin() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-}
 
 const STATUS_COPY = {
   pending: {

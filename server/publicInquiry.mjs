@@ -1,14 +1,7 @@
 import { buildTintLead, validateTintConfig } from '../src/lib/tintFinder.js'
-import { createClient } from '@supabase/supabase-js'
 import { json, readJsonBody, setCors, clientIp, rateLimit } from './httpUtil.mjs'
 import { notifyStaffEvent } from './notifyOpsEvent.mjs'
-
-function admin() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-}
+import { adminClient as admin } from './supabaseAdmin.mjs'
 
 const text = (value) => String(value ?? '').trim()
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/

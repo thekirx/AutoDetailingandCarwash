@@ -1,13 +1,9 @@
-import { createClient } from '@supabase/supabase-js'
 import { notifyBookingStatus } from './notifyBooking.mjs'
 import { bearer, json, readJsonBody, setCors, clientIp, rateLimit } from './httpUtil.mjs'
+import { adminClient as admin } from './supabaseAdmin.mjs'
 
-function admin() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-}
+const NOTIFY_BOOKING_COLS =
+  'id, branch, customer_id, customer_name, customer_phone, vehicle_plate, vehicle_make, vehicle_model, vehicle_type, service_id, scheduled_start, estimated_completion, status, queue_date, queue_number, visit_group_id, is_redo, price_minor, payable_minor, progress_photo_urls, is_archived'
 
 const ALLOWED = new Set(['admin', 'BossMich', 'assistant_super_admin', 'team_lead'])
 
@@ -44,7 +40,7 @@ export async function handleNotifyBookingRequest(req, res) {
     const bookingId = body.booking_id
     if (!bookingId) return json(res, 400, { error: 'booking_id required' })
 
-    const { data: booking, error } = await db.from('bookings').select('*').eq('id', bookingId).single()
+    const { data: booking, error } = await db.from('bookings').select(NOTIFY_BOOKING_COLS).eq('id', bookingId).single()
     if (error || !booking) return json(res, 404, { error: error?.message || 'Booking not found' })
 
     const status = String(body.status || booking.status).trim()

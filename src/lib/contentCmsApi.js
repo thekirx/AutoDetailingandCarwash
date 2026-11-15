@@ -12,6 +12,11 @@ import { findBuiltInBlogPost } from '@/lib/seoLocalGuides'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
+const BLOG_SELECT_COLS =
+  'id, title, slug, excerpt, cover_url, author_label, status, is_published, published_at, content_blocks, created_at, updated_at, created_by'
+const EVENT_SELECT_COLS =
+  'id, title, description, branch, starts_at, ends_at, is_published, is_date_tba, slug, form_id, banner_url, content_blocks, created_at, updated_at'
+
 export function isValidUuid(id) {
   return UUID_RE.test(String(id || '').trim())
 }
@@ -130,7 +135,7 @@ export function toLocalDatetimeInput(iso) {
 export async function fetchAllCmsBlogs() {
   const { data, error } = await supabase
     .from('blogs')
-    .select('*')
+    .select(BLOG_SELECT_COLS)
     .order('updated_at', { ascending: false })
     .limit(100)
   if (!error && Array.isArray(data)) {
@@ -224,11 +229,11 @@ export async function saveCmsBlog(editorState, profileOrOptions = null) {
   }
 
   const query = existingId
-    ? supabase.from('blogs').update(row).eq('id', existingId).select('*').maybeSingle()
+    ? supabase.from('blogs').update(row).eq('id', existingId).select(BLOG_SELECT_COLS).maybeSingle()
     : supabase
         .from('blogs')
         .upsert({ ...row, created_by: profile?.id || null }, { onConflict: 'slug' })
-        .select('*')
+        .select(BLOG_SELECT_COLS)
         .maybeSingle()
 
   const { data, error } = await query
@@ -312,8 +317,8 @@ export async function saveCmsEvent(editorState, options = null) {
   }
 
   const query = existingId
-    ? supabase.from('events').update(row).eq('id', existingId).select('*').maybeSingle()
-    : supabase.from('events').insert(row).select('*').maybeSingle()
+    ? supabase.from('events').update(row).eq('id', existingId).select(EVENT_SELECT_COLS).maybeSingle()
+    : supabase.from('events').insert(row).select(EVENT_SELECT_COLS).maybeSingle()
 
   const { data, error } = await query
   if (!error) {

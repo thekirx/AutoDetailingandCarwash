@@ -2,10 +2,10 @@
  * Ops API for detailing paint-maintenance schedules on Bookings → Maintenance.
  * GET list · PATCH reschedule/cancel · POST send reminder
  */
-import { createClient } from '@supabase/supabase-js'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
 import { sendPaintMaintenanceReminder } from './paintMaintenanceNotify.mjs'
 import { notifyBookingStatus } from './notifyBooking.mjs'
+import { adminClient as admin } from './supabaseAdmin.mjs'
 import {
   DETAILING_SCHEDULE_TYPES,
   PAINT_MAINTENANCE_PROGRAM,
@@ -16,13 +16,6 @@ import {
   normalizeMaintPlate,
   sortMaintenanceSchedules,
 } from '../src/lib/paintMaintenance.js'
-
-function admin() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-}
 
 const READ_ROLES = new Set([
   'BossMich',
@@ -219,7 +212,8 @@ export async function handleMaintenanceSchedulesRequest(req, res) {
 
       const { data: services } = await db.from('services').select('id, slug')
       const bySlug = new Map((services || []).map((s) => [String(s.slug || '').toLowerCase(), s]))
-      const saved = []
+      const rowsToSave = []
+      const nowIso = new Date().toISOString()
 
       for (const row of types) {
         const slug = String(row.slug || '').toLowerCase()
@@ -229,28 +223,29 @@ export async function handleMaintenanceSchedulesRequest(req, res) {
         if (!svc?.id) continue
         const months = Math.min(24, Math.max(1, Number(row.frequency_months) || meta.defaultMonths))
         const channel = ['push', 'sms', 'both'].includes(row.channel) ? row.channel : 'both'
-
-        await db.from('notification_settings').delete().eq('scope', 'per_service').eq('service_id', svc.id)
-        const { data: inserted, error } = await db
-          .from('notification_settings')
-          .insert({
-            scope: 'per_service',
-            service_id: svc.id,
-            branch_slug: null,
-            channel,
-            frequency_months: months,
-            enabled: true,
-            title: row.title || null,
-            message: row.message || null,
-            updated_at: new Date().toISOString(),
-          })
-          .select('id, scope, service_id, frequency_months, channel')
-          .maybeSingle()
-        if (error) return json(res, 400, { error: error.message })
-        saved.push(inserted)
+        rowsToSave.push({
+          scope: 'per_service',
+          service_id: svc.id,
+          branch_slug: null,
+          channel,
+          frequency_months: months,
+          enabled: true,
+          title: row.title || null,
+          message: row.message || null,
+          updated_at: nowIso,
+        })
       }
 
-      return json(res, 200, { ok: true, saved })
+      if (!rowsToSave.length) return json(res, 200, { ok: true, saved: [] })
+      const serviceIds = rowsToSave.map((r) => r.service_id)
+      await db.from('notification_settings').delete().eq('scope', 'per_service').in('service_id', serviceIds)
+      const { data: saved, error } = await db
+        .from('notification_settings')
+        .insert(rowsToSave)
+        .select('id, scope, service_id, frequency_months, channel')
+      if (error) return json(res, 400, { error: error.message })
+
+      return json(res, 200, { ok: true, saved: saved || [] })
     }
 
     if (req.method === 'PATCH') {

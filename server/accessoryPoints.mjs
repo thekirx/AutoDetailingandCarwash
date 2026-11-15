@@ -1,12 +1,5 @@
-import { createClient } from '@supabase/supabase-js'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
-
-function adminClient() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-}
+import { adminClient } from './supabaseAdmin.mjs'
 
 function canAssignAccessoryPoints(staff) {
   if (!staff?.is_active || staff.is_archived) return false

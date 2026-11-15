@@ -3,19 +3,14 @@
  * at 6, 12, 18, 24, and 30 completed visits, and a rate-your-visit text.
  * Sends respect the shop SMS toggle and sms_opt_in, and are idempotent via sms_events.
  */
-import { createClient } from '@supabase/supabase-js'
 import { applyTemplateText } from '../src/lib/notificationTemplates.js'
 import { VISIT_REWARDS } from '../src/lib/rewardsCatalog.js'
 import { busybeeSendSms } from './busybee.mjs'
 import { isSmsNotificationsEnabled } from './notifyBooking.mjs'
 import { loadTemplateMap, templateEnabled } from './notificationTemplatesDb.mjs'
+import { adminClient as adminDb } from './supabaseAdmin.mjs'
 
-export function adminDb() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-}
+export { adminDb }
 
 export const LIFECYCLE_KINDS = [
   'welcome_app',

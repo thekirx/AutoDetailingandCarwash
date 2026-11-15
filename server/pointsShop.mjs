@@ -1,16 +1,10 @@
-import { createClient } from '@supabase/supabase-js'
 import { canAccessPos, canManageMerchShop, getBranchScopeList } from '../src/auth/permissions.js'
 import { normalizePickupCode, pickupCodeMatches, pickupDaysLeft, pickupPath, PICKUP_MASK } from '../src/lib/pointsShop.js'
 import { bearer, json, rateLimit, readJsonBody, setCors } from './httpUtil.mjs'
 import { scheduledRunGate } from './scheduledRun.mjs'
+import { adminClient } from './supabaseAdmin.mjs'
 import { sendWebPushToUsers } from './webPush.mjs'
 
-function adminClient() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing Supabase server configuration')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-}
 const fail = (message, status = 400) => Object.assign(new Error(message), { status })
 export function maskedPickup(row) {
   // An explicit projection prevents future secret columns being leaked by a spread.

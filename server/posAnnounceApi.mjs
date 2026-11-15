@@ -8,10 +8,10 @@
  * customers (same plate/line) do not burn TTS tokens again.
  */
 import { createHash } from 'node:crypto'
-import { createClient } from '@supabase/supabase-js'
 import { canAccessPos, getBranchScopeList } from '../src/auth/permissions.js'
 import { buildPaymentAnnouncement } from '../src/lib/paymentAnnouncement.js'
 import { bearer, json, readJsonBody, setCors, clientIp, rateLimit } from './httpUtil.mjs'
+import { adminClient as admin } from './supabaseAdmin.mjs'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const MAX_CLIPS = 200
@@ -34,13 +34,6 @@ export function elevenLabsCreditsGone(status, body = '') {
 
 export function resetElevenLabsCredits() {
   elevenCreditsGone = false
-}
-
-function admin() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
 export function staffCanAnnounce(staff, branchSlugs, branch) {

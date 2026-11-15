@@ -2,7 +2,6 @@
  * Super Admin Data Center API (service role).
  * Export / import / purge / status — BossMich only.
  */
-import { createClient } from '@supabase/supabase-js'
 import { collectInChunks, collectPaged } from '../src/lib/crmInsights.js'
 import {
   DATA_CENTER_EXPORT_TABLES,
@@ -19,16 +18,10 @@ import {
   purgeCutoffIso,
 } from '../src/lib/dataCenterLogic.js'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
+import { adminClient } from './supabaseAdmin.mjs'
 
 const PAGE = 1000
 const UPSERT_CHUNK = 200
-
-function adminClient() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-}
 
 async function requireSuperAdmin(accessToken) {
   if (!accessToken) throw Object.assign(new Error('Unauthorized'), { status: 401 })

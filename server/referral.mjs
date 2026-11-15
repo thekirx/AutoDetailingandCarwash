@@ -9,7 +9,6 @@
  * Every helper tolerates the migration not being applied yet: it reports the
  * program as off instead of throwing, so this code can ship before the SQL.
  */
-import { createClient } from '@supabase/supabase-js'
 import {
   REFERRAL_DEFAULTS,
   makeReferralCode,
@@ -20,13 +19,7 @@ import {
 import { applyTemplateText } from '../src/lib/notificationTemplates.js'
 import { phoneDigits } from '../src/lib/customerAuth.js'
 import { bearer, clientIp, json, rateLimit, readJsonBody } from './httpUtil.mjs'
-
-function adminClient() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-}
+import { adminClient } from './supabaseAdmin.mjs'
 
 const WASH_CATEGORIES = ['wash', 'package', 'addon']
 

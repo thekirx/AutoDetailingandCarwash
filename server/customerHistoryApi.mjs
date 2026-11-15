@@ -2,8 +2,8 @@
  * Ops customer History API — plate / phone ledger (bookings + maintenance + POS sales).
  * Branch Admin / TL: scoped to their branch(es). SA / ASA / Sales / Marketing: all branches.
  */
-import { createClient } from '@supabase/supabase-js'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
+import { adminClient as admin } from './supabaseAdmin.mjs'
 import {
   HISTORY_ROLES,
   buildHistoryTimeline,
@@ -14,13 +14,6 @@ import {
   phonesMatch,
   summarizeHistoryIdentity,
 } from '../src/lib/customerHistory.js'
-
-function admin() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-}
 
 function bookingMatchesQuery(row, classified) {
   if (classified.kind === 'phone' || classified.kind === 'mixed') {

@@ -2,17 +2,10 @@
  * POST /api/notify-planner — inbox + push after a Planner assign.
  * Body: { card_id, user_ids, title? }
  */
-import { createClient } from '@supabase/supabase-js'
 import { canEditPlanning } from '../src/auth/permissions.js'
 import { notifyPlannerAssignees } from './notifyPlanner.mjs'
 import { bearer, json, readJsonBody, setCors, clientIp, rateLimit } from './httpUtil.mjs'
-
-function admin() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-}
+import { adminClient as admin } from './supabaseAdmin.mjs'
 
 export async function handleNotifyPlannerRequest(req, res) {
   setCors(res, 'POST, OPTIONS')

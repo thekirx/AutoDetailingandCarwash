@@ -2,17 +2,13 @@
  * Send finance quotation email via Resend REST (no SDK dep).
  * Env: RESEND_API_KEY, RESEND_FROM (optional, defaults to onboarding@resend.dev)
  */
-import { createClient } from '@supabase/supabase-js'
+import { adminClient } from './supabaseAdmin.mjs'
 
 const WRITE_ROLES = new Set(['BossMich', 'admin', 'assistant_super_admin'])
 
 export async function sendFinanceQuote({ accessToken, body }) {
   if (!accessToken) throw Object.assign(new Error('Unauthorized'), { status: 401 })
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing Supabase service env')
-
-  const admin = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
+  const admin = adminClient()
   const { data: userData, error: userErr } = await admin.auth.getUser(accessToken)
   if (userErr || !userData?.user) throw Object.assign(new Error('Unauthorized'), { status: 401 })
 

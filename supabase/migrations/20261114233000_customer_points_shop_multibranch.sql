@@ -56,10 +56,7 @@ end $$;
 revoke all on function public.redeem_accessory(uuid, uuid, text, text) from public, anon, authenticated;
 grant execute on function public.redeem_accessory(uuid, uuid, text, text) to service_role;
 
--- Indexes for customer redemptions and staff multi-branch pickup handover lookups
-create index if not exists idx_accessory_redemptions_customer_created
-  on public.accessory_redemptions (customer_id, created_at desc);
-
+-- Indexes for staff multi-branch pickup handover lookups and operational branch list
 create index if not exists idx_accessory_redemptions_branch_status_expires
   on public.accessory_redemptions (branch_slug, status, expires_at);
 

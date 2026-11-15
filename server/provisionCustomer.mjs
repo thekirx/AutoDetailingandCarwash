@@ -2,13 +2,13 @@
  * Server-only customer account provisioning (service role).
  * Used by Vite middleware (dev) and Vercel /api/provision-customer (prod).
  */
-import { createClient } from '@supabase/supabase-js'
 import { authCreateUserIdForCrm, buildProvisionInviteMessage } from './provisionSms.mjs'
 import { canonicalPhMobile, phoneLoginEmail, phoneLoginEmailAliases, plateValidationError } from '../src/lib/customerAuth.js'
 import {
   mergeCustomerDisplayName,
   resolveQueueCustomerDisplayName,
 } from '../src/lib/queueCustomerName.js'
+import { adminClient } from './supabaseAdmin.mjs'
 
 export { phoneLoginEmail }
 
@@ -18,13 +18,6 @@ export const QUEUE_PROVISION_ROLES = new Set(['BossMich', 'admin', 'assistant_su
 
 function randomTempPassword() {
   return `Hakum-${crypto.randomUUID().replace(/-/g, '').slice(0, 12)}!`
-}
-
-function adminClient() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
 async function assertQueueEditor(admin, accessToken) {

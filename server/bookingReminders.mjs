@@ -34,16 +34,25 @@ export async function runDetailingBookingReminders(db, today = manilaTodayISO())
   const due = (data || []).filter((row) => isBookingBoardRow(row) && reminderOffset(row.scheduled_start, today))
   const sent = []
 
+  // Batch prior reminder lookup across all due bookings to avoid N+1 per-booking SELECTs.
+  const priorSent = new Set()
+  if (due.length) {
+    const dueIds = due.map((row) => row.id)
+    const eventTypes = DETAILING_REMINDER_DAYS.map((d) => `booking_remind_${d}d`)
+    const { data: priorRows } = await db
+      .from('sms_events')
+      .select('booking_id, event_type')
+      .in('booking_id', dueIds)
+      .in('event_type', eventTypes)
+    for (const r of priorRows || []) {
+      priorSent.add(`${r.booking_id}|${r.event_type}`)
+    }
+  }
+
   for (const booking of due) {
     const days = reminderOffset(booking.scheduled_start, today)
     const eventType = `booking_remind_${days}d`
-    const { data: prior } = await db
-      .from('sms_events')
-      .select('id')
-      .eq('booking_id', booking.id)
-      .eq('event_type', eventType)
-      .limit(1)
-    if (prior?.length) continue
+    if (priorSent.has(`${booking.id}|${eventType}`)) continue
 
     const bookingWithService = {
       ...booking,

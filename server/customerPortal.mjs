@@ -1,12 +1,12 @@
 import { sendShopMessage } from './pointsShop.mjs'
 import { shopItems } from '../src/lib/pointsShop.js'
 import { filterOperationalBranches, filterOperationalStockRows } from '../src/lib/inventoryBranchStock.js'
+import { adminClient } from './supabaseAdmin.mjs'
 /**
  * Customer portal data (service role) — JWT customer → history / garage / queue / loyalty.
  * POST actions: add-vehicle | update-vehicle | archive-vehicle | sync-email | update-phone | update-birthday | submit-review | request-reschedule | claim-birthday | redeem-accessory | check-voucher | apply-booking-voucher
  * (kept in step with mutateCustomerPortal by scripts/check-portal-actions.mjs)
  */
-import { createClient } from '@supabase/supabase-js'
 import { getQueueCounts, buildVisitProgress, formatQueueNumber, normalizePlate } from '../src/queue/queueLogic.js'
 import { isBookingBoardService } from '../src/lib/serviceKinds.js'
 import { maintenanceNeedsOpsAttention } from '../src/lib/paintMaintenance.js'
@@ -65,13 +65,6 @@ function resolveGarageSize(body) {
   const raw = String(body?.vehicle_type || '').trim()
   if (raw) return normalizePricingSize(raw)
   return inferPhPricingSize(body?.vehicle_make, body?.vehicle_model)
-}
-
-function adminClient() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
 }
 
 function visitKindFromService(svc) {

@@ -3,15 +3,8 @@
  * VAPID_* env only — never expose private key to the client.
  */
 import webpush from 'web-push'
-import { createClient } from '@supabase/supabase-js'
 import { planStaffRecipients } from '../src/lib/notifyRouting.js'
-
-function admin() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-}
+import { adminClient as admin } from './supabaseAdmin.mjs'
 
 function ensureVapid() {
   const publicKey = process.env.VAPID_PUBLIC_KEY || process.env.VITE_VAPID_PUBLIC_KEY

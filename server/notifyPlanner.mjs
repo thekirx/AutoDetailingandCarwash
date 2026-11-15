@@ -1,17 +1,10 @@
 /**
  * Planner assign — inbox + web push to the people on the card.
  */
-import { createClient } from '@supabase/supabase-js'
 import { NOTIFY_EVENTS } from '../src/lib/notifyRouting.js'
 import { buildPlannerAssignNotify } from '../src/lib/plannerTasks.js'
+import { adminClient as admin } from './supabaseAdmin.mjs'
 import { notifyRecipients, resolveStaffRecipients } from './webPush.mjs'
-
-function admin() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-}
 
 export async function notifyPlannerAssignees({ cardId, userIds, title } = {}) {
   const copy = buildPlannerAssignNotify({ title, cardId })

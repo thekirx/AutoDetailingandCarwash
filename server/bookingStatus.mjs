@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { adminClient as admin } from './supabaseAdmin.mjs'
 import { sendBirthdayQueueStart } from './birthdayGreetings.mjs'
 import { notifyBookingPhotosReady, notifyBookingStatus } from './notifyBooking.mjs'
 import { canStaffUpdateBookingStatus } from './bookingStatusAccess.mjs'
@@ -12,13 +13,6 @@ import {
 } from '../src/lib/detailingCompletion.js'
 import { nextPlanCardPosition, nextPlanListPosition } from '../src/lib/plannerBoard.js'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
-
-function admin() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-}
 
 function userClient(token) {
   const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL

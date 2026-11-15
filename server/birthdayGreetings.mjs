@@ -2,21 +2,14 @@
  * Grant the yearly birthday free-service perk and send greeting push + SMS.
  * Idempotent per customer/year via customer_birthday_perks unique key.
  */
-import { createClient } from '@supabase/supabase-js'
 import { BIRTHDAY_GIFT_LABEL, birthdayPerkExpiresAt, birthdayQueryDays, isBirthdayToday, mintBirthdayCode } from '../src/lib/birthdayPerk.js'
 import { CUSTOMER_VOUCHERS_PATH } from '../src/lib/customerAccountNav.js'
 import { applyTemplateText } from '../src/lib/notificationTemplates.js'
 import { busybeeSendSms } from './busybee.mjs'
 import { isSmsNotificationsEnabled } from './notifyBooking.mjs'
 import { loadTemplateMap, templateEnabled } from './notificationTemplatesDb.mjs'
+import { adminClient as admin } from './supabaseAdmin.mjs'
 import { sendWebPushToUsers } from './webPush.mjs'
-
-function admin() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-}
 
 async function writeInbox(db, userId, payload) {
   if (!userId) return { inserted: 0 }

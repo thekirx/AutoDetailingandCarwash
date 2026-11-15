@@ -1,15 +1,8 @@
-import { createClient } from '@supabase/supabase-js'
 import { referralStaffOptionLabel } from '../src/lib/referralSource.js'
 import { json, setCors } from './httpUtil.mjs'
+import { adminClient } from './supabaseAdmin.mjs'
 
 const ROLES = ['staff', 'detailer', 'team_lead', 'admin', 'sales']
-
-function adminClient() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-}
 
 /** Active crew, staff, and branch admins, with the branch each person is linked to. */
 export async function listReferralStaff(db) {

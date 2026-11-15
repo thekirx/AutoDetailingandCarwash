@@ -3,7 +3,6 @@
  * New phone → create Auth + CRM + vehicle.
  * Team Lead CRM-only or must_set_password → claim/attach, set password, keep customer_id.
  */
-import { createClient } from '@supabase/supabase-js'
 import { normalizePlate, phoneLoginEmail, phoneLoginEmailAliases } from '../src/lib/customerAuth.js'
 import {
   garagePlatePlan,
@@ -19,13 +18,7 @@ import {
   validateOnboardingDraft,
 } from '../src/lib/customerOnboarding.js'
 import { clientIp, rateLimit } from './httpUtil.mjs'
-
-function adminClient() {
-  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!url || !key) throw new Error('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY')
-  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } })
-}
+import { adminClient } from './supabaseAdmin.mjs'
 
 export function assertAcceptedTerms(body) {
   if (body?.accepted_terms !== true) {
