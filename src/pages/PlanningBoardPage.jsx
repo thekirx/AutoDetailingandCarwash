@@ -169,7 +169,7 @@ export default function PlanningBoardPage() {
     if (error) toast.error(error.message)
     setBoard(data || null)
     setLoading(false)
-  }, [searchParams, canEdit, profile?.id])
+  }, [searchParams, canEdit, profile])
 
   useEffect(() => {
     load()

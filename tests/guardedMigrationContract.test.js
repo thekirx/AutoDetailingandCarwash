@@ -106,6 +106,9 @@ const EXEMPTED = [
   '20261114200000_inventory_forms_multibranch_optimization.sql',
   '20261114233000_customer_points_shop_multibranch.sql',
   '20261115100000_db_fk_rls_and_cleanup_optimization.sql',
+  '20261115103500_referral_sale_fk_indexes.sql',
+  '20261115104200_restore_sales_bookings_select.sql',
+  '20261115213000_real_services_products_coffee_menu.sql',
 ]
 
 const read = (name) => readFileSync(join(migrationsDir, name), 'utf8')

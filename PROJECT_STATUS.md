@@ -1,8 +1,19 @@
 # Project Status
 
-**Last Updated:** 2026-10-16 ~23:31 (Asia/Manila) — second strict progress check (unchanged outcomes)  
-**Deployed:** `origin/main` @ `f7ebc41` · **BUG-094 NOT deployed**  
-**Overall Status:** **READY_WITH_OPS_BLOCKERS** · shop-day ready · **BUG-094 on prod** · **SMS FAIL** · **push 0/20** · Auth SMTP **OPEN**
+**Last Updated:** 2026-11-15 (Asia/Manila) — Full UAT + Real Catalog & Staff Cutover  
+**Overall Status:** Verified local & Supabase UAT complete; ready to deploy to `origin/main`.
+
+## Executive Summary (2026-11-15 — UAT, Real Catalog & Staff Cutover)
+
+- **Real Catalog Cutover (`20261115213000_real_services_products_coffee_menu.sql`)**:
+  - Archived placeholder/demo services while preserving historical booking FKs; set **33 active services** (**12 detailing** + **21 car wash/packages/treatments**) with Small/Medium/Large/XL pricing tiers (Motorcycle Wash & Motorcycle Wash + Wax exclude L/XL as N/A).
+  - Set **6 Coffee Menu items** (`Americano`, `Café Latte`, `Caramel Macchiato`, `Vanilla Latte`, `Spanish Latte`, `Irish Coffee` — Iced/Hot) and **5 Sellables** (`Hakum Car Spray`, `Hakum Car Scent`, `Hakum Tshirt` S–2XL, `Hakum Car Care Kit`, `Air Spencer`) + Points Shop redemptions (`Hakum Keychain` 20 pts, `Hakum Car Scent` 30 pts, `Hakum Tshirt` 50 pts, `Hakum Car Care Kit` 50 pts, `Air Spencer` 30 pts), seeding missing `product_branch_stock` rows (`50` on active branches `bacoor` & `batangas`).
+- **Real Staff Provisioning (`scripts/sync-real-staff.mjs`)**: Synced **15 real named staff accounts** (`8` Team Leads across `bacoor`/`dasmarinas`/`batangas`/`imus`, `3` Branch Admins `Jennica`/`Peter`/`Almirra`, `3` General Admins `Lucy`/`Robert`/`Bryan`, `1` cross-branch Marketing Manager `Mira`) while keeping historical/QA demo logins behind the scenes. `dasmarinas` & `imus` remain `coming_soon = true, is_active = false, is_public = true`.
+- **Database & Security Hardening**: Applied `20261018120000_refer_a_friend.sql` (live `referral_program_settings` + `services.referral_eligible`), `20261115103500_referral_sale_fk_indexes.sql` (`0` unindexed FKs in `public`), and `20261115104200_restore_sales_bookings_select.sql` (restored `sales` read access on `bookings`).
+- **UAT Code Fixes**: Fixed duplicate `hr` nav group key for Branch Admin (`src/auth/permissions.js`), Marketing & Investor read-only Queue Board gate (`src/pages/OperationsPages.jsx`), `PlanningBoardPage.jsx` hook deps, `serviceKinds.js` detailing floor filter, `CustomerBookPage.jsx` photo fallback, `serviceStartingPrices.js` card slugs, and `tests/uatFixes.test.js` + `tests/guardedMigrationContract.test.js`.
+- **Fresh Verification (2026-11-15)**: `npm run lint` (`0` errors), `npm test` (`2618/2618` across `587` suites), `npm run check` (`ok`), `npm run audit:api-auth` (`36` handlers ok), `e2e-role-qa-wave.mjs` (`206/206`), `e2e-ui-money.mjs` (`5/5`), `e2e-ui-p0.mjs` (`9/9`), `e2e-ui-forms.mjs` (`10/10`), `e2e-daily-sheet-money.mjs` (`38` checks), `e2e-sales-bookings.mjs` (`14/14`), `e2e-plate-vehicle-queue.mjs` (`13/13`), `responsive-validation.mjs` (`fail=0 conditional=0`). Note `audit:db` exits 1 only for pre-existing BUG-061 test handoffs (2026-09-29) and push opt-in enrollment (`0/34`), with money reconciliation passing (`1309/1309` sales).
+
+---
 
 ## Executive Summary (2026-10-16 evening — strict, pass 2)
 

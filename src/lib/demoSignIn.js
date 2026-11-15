@@ -39,7 +39,9 @@ export function isDemoLoginVisible() {
   if (key === DEFAULT_QA_KEY) {
     try {
       globalThis.localStorage?.removeItem(QA_KEY_STORAGE)
-    } catch {}
+    } catch {
+      /* ignore storage access errors */
+    }
     return false
   }
   return Boolean(key)
@@ -76,7 +78,9 @@ export async function unlockDemoLoginFromUrl() {
         if (res?.ok) {
           try {
             localStorage.setItem(QA_KEY_STORAGE, key)
-          } catch {}
+          } catch {
+            /* ignore storage access errors */
+          }
         }
       })
       .catch(() => {})

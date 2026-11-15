@@ -129,10 +129,13 @@ export function filterPosDetailingCatalog(services) {
   })
 }
 
-/** Prefer floor detailing SKUs (Ceramic / Paint Maint / Tint / PPF); fall back to any active detailing row. */
+/** Prefer floor detailing SKUs (Ceramic / Paint Maint / Tint / PPF); when curated extra detailing rows exist, include all detailing rows. */
 export function filterFloorDetailingServices(services) {
   const rows = services || []
+  const detailingRows = filterServicesByKind(rows, 'detailing')
   const preferred = new Set(FLOOR_DETAILING_SERVICE_SLUGS)
+  const hasCuratedExtras = detailingRows.some((svc) => !preferred.has(String(svc.slug || '').toLowerCase()))
+  if (hasCuratedExtras) return detailingRows
   const named = rows.filter((svc) => preferred.has(String(svc.slug || '').toLowerCase()))
   if (named.length) {
     return [...named].sort((a, b) => {
@@ -141,7 +144,7 @@ export function filterFloorDetailingServices(services) {
       return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi)
     })
   }
-  return filterServicesByKind(rows, 'detailing')
+  return detailingRows
 }
 
 /**

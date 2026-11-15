@@ -1,3 +1,4 @@
+/* global document */
 /**
  * Comprehensive E2E Verification Suite for:
  * 1. Main Domain (https://www.hakumautocare.com) SEO, Google Search Console Logo/Favicon, & Professional Multi-Branch Title

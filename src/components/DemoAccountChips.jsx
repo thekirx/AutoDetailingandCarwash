@@ -1,4 +1,3 @@
-import { isDemoLoginEnabled } from '../lib/demoLogin'
 import { isDemoLoginVisible } from '../lib/demoSignIn'
 
 /** Compact demo account chips for ops / customer login, only on a device holding a QA key or test hosts. */

@@ -31,7 +31,7 @@ import {
   QUEUE_FAMILY_DETAILING,
   ticketQueueFamily,
 } from '../lib/queueFamilies'
-import { allowRoute, canAccessPos, canEditQueueTicket, canManagePeople, canSeeAllBranches, canViewPlanning, canViewRedoLane, isAdmin, isAssistantSuperAdmin, isInvestor, isSalesRole, ROLES, isSuperAdmin } from '../auth/permissions'
+import { allowRoute, canAccessPos, canEditQueueTicket, canManagePeople, canSeeAllBranches, canViewPlanning, canViewQueueBoard, canViewRedoLane, isAdmin, isAssistantSuperAdmin, isInvestor, isSalesRole, ROLES, isSuperAdmin } from '../auth/permissions'
 import ReferralRank from '../components/bookings/ReferralRank'
 import {
   DEFAULT_COMPENSATION_RULES,
@@ -801,7 +801,7 @@ export function OperationsQueuePage() {
 }
 
 function OperationsQueueBoardPage() {
-  const { profile, canManageQueue, canViewQueueOperations } = useAuth()
+  const { profile, canManageQueue } = useAuth()
   const navigate = useNavigate()
   const seeAll = canSeeAllBranches(profile)
   const scopeList = getBranchScopeList(profile)
@@ -932,7 +932,7 @@ function OperationsQueueBoardPage() {
     fetchBranches().then(setBranches).catch(() => setBranches([]))
   }, [seeAll, scopeList])
 
-  if (!canViewQueueOperations && !salesView) return <Navigate to="/operations/access-denied" replace />
+  if (!canViewQueueBoard(profile)) return <Navigate to="/operations/access-denied" replace />
   if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
   if (error) return <ErrorState error={error} onRetry={reload} />
 

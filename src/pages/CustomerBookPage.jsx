@@ -33,7 +33,29 @@ import tintPhoto from '@/assets/services/ceramic-tint.webp'
 import ppfPhoto from '@/assets/services/ppf-clearpro-install.webp'
 import carwashPhoto from '@/assets/services/carwash.webp'
 
-const SERVICE_PHOTOS = { 'ceramic-coating': ceramicPhoto, 'paint-maintenance': maintenancePhoto, 'nano-ceramic-tint': tintPhoto, 'ceramic-tint': tintPhoto, 'paint-protection-film': ppfPhoto, ppf: ppfPhoto }
+const SERVICE_PHOTOS = {
+  'ceramic-coating': ceramicPhoto,
+  'ultimate-ceramic-coating': ceramicPhoto,
+  'platinum-ceramic-coating': ceramicPhoto,
+  'paint-maintenance': maintenancePhoto,
+  'ceramic-paint-maintenance': maintenancePhoto,
+  'nano-ceramic-tint': tintPhoto,
+  'nano-ceramic-pro-tint': tintPhoto,
+  'nano-ceramic-pro-black-series-tint': tintPhoto,
+  'ceramic-tint': tintPhoto,
+  'paint-protection-film': ppfPhoto,
+  ppf: ppfPhoto,
+}
+
+function resolveServicePhoto(slug) {
+  const key = String(slug || '').toLowerCase()
+  if (SERVICE_PHOTOS[key]) return SERVICE_PHOTOS[key]
+  if (key.includes('ppf')) return ppfPhoto
+  if (key.includes('maintenance')) return maintenancePhoto
+  if (key.includes('tint')) return tintPhoto
+  if (key.includes('ceramic')) return ceramicPhoto
+  return carwashPhoto
+}
 
 function formatPeso(minor) {
   return `₱${(Number(minor || 0) / 100).toLocaleString('en-PH', { minimumFractionDigits: 0 })}`
@@ -315,7 +337,7 @@ export default function CustomerBookPage() {
         <div className="capp-svc-list" role="list" aria-label="Service">
           {services.map((s, i) => (
             <button key={s.id} type="button" role="listitem" className="capp-svc" onClick={() => openFlow(s.id)}>
-              {SERVICE_PHOTOS[s.slug] ? <img className="capp-svc-bg" src={SERVICE_PHOTOS[s.slug]} alt="" loading="lazy" /> : null}
+              <img className="capp-svc-bg" src={resolveServicePhoto(s.slug)} alt="" loading="lazy" />
               <span className="capp-no" aria-hidden>
                 {String(i + 1).padStart(2, '0')}
               </span>

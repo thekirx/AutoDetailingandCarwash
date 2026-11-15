@@ -187,13 +187,13 @@ try {
       fail('money.admin.pos', 'skipped')
       fail('money.admin.daily_sheet', 'skipped')
     } else {
-      await page.goto(`${base}/operations/queue`, { waitUntil: 'domcontentloaded', timeout: 60000 })
+      await page.goto(`${base}/operations/queue/new`, { waitUntil: 'domcontentloaded', timeout: 60000 })
       await dismissCookieBanner(page)
       await new Promise((r) => setTimeout(r, 1200))
-      if (/access-denied/i.test(page.url()) || !page.url().includes('/operations/queue')) {
-        pass('money.admin.queue_denied', page.url())
+      if (/access-denied/i.test(page.url()) || !page.url().includes('/operations/queue/new')) {
+        pass('money.admin.queue_new_denied', page.url())
       } else {
-        fail('money.admin.queue_denied', `Branch Admin reached the queue: ${page.url()}`)
+        fail('money.admin.queue_new_denied', `Branch Admin reached new ticket form: ${page.url()}`)
         await shot(page, 'admin-queue-FAIL')
       }
 
@@ -210,7 +210,7 @@ try {
 
         await page.goto(`${base}/operations/pos?tab=sheet`, { waitUntil: 'domcontentloaded', timeout: 60000 })
         const sheetOk = await page
-          .waitForFunction(() => /Cash in drawer/.test(document.body?.innerText || '') && /Money out/.test(document.body?.innerText || ''), { timeout: 30000 })
+          .waitForFunction(() => /Cash to collect/.test(document.body?.innerText || '') && /Money out/.test(document.body?.innerText || ''), { timeout: 30000 })
           .then(() => true, () => false)
         if (sheetOk) {
           pass('money.admin.daily_sheet', 'POS › Daily sheet open (no save)')

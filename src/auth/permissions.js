@@ -824,14 +824,14 @@ function nav(label, to, icon, group) {
   return { label, to, icon, group }
 }
 
-/** Group the nav in list order. Callers put Floor Insight items first. */
+/** Group the nav in list order, coalescing items sharing a group id. */
 export function groupOperationsNav(items = []) {
   const groups = []
   for (const item of items) {
     const id = COMMAND_NAV_GROUP_ORDER.includes(item.group) ? item.group : 'more'
-    const last = groups[groups.length - 1]
-    if (last && last.id === id) {
-      last.items.push(item)
+    const existing = groups.find((g) => g.id === id)
+    if (existing) {
+      existing.items.push(item)
       continue
     }
     groups.push({

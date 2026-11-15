@@ -158,7 +158,8 @@ async function main() {
       timeout: 60000,
     })
     await dismissCookieBanner(page)
-    await new Promise((r) => setTimeout(r, 2500))
+    await page.waitForSelector('.planner-forms .planner-ticket', { timeout: 20000 }).catch(() => null)
+    await page.waitForSelector('.planner-forms img[alt*="QR"]', { timeout: 10000 }).catch(() => null)
 
     if (isLoginWallUrl(page.url())) {
       fail('planner.forms', `login wall ${page.url()}`)
@@ -166,9 +167,9 @@ async function main() {
     } else {
       const bodyText = await page.evaluate(() => document.body?.innerText || '')
       const hasDetailing = /detailing/i.test(bodyText)
-      const hasQr = Boolean(await page.$('img[alt*="QR"], canvas, .form-qr, [data-testid="form-qr"]'))
+      const hasQr = Boolean(await page.$('.planner-forms img[alt*="QR"], .planner-forms canvas, .form-qr, [data-testid="form-qr"]'))
       const qrImg = await page.evaluate(() => {
-        const imgs = [...document.querySelectorAll('img')]
+        const imgs = [...document.querySelectorAll('.planner-forms img')]
         return imgs.some((img) => /qr|data:image\/png/i.test(img.src || '') || /QR/i.test(img.alt || ''))
       })
       if (!hasDetailing) {
@@ -178,17 +179,18 @@ async function main() {
         pass('planner.forms.detailing', 'detailing visible')
       }
       if (!hasQr && !qrImg) {
-        // select detailing template first if list exists
+        // select detailing option in main panel only (never sidebar nav links)
         await page.evaluate(() => {
-          const row = [...document.querySelectorAll('button, tr, [role="button"], a')].find((el) =>
+          const scope = document.querySelector('.planner-forms') || document.querySelector('main') || document
+          const row = [...scope.querySelectorAll('button, tr, [role="button"]')].find((el) =>
             /detailing/i.test(el.textContent || ''),
           )
           row?.click()
         })
-        await new Promise((r) => setTimeout(r, 1500))
+        await page.waitForSelector('.planner-forms img[alt*="QR"]', { timeout: 10000 }).catch(() => null)
       }
       const qrAfter = await page.evaluate(() => {
-        const imgs = [...document.querySelectorAll('img')]
+        const imgs = [...document.querySelectorAll('.planner-forms img')]
         return imgs.some((img) => /^data:image\/png/i.test(img.src || '') || /QR/i.test(img.alt || ''))
       })
       if (qrAfter || hasQr || qrImg) pass('planner.forms.qr', 'QR present')
@@ -314,17 +316,18 @@ async function main() {
       waitUntil: 'domcontentloaded',
       timeout: 60000,
     })
-    await new Promise((r) => setTimeout(r, 2000))
+    await page.waitForSelector('.planner-forms .planner-ticket button', { timeout: 20000 }).catch(() => null)
     await page.evaluate(() => {
-      const edit = [...document.querySelectorAll('button')].find((b) =>
-        /edit/i.test(b.textContent || '') || b.getAttribute('aria-label')?.match?.(/edit/i),
+      const scope = document.querySelector('.planner-forms .planner-ticket') || document.querySelector('.planner-forms') || document
+      const edit = [...scope.querySelectorAll('button')].find((b) =>
+        /^edit$/i.test((b.textContent || '').trim()) || /edit/i.test(b.getAttribute('aria-label') || ''),
       )
       edit?.click()
     })
-    await new Promise((r) => setTimeout(r, 1000))
+    await page.waitForSelector('[role="dialog"]', { timeout: 8000 }).catch(() => null)
     const dialogOpen = await page.evaluate(() =>
-      Boolean(document.querySelector('[role="dialog"]')) ||
-        /Field|Slug|Status|Public/i.test(document.body?.innerText || ''),
+      Boolean(document.querySelector('[role="dialog"]')) &&
+        /Slug|Status|Public/i.test(document.querySelector('[role="dialog"]')?.innerText || ''),
     )
     if (dialogOpen) {
       pass('planner.forms.edit_dialog', 'edit UI opened')

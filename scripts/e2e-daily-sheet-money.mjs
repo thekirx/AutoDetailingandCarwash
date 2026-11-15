@@ -17,7 +17,7 @@ import { demoPassword } from '../src/lib/demoAccounts.js'
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const QA_DATE = '2000-01-03'
 const QA_BRANCH = 'bacoor'
-const OTHER_BRANCH = 'batangas'
+const OTHER_BRANCH = 'imus'
 const RECEIPT_PATH = `${QA_BRANCH}/${QA_DATE}/qa-e2e-receipt.png`
 
 if (existsSync(join(root, '.env'))) {

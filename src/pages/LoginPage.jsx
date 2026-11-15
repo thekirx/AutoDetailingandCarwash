@@ -9,7 +9,6 @@ import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell, { TEAM_AUTH_BULLETS } from '../components/HakumAuthShell'
 import DemoAccountChips from '../components/DemoAccountChips'
 import { describeAuthError } from '../lib/authErrorMessage'
-import { isDemoLoginEnabled } from '../lib/demoLogin'
 import { OPS_DEMO_ACCOUNTS } from '../lib/demoAccounts'
 import { demoSignIn, unlockDemoLoginFromUrl, isDemoLoginVisible } from '../lib/demoSignIn'
 

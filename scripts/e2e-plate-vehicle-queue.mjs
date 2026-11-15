@@ -37,7 +37,10 @@ function fail(name, detail = '') {
 
 const stamp = Date.now().toString(36).toUpperCase()
 const plate = `QA${stamp.slice(-6)}`
-const phone = '09625294043'
+const phone = `0999${String(Date.now()).slice(-7)}`
+let cleanupCustomerId = null
+let cleanupVehicleId = null
+let cleanupBookingId = null
 
 try {
   // Catalog smart search
@@ -58,8 +61,9 @@ try {
   })
   if (authErr) throw authErr
   const customerId = authUser.user.id
+  cleanupCustomerId = customerId
 
-  await admin.from('customers').upsert({
+  const { error: custUpsertErr } = await admin.from('customers').upsert({
     id: customerId,
     full_name: 'QA Plate Autofill',
     first_name: 'QA',
@@ -69,6 +73,7 @@ try {
     role: 'customer',
     is_archived: false,
   })
+  if (custUpsertErr) throw custUpsertErr
 
   const { data: vehicle, error: vehErr } = await admin
     .from('vehicles')
@@ -169,12 +174,18 @@ try {
     await admin.from('bookings').delete().eq('id', booking.id)
   }
 
-  await admin.from('vehicles').delete().eq('id', vehicle.id)
-  await admin.from('customers').delete().eq('id', customerId)
-  await admin.auth.admin.deleteUser(customerId)
+  cleanupVehicleId = vehicle.id
   pass('cleanup')
 } catch (err) {
   fail('fatal', err.message)
+} finally {
+  if (cleanupBookingId) await admin.from('bookings').delete().eq('id', cleanupBookingId)
+  if (cleanupVehicleId) await admin.from('vehicles').delete().eq('id', cleanupVehicleId)
+  if (cleanupCustomerId) {
+    await admin.from('vehicles').delete().eq('customer_id', cleanupCustomerId)
+    await admin.from('customers').delete().eq('id', cleanupCustomerId)
+    await admin.auth.admin.deleteUser(cleanupCustomerId)
+  }
 }
 
 const failed = results.filter((r) => !r.ok)

@@ -111,7 +111,7 @@ assert(allowRoute({ role: ROLES.SALES }, 'queue'), 'sales views the queue')
 assert(!allowRoute({ role: ROLES.SALES }, 'queue-new'))
 assert(!allowRoute({ role: ROLES.SALES }, 'pos'))
 assert(allowRoute({ role: ROLES.SALES }, 'crm'), 'sales views crm')
-assert(canCheckInFormBooking({ role: ROLES.SALES }), 'sales may check in form bookings')
+assert(!canCheckInFormBooking({ role: ROLES.SALES }), 'sales may not check in form bookings')
 results.push('rbac.home+gates: ok')
 
 const { data: branches, error: brErr } = await client.from('branches').select('slug, name').eq('is_active', true)
@@ -150,69 +150,80 @@ const payload = {
   scheduled_start: new Date(Date.now() + 2 * 86400000).toISOString(),
   is_archived: false,
 }
-const { data: created, error: createErr } = await client.from('bookings').insert(payload).select('id, status').single()
-assert(!createErr && created?.id, createErr?.message || 'create failed')
-results.push(`bookings.create: ${created.id}`)
+// 19 Oct RBAC lock: Customer Rep (sales) is read-only on bookings and cannot insert/update.
+const { error: createErr } = await client.from('bookings').insert(payload).select('id, status').single()
+assert(createErr, 'sales direct booking insert must be refused by RLS')
+results.push('bookings.insert_blocked: ok')
 
-const { error: updateErr } = await client
-  .from('bookings')
-  .update({ notes: 'sales edit ok', vehicle_make: 'Honda' })
-  .eq('id', created.id)
-assert(!updateErr, updateErr?.message)
-results.push('bookings.update_details: ok')
+// Seed a fixture detailing booking with service role so we can prove cross-branch read + 403 mutations.
+const { data: seeded, error: seedErr } = await admin.from('bookings').insert(payload).select('id, status').single()
+assert(!seedErr && seeded?.id, seedErr?.message || 'seed failed')
+try {
+  const { data: readBack, error: readErr } = await client.from('bookings').select('id, branch, status').eq('id', seeded.id).maybeSingle()
+  assert(!readErr && readBack?.id === seeded.id, readErr?.message || 'sales must be able to read detailing booking')
+  results.push(`bookings.read_cross_branch: ${readBack.id}`)
 
-// Direct client status change must fail (queue_events / can_manage_branch)
-const { error: directConfirmErr } = await client.from('bookings').update({ status: 'confirmed' }).eq('id', created.id)
-assert(directConfirmErr, 'direct confirm must fail without queue manager role')
-results.push('bookings.direct_status_blocked: ok')
+  const { data: updRows, error: directUpdateErr } = await client
+    .from('bookings')
+    .update({ notes: 'sales edit attempt' })
+    .eq('id', seeded.id)
+    .select('id')
+  assert(directUpdateErr || (updRows?.length ?? 0) === 0, 'sales direct details update must modify 0 rows under RLS')
+  results.push('bookings.update_details_blocked: ok')
 
-assert(
-  canStaffUpdateBookingStatus(
-    { role: 'sales', branch_slug: 'bacoor' },
-    { branch: 'bacoor', status: 'pending', services: services[0] },
-    { nextStatus: 'confirmed' },
-  ),
-)
-const confirm = await callBookingStatus(token, { booking_id: created.id, status: 'confirmed' })
-assert(confirm.statusCode === 200, `confirm API ${confirm.statusCode} ${JSON.stringify(confirm.body)}`)
-assert(confirm.body?.booking?.status === 'confirmed', JSON.stringify(confirm.body))
-results.push('api.confirm: ok')
+  const { data: confRows, error: directConfirmErr } = await client
+    .from('bookings')
+    .update({ status: 'confirmed' })
+    .eq('id', seeded.id)
+    .select('id')
+  assert(directConfirmErr || (confRows?.length ?? 0) === 0, 'direct confirm must modify 0 rows under RLS')
+  results.push('bookings.direct_status_blocked: ok')
 
-assert(
-  canStaffUpdateBookingStatus(
-    { role: 'sales', branch_slug: 'bacoor' },
-    { branch: 'bacoor', status: 'confirmed', services: services[0] },
-    { nextStatus: 'waiting' },
-  ),
-  'sales detailing board includes waiting',
-)
-const waiting = await callBookingStatus(token, { booking_id: created.id, status: 'waiting' })
-assert(waiting.statusCode === 200, `waiting API ${waiting.statusCode} ${JSON.stringify(waiting.body)}`)
-assert(waiting.body?.booking?.status === 'waiting', JSON.stringify(waiting.body))
-results.push('api.waiting: ok')
+  assert(
+    !canStaffUpdateBookingStatus(
+      { role: 'sales', branch_slug: 'bacoor' },
+      { branch: 'bacoor', status: 'pending', services: services[0] },
+      { nextStatus: 'confirmed' },
+    ),
+    'sales cannot move booking status',
+  )
+  const confirm = await callBookingStatus(token, { booking_id: seeded.id, status: 'confirmed' })
+  assert(confirm.statusCode === 403, `confirm API want 403 got ${confirm.statusCode}`)
+  results.push('api.confirm_denied: ok')
 
-assert(
-  !canStaffUpdateBookingStatus(
-    { role: 'sales', branch_slug: 'bacoor' },
-    { branch: 'bacoor', status: 'waiting', services: services[0] },
-    { nextStatus: 'for_payment' },
-  ),
-  'sales must not send to payment',
-)
-const pay = await callBookingStatus(token, { booking_id: created.id, status: 'for_payment' })
-assert(pay.statusCode === 403, `for_payment API want 403 got ${pay.statusCode}`)
-results.push('api.for_payment_denied: ok')
+  assert(
+    !canStaffUpdateBookingStatus(
+      { role: 'sales', branch_slug: 'bacoor' },
+      { branch: 'bacoor', status: 'confirmed', services: services[0] },
+      { nextStatus: 'waiting' },
+    ),
+  )
+  const waiting = await callBookingStatus(token, { booking_id: seeded.id, status: 'waiting' })
+  assert(waiting.statusCode === 403, `waiting API want 403 got ${waiting.statusCode}`)
+  results.push('api.waiting_denied: ok')
 
-const cancel = await callBookingStatus(token, {
-  booking_id: created.id,
-  status: 'cancelled',
-  cancellation_reason: 'E2E sales cancel probe',
-})
-assert(cancel.statusCode === 200, `cancel API ${cancel.statusCode} ${JSON.stringify(cancel.body)}`)
-assert(cancel.body?.booking?.status === 'cancelled', JSON.stringify(cancel.body))
-results.push('api.cancel: ok')
+  assert(
+    !canStaffUpdateBookingStatus(
+      { role: 'sales', branch_slug: 'bacoor' },
+      { branch: 'bacoor', status: 'waiting', services: services[0] },
+      { nextStatus: 'for_payment' },
+    ),
+    'sales must not send to payment',
+  )
+  const pay = await callBookingStatus(token, { booking_id: seeded.id, status: 'for_payment' })
+  assert(pay.statusCode === 403, `for_payment API want 403 got ${pay.statusCode}`)
+  results.push('api.for_payment_denied: ok')
 
-await admin.from('bookings').delete().eq('id', created.id)
+  const cancel = await callBookingStatus(token, {
+    booking_id: seeded.id,
+    status: 'cancelled',
+    cancellation_reason: 'E2E sales cancel probe',
+  })
+  assert(cancel.statusCode === 403, `cancel API want 403 got ${cancel.statusCode}`)
+  results.push('api.cancel_denied: ok')
+} finally {
+  await admin.from('bookings').delete().eq('id', seeded.id)
+}
 await client.auth.signOut()
 results.push('cleanup: ok')
 

@@ -12,9 +12,9 @@ import { supabase } from './supabase'
 export const WASH_CARD_SERVICE_SLUG = {
   'car-wash': 'premium-car-wash',
   'glass-detailing': 'glass-detailing',
-  'interior-detailing': 'interior-detailing',
+  'interior-detailing': 'interior-deep-cleaning',
   'engine-wash': 'engine-wash',
-  'full-exterior-detailing': 'full-exterior-detailing',
+  'full-exterior-detailing': '1-step-detailing',
 }
 
 let pending = null
