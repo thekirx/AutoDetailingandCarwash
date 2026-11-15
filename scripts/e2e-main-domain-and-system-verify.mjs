@@ -1,4 +1,4 @@
-/* global document */
+/* global document, window */
 /**
  * Comprehensive E2E Verification Suite for:
  * 1. Main Domain (https://www.hakumautocare.com) SEO, Google Search Console Logo/Favicon, & Professional Multi-Branch Title
@@ -202,7 +202,7 @@ async function runBrowserSuite() {
     await page.type(passSel, marketingAcc.password)
 
     await page.click('button[type="submit"]')
-    await page.waitForFunction(() => !location.pathname.startsWith('/operations/login'), { timeout: 25000 }).catch(() => null)
+    await page.waitForFunction(() => !window.location.pathname.startsWith('/operations/login'), { timeout: 25000 }).catch(() => null)
 
     await page.goto(`${LOCAL_ORIGIN}/operations/content`, { waitUntil: 'domcontentloaded', timeout: 45000 })
     await page
