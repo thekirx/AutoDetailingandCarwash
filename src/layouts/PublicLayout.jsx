@@ -26,17 +26,27 @@ import {
 // keep the shipping look until Phase 4 rebuilds them.
 const BREDESIGN_ROUTES = ['/home', '/services', '/tint-finder', '/branches', '/partnerships', '/refer', '/events', '/blog', '/contact', '/complaints', '/terms', '/privacy', '/cookies']
 
-function PublicSiteHeader({ open, setOpen, isCustomer, className = '' }) {
+function PublicSiteHeader({ open, setOpen, isSignedIn, isCustomer, className = '' }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
-  const { profile, signOut } = useAuth()
+  const { user, profile, signOut } = useAuth()
   const navigate = useNavigate()
+
+  const displayName =
+    profile?.full_name?.trim() ||
+    user?.user_metadata?.full_name?.trim() ||
+    user?.email?.split('@')[0] ||
+    'Account'
+  const isOps = isSignedIn && Boolean(profile?.role) && !isCustomer
+  const portalPath = isCustomer ? '/account' : isOps ? '/operations' : null
+  const portalLabel = isCustomer ? 'My account' : 'Operations portal'
+  const signOutPath = isOps ? '/operations/login' : '/signin'
 
   async function leaveAccount() {
     setOpen(false)
     setAccountOpen(false)
     await signOut()
-    navigate('/signin', { replace: true })
+    navigate(signOutPath, { replace: true })
   }
 
   function openSettings() {
@@ -66,7 +76,7 @@ function PublicSiteHeader({ open, setOpen, isCustomer, className = '' }) {
           {isCustomer ? <NavLink to="/account">My account</NavLink> : null}
         </nav>
         <div className="header-actions">
-          {isCustomer ? (
+          {isSignedIn ? (
             <>
               <NotificationBell light />
               <button
@@ -75,9 +85,10 @@ function PublicSiteHeader({ open, setOpen, isCustomer, className = '' }) {
                 aria-label="Account menu"
                 aria-haspopup="dialog"
                 aria-expanded={accountOpen}
+                title={displayName}
                 onClick={() => setAccountOpen(true)}
               >
-                Account
+                <span className="header-auth-label">{displayName}</span>
               </button>
             </>
           ) : (
@@ -110,9 +121,9 @@ function PublicSiteHeader({ open, setOpen, isCustomer, className = '' }) {
               {label}
             </NavLink>
           ))}
-          {isCustomer ? (
+          {isSignedIn ? (
             <>
-              <NavLink to="/account">My account</NavLink>
+              {portalPath ? <NavLink to={portalPath}>{portalLabel}</NavLink> : null}
               <button type="button" className="mobile-nav-action" onClick={openSettings}>
                 Settings
               </button>
@@ -128,26 +139,28 @@ function PublicSiteHeader({ open, setOpen, isCustomer, className = '' }) {
           )}
         </nav>
       )}
-      {isCustomer ? (
+      {isSignedIn ? (
         <>
           <Dialog open={accountOpen} onOpenChange={setAccountOpen}>
             <DialogContent className="header-account-dialog sm:max-w-sm">
               <DialogHeader>
-                <DialogTitle>{profile?.full_name || 'Account'}</DialogTitle>
+                <DialogTitle>{displayName}</DialogTitle>
                 <DialogDescription>Open your portal, change settings, or sign out.</DialogDescription>
               </DialogHeader>
               <div className="grid gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="min-h-11 w-full justify-start"
-                  onClick={() => {
-                    setAccountOpen(false)
-                    navigate('/account')
-                  }}
-                >
-                  My account
-                </Button>
+                {portalPath ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="min-h-11 w-full justify-start"
+                    onClick={() => {
+                      setAccountOpen(false)
+                      navigate(portalPath)
+                    }}
+                  >
+                    {portalLabel}
+                  </Button>
+                ) : null}
                 <Button type="button" variant="outline" className="min-h-11 w-full justify-start" onClick={openSettings}>
                   Settings
                 </Button>
@@ -161,7 +174,7 @@ function PublicSiteHeader({ open, setOpen, isCustomer, className = '' }) {
             open={settingsOpen}
             onOpenChange={setSettingsOpen}
             profile={profile}
-            audience="customer"
+            audience={isOps ? 'ops' : 'customer'}
           />
         </>
       ) : null}
@@ -178,8 +191,9 @@ export default function PublicLayout() {
     coming_soon: branch.isComingSoon,
   }))
   const { user, profile, loading } = useAuth()
+  const isSignedIn = !loading && Boolean(user)
   // Trust DB profile only — metadata.role is client-writable
-  const isCustomer = !loading && Boolean(user) && profile?.role === 'customer'
+  const isCustomer = isSignedIn && profile?.role === 'customer'
   // /account: phone app chrome on mobile; landing header + wide layout on desktop.
   const accountRoute = pathname.startsWith('/account')
   // BreDESIGN covers the marketing site only. /book, /queue and the auth pages
@@ -199,6 +213,7 @@ export default function PublicLayout() {
           className="account-web-header"
           open={open}
           setOpen={setOpen}
+          isSignedIn={isSignedIn}
           isCustomer={isCustomer}
         />
         <main className="app-shell-main">
@@ -218,7 +233,12 @@ export default function PublicLayout() {
       }`}
     >
       <PublicPageMeta />
-      <PublicSiteHeader open={open} setOpen={setOpen} isCustomer={isCustomer} />
+      <PublicSiteHeader
+        open={open}
+        setOpen={setOpen}
+        isSignedIn={isSignedIn}
+        isCustomer={isCustomer}
+      />
 
       <main>
         <Outlet />

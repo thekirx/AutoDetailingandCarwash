@@ -90,6 +90,7 @@ button { cursor: pointer; }
 .desktop-nav a:hover,.desktop-nav a.active { color:#fff; }
 .header-actions { display:flex; align-items:center; gap:10px; flex-shrink:0; }
 .header-auth { display:inline-flex; align-items:center; min-height:44px; padding:12px 14px; text-decoration:none; text-transform:uppercase; font-size:11px; letter-spacing:.12em; font-weight:800; transition:color var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast); }
+.header-auth-label { display:block; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .header-signin { color:#fff; border:1px solid rgba(255,255,255,.45); }
 .header-signin:hover { background:rgba(255,255,255,.1); }
 button.header-auth { cursor:pointer; background:transparent; appearance:none; font-family:inherit; }
@@ -8656,7 +8657,7 @@ button.bk-ticket-compact {
   flex-wrap: wrap;
   align-items: center;
   gap: 0.4rem;
-  margin-left: auto;
+  margin-top: 0.35rem;
 }
 
 .bd-cms-inline-btn {
