@@ -1,0 +1,305 @@
+.planner-configure {
+  display: grid;
+  gap: 1.15rem;
+  width: 100%;
+  max-width: 72rem;
+}
+
+.planner-configure-grid {
+  display: grid;
+  gap: 1.15rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 1024px) {
+  .planner-configure-grid {
+    grid-template-columns: minmax(0, 1.06fr) minmax(0, 0.94fr);
+    align-items: start;
+  }
+}
+
+.planner-configure .planner-ticket {
+  border-left: 4px solid var(--planner-stub);
+  scroll-margin-top: 5.5rem;
+}
+
+.planner-config-snapshot {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr));
+}
+
+.planner-config-stat {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.65rem 0.8rem;
+  border-radius: 0.85rem;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--planner-navy) 3%, var(--background));
+}
+
+.planner-config-stat-label {
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.planner-config-stat-value {
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--foreground);
+  line-height: 1.35;
+}
+
+.planner-board-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 0.84rem;
+  cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
+}
+
+.planner-board-pill:hover {
+  border-color: color-mix(in oklab, var(--planner-navy) 45%, var(--border));
+}
+
+.planner-board-pill.is-on {
+  border-color: var(--planner-navy);
+  background: var(--planner-navy);
+  color: #fff;
+}
+
+.planner-board-pill-meta {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.12rem 0.48rem;
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--foreground) 8%, transparent);
+  color: var(--muted-foreground);
+}
+
+.planner-board-pill.is-on .planner-board-pill-meta {
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+.planner-jump-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0.25rem 0.72rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.planner-jump-pill:hover {
+  border-color: var(--planner-navy);
+  color: var(--planner-navy);
+}
+
+.planner-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 999px;
+  padding: 0.16rem 0.55rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.3;
+  border: 1px solid transparent;
+}
+
+.planner-status-pill.is-saved {
+  background: #ecfdf5;
+  color: #065f46;
+  border-color: #a7f3d0;
+}
+
+.planner-status-pill.is-dirty {
+  background: #fffbeb;
+  color: #92400e;
+  border-color: #fde68a;
+}
+
+.planner-status-pill.is-restricted {
+  background: #eff6ff;
+  color: #1e3a8a;
+  border-color: #bfdbfe;
+  border-radius: 0.65rem;
+  max-width: 100%;
+}
+
+.planner-color-input {
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 0.2rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.planner-status-pill.is-neutral {
+  background: color-mix(in oklab, var(--foreground) 5%, var(--background));
+  color: var(--muted-foreground);
+  border-color: var(--border);
+}
+
+.planner-role-panel {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.85rem;
+  border-radius: 0.9rem;
+  border: 1px solid var(--border);
+  background: color-mix(in oklab, var(--planner-navy) 2.5%, var(--background));
+}
+
+.planner-access-switch {
+  display: inline-flex;
+  padding: 0.2rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+  gap: 0.2rem;
+}
+
+.planner-access-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 36px;
+  padding: 0.25rem 0.7rem;
+  border-radius: 0.55rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.planner-access-btn.is-on {
+  background: var(--planner-navy);
+  color: #fff;
+}
+
+.planner-role-summary {
+  border-radius: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+}
+
+.planner-role-summary.is-open {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.planner-role-summary.is-legacy {
+  background: #fffbeb;
+  border-color: #fde68a;
+}
+
+.planner-role-readonly-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.18rem 0.52rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: #dcfce7;
+  color: #166534;
+}
+
+.planner-role-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 44px;
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+  font-size: 0.84rem;
+  font-weight: 500;
+  color: var(--foreground);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.planner-role-chip.is-checked {
+  border-color: var(--planner-navy);
+  background: color-mix(in oklab, var(--planner-navy) 7%, var(--card));
+  font-weight: 600;
+}
+
+.planner-role-chip input[type='checkbox'] {
+  accent-color: var(--planner-navy);
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
+.planner-role-warn {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.75rem;
+  border-radius: 0.75rem;
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.planner-list-order {
+  display: inline-grid;
+  place-items: center;
+  width: 1.65rem;
+  height: 1.65rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  background: color-mix(in oklab, var(--planner-navy) 10%, var(--background));
+  color: var(--planner-navy);
+  flex-shrink: 0;
+}
+
+.planner-config-cat-preview {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.22rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.planner-tmpl-step-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.18rem 0.5rem;
+  border-radius: 0.55rem;
+  border: 1px solid var(--border);
+  background: var(--card);
+  font-size: 0.74rem;
+  color: var(--foreground);
+}
+
+.planner-tmpl-step-chip span {
+  font-weight: 700;
+  color: var(--planner-navy);
+}

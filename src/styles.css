@@ -8194,11 +8194,7 @@ button.bk-ticket-compact {
 .planner-configure {
   display: grid;
   gap: 1rem;
-  max-width: 46rem;
-}.planner-configure {
-  display: grid;
-  gap: 1rem;
-  max-width: 46rem;
+  max-width: 72rem;
 }
 .planner-configure .planner-ticket {
   border-left: 4px solid var(--planner-stub);
@@ -8213,6 +8209,8 @@ button.bk-ticket-compact {
   color: var(--muted-foreground);
 }
 .planner-configure-field select {
+  width: 100%;
+  min-width: 0;
   min-height: 44px;
   border-radius: 0.75rem;
   border: 1px solid var(--border);
@@ -8220,6 +8218,7 @@ button.bk-ticket-compact {
   color: var(--foreground);
   padding: 0 0.7rem;
   font-size: 0.875rem;
+  text-overflow: ellipsis;
 }
 .planner-swatch {
   width: 2.75rem;

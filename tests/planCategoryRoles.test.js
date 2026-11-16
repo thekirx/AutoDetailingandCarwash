@@ -7,8 +7,11 @@ import {
   PLAN_CATEGORY_ROLE_OPTIONS,
   categoryVisibleToRole,
   filterCategoriesForRole,
+  formatRoleLabels,
   normalizeVisibleRoles,
+  roleLabelForId,
 } from '../src/lib/planCategoryRoles.js'
+import { describeBoardVisibility } from '../src/lib/plannerBoard.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
@@ -47,8 +50,39 @@ describe('plan category visible_roles (Michi C13)', () => {
     )
     assert.match(configure, /visible_roles/)
     assert.match(configure, /RoleChecks/)
+    assert.match(configure, /describeBoardVisibility/)
+    assert.match(configure, /Unsaved changes/)
     assert.match(board, /filterCategoriesForRole/)
     assert.match(board, /visibleCategories/)
     assert.match(migration, /visible_roles text\[]/)
+  })
+
+  it('formats human role labels and accurately describes board visibility states', () => {
+    assert.equal(roleLabelForId('BossMich'), 'Super Admin')
+    assert.equal(roleLabelForId('assistant_super_admin'), 'ASA')
+    assert.deepEqual(formatRoleLabels(['staff', 'BossMich']), ['Crew', 'Super Admin'])
+
+    const openBoard = describeBoardVisibility({ id: '1', name: 'Planner', visible_roles: [] }, PLAN_CATEGORY_ROLE_OPTIONS)
+    assert.equal(openBoard.mode, 'all')
+    assert.equal(openBoard.isLegacyDefault, false)
+    assert.equal(openBoard.effectiveRoleIds.length, PLAN_CATEGORY_ROLE_OPTIONS.length)
+
+    const cashBoard = describeBoardVisibility(
+      { id: '2', name: 'Employee Cash Advance', visible_roles: [] },
+      PLAN_CATEGORY_ROLE_OPTIONS,
+    )
+    assert.equal(cashBoard.mode, 'legacy_cash_advance')
+    assert.equal(cashBoard.isLegacyDefault, true)
+    assert.ok(cashBoard.hiddenRoleIds.includes('team_lead'))
+    assert.ok(!cashBoard.effectiveRoleIds.includes('team_lead'))
+    assert.ok(cashBoard.effectiveRoleIds.includes('BossMich'))
+
+    const restricted = describeBoardVisibility(
+      { id: '3', name: 'Custom Board', visible_roles: ['BossMich', 'operations_lead'] },
+      PLAN_CATEGORY_ROLE_OPTIONS,
+    )
+    assert.equal(restricted.mode, 'custom')
+    assert.deepEqual(restricted.effectiveRoleIds, ['BossMich', 'operations_lead'])
+    assert.ok(restricted.hiddenRoleIds.includes('staff'))
   })
 })

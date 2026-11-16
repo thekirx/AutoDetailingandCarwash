@@ -564,6 +564,7 @@ export default function PlanningBoardPage() {
           categories={categories}
           templates={templates}
           canEdit={canEdit}
+          viewerRole={profile?.role}
           onChanged={load}
           onSelectBoard={(id) => {
             setSearchParams((prev) => {
