@@ -119,11 +119,10 @@ describe('booking form customer lookup', () => {
 })
 
 describe('dedicated Notifications sidebar page', () => {
-  it('Settings hub no longer tiles notifications/broadcast', async () => {
+  it('Settings hub links Super Admin Notifications & SMS configuration card', async () => {
     const jsx = await readProject('src/pages/SettingsHubPage.jsx')
-    assert.doesNotMatch(jsx, /Reminder notifications/)
-    assert.doesNotMatch(jsx, /Broadcast push/)
-    assert.doesNotMatch(jsx, /\/operations\/notifications/)
+    assert.match(jsx, /Notifications & SMS/)
+    assert.match(jsx, /\/operations\/notifications\?tab=templates/)
   })
 
   it('SA/ASA/Marketing nav includes Notifications; App routes the hub', async () => {

@@ -1,6 +1,6 @@
 # Graphify gap audit — principal fullstack view
 
-Updated 2026-09-15 after full live dumps (`GRAPHIFY_DB_FULL`, `GRAPHIFY_RLS`, `GRAPHIFY_MONEY_PAYLOADS`, `GRAPHIFY_FRONTEND`).
+Updated **2026-11-16** alongside Daily Sheet cutover, 33-service catalog, Form Results Board, Local SEO/PWA, and Web Push delivery sync (`GRAPHIFY_MEMORY`, `GRAPHIFY_WORKFLOWS`, `GRAPHIFY_SEAMS`).
 
 ## Verdict
 

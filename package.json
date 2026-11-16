@@ -12,7 +12,7 @@
     "verify:owner-stories": "node scripts/verify-owner-stories.mjs",
     "lint": "eslint .",
     "test": "node scripts/run-unit-tests.mjs",
-    "test:browser": "node --test tests/*.browser.test.js",
+    "test:browser": "node --test --test-concurrency=3 tests/*.browser.test.js",
     "test:readiness": "node scripts/e2e-ultimate-readiness.mjs",
     "preview": "vite preview",
     "e2e:newrequest": "node scripts/e2e-newrequest.mjs",

@@ -1,6 +1,12 @@
+import { OPS_LOGIN_ROLES } from '../auth/permissions.js'
 import { notificationHref } from './notificationUrl.js'
 
 const MAX_SEEN_IDS = 150
+
+/** Default app home fallback for inbox/toast links based on profile role. */
+export function defaultNotificationHome(role = '') {
+  return role && OPS_LOGIN_ROLES.includes(role) ? '/operations' : '/account'
+}
 
 /** Track shown notification IDs per browser session so realtime reconnects never double-toast. */
 export function rememberNotificationId(seenSet, id) {
@@ -16,7 +22,8 @@ export function rememberNotificationId(seenSet, id) {
 
 export function buildForegroundToastData(row, role = '') {
   if (!row || !row.title) return null
-  const href = notificationHref(row.url, role)
+  const fallback = defaultNotificationHome(role)
+  const href = notificationHref(row.url, fallback, row.kind || '')
   return {
     id: row.id || undefined,
     title: String(row.title).trim(),

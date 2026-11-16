@@ -29,8 +29,8 @@ export const NOTIFY_EVENTS = {
   // Must match the inbox recipients written by the geo_clock_in SQL function.
   attendance_location_alert: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.ADMIN], urls: ['/operations/attendance'] },
   inquiry: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN], urls: ['/operations/inquiries'] },
-  review: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.OPERATIONS_LEAD, R.ADMIN], urls: ['/operations/planning?tab=forms'] },
-  complaint: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.ADMIN], urls: ['/operations/planning?tab=forms'] },
+  review: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.OPERATIONS_LEAD, R.ADMIN], urls: ['/operations/forms/results'] },
+  complaint: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.ADMIN], urls: ['/operations/forms/results'] },
   pos: { roles: [R.SUPER_ADMIN, R.ASSISTANT_SUPER_ADMIN, R.ADMIN], urls: ['/operations/pos'] },
   planner_task: {
     roles: [...EMPLOYEES, R.SUPER_ADMIN],

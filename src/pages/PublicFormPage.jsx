@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import BrandedOpsForm from '@/components/BrandedOpsForm'
 import {
-  extractComplaintBranch,
   filterFormBranchSlugs,
   normalizeFields,
   validatePayload,
   withLiveBranchOptions,
 } from '@/lib/opsForms'
 import { listBranches } from '@/lib/adminApi'
+import { createPublicFormGuard, validatePublicFormGuard } from '@/lib/publicFormGuard'
+import { submitPublicOpsFormViaApi } from '@/lib/publicInquiryApi'
 import { supabase } from '@/lib/supabase'
 
 export default function PublicFormPage() {
@@ -19,6 +20,7 @@ export default function PublicFormPage() {
   const [status, setStatus] = useState('idle')
   const [submissionId, setSubmissionId] = useState(null)
   const [acceptedLegal, setAcceptedLegal] = useState(false)
+  const [guard, setGuard] = useState(() => createPublicFormGuard())
 
   useEffect(() => {
     if (!slug) return
@@ -28,12 +30,13 @@ export default function PublicFormPage() {
     setValues({})
     setForm(null)
     setAcceptedLegal(false)
+    setGuard(createPublicFormGuard())
     Promise.all([
       supabase.rpc('get_public_ops_form', { p_slug: slug }),
       listBranches().catch(() => []),
     ]).then(([{ data, error: e }, branches]) => {
       if (e) setError(e.message)
-      else if (!data) setError('This form is closed or not found.')
+      else if (!data || data.kind === 'event') setError('This form is closed or not found.')
       else {
         const slugs = filterFormBranchSlugs(branches || [])
         setForm({ ...data, fields: withLiveBranchOptions(data.fields, slugs) })
@@ -47,6 +50,11 @@ export default function PublicFormPage() {
       setError('Please agree to the Terms of Service and Privacy Policy.')
       return
     }
+    const blocked = validatePublicFormGuard(guard)
+    if (blocked) {
+      setError(blocked)
+      return
+    }
     const fields = normalizeFields(form.fields)
     const errs = validatePayload(fields, values)
     if (errs[0]) {
@@ -56,38 +64,38 @@ export default function PublicFormPage() {
     setStatus('loading')
     setError('')
     const submittedPayload = { ...values }
-    const { data, error: err } = await supabase.rpc('submit_public_ops_form', {
-      p_slug: slug,
-      p_payload: submittedPayload,
-      p_calendar_at: null,
-      p_respondent_label: submittedPayload.customer_name || submittedPayload.name || submittedPayload.full_name || null,
+    const respondentLabel =
+      submittedPayload.customer_name || submittedPayload.name || submittedPayload.full_name || null
+
+    let accessToken = null
+    try {
+      const { data: sessionData } = await supabase.auth.getSession()
+      accessToken = sessionData?.session?.access_token || null
+    } catch {
+      /* guest public submission */
+    }
+
+    const res = await submitPublicOpsFormViaApi({
+      slug,
+      payload: submittedPayload,
+      calendarAt: null,
+      respondentLabel,
+      source: 'public',
+      guard,
+      accessToken,
     })
-    if (err) {
-      setError(err.message)
+
+    if (!res.ok) {
+      setError(res.error)
       setStatus('idle')
       return
     }
-    if (form.kind === 'complaint') {
-      try {
-        await fetch('/api/notify-ops-form', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            slug,
-            form_name: form.name,
-            payload: submittedPayload,
-            submission_id: data?.id || null,
-            branch: extractComplaintBranch(submittedPayload),
-          }),
-        })
-      } catch {
-        // best-effort push
-      }
-    }
-    setSubmissionId(data?.id || null)
+
+    setSubmissionId(res.booking?.id || res.id || null)
     setStatus('success')
     setValues({})
     setAcceptedLegal(false)
+    setGuard(createPublicFormGuard())
   }
 
   return (

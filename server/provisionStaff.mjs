@@ -3,9 +3,8 @@
  * BossMich may create admin + assistant_super_admin + crew; admin/assistant may create TL/staff;
  * team_lead may create staff for their own branch.
  */
-import { canViewPlanning, getBranchScopeList } from '../src/auth/permissions.js'
 import { isStaffAssignableBranch } from '../src/lib/branchAssignable.js'
-import { filterSubmissionsByBranchScope } from '../src/lib/opsForms.js'
+import { handleFormResultsAction } from './formResultsStore.mjs'
 import { adminClient } from './supabaseAdmin.mjs'
 
 const SUPER = 'BossMich'
@@ -468,42 +467,6 @@ async function assertContentManagerCaller(admin, accessToken, { forEvents = fals
   return { user: userData.user, staff }
 }
 
-const VALID_SUBMISSION_STATUSES = new Set(['new', 'in_review', 'resolved', 'archived'])
-
-async function assertFormResultsCaller(admin, accessToken, { ownerOnly = false } = {}) {
-  if (!accessToken) throw Object.assign(new Error('Unauthorized'), { status: 401 })
-  const { data: userData, error: userError } = await admin.auth.getUser(accessToken)
-  if (userError || !userData?.user) throw Object.assign(new Error('Unauthorized'), { status: 401 })
-
-  const { data: staff, error } = await admin
-    .from('staff_profiles')
-    .select('id, role, full_name, branch_slug, is_active, permission_grants')
-    .eq('id', userData.user.id)
-    .eq('is_active', true)
-    .maybeSingle()
-
-  if (error) throw error
-  if (!staff) throw Object.assign(new Error('Forbidden'), { status: 403 })
-  if (ownerOnly) {
-    if (staff.role !== SUPER) {
-      throw Object.assign(new Error('Only Owner may edit or delete form responses.'), { status: 403 })
-    }
-    return { user: userData.user, staff }
-  }
-  const { data: assigns } = await admin
-    .from('staff_branch_assignments')
-    .select('branch_slug')
-    .eq('staff_id', staff.id)
-  const hydratedStaff = {
-    ...staff,
-    branch_slugs: (assigns || []).map((row) => row.branch_slug).filter(Boolean),
-  }
-  if (!canViewPlanning(hydratedStaff)) {
-    throw Object.assign(new Error('Forbidden'), { status: 403 })
-  }
-  return { user: userData.user, staff: hydratedStaff }
-}
-
 const BLOG_SELECT_COLS =
   'id, title, slug, excerpt, cover_url, author_label, status, is_published, published_at, content_blocks, created_at, updated_at, created_by'
 
@@ -511,134 +474,9 @@ export async function manageSiteContent({ accessToken, body }) {
   const admin = adminClient()
   const action = String(body?.action || '').trim()
 
-  if (action === 'list-form-results') {
-    const { staff } = await assertFormResultsCaller(admin, accessToken, { ownerOnly: false })
-    const scopeList = getBranchScopeList(staff)
-    const [formsRes, subsRes, eventsRes, regsRes] = await Promise.all([
-      admin
-        .from('ops_forms')
-        .select('id, name, kind, fields, is_active, slug, description, status, public_enabled, event_id, settings, created_at, updated_at')
-        .neq('status', 'archived')
-        .order('created_at', { ascending: true }),
-      admin
-        .from('ops_form_submissions')
-        .select('id, form_id, payload, plan_card_id, due_at, calendar_at, status, source, respondent_label, created_at, ops_forms ( id, name, kind, slug, event_id )')
-        .order('created_at', { ascending: false })
-        .limit(1000),
-      admin
-        .from('events')
-        .select('id, title, slug, branch, starts_at, ends_at, is_published, form_id')
-        .order('starts_at', { ascending: false })
-        .limit(250),
-      admin
-        .from('event_registrations')
-        .select('id, event_id, name, phone, email, created_at, events ( id, title, slug, branch, starts_at, form_id )')
-        .order('created_at', { ascending: false })
-        .limit(1000),
-    ])
-
-    for (const r of [formsRes, subsRes, eventsRes, regsRes]) {
-      if (r.error) throw Object.assign(new Error(r.error.message), { status: 400 })
-    }
-
-    const scopedSubs = filterSubmissionsByBranchScope(subsRes.data || [], { branchFilter: 'all', scopeList })
-    const allowedBranches = Array.isArray(scopeList)
-      ? new Set(scopeList.map((s) => String(s || '').trim().toLowerCase()).filter(Boolean))
-      : null
-    const scopedRegs = (regsRes.data || []).filter((reg) => {
-      if (!allowedBranches) return true
-      const raw = String(reg?.events?.branch || '').trim().toLowerCase()
-      return !raw || allowedBranches.has(raw)
-    })
-
-    return {
-      forms: formsRes.data || [],
-      events: eventsRes.data || [],
-      submissions: scopedSubs,
-      eventRegistrations: scopedRegs,
-    }
-  }
-
-  if (action === 'update-form-submission') {
-    await assertFormResultsCaller(admin, accessToken, { ownerOnly: true })
-    const id = String(body?.id || '').trim()
-    if (!id) throw Object.assign(new Error('Submission id is required.'), { status: 400 })
-
-    const patch = {}
-    if (body.status !== undefined) {
-      const nextStatus = String(body.status || '').trim()
-      if (!VALID_SUBMISSION_STATUSES.has(nextStatus)) {
-        throw Object.assign(new Error('Invalid submission status.'), { status: 400 })
-      }
-      patch.status = nextStatus
-    }
-    if (body.payload !== undefined) {
-      if (!body.payload || typeof body.payload !== 'object' || Array.isArray(body.payload)) {
-        throw Object.assign(new Error('Submission answers must be an object.'), { status: 400 })
-      }
-      patch.payload = body.payload
-    }
-    if (body.respondent_label !== undefined) {
-      patch.respondent_label = String(body.respondent_label || '').trim() || null
-    }
-    if (body.calendar_at !== undefined) {
-      patch.calendar_at = body.calendar_at ? new Date(body.calendar_at).toISOString() : null
-    }
-    if (body.due_at !== undefined) {
-      patch.due_at = body.due_at ? new Date(body.due_at).toISOString() : null
-    }
-    if (!Object.keys(patch).length) {
-      throw Object.assign(new Error('Nothing to update.'), { status: 400 })
-    }
-
-    const { data, error } = await admin
-      .from('ops_form_submissions')
-      .update(patch)
-      .eq('id', id)
-      .select('id, form_id, payload, plan_card_id, due_at, calendar_at, status, source, respondent_label, created_at')
-      .maybeSingle()
-    if (error) throw Object.assign(new Error(error.message), { status: 400 })
-    if (!data) throw Object.assign(new Error('Submission not found.'), { status: 404 })
-    return { data }
-  }
-
-  if (action === 'delete-form-submission') {
-    await assertFormResultsCaller(admin, accessToken, { ownerOnly: true })
-    const id = String(body?.id || '').trim()
-    if (!id) throw Object.assign(new Error('Submission id is required.'), { status: 400 })
-    const { error } = await admin.from('ops_form_submissions').delete().eq('id', id)
-    if (error) throw Object.assign(new Error(error.message), { status: 400 })
-    return { ok: true }
-  }
-
-  if (action === 'update-event-registration') {
-    await assertFormResultsCaller(admin, accessToken, { ownerOnly: true })
-    const id = String(body?.id || '').trim()
-    if (!id) throw Object.assign(new Error('Registration id is required.'), { status: 400 })
-    const name = String(body?.name ?? body?.payload?.name ?? '').trim()
-    const phone = String(body?.phone ?? body?.payload?.phone ?? '').trim()
-    const emailRaw = String(body?.email ?? body?.payload?.email ?? '').trim()
-    if (!name || !phone) {
-      throw Object.assign(new Error('Name and phone are required.'), { status: 400 })
-    }
-    const { data, error } = await admin
-      .from('event_registrations')
-      .update({ name, phone, email: emailRaw || null })
-      .eq('id', id)
-      .select('id, event_id, name, phone, email, created_at')
-      .maybeSingle()
-    if (error) throw Object.assign(new Error(error.message), { status: 400 })
-    if (!data) throw Object.assign(new Error('Registration not found.'), { status: 404 })
-    return { data }
-  }
-
-  if (action === 'delete-event-registration') {
-    await assertFormResultsCaller(admin, accessToken, { ownerOnly: true })
-    const id = String(body?.id || '').trim()
-    if (!id) throw Object.assign(new Error('Registration id is required.'), { status: 400 })
-    const { error } = await admin.from('event_registrations').delete().eq('id', id)
-    if (error) throw Object.assign(new Error(error.message), { status: 400 })
-    return { ok: true }
+  const formResultsResponse = await handleFormResultsAction({ admin, accessToken, action, body })
+  if (formResultsResponse !== null) {
+    return formResultsResponse
   }
 
   const forEvents = action.includes('event') || action === 'upload-media'

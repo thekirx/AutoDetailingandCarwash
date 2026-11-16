@@ -30,3 +30,91 @@ export function resolveBroadcastAudience(targetAudience, branchSlug) {
   }
   return { ok: true, audience, branchSlug: null }
 }
+
+export const EMPLOYEE_NOTIFY_ROLES = Object.freeze([
+  'team_lead',
+  'admin',
+  'detailer',
+  'staff',
+  'assistant_super_admin',
+  'sales',
+  'marketing',
+  'video_editor',
+  'operations_lead',
+  'BossMich',
+])
+
+const EMPLOYEE_BROADCAST_ROLES = new Set(['BossMich', 'assistant_super_admin'])
+const VALID_EMPLOYEE_ROLES = new Set(EMPLOYEE_NOTIFY_ROLES)
+
+/**
+ * Resolve multi-audience dispatch rules (`customers` | `employees` | `both`),
+ * RBAC restrictions (Marketing is customer-only), and channel constraints
+ * (Employees receive In-App Inbox + Web Push only — zero BusyBee SMS).
+ */
+export function resolveBroadcastDispatch({
+  audience_group = 'customers',
+  target_audience = 'all',
+  branch_slug = null,
+  employee_scope = 'all',
+  employee_roles = [],
+  channel = 'push',
+  staffRole,
+} = {}) {
+  const group = ['customers', 'employees', 'both'].includes(audience_group)
+    ? audience_group
+    : 'customers'
+
+  if (group !== 'customers' && !EMPLOYEE_BROADCAST_ROLES.has(staffRole)) {
+    return {
+      ok: false,
+      status: 403,
+      error: 'Only Super Admin or Assistant Super Admin can target employees.',
+    }
+  }
+
+  if (group === 'employees' && channel !== 'push') {
+    return {
+      ok: false,
+      status: 400,
+      error: 'Employee broadcasts use In-App Inbox and Web Push only (SMS is customer-only).',
+    }
+  }
+
+  const empScope = ['all', 'roles', 'branch'].includes(employee_scope) ? employee_scope : 'all'
+  const empRoles = Array.isArray(employee_roles)
+    ? [...new Set(employee_roles.map((r) => String(r || '').trim()).filter((r) => VALID_EMPLOYEE_ROLES.has(r)))]
+    : []
+
+  if (group !== 'customers') {
+    if (empScope === 'roles' && !empRoles.length) {
+      return {
+        ok: false,
+        status: 400,
+        error: 'Pick at least one employee role when targeting specific roles.',
+      }
+    }
+    if (empScope === 'branch' && !String(branch_slug || '').trim()) {
+      return {
+        ok: false,
+        status: 400,
+        error: 'Pick a branch before broadcasting to one branch of employees.',
+      }
+    }
+  }
+
+  const customerScope = resolveBroadcastAudience(target_audience, branch_slug)
+  if (group !== 'employees' && !customerScope.ok) {
+    return { ok: false, status: 400, error: customerScope.error }
+  }
+
+  const cleanBranch = String(branch_slug || '').trim() || customerScope.branchSlug || null
+  return {
+    ok: true,
+    audienceGroup: group,
+    customerAudience: customerScope.audience,
+    branchSlug: group === 'customers' ? customerScope.branchSlug : cleanBranch,
+    employeeScope: empScope,
+    employeeRoles: empRoles,
+  }
+}

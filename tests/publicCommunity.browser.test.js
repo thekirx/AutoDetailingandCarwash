@@ -31,27 +31,23 @@ describe('public community and contact navigation', () => {
     assert.ok(!content.nav.includes('Contact'))
     assert.match(content.title, /Events\s*&\s*blog/i)
     assert.match(content.events, /Events & meets/i)
-    assert.match(content.blog, /Latest stories/i)
+    assert.match(content.blog, /Blog & regional guides/i)
     assert.equal(content.rawError, false)
   })
 
-  it('uses the same order in the phone menu without a Book now link', async () => {
+  it('uses the same order in the phone menu without a Book now or Events link', async () => {
     await page.setViewport({ width: 390, height: 844 })
     await page.goto(`${ORIGIN}/home`, { waitUntil: 'networkidle0' })
     await page.click('button[aria-label="Open menu"]')
     const links = await page.$$eval('#mobile-navigation a', (items) => items.map((item) => item.textContent.trim()))
-    assert.deepEqual(links, ['Home', 'Services', 'Branch', 'Live Queue', 'Events & Blogs', 'Sign in', 'Sign up'])
+    assert.deepEqual(links, ['Home', 'Services', 'Branch', 'Live Queue', 'Sign in', 'Sign up'])
     await page.setViewport({ width: 1440, height: 900 })
   })
 
-  it('keeps old Blog links pointed at the blog section', async () => {
+  it('renders dedicated regional guides and stories on /blog', async () => {
     await page.goto(`${ORIGIN}/blog`, { waitUntil: 'networkidle0' })
-    await page.waitForFunction(() => location.pathname === '/events' && location.hash === '#blog')
-    await page.waitForFunction(() => {
-      const top = document.querySelector('#blog')?.getBoundingClientRect().top
-      return top !== undefined && top >= 0 && top < 130
-    })
-    assert.match(await page.$eval('#blog h2', (node) => node.textContent), /Latest stories/i)
+    await page.waitForFunction(() => location.pathname === '/blog')
+    assert.match(await page.$eval('#blog h2', (node) => node.textContent), /Blog & regional guides/i)
   })
 
   it('offers Brand Collabs from Contact on desktop and phone', async () => {

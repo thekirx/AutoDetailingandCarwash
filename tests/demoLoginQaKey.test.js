@@ -131,22 +131,27 @@ describe('demo chips render only on a device holding a QA key', () => {
     }
   })
 
-  it('hides easy login cards on www.hakumautocare.com main domain and removes default demo key', async () => {
-    const store = new Map()
-    store.set(QA_KEY_STORAGE, DEFAULT_QA_KEY)
-    const globals = { window: globalThis.window, localStorage: globalThis.localStorage }
-    globalThis.localStorage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v), removeItem: (k) => store.delete(k) }
-    globalThis.window = {
-      location: { hostname: 'www.hakumautocare.com', href: 'https://www.hakumautocare.com/operations/login' },
-    }
-    try {
-      assert.equal(isDemoLoginVisible(), false)
-      assert.equal(store.has(QA_KEY_STORAGE), false, 'residual DEFAULT_QA_KEY was stripped')
-      const result = await unlockDemoLoginFromUrl()
-      assert.equal(result, false)
-      assert.equal(isDemoLoginVisible(), false)
-    } finally {
-      Object.assign(globalThis, globals)
+  it('hides easy login cards on hakumautocare.com and www.hakumautocare.com even if a custom key sits in localStorage', async () => {
+    for (const host of ['hakumautocare.com', 'www.hakumautocare.com']) {
+      const store = new Map()
+      store.set(QA_KEY_STORAGE, DEFAULT_QA_KEY)
+      const globals = { window: globalThis.window, localStorage: globalThis.localStorage }
+      globalThis.localStorage = { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => store.set(k, v), removeItem: (k) => store.delete(k) }
+      globalThis.window = {
+        location: { hostname: host, href: `https://${host}/operations/login?qa=some-key` },
+      }
+      try {
+        assert.equal(isDemoLoginVisible(), false)
+        assert.equal(store.has(QA_KEY_STORAGE), false, 'stale key removed on main domain')
+        store.set(QA_KEY_STORAGE, 'arbitrary-manual-key')
+        assert.equal(isDemoLoginVisible(), false, 'non-default manual key must never enable chips on main domain')
+        assert.equal(store.has(QA_KEY_STORAGE), false)
+        const result = await unlockDemoLoginFromUrl()
+        assert.equal(result, false)
+        assert.equal(isDemoLoginVisible(), false)
+      } finally {
+        Object.assign(globalThis, globals)
+      }
     }
   })
 })

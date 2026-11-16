@@ -21,7 +21,9 @@ it('widens the kinds and preserves every existing role branch, adding custom lik
 })
 it('enforces fixed sequence reordering, live preview, save/publish, and excludes event forms in Forms panel', () => {
   const panel = readFileSync(new URL('../src/pages/planning/PlanningFormsSmartPanel.jsx',import.meta.url),'utf8')
-  for(const text of ['Input sequence','Real-time preview','Save &amp; Publish',"k.value !== 'event'"]) assert.ok(panel.includes(text),text)
+  for(const text of ['Input sequence','Real-time preview','Save &amp; Publish']) assert.ok(panel.includes(text),text)
+  const opsFormsSrc = readFileSync(new URL('../src/lib/opsForms.js',import.meta.url),'utf8')
+  assert.doesNotMatch(opsFormsSrc,/Events RSVP/)
   for(const forbidden of ['Add field','New custom form','Start from a template']) assert.ok(!panel.includes(forbidden),`unexpected editable/template control: ${forbidden}`)
   const eventsPanel = readFileSync(new URL('../src/pages/planning/PlanningPart6Panels.jsx',import.meta.url),'utf8')
   assert.ok(!eventsPanel.includes('Create event form'))

@@ -336,7 +336,7 @@ try {
     // totals (`<Money minor={-totals.expensesMinor} />`), so the sign must be
     // flipped before comparing or every figure looks wrong.
     const posChecks = [
-      ['Net sales', want?.net, 1],
+      ['POS sales', want?.net, 1],
       ['Expenses', want?.expenses, -1],
       ['Salaries', want?.salaries, -1],
       ['Net profit', want?.profit, 1],

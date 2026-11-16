@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { mkdir } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { test } from 'node:test'
 import { launchPuppeteer, newPreparedPage } from './puppeteerLaunch.js'
-const origin=process.env.PUBLIC_TEST_URL || 'http://127.0.0.1:5173'
+const origin=process.env.PUBLIC_TEST_URL || 'http://127.0.0.1:4173'
+const qaDir=join(tmpdir(),'hakum-tint-qa')
 const config=JSON.parse(readFileSync(new URL('../src/data/tintFinderConfig.json',import.meta.url)))
 
 for (const width of [1440,390,320]) test(`Tint Finder preserves answers, recommends, and captures a request at ${width}px`,async()=>{
@@ -34,9 +37,9 @@ for (const width of [1440,390,320]) test(`Tint Finder preserves answers, recomme
   assert.equal(await page.$('main .bd-tint-comparison'),null)
   const cookie=await page.$('.cookie-consent-secondary')
   if(cookie) await cookie.click()
-  await mkdir('/tmp/hakum-tint-qa',{recursive:true})
+  await mkdir(qaDir,{recursive:true})
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
-  await page.screenshot({path:`/tmp/hakum-tint-qa/finder-page-${width}.png`})
+  await page.screenshot({path:join(qaDir,`finder-page-${width}.png`)})
   assert.equal(await page.$eval('.tf-actions .bd-btn',e=>e.disabled),true)
   async function choose(index) {const previous=await page.$eval('.tf-progress',e=>e.getAttribute('aria-valuenow'));await page.click(`.tf-choices button:nth-child(${index+1})`);await page.waitForFunction(()=>!document.querySelector('.tf-actions .bd-btn').disabled);await page.click('.tf-actions .bd-btn');await page.waitForFunction(p=>document.querySelector('.tf-results') || document.querySelector('.tf-progress')?.getAttribute('aria-valuenow')!==p,{},previous)}
   await choose(0);await choose(1)
@@ -73,10 +76,10 @@ for (const width of [1440,390,320]) test(`Tint Finder preserves answers, recomme
   assert.equal(await page.$$eval('.tf-for-you',els=>els.length),3)
   assert.equal(await page.$('.tf-seal'),null)
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true)
-  await mkdir('/tmp/hakum-tint-qa',{recursive:true})
+  await mkdir(qaDir,{recursive:true})
   await page.$eval('.tf-results-head',e=>e.scrollIntoView({block:'start'}))
-  await page.screenshot({path:`/tmp/hakum-tint-qa/results-${width}.png`})
-  if(width===1440){await page.$eval('.tf-benefits',e=>e.scrollIntoView({block:'start'}));await page.screenshot({path:'/tmp/hakum-tint-qa/benefits-1440.png'})}
+  await page.screenshot({path:join(qaDir,`results-${width}.png`)})
+  if(width===1440){await page.$eval('.tf-benefits',e=>e.scrollIntoView({block:'start'}));await page.screenshot({path:join(qaDir,'benefits-1440.png')})}
   await page.click('.tf-option-actions button')
   await page.waitForSelector('.tf-booking select:not(:disabled)')
   assert.equal(await page.$eval('.tf-booking form',e=>e.checkValidity()),false)
@@ -106,8 +109,9 @@ for (const width of [1440,390,320]) test(`Tint Finder preserves answers, recomme
   }
   assert.deepEqual(pageErrors,[])
  } catch(error) {
+  await mkdir(qaDir,{recursive:true})
   const pages=await browser.pages()
-  await pages.at(-1)?.screenshot({path:`/tmp/hakum-tint-qa/failure-${width}.png`})
+  await pages.at(-1)?.screenshot({path:join(qaDir,`failure-${width}.png`)})
   throw error
  } finally {await browser.close()}
 })

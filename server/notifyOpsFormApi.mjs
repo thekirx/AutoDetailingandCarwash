@@ -45,6 +45,7 @@ export async function handleNotifyOpsFormRequest(req, res) {
     try {
       notify = await notifyOpsFormComplaint({
         formName: body.form_name || form.name,
+        formSlug: form.slug || slug,
         payload,
         submissionId: body.submission_id || null,
         branch: body.branch || null,

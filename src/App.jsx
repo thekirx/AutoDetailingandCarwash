@@ -255,7 +255,7 @@ export default function App() {
             <Route path="reports" element={gate('reports', <ReportsPage />)} />
             <Route path="memberships" element={gate('memberships', <MembershipsPage />)} />
             <Route path="vouchers" element={gate('vouchers', <VouchersPage />)} />
-            <Route path="reviews" element={gate('reviews', <Navigate to="/operations/planning?tab=forms" replace />)} />
+            <Route path="reviews" element={gate('reviews', <Navigate to="/operations/forms/results" replace />)} />
           </Route>
         </Route>
 

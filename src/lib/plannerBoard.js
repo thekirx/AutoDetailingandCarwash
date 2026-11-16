@@ -5,6 +5,7 @@ export const PLANNER_TABS = [
   { id: 'board', label: 'Tasks', hint: 'Filter, create, and assign work', icon: 'tasks' },
   { id: 'calendar', label: 'Calendar', hint: 'Tasks, bookings, and events', icon: 'calendar' },
   { id: 'forms', label: 'Forms', hint: 'List, edit, and results', icon: 'forms' },
+  { id: 'results', label: 'Form Results', hint: 'Completed form & event responses', icon: 'results' },
   { id: 'events', label: 'Events', hint: 'Meets and RSVP links', icon: 'events' },
   { id: 'review', label: 'Review', hint: 'Accept or send back proof', icon: 'review' },
   { id: 'configure', label: 'Configure', hint: 'Lists, categories, and boards', icon: 'settings' },

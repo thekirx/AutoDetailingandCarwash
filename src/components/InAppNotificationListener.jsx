@@ -78,6 +78,17 @@ export default function InAppNotificationListener() {
   }, [user?.id, surfaceNotification])
 
   useEffect(() => {
+    const onSwNavigate = (event) => {
+      const nextPath = event?.detail?.path
+      if (!nextPath || typeof nextPath !== 'string') return
+      event.preventDefault()
+      navigate(nextPath)
+    }
+    window.addEventListener('hakum:sw-navigate', onSwNavigate)
+    return () => window.removeEventListener('hakum:sw-navigate', onSwNavigate)
+  }, [navigate])
+
+  useEffect(() => {
     if (!user?.id) {
       seenIdsRef.current.clear()
       void syncAppBadge(0)

@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { demoSignIn, unlockDemoLoginFromUrl, isDemoLoginVisible } from '../lib/demoSignIn'
 import { useAuth } from '../auth/AuthProvider'
+import { resolveCustomerPostLoginPath } from '../auth/authRedirect'
 import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell, { CUSTOMER_AUTH_BULLETS } from '../components/HakumAuthShell'
 import { AuthLegalLinks } from '../components/FormLegalNotice'
@@ -79,7 +80,9 @@ export default function CustomerSignInPage() {
   const [submitting, setSubmitting] = useState(false)
   const [demoCustomer, setDemoCustomer] = useState(() => (isDemoLoginVisible() ? CUSTOMER_DEMO_ACCOUNT : null))
   const { user, profile, loading, signOut } = useAuth()
+  const location = useLocation()
   const navigate = useNavigate()
+  const returnPath = resolveCustomerPostLoginPath(location.state?.from)
 
   useEffect(() => {
     let cancelled = false
@@ -93,8 +96,8 @@ export default function CustomerSignInPage() {
   }, [])
 
   useEffect(() => {
-    if (!loading && user && profile?.role === 'customer') navigate('/account', { replace: true })
-  }, [loading, user, profile, navigate])
+    if (!loading && user && profile?.role === 'customer') navigate(returnPath, { replace: true })
+  }, [loading, user, profile, navigate, returnPath])
 
   // Smart check: plate / phone / email → TL-provisioned without password?
   useEffect(() => {
@@ -193,7 +196,7 @@ export default function CustomerSignInPage() {
           navigate(activateSignupHref(rawIdentifier), { replace: true })
           return
         }
-        navigate('/account', { replace: true })
+        navigate(returnPath, { replace: true })
       }
 
       const { res, data } = await customerSignInApi(rawIdentifier, nextPassword)

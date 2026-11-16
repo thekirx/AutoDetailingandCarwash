@@ -500,7 +500,7 @@ export default function ContentStudioModal({
                   <div className="flex items-center justify-between border-b border-border/60 pb-2">
                     <span className="flex items-center gap-1.5 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                       <Settings2 className="size-3.5 text-primary" />
-                      {isBlog ? 'Post Settings, Regional SEO & AI Summary' : 'Event Schedule, Branch & RSVP Form'}
+                      {isBlog ? 'Post Settings, Regional SEO & AI Summary' : 'Event Schedule, Branch & Smart Form'}
                     </span>
                   </div>
 
@@ -625,11 +625,11 @@ export default function ContentStudioModal({
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <Label>Attached RSVP / Registration Smart Form</Label>
+                        <Label>Attached Smart Form</Label>
                         <NamedSelect
                           value={draft.form_id || ''}
                           onChange={(form_id) => updateDraft({ form_id })}
-                          emptyLabel="Built-in Quick Registration Form"
+                          emptyLabel="None (no form attached)"
                           options={forms.map((f) => ({ value: f.id, label: f.name }))}
                         />
                       </div>

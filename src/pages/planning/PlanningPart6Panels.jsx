@@ -22,7 +22,7 @@ import ContentStudioModal from '@/components/content/ContentStudioModal'
 import { supabase } from '@/lib/supabase'
 import { listBranches } from '@/lib/adminApi'
 import { slugifyEventTitle } from '@/lib/planningPart6'
-import { eventQuickResultsSlug, permanentFormResultsPath } from '@/lib/formResults'
+import { permanentFormResultsPath } from '@/lib/formResults'
 import {
   deleteCmsEvent,
   prepareEventForEditor,
@@ -300,12 +300,14 @@ export function PlanningEventsPanel({ canEdit, highlightId }) {
                 <div className="flex flex-wrap gap-2">
                   {ev.slug ? (
                     <>
-                      <Button size="sm" variant="outline" className="max-xl:min-h-11" asChild>
-                        <Link to={permanentFormResultsPath(ev.ops_forms?.slug || eventQuickResultsSlug(ev))}>
-                          <ClipboardList size={14} className="mr-1" aria-hidden />
-                          Results
-                        </Link>
-                      </Button>
+                      {ev.ops_forms?.slug ? (
+                        <Button size="sm" variant="outline" className="max-xl:min-h-11" asChild>
+                          <Link to={permanentFormResultsPath(ev.ops_forms.slug)}>
+                            <ClipboardList size={14} className="mr-1" aria-hidden />
+                            Results
+                          </Link>
+                        </Button>
+                      ) : null}
                       <Button size="sm" variant="outline" className="max-xl:min-h-11" asChild>
                         <a href={`/events/${ev.slug}`} target="_blank" rel="noreferrer">Open page</a>
                       </Button>
@@ -381,12 +383,14 @@ export function PlanningEventsPanel({ canEdit, highlightId }) {
                           <a className="inline-flex items-center text-sm text-primary underline max-xl:min-h-11" href={`/events/${ev.slug}`} target="_blank" rel="noreferrer">
                             /events/{ev.slug}
                           </a>
-                          <Button size="sm" variant="outline" className="cursor-pointer max-xl:min-h-11" asChild>
-                            <Link to={permanentFormResultsPath(ev.ops_forms?.slug || eventQuickResultsSlug(ev))}>
-                              <ClipboardList size={13} className="mr-1" aria-hidden />
-                              Results
-                            </Link>
-                          </Button>
+                          {ev.ops_forms?.slug ? (
+                            <Button size="sm" variant="outline" className="cursor-pointer max-xl:min-h-11" asChild>
+                              <Link to={permanentFormResultsPath(ev.ops_forms.slug)}>
+                                <ClipboardList size={13} className="mr-1" aria-hidden />
+                                Results
+                              </Link>
+                            </Button>
+                          ) : null}
                           <Button size="sm" variant="outline" className="cursor-pointer max-xl:min-h-11" onClick={() => copyLink(ev)}>Copy</Button>
                         </>
                       ) : null}

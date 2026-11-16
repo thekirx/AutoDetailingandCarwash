@@ -84,7 +84,7 @@ describe('every notification url is a route the app still renders', () => {
   const app = readFileSync(join(root, 'src/App.jsx'), 'utf8')
   // Ops routes are declared as relative children of /operations, and as absolute
   // paths for everything outside it. Both shapes have to be read.
-  const opsChildren = [...app.matchAll(/<Route\s+path="([a-z0-9-]+)"/g)].map((m) => m[1])
+  const opsChildren = [...app.matchAll(/<Route\s+path="([a-z0-9/-]+)"/g)].map((m) => m[1])
   const absolute = [...app.matchAll(/<Route\s+path="(\/[a-z0-9/:_-]*)"/g)].map((m) => m[1])
 
   it('the route table was actually parsed — an empty read would pass vacuously', () => {

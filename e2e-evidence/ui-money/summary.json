@@ -4,6 +4,6 @@
   "total": 5,
   "failed": [],
   "evidence": "e2e-evidence/ui-money",
-  "at": "2026-11-15T14:18:02.605Z",
+  "at": "2026-11-16T12:39:09.929Z",
   "note": "Non-destructive: does not submit shift_close or complete_pos_sale"
 }

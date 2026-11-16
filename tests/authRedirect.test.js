@@ -2,8 +2,10 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import {
   opsRouteKeyFromPath,
+  resolveCustomerPostLoginPath,
   resolvePostLoginPath,
   safeAuthReturnPath,
+  safeAuthReturnUrl,
 } from '../src/auth/authRedirect.js'
 import { ROLES } from '../src/auth/permissions.js'
 
@@ -15,6 +17,11 @@ describe('safeAuthReturnPath', () => {
     assert.equal(safeAuthReturnPath('/operations/queue'), '/operations/queue')
     assert.equal(safeAuthReturnPath('/operations/dashboard?x=1'), '/operations/dashboard')
     assert.equal(safeAuthReturnPath(undefined, { fallback: '/operations/console' }), '/operations/console')
+    assert.equal(
+      safeAuthReturnUrl({ pathname: '/operations/finance', search: '?tab=sheets&sheet=s1' }),
+      '/operations/finance?tab=sheets&sheet=s1',
+    )
+    assert.equal(safeAuthReturnUrl('//evil.example/phish'), null)
   })
 })
 
@@ -32,7 +39,28 @@ describe('resolvePostLoginPath', () => {
     assert.equal(opsRouteKeyFromPath('/operations/content'), 'content')
     assert.equal(opsRouteKeyFromPath('/operations/notifications'), 'notifications')
     assert.equal(opsRouteKeyFromPath('/operations/broadcast'), 'notifications')
+    assert.equal(opsRouteKeyFromPath('/operations/vehicle-transfer'), 'vehicle-transfer')
+    assert.equal(opsRouteKeyFromPath('/operations/my-advances'), 'my-advances')
+    assert.equal(opsRouteKeyFromPath('/operations/payslips'), 'payslips')
+    assert.equal(opsRouteKeyFromPath('/operations/approvals'), 'approvals')
+    assert.equal(opsRouteKeyFromPath('/operations/monthly-payroll'), 'monthly-payroll')
+    assert.equal(opsRouteKeyFromPath('/operations/merch-shop'), 'merch-shop')
+    assert.equal(opsRouteKeyFromPath('/operations/vouchers'), 'vouchers')
     assert.equal(opsRouteKeyFromPath('/operations/access-denied'), null)
+  })
+
+  it('preserves query parameters across post-login deep links for ops and customers', () => {
+    const boss = { role: ROLES.SUPER_ADMIN }
+    assert.equal(
+      resolvePostLoginPath(boss, { pathname: '/operations/finance', search: '?tab=sheets&sheet=sh-9' }),
+      '/operations/finance?tab=sheets&sheet=sh-9',
+    )
+    assert.equal(
+      resolveCustomerPostLoginPath({ pathname: '/account/book', search: '?service=paint-maintenance' }),
+      '/account/book?service=paint-maintenance',
+    )
+    assert.equal(resolveCustomerPostLoginPath({ pathname: '/operations/pos', search: '' }), '/account')
+    assert.equal(resolveCustomerPostLoginPath('//evil.example/account'), '/account')
   })
 
   it('ignores deep-links the role cannot open (avoids login → access-denied)', () => {

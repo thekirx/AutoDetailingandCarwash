@@ -74,6 +74,100 @@ describe('Omnichannel in-app notification listener & realtime payload fan-out', 
     )
     assert.equal(opsToast.title, 'New booking')
     assert.equal(opsToast.href, '/operations/queue')
+
+    const opsFallback = buildForegroundToastData(
+      { id: 'n2', title: 'Ops alert', body: 'Check dashboard', url: '/', kind: 'system' },
+      'BossMich',
+    )
+    assert.equal(opsFallback.href, '/operations')
+
+    const customerFallback = buildForegroundToastData(
+      { id: 'n3', title: 'Account alert', body: 'Update', url: '', kind: 'system' },
+      'customer',
+    )
+    assert.equal(customerFallback.href, '/account')
+
+    const bdayToast = buildForegroundToastData(
+      { id: 'n4', title: 'Happy birthday', body: 'Code', url: '/account', kind: 'birthday_greeting' },
+      'customer',
+    )
+    assert.equal(bdayToast.href, '/account/vouchers')
+  })
+
+  it('blocks iOS non-standalone Safari tabs (including iPadOS desktop UA) and wires mobile push guidance', async () => {
+    const { iosPushBlocked } = await import('../src/lib/installApp.js')
+    assert.equal(
+      iosPushBlocked({ ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)', standalone: false, hasChrome: false }),
+      true,
+    )
+    assert.equal(
+      iosPushBlocked({ ua: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', platform: 'MacIntel', maxTouchPoints: 5, standalone: false, hasChrome: false }),
+      true,
+    )
+    assert.equal(
+      iosPushBlocked({ ua: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)', standalone: true, hasChrome: false }),
+      false,
+    )
+
+    const pushLib = read('src/lib/push.js')
+    assert.match(pushLib, /readyRegistrationWithTimeout/)
+    const opsLayout = read('src/layouts/OperationsLayout.jsx')
+    assert.match(opsLayout, /allowUnsupportedInCompact/)
+    assert.doesNotMatch(opsLayout, /<PushToggle[^>]*hidden md:inline-flex/)
+    const listener = read('src/components/InAppNotificationListener.jsx')
+    assert.match(listener, /hakum:sw-navigate/)
+  })
+
+  it('deliverUserNotifications normalizes urls, enforces customer push prefs, and inserts inbox rows', async () => {
+    const { deliverUserNotifications } = await import('../server/webPush.mjs')
+    const inserted = []
+    const pushed = []
+    const fakeDb = {
+      from(table) {
+        if (table === 'customers') {
+          return {
+            select() { return this },
+            async in() {
+              return {
+                data: [
+                  { id: 'c1', notify_push: true, is_disabled: false, is_archived: false },
+                  { id: 'c2', notify_push: false, is_disabled: false, is_archived: false },
+                ],
+              }
+            },
+          }
+        }
+        if (table === 'user_notifications') {
+          return {
+            async insert(rows) {
+              inserted.push(...rows)
+              return { error: null }
+            },
+          }
+        }
+        throw new Error(`unexpected table ${table}`)
+      },
+    }
+    const res = await deliverUserNotifications(fakeDb, {
+      userIds: ['c1', 'c2', 'c1'],
+      kind: 'promo',
+      title: 'Weekend wash',
+      body: 'Book now',
+      url: '//evil.test/steal',
+      tag: 'promo-1',
+      inbox: true,
+      checkCustomerPrefs: true,
+      sendPush: async (payload) => {
+        pushed.push(payload)
+        return { sent: 1, failed: 0, pruned: 0, subscriptions: 1 }
+      },
+    })
+    assert.equal(res.targets, 1)
+    assert.equal(res.skipped, 1)
+    assert.equal(inserted.length, 1)
+    assert.equal(inserted[0].user_id, 'c1')
+    assert.equal(inserted[0].url, '/')
+    assert.deepEqual(pushed[0].userIds, ['c1'])
   })
 
   it('passes realtime payload through subscribeUserNotificationRealtime without breaking zero-arg hooks', async () => {

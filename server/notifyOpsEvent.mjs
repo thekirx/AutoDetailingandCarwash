@@ -4,8 +4,10 @@
  */
 import { canEditQueueOperations } from '../src/auth/permissions.js'
 import { canEditDailySheet, canReviewDailySheet } from '../src/lib/dailySheet.js'
+import { applyTemplateText } from '../src/lib/notificationTemplates.js'
 import { NOTIFY_EVENTS, branchLabel } from '../src/lib/notifyRouting.js'
 import { hydrateBookingForNotify } from './notifyBooking.mjs'
+import { loadTemplateMap, templateEnabled } from './notificationTemplatesDb.mjs'
 import { notifyRecipients, resolveStaffRecipients } from './webPush.mjs'
 
 export const OPS_EVENTS = ['crew_assigned', 'sheet_submitted', 'sheet_reviewed', 'cash_advance_submitted', 'cash_advance_approved', 'attendance_location_alert']
@@ -15,26 +17,44 @@ const FRESH_MS = 10 * 60_000
 const fresh = (iso) => Boolean(iso) && Date.now() - Date.parse(iso) < FRESH_MS
 const pesos = (minor) => `₱${Math.round((Number(minor) || 0) / 100).toLocaleString('en-PH')}`
 
-export function buildOpsEventCopy(event, c = {}) {
+function opsTemplateKey(event) {
+  return event === 'complaint' ? 'ops.complaint' : `ops.${event}`
+}
+
+function opsEventVars(c = {}) {
+  return {
+    name: c.name || c.submitter || c.employee || c.staff || 'Team',
+    plate: c.plate || 'vehicle',
+    service: c.service || 'service',
+    branch: c.branchName || c.branch || 'Hakum',
+    when: c.businessDate || 'Today',
+    code: c.code || '',
+  }
+}
+
+export function buildOpsEventCopy(event, c = {}, tpl = null) {
+  let base = null
   switch (event) {
     case 'crew_assigned':
-      return {
+      base = {
         kind: 'crew_assigned',
         title: 'New car assigned',
         body: `${c.queueNumber ? `Q${c.queueNumber} · ` : ''}${c.plate || 'Vehicle'} · ${c.service || 'service'} @ ${c.branchName || 'Hakum'}`,
         tag: `crew-${c.bookingId}`,
       }
+      break
     case 'sheet_submitted': {
       const off = Number(c.overShortMinor) || 0
-      return {
+      base = {
         kind: 'sheet_submitted',
         title: `Daily sheet to approve · ${c.branchName || 'branch'}`,
         body: `${c.submitter || 'Branch admin'} submitted ${c.businessDate || 'today'} · net ${pesos(c.netProfitMinor)}${off ? ` · drawer ${off > 0 ? 'over' : 'short'} ${pesos(Math.abs(off))}` : ''}. Approve or return in Finance.`,
         tag: `sheet-submitted-${c.sheetId}`,
       }
+      break
     }
     case 'sheet_reviewed':
-      return {
+      base = {
         kind: 'sheet_reviewed',
         title: `Daily sheet ${c.approved ? 'approved' : 'returned'} · ${c.branchName || 'branch'}`,
         body: c.approved
@@ -42,29 +62,33 @@ export function buildOpsEventCopy(event, c = {}) {
           : `${c.businessDate || 'Today'}: ${c.note || 'please fix and submit again'}`,
         tag: `sheet-reviewed-${c.sheetId}`,
       }
+      break
     case 'cash_advance_submitted':
-      return {
+      base = {
         kind: 'cash_advance_submitted',
         title: 'Cash advance request',
         body: `${c.employee || 'Employee'} · ${pesos(c.amountMinor)} @ ${c.branchName || 'branch'}. Waiting for approval before any cash leaves the drawer.`,
         tag: `ca-req-${c.submissionId}`,
       }
+      break
     case 'cash_advance_approved':
-      return {
+      base = {
         kind: 'cash_advance_approved',
         title: 'Cash advance approved',
         body: `${c.employee || 'Employee'} · ${pesos(c.amountMinor)} @ ${c.branchName || 'branch'}. Code ${c.code}. Type it on the Daily Sheet to give the cash.`,
         tag: `ca-ok-${c.submissionId}`,
       }
+      break
     case 'attendance_location_alert':
-      return {
+      base = {
         kind: 'attendance_location_alert',
         title: `Time-in blocked · ${c.branchName || 'branch'}`,
         body: `${c.staff || 'A team member'} tried to time in with a faked or tampered location. Review it on Attendance.`,
         tag: `geo-alert-${c.alertId}`,
       }
+      break
     case 'inquiry':
-      return {
+      base = {
         kind: 'inquiry',
         title: c.kind === 'tint_finder' ? 'New tint booking request' : c.kind === 'complaint' ? 'New customer complaint' : 'New partnership inquiry',
         body: c.kind === 'tint_finder'
@@ -74,30 +98,43 @@ export function buildOpsEventCopy(event, c = {}) {
           : `${c.name || 'Someone'} · ${c.city || 'site'}`,
         tag: `inquiry-${c.id}`,
       }
+      break
     case 'booking_reschedule':
-      return {
+      base = {
         kind: 'booking_reschedule',
         title: 'Customer wants a new date',
         body: `${c.name || 'A customer'} · ${c.plate || 'vehicle'} asked to reschedule. Call them to confirm a new time.`,
         tag: `reschedule-${c.bookingId}`,
       }
+      break
     case 'review': {
       const note = String(c.comment || '').trim()
-      return {
+      base = {
         kind: 'review',
         title: `New review · ${c.rating}★`,
         body: `${c.name || 'Customer'} @ ${c.branchName || 'Hakum'}${note ? ` — "${note.length > 80 ? `${note.slice(0, 80)}…` : note}"` : ''}`,
         tag: `review-${c.id}`,
       }
+      break
     }
     default:
       return null
+  }
+  if (!tpl?.has_override) return base
+  const vars = opsEventVars(c)
+  return {
+    ...base,
+    title: applyTemplateText(tpl.title, vars, base.title),
+    body: applyTemplateText(tpl.body, vars, base.body),
   }
 }
 
 /** Server-side events (inquiry, review): rule from NOTIFY_EVENTS plus branch / ids / excludeId. */
 export async function notifyStaffEvent(db, event, ctx, extra = {}) {
-  const copy = buildOpsEventCopy(event, ctx)
+  const templates = await loadTemplateMap(db).catch(() => null)
+  const tplKey = opsTemplateKey(event)
+  if (templates && !templateEnabled(templates, tplKey)) return { skipped: true, reason: 'template_disabled' }
+  const copy = buildOpsEventCopy(event, ctx, templates?.[tplKey] || null)
   const recipients = await resolveStaffRecipients(db, { ...NOTIFY_EVENTS[event], ...extra })
   return notifyRecipients(db, recipients, copy)
 }
@@ -219,7 +256,12 @@ export async function notifyOpsEvent(db, { event, id, actor }) {
   if (!load) return { status: 400, error: 'Unknown event' }
   const found = await load(db, id, actor)
   if (found.error) return found
-  const copy = buildOpsEventCopy(event, found.ctx)
+  const templates = await loadTemplateMap(db).catch(() => null)
+  const tplKey = opsTemplateKey(event)
+  if (templates && !templateEnabled(templates, tplKey)) {
+    return { skipped: true, reason: 'template_disabled', targets: 0, inbox: { inserted: 0 }, push: { sent: 0 } }
+  }
+  const copy = buildOpsEventCopy(event, found.ctx, templates?.[tplKey] || null)
   const recipients = await resolveStaffRecipients(db, found.rule)
   return { ...(await notifyRecipients(db, recipients, copy, { inbox: found.inbox !== false })), copy }
 }

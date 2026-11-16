@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Inbox, Mail, Phone, RefreshCw } from 'lucide-react'
 
@@ -11,10 +11,13 @@ import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { toast } from 'sonner'
 
+const FormResultsBoardPage = lazy(() => import('@/pages/FormResultsBoardPage'))
+
 const TABS = [
   { key: 'partnership', label: 'Brand Collabs', table: 'partnership_inquiries' },
   { key: 'contact', label: 'Contact', table: 'contact_inquiries' },
   { key: 'complaints', label: 'Complaints', table: 'complaints' },
+  { key: 'form_results', label: 'Form Results', table: null },
 ]
 
 const COMPLAINT_STATUSES = ['submitted', 'review', 'resolved', 'closed']
@@ -140,6 +143,12 @@ export default function InquiriesPage() {
   }, [active.key])
 
   const load = useCallback(async () => {
+    if (!active.table) {
+      setLoadError('')
+      setRows([])
+      setLoading(false)
+      return
+    }
     setLoading(true)
     setLoadError('')
     const { data, error } = await supabase
@@ -247,74 +256,82 @@ export default function InquiriesPage() {
         ))}
       </div>
 
-      <div className="inquiries-status-filters" role="group" aria-label="Filter by status">
-        <button
-          type="button"
-          className={statusFilter === 'all' ? 'is-active' : undefined}
-          onClick={() => setStatusFilter('all')}
-        >
-          All
-        </button>
-        {statusOptions.map((status) => (
-          <button
-            key={status}
-            type="button"
-            className={statusFilter === status ? 'is-active' : undefined}
-            onClick={() => setStatusFilter(status)}
-          >
-            {status}
-          </button>
-        ))}
-      </div>
+      {tab === 'form_results' ? (
+        <Suspense fallback={<p className="py-6 text-sm text-muted-foreground">Loading form results…</p>}>
+          <FormResultsBoardPage embedded />
+        </Suspense>
+      ) : (
+        <>
+          <div className="inquiries-status-filters" role="group" aria-label="Filter by status">
+            <button
+              type="button"
+              className={statusFilter === 'all' ? 'is-active' : undefined}
+              onClick={() => setStatusFilter('all')}
+            >
+              All
+            </button>
+            {statusOptions.map((status) => (
+              <button
+                key={status}
+                type="button"
+                className={statusFilter === status ? 'is-active' : undefined}
+                onClick={() => setStatusFilter(status)}
+              >
+                {status}
+              </button>
+            ))}
+          </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            {active.label} —{' '}
-            {loading
-              ? 'loading…'
-              : statusFilter === 'all'
-                ? `${rows.length} total`
-                : `${filteredRows.length} of ${rows.length} · ${statusFilter}`}
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loadError ? (
-            <p className="inquiries-error">
-              Could not load {active.label.toLowerCase()} inquiries: {loadError}
-            </p>
-          ) : loading ? (
-            <p className="inquiries-empty">Loading…</p>
-          ) : !filteredRows.length ? (
-            <div className="inquiries-empty-state">
-              <Inbox size={28} aria-hidden="true" />
-              <p>
-                {rows.length
-                  ? `No ${active.label.toLowerCase()} inquiries with status “${statusFilter}”.`
-                  : `No ${active.label.toLowerCase()} inquiries yet.`}
-              </p>
-            </div>
-          ) : (
-            <ul className="inquiry-list">
-              {filteredRows.map((row) => (
-                <li key={row.id} className="inquiry-row">
-                  <Renderer
-                    row={row}
-                    onStatus={
-                      active.key === 'partnership'
-                        ? setPartnershipStatus
-                        : active.key === 'complaints'
-                          ? setComplaintStatus
-                          : setContactStatus
-                    }
-                    onPromote={active.key === 'complaints' ? promoteComplaintToNote : undefined}
-                  />
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>
+                {active.label} —{' '}
+                {loading
+                  ? 'loading…'
+                  : statusFilter === 'all'
+                    ? `${rows.length} total`
+                    : `${filteredRows.length} of ${rows.length} · ${statusFilter}`}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loadError ? (
+                <p className="inquiries-error">
+                  Could not load {active.label.toLowerCase()} inquiries: {loadError}
+                </p>
+              ) : loading ? (
+                <p className="inquiries-empty">Loading…</p>
+              ) : !filteredRows.length ? (
+                <div className="inquiries-empty-state">
+                  <Inbox size={28} aria-hidden="true" />
+                  <p>
+                    {rows.length
+                      ? `No ${active.label.toLowerCase()} inquiries with status “${statusFilter}”.`
+                      : `No ${active.label.toLowerCase()} inquiries yet.`}
+                  </p>
+                </div>
+              ) : (
+                <ul className="inquiry-list">
+                  {filteredRows.map((row) => (
+                    <li key={row.id} className="inquiry-row">
+                      <Renderer
+                        row={row}
+                        onStatus={
+                          active.key === 'partnership'
+                            ? setPartnershipStatus
+                            : active.key === 'complaints'
+                              ? setComplaintStatus
+                              : setContactStatus
+                        }
+                        onPromote={active.key === 'complaints' ? promoteComplaintToNote : undefined}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      )}
     </OpsPageShell>
   )
 }

@@ -1,6 +1,6 @@
 # Hakum Auto Care — principal memory (Graphify seed)
 
-Last verified live: 2026-09-15. Product: Hakum Auto Care. Repo: `thekirx/AutoDetailingandCarwash`. Stack: Vite + React SPA, PostgREST + `/api/*`, Supabase Auth + RLS. Live API: `https://lybxhpzzqqyqswvuwpxv.supabase.co`. Do not store service_role, `sbp_` tokens, or `.env` in this graph.
+Last verified live: **2026-11-16** (reconciled with Daily Sheet cutover, 33-service catalog, Permanent Form Results Board, Local SEO/PWA, and Web Push/deep-link fixes). Product: Hakum Auto Care. Repo: `thekirx/AutoDetailingandCarwash`. Stack: Vite + React SPA, PostgREST + `/api/*`, Supabase Auth + RLS. Live API: `https://lybxhpzzqqyqswvuwpxv.supabase.co`. Do not store service_role, `sbp_` tokens, or `.env` in this graph.
 
 This file is the session-durable principal dump: domain rules, live schema, money path, RBAC, routes, and how agents should work. Pair with `CONTEXT.md`, `docs/OPS/MONEY-CONTRACT.md`, `docs/POS/`, `docs/PAYROLL/`.
 
@@ -15,8 +15,8 @@ This file is the session-durable principal dump: domain rules, live schema, mone
 
 - **Client:** `src/` React 19 + React Router 7 + Tailwind 4. Public site + customer portal + staff `/operations/*`.
 - **Auth:** `@supabase/supabase-js`. Staff roles live in `staff_profiles.role` (and `app_metadata` — never `user_metadata` for authz). Customers are a separate portal.
-- **Data:** Supabase Postgres. Floor writes go through SECURITY DEFINER RPCs (`complete_pos_sale`, `assign_daily_queue_number`, `send_queue_ticket_to_payment`, `run_payroll`, `submit_shift_close`, …). Direct table writes are RLS-gated.
-- **API gateway:** `server/apiGateway.mjs` — Node `/api/*` for SMS (BusyBee), customer provision, public book, web push, data center, BrandTxt, etc. Vite proxies `/api` in `npm run dev`.
+- **Data:** Supabase Postgres. Floor & daily close writes go through SECURITY DEFINER RPCs (`complete_pos_sale`, `assign_daily_queue_number`, `send_queue_ticket_to_payment`, `save_daily_sheet`, `submit_daily_sheet`, `review_daily_sheet`, `reopen_daily_sheet`). Legacy `run_payroll`, `submit_shift_close`, `review_shift_close`, and `complete_payment` are retired/revoked. Direct table writes are RLS-gated.
+- **API gateway:** `server/*.mjs` + `api/*.js` (`audit:api-auth` scans 36 handlers) for SMS (BusyBee), customer provision, public book, unified Web Push (`deliverUserNotifications` + `resolvePushTargets`), form results, data center, BrandTxt, etc. Vite proxies `/api` in `npm run dev` & `vite preview`.
 - **Migrations:** `supabase/migrations/` — apply via CLI/MCP; never invent filenames; use `supabase migration new`.
 - **Money is integer minor units** (centavos). Display as pesos in UI.
 
@@ -26,9 +26,9 @@ This file is the session-durable principal dump: domain rules, live schema, mone
 |---------|------|----------------|
 | **Queue** | Same-day Services & Packages only. Daily queue numbers (Manila calendar). | Ceramic / tint / PPF film / paint maintenance |
 | **Bookings board** | Multi-day detailing pipeline (Assigned → intake → … → release) | Wash bay tickets |
-| **POS** | Paid tickets, merch, day expenses, CA repayments, End of shift attestation | Paying crew, rewriting history |
-| **Finance** | Accept/reject/lock close; P&L from **paid POS + expenses** | Changing sales totals, auto-running payroll |
-| **Payroll** | Floor pay from paid POS + attendance + ceramic keys; fixed packages; **manual** CA deduct | Inventing pay from close ₱ |
+| **POS** | Paid tickets, merch, day expenses, CA repayments, **Daily Sheet** (`DailySheetPanel`) | Paying crew outside Daily Sheet, rewriting approved history |
+| **Finance** | Review/approve/return/reopen **Daily Sheet** (`FinanceDailySheetsTab`); P&L from **paid POS + posted expenses** | Self-approving own sheet (except `BossMich`), auto-editing sales totals |
+| **Daily Sheet** | Single close-of-day sheet per branch/date (`save_daily_sheet` → `submit_daily_sheet` → `review_daily_sheet` → `reopen_daily_sheet`) | Retired `run_payroll` / `submit_shift_close` / `review_shift_close` wizards |
 
 Detailing SKUs (must stay on Bookings, never Queue): `ceramic-coating`, `paint-maintenance`, `nano-ceramic-tint`, `paint-protection-film`. Code: `src/lib/serviceKinds.js`. Public `/book` is detailing-only. Wash queue rejects detailing SKUs (`src/queue/queueApi.js`, `server/publicBook.mjs`).
 
@@ -72,38 +72,40 @@ Medium `price_minor` is centavos.
 
 Archived `audit-svc-*` / `crud-svc-*` rows are e2e leftovers — ignore for product copy.
 
-## Money path (binding)
+## Money path (binding since 2026-10-01)
 
-Source: `docs/OPS/MONEY-CONTRACT.md`.
+Source: `docs/OPS/MONEY-CONTRACT.md` + `docs/OPS/RBAC-MATRIX.md`.
 
 ```
-Paid POS (services / packages / detailing / merch)
-  → Bacoor report + End of shift (drawer attestation)
-  → Finance accept → notify SA/ASA + Pending floor (hard gate)
-  → SA/ASA confirms floor payroll (same night preferred)
+Paid POS / Queue handoff (`complete_pos_sale`)
+  → Branch Admin fills POS Daily Sheet (`save_daily_sheet` → `submit_daily_sheet`)
+  → Notifications (`sheet_submitted` fan-out via `deliverUserNotifications`)
+  → Super Admin / ASA (with `finance_view`, not submitter) reviews (`review_daily_sheet`)
+  → Approved salary & expense lines post once to `expenses` (`daily_sheet_line_id`) → Finance P&L
 ```
 
 - Sale write = RPC `complete_pos_sale` (impl `complete_pos_sale_impl`).
 - Queue → POS = `send_queue_ticket_to_payment` + `pos_handoffs`.
 - Queue numbers = `assign_daily_queue_number` on `queue_number_counters` (RPC-only; tables have RLS, **0 policies** — intentional).
 - Detailing queue numbers persist until the ticket finishes (`assign_persistent_queue_number`).
-- End of shift does **not** pay payroll. `pending_floor_optional = false` hard-blocks floor confirm until closes are accepted.
-- CA deduct is **manual in payroll wizard only**. Approve CA on Payroll, not POS.
-- Expense report: ASA submit → `pending_approval` → SA `pending_payment` → `approve_paid`/`mark_paid` → P&L. RPC `review_expense_report`.
+- Retired payroll/shift-close RPCs (`run_payroll`, `submit_shift_close`, `review_shift_close`, `complete_payment`) have `EXECUTE` revoked (`e2e:daily-sheet-money` proves refusal).
+- Active catalog (since `20261115213000`): **33 active services** (**12 detailing** + **21 wash/packages/treatments**), **6 Coffee Menu**, **5 Sellables**.
 
 ## RBAC
 
-Source of truth: `src/auth/permissions.js`. Super Admin role key is `BossMich`. ASA is `assistant_super_admin` with `permission_grants` toggles (`asa_has_grant`). Operations Lead is network-wide: planner + POS + queue (TL∪BA), all branches, My Pay, **no attendance clock**. Detailer: Bookings only, not wash Queue. Investor: read-scoped. Branch scope: `user_has_branch_access` / `current_user_branch_slugs`; null = all sites.
+Source of truth: `src/auth/permissions.js` + `docs/OPS/RBAC-MATRIX.md` (19 Oct 2026). Super Admin role key is `BossMich`. ASA is `assistant_super_admin` with `permission_grants` toggles (`asa_has_grant`). Branch Admin (`admin`) accesses POS, Daily Sheet, Inventory, CRM, Customers, Attendance, Branch Queue board + `For Payment` lane, and branch-scoped Finance (`BUG-054`/`055` closed). Operations Lead (`operations_lead`) has Finance + Planning across branches without the Floor Board (`canAccessFloorBoard === false`). Detailer: Bookings only, not wash Queue. Investor: read-scoped.
 
 Ops login roles: staff, team_lead, operations_lead, sales, admin, BossMich, assistant_super_admin, marketing, detailer, video_editor, investor.
 
-Never authorize from `user_metadata` / `raw_user_meta_data`. JWT `app_metadata` can be stale until refresh.
+Never authorize from `user_metadata` / `raw_user_meta_data` (client-writable; `pushApi.mjs` & `webPush.mjs` resolve live `staff_profiles`/`customers` roles).
 
-## Routes
+## Routes & Notifications
 
-Public: `/home`, `/services`, `/services/:slug`, `/book` (detailing), `/queue`, `/branches`, `/partnerships`, `/contact`, `/complaints`, `/events`, `/blog`, `/f/:slug` (public ops forms), legal pages. Customer: `/signin`, `/signup`, `/account/*`. Kiosk: `/queue/:branch`, `/queue/:branch/tv` (DEFINER views: `public_queue_counts`, `public_queue_numbers`, `public_queue_floor`, `public_home_stats`).
+Public: `/home`, `/services`, `/services/:slug`, `/tint-finder`, `/book` (detailing), `/queue`, `/branches`, `/branches/:citySlug` + `/near-me/*` (prerendered SEO hubs), `/partnerships`, `/refer`, `/contact`, `/complaints`, `/events`, `/blog`, `/blog/:slug`, `/f/:slug`, legal pages. Customer: `/signin` (preserves deep-link return path), `/signup`, `/account/*`. Kiosk: `/queue/:branch`, `/queue/:branch/tv`.
 
-Staff `/operations/*` (gated by `OpsRoleGate`): dashboard, queue, queue/new, queue/:id, attendance, kpi, my-tasks, pos, inventory, finance, payroll, my-pay, crm, bookings, planning, settings, settings/pos, settings/payroll, content, notifications, history, broadcast, reports, memberships, reviews, people, branches, cars, audit, data-center, inquiries.
+Staff `/operations/*` (gated by `OpsRoleGate`): `dashboard`, `queue`, `queue/new`, `queue/:id`, `attendance`, `kpi`, `my-tasks`, `pos`, `inventory`, `finance`, `my-advances`, `payslips`, `approvals`, `monthly-payroll`, `merch-shop`, `crm`, `bookings`, `planning` (`?tab=forms`), `forms/results`, `forms/results/:slug` (`/operations/reviews` redirects here), `settings`, `settings/pos`, `settings/tint-finder`, `settings/daily-sheet-rules`, `content`, `notifications`, `history`, `broadcast`, `reports`, `memberships`, `vouchers`, `people`, `branches`, `cars`, `vehicle-transfer`, `audit`, `data-center`, `inquiries`.
+
+Web Push & Realtime: `server/webPush.mjs` (`deliverUserNotifications`, `resolvePushTargets` reading live `staff_profiles` + `staff_branch_assignments` + `customers`), `public/push-sw.js` (same-origin URL check, visible/focused client priority, `HAKUM_NAV` SPA message -> `InAppNotificationListener.jsx` -> React Router `navigate`), and `src/components/PushToggle.jsx` (visible across desktop & mobile headers, including iOS Home Screen install guidance).
 
 Data Center is Super Admin only. Catalog/CRM importable; floor/finance export-only (PITR).
 

@@ -29,7 +29,7 @@ import BlogArticlePreview from '@/components/content/BlogArticlePreview'
 import { MediaLibraryDialog } from '@/components/content/ContentBlockEditor'
 import ContentBlockRenderer from '@/components/content/ContentBlockRenderer'
 import ContentStudioModal from '@/components/content/ContentStudioModal'
-import { eventQuickResultsSlug, permanentFormResultsPath } from '@/lib/formResults'
+import { permanentFormResultsPath } from '@/lib/formResults'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -614,16 +614,18 @@ export default function ContentAdminPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap justify-end gap-1">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="cursor-pointer"
-                              asChild
-                            >
-                              <Link to={permanentFormResultsPath(ev.ops_forms?.slug || eventQuickResultsSlug(ev))}>
-                                <ClipboardList className="mr-1 size-3.5" /> Results
-                              </Link>
-                            </Button>
+                            {ev.ops_forms?.slug ? (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="cursor-pointer"
+                                asChild
+                              >
+                                <Link to={permanentFormResultsPath(ev.ops_forms.slug)}>
+                                  <ClipboardList className="mr-1 size-3.5" /> Results
+                                </Link>
+                              </Button>
+                            ) : null}
                             <Button
                               size="sm"
                               variant="outline"

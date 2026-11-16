@@ -47,23 +47,22 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs } from '@/components/ui/tabs'
 import { Textarea } from '@/components/ui/textarea'
 import { listBranches } from '@/lib/adminApi'
+import { BOOKING_STATUS_TRANSITIONS } from '@/lib/detailingBoardStatuses'
 import {
   DATE_FILTER_PRESETS,
+  DETAILING_RESULT_COLUMNS,
   FORM_RESULT_KIND_TABS,
   buildSubmissionAnswerRows,
-  eventQuickResultsSlug,
   filterFormResultItems,
+  formResultStatusLabel,
   groupResultsByStatus,
-  normalizeEventRegistrationItem,
   normalizeSubmissionItem,
   permanentFormResultsPath,
   resolveFormResultTarget,
 } from '@/lib/formResults'
 import {
-  deleteEventRegistrationAsOwner,
   deleteFormSubmissionAsOwner,
   fetchFormResultsSnapshot,
-  updateEventRegistrationAsOwner,
   updateFormSubmissionAsOwner,
 } from '@/lib/formResultsApi'
 import {
@@ -90,17 +89,18 @@ const EMPTY_FILTERS = Object.freeze({
 })
 
 function statusBadgeVariant(status) {
-  if (status === 'resolved') return 'default'
-  if (status === 'archived') return 'outline'
+  if (status === 'resolved' || status === 'completed') return 'default'
+  if (status === 'archived' || status === 'cancelled' || status === 'no_show') return 'outline'
   return 'secondary'
 }
 
-function statusLabel(status) {
-  return SUBMISSION_STATUSES.find((s) => s.value === status)?.label || 'New'
-}
-
-export default function FormResultsBoardPage() {
-  const { formSlug } = useParams()
+export default function FormResultsBoardPage({ embedded = false, initialFormSlug = '' } = {}) {
+  const { formSlug: routeSlug } = useParams()
+  const [embeddedSlug, setEmbeddedSlug] = useState(initialFormSlug)
+  useEffect(() => {
+    setEmbeddedSlug(initialFormSlug || '')
+  }, [initialFormSlug])
+  const formSlug = embedded ? embeddedSlug : routeSlug
   const navigate = useNavigate()
   const { profile } = useAuth()
   const isOwner = canEditDeleteFormResults(profile)
@@ -112,7 +112,6 @@ export default function FormResultsBoardPage() {
   const [events, setEvents] = useState([])
   const [branches, setBranches] = useState([])
   const [submissions, setSubmissions] = useState([])
-  const [eventRegistrations, setEventRegistrations] = useState([])
 
   const [kindTab, setKindTab] = useState('all')
   const [filters, setFilters] = useState(EMPTY_FILTERS)
@@ -134,7 +133,6 @@ export default function FormResultsBoardPage() {
       setForms(snapshot?.forms || [])
       setEvents(snapshot?.events || [])
       setSubmissions(snapshot?.submissions || [])
-      setEventRegistrations(snapshot?.eventRegistrations || [])
       setBranches(branchList || [])
     } catch (err) {
       toast.error(err?.message || 'Could not load form results.')
@@ -151,7 +149,7 @@ export default function FormResultsBoardPage() {
       ?.on('postgres_changes', { event: '*', schema: 'public', table: 'ops_form_submissions' }, () => {
         load({ silent: true })
       })
-      ?.on('postgres_changes', { event: '*', schema: 'public', table: 'event_registrations' }, () => {
+      ?.on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, () => {
         load({ silent: true })
       })
       ?.subscribe?.()
@@ -178,17 +176,10 @@ export default function FormResultsBoardPage() {
     const eventsById = new Map((events || []).map((e) => [e.id, e]))
     const eventsByFormId = new Map((events || []).filter((e) => e.form_id).map((e) => [e.form_id, e]))
 
-    const normalizedSubs = (submissions || []).map((row) =>
-      normalizeSubmissionItem(row, { formsById, eventsById, eventsByFormId, branches }),
-    )
-    const normalizedRegs = (eventRegistrations || []).map((row) =>
-      normalizeEventRegistrationItem(row, { eventsById, branches }),
-    )
-
-    return [...normalizedSubs, ...normalizedRegs].sort(
-      (a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime(),
-    )
-  }, [forms, events, branches, submissions, eventRegistrations])
+    return (submissions || [])
+      .map((row) => normalizeSubmissionItem(row, { formsById, eventsById, eventsByFormId, branches }))
+      .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+  }, [forms, events, branches, submissions])
 
   const availableBranchSlugs = useMemo(() => {
     const baseSlugs = filterFormBranchSlugs(branches)
@@ -207,6 +198,7 @@ export default function FormResultsBoardPage() {
     }
 
     for (const f of forms) {
+      if (f.kind === 'event') continue
       if (kindTab !== 'all' && f.kind !== kindTab) continue
       const key = f.slug || f.id
       if (!key || seen.has(key)) continue
@@ -220,26 +212,10 @@ export default function FormResultsBoardPage() {
       })
     }
 
-    if (kindTab === 'all' || kindTab === 'event') {
-      for (const ev of events) {
-        const quickKey = eventQuickResultsSlug(ev)
-        const quickCount = countMap.get(quickKey) || 0
-        if (!quickKey || seen.has(quickKey)) continue
-        if (!ev.form_id || quickCount > 0) {
-          seen.add(quickKey)
-          pills.push({
-            key: quickKey,
-            id: ev.id,
-            label: `${ev.title} (RSVP)`,
-            kind: 'event',
-            count: quickCount,
-          })
-        }
-      }
-    }
-
     return pills
-  }, [forms, events, allItems, kindTab])
+  }, [forms, allItems, kindTab])
+
+  const isDetailingView = kindTab === 'detailing' || targetScope.form?.kind === 'detailing'
 
   const activeFormKey = formSlug ? targetScope.formKey : 'all'
 
@@ -260,7 +236,10 @@ export default function FormResultsBoardPage() {
     [allItems, kindTab, activeFormKey, filters],
   )
 
-  const boardColumns = useMemo(() => groupResultsByStatus(filteredItems), [filteredItems])
+  const boardColumns = useMemo(
+    () => groupResultsByStatus(filteredItems, { mode: isDetailingView ? 'detailing' : 'standard' }),
+    [filteredItems, isDetailingView],
+  )
 
   const tabCounts = useMemo(() => {
     const withoutKind = filterFormResultItems(allItems, {
@@ -304,7 +283,10 @@ export default function FormResultsBoardPage() {
 
   function handleKindChange(nextKind) {
     setKindTab(nextKind)
-    if (formSlug) {
+    setFilters((prev) => ({ ...prev, status: 'all' }))
+    if (embedded) {
+      setEmbeddedSlug('')
+    } else if (formSlug) {
       navigate(permanentFormResultsPath(''))
     }
   }
@@ -314,7 +296,7 @@ export default function FormResultsBoardPage() {
     setEditing(false)
     setEditDraft({
       respondentLabel: item.respondentLabel || '',
-      status: item.status || 'new',
+      status: item.status || (item.isDetailing ? 'pending' : 'new'),
       calendarAt: item.calendarAt ? String(item.calendarAt).slice(0, 16) : '',
       payload: { ...(item.payload || {}) },
     })
@@ -337,14 +319,10 @@ export default function FormResultsBoardPage() {
       toast.error('Only Owner can edit or delete form responses.')
       return
     }
-    if (item.recordType !== 'submission') {
-      toast.message('Event quick RSVPs remain in New lane; edit contact answers or delete if needed.')
-      return
-    }
     setSaving(true)
     try {
       await updateFormSubmissionAsOwner({ id: item.id, status: nextStatus })
-      toast.success(`Moved to ${statusLabel(nextStatus)}`)
+      toast.success(`Moved to ${formResultStatusLabel(nextStatus, item.formKind)}`)
       setActiveItem((prev) => (prev?.id === item.id ? { ...prev, status: nextStatus } : prev))
       setEditDraft((prev) => ({ ...prev, status: nextStatus }))
       await load({ silent: true })
@@ -363,37 +341,22 @@ export default function FormResultsBoardPage() {
     }
     setSaving(true)
     try {
-      if (activeItem.recordType === 'event_registration') {
-        await updateEventRegistrationAsOwner({
-          id: activeItem.id,
-          name: editDraft.payload.name ?? editDraft.respondentLabel,
-          phone: editDraft.payload.phone || '',
-          email: editDraft.payload.email || '',
-        })
-      } else {
-        await updateFormSubmissionAsOwner({
-          id: activeItem.id,
-          status: editDraft.status,
-          respondent_label: editDraft.respondentLabel,
-          calendar_at: editDraft.calendarAt || null,
-          payload: editDraft.payload,
-        })
-      }
+      await updateFormSubmissionAsOwner({
+        id: activeItem.id,
+        status: editDraft.status,
+        respondent_label: editDraft.respondentLabel,
+        calendar_at: editDraft.calendarAt || null,
+        payload: editDraft.payload,
+      })
       toast.success('Response updated')
       setEditing(false)
       setActiveItem((prev) =>
         prev
           ? {
               ...prev,
-              respondentLabel:
-                activeItem.recordType === 'event_registration'
-                  ? editDraft.payload.name || prev.respondentLabel
-                  : editDraft.respondentLabel || prev.respondentLabel,
-              status: activeItem.recordType === 'submission' ? editDraft.status : prev.status,
-              calendarAt:
-                activeItem.recordType === 'submission' && editDraft.calendarAt
-                  ? new Date(editDraft.calendarAt).toISOString()
-                  : prev.calendarAt,
+              respondentLabel: editDraft.respondentLabel || prev.respondentLabel,
+              status: editDraft.status,
+              calendarAt: editDraft.calendarAt ? new Date(editDraft.calendarAt).toISOString() : prev.calendarAt,
               payload: { ...editDraft.payload },
             }
           : null,
@@ -414,11 +377,7 @@ export default function FormResultsBoardPage() {
     if (!window.confirm(`Permanently delete submission from "${item.respondentLabel}"?`)) return
     setSaving(true)
     try {
-      if (item.recordType === 'event_registration') {
-        await deleteEventRegistrationAsOwner(item.id)
-      } else {
-        await deleteFormSubmissionAsOwner(item.id)
-      }
+      await deleteFormSubmissionAsOwner(item.id)
       toast.success('Response deleted')
       setActiveItem(null)
       await load({ silent: true })
@@ -432,66 +391,11 @@ export default function FormResultsBoardPage() {
   const pageTitle = formSlug ? targetScope.label : 'Forms Results Board'
   const pageDescription = formSlug
     ? `Permanent archive of every answer submitted to ${targetScope.label}. Click any card to inspect the entire completed form.`
-    : 'Permanent archive across Events RSVP, Feedback, Detailing, Equipment repairs, Cash advances, and Custom forms.'
+    : 'Permanent archive across Feedback, Detailing services, Equipment repairs, Cash advances, and Custom forms.'
   const permanentUrlPath = permanentFormResultsPath(formSlug || '')
 
-  return (
-    <OpsPageShell
-      className="frb-page"
-      eyebrow="Permanent results archive"
-      title={pageTitle}
-      description={pageDescription}
-      icon={ClipboardList}
-      breadcrumbs={[
-        { label: 'Planner & Forms', to: '/operations/planning?tab=forms' },
-        ...(formSlug ? [{ label: 'All Results', to: '/operations/forms/results' }] : []),
-        { label: formSlug ? targetScope.label : 'Forms Results Board' },
-      ]}
-      meta={
-        <span className="inline-flex items-center gap-1.5">
-          <span className="font-semibold text-foreground tabular-nums">{filteredItems.length}</span>
-          <span>showing of {allItems.length} permanent responses</span>
-          {!isOwner ? (
-            <span className="inline-flex items-center gap-1 text-muted-foreground">
-              · <Lock className="size-3" aria-hidden /> Owner-only edit/delete
-            </span>
-          ) : null}
-        </span>
-      }
-      actions={
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="min-h-11"
-            onClick={() => copyPermanentUrl(permanentUrlPath, 'page')}
-          >
-            {copiedKey === 'page' ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-            Copy permanent link
-          </Button>
-          {targetScope.form?.slug && targetScope.form?.public_enabled && targetScope.form?.status === 'published' ? (
-            <Button type="button" variant="outline" size="sm" className="min-h-11" asChild>
-              <a href={shareFormUrl(targetScope.form.slug)} target="_blank" rel="noreferrer">
-                <ExternalLink className="size-3.5" />
-                Open public form
-              </a>
-            </Button>
-          ) : null}
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="min-h-11"
-            disabled={refreshing}
-            onClick={() => load({ silent: true })}
-          >
-            <RefreshCw className={`size-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-            Refresh
-          </Button>
-        </div>
-      }
-    >
+  const boardContent = (
+    <>
       {/* Kind sub-tabs */}
       <Tabs value={kindTab} onValueChange={handleKindChange} className="min-w-0 w-full gap-4">
         <OpsTabList tabs={kindTabs} aria-label="Filter results by form kind" className="max-w-full" />
@@ -499,23 +403,59 @@ export default function FormResultsBoardPage() {
         {/* Individual permanent form selector strip */}
         {formPills.length > 0 ? (
           <div className="frb-form-strip" role="navigation" aria-label="Specific forms in category">
-            <Link
-              to={permanentFormResultsPath('')}
-              className={`frb-form-pill ${!formSlug ? 'is-active' : ''}`}
-            >
-              <span>All in {kindTab === 'all' ? 'archive' : formKindLabel(kindTab)}</span>
-              <span className="frb-form-pill-count">{tabCounts[kindTab] || 0}</span>
-            </Link>
-            {formPills.map((pill) => (
-              <Link
-                key={pill.key}
-                to={permanentFormResultsPath(pill.key)}
-                className={`frb-form-pill ${activeFormKey === pill.key ? 'is-active' : ''}`}
+            {embedded ? (
+              <button
+                type="button"
+                onClick={() => setEmbeddedSlug('')}
+                className={`frb-form-pill ${!formSlug ? 'is-active' : ''}`}
               >
-                <span className="truncate">{pill.label}</span>
-                <span className="frb-form-pill-count">{pill.count}</span>
+                <span>All in {kindTab === 'all' ? 'archive' : formKindLabel(kindTab)}</span>
+                <span className="frb-form-pill-count">{tabCounts[kindTab] || 0}</span>
+              </button>
+            ) : (
+              <Link
+                to={permanentFormResultsPath('')}
+                className={`frb-form-pill ${!formSlug ? 'is-active' : ''}`}
+              >
+                <span>All in {kindTab === 'all' ? 'archive' : formKindLabel(kindTab)}</span>
+                <span className="frb-form-pill-count">{tabCounts[kindTab] || 0}</span>
               </Link>
-            ))}
+            )}
+            {formPills.map((pill) =>
+              embedded ? (
+                <button
+                  key={pill.key}
+                  type="button"
+                  onClick={() => setEmbeddedSlug(pill.key)}
+                  className={`frb-form-pill ${activeFormKey === pill.key ? 'is-active' : ''}`}
+                >
+                  <span className="truncate">{pill.label}</span>
+                  <span className="frb-form-pill-count">{pill.count}</span>
+                </button>
+              ) : (
+                <Link
+                  key={pill.key}
+                  to={permanentFormResultsPath(pill.key)}
+                  className={`frb-form-pill ${activeFormKey === pill.key ? 'is-active' : ''}`}
+                >
+                  <span className="truncate">{pill.label}</span>
+                  <span className="frb-form-pill-count">{pill.count}</span>
+                </Link>
+              ),
+            )}
+          </div>
+        ) : null}
+
+        {isDetailingView ? (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-muted/30 px-3.5 py-2.5 text-sm">
+            <span className="text-muted-foreground">
+              Detailing service requests go straight into the <strong className="text-foreground">Booking Placeholder</strong> lane and stay synced with the Detailing Schedule.
+            </span>
+            <Button type="button" size="sm" variant="default" asChild>
+              <Link to="/operations/bookings">
+                <ExternalLink className="size-3.5" /> Open Detailing Schedule →
+              </Link>
+            </Button>
           </div>
         ) : null}
 
@@ -527,7 +467,7 @@ export default function FormResultsBoardPage() {
               <Input
                 value={filters.query}
                 onChange={(e) => setFilters((prev) => ({ ...prev, query: e.target.value }))}
-                placeholder="Search name, phone, plate, event, form answers…"
+                placeholder="Search name, phone, plate, branch, form answers…"
                 className="min-h-11 pl-9 pr-9"
                 aria-label="Search all form answers"
               />
@@ -547,10 +487,12 @@ export default function FormResultsBoardPage() {
               <NamedSelect
                 value={filters.status}
                 onChange={(status) => setFilters((prev) => ({ ...prev, status }))}
-                className="min-h-11 w-full sm:w-40"
+                className="min-h-11 w-full sm:w-44"
                 options={[
                   { value: 'all', label: 'All statuses' },
-                  ...SUBMISSION_STATUSES.map((s) => ({ value: s.value, label: s.label })),
+                  ...(isDetailingView
+                    ? DETAILING_RESULT_COLUMNS.map((s) => ({ value: s.id, label: s.label }))
+                    : SUBMISSION_STATUSES.map((s) => ({ value: s.value, label: s.label }))),
                 ]}
               />
 
@@ -687,8 +629,8 @@ export default function FormResultsBoardPage() {
         {/* Results Canvas: Board or Table */}
         {loading ? (
           <div className="frb-board-cols">
-            {SUBMISSION_STATUSES.map((col) => (
-              <section key={col.value} className="frb-board-col">
+            {(isDetailingView ? DETAILING_RESULT_COLUMNS : SUBMISSION_STATUSES).map((col) => (
+              <section key={col.id || col.value} className="frb-board-col">
                 <div className="frb-col-head">
                   <h2>{col.label}</h2>
                 </div>
@@ -741,6 +683,11 @@ export default function FormResultsBoardPage() {
                           <Badge variant="outline" className="text-[10px]">
                             {item.formKindLabel}
                           </Badge>
+                          {item.isDetailing ? (
+                            <Badge variant={statusBadgeVariant(item.status)} className="text-[10px]">
+                              {formResultStatusLabel(item.status, item.formKind)}
+                            </Badge>
+                          ) : null}
                           {item.branchLabel ? (
                             <Badge variant="secondary" className="text-[10px]">
                               {item.branchLabel}
@@ -827,7 +774,9 @@ export default function FormResultsBoardPage() {
                       )}
                     </TableCell>
                     <TableCell>
-                      <Badge variant={statusBadgeVariant(item.status)}>{statusLabel(item.status)}</Badge>
+                      <Badge variant={statusBadgeVariant(item.status)}>
+                        {formResultStatusLabel(item.status, item.formKind)}
+                      </Badge>
                     </TableCell>
                     <TableCell className="max-w-xs truncate text-xs text-muted-foreground">
                       {buildSubmissionAnswerRows(item)
@@ -868,9 +817,18 @@ export default function FormResultsBoardPage() {
                   </span>
                   <div className="flex flex-wrap items-center gap-1.5">
                     <Badge variant="secondary">{activeItem.formKindLabel}</Badge>
-                    <Badge variant={statusBadgeVariant(activeItem.status)}>{statusLabel(activeItem.status)}</Badge>
+                    <Badge variant={statusBadgeVariant(activeItem.status)}>
+                      {formResultStatusLabel(activeItem.status, activeItem.formKind)}
+                    </Badge>
                     <Badge variant="outline" className="capitalize">{activeItem.source}</Badge>
                     {activeItem.branchLabel ? <Badge variant="outline">{activeItem.branchLabel}</Badge> : null}
+                    {activeItem.isDetailing && activeItem.bookingId ? (
+                      <Button type="button" size="sm" variant="outline" asChild>
+                        <Link to="/operations/bookings">
+                          <ExternalLink className="size-3.5" /> Open Detailing Schedule →
+                        </Link>
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
                 <DialogTitle className="mt-2 text-xl">{activeItem.formName}</DialogTitle>
@@ -902,21 +860,31 @@ export default function FormResultsBoardPage() {
               ) : (
                 <div className="frb-owner-bar">
                   <div className="flex flex-wrap items-center gap-2">
-                    {activeItem.recordType === 'submission' ? (
-                      <div className="flex items-center gap-2">
-                        <Label htmlFor="frb-status-select" className="text-xs font-semibold uppercase tracking-wide">
-                          Lane
-                        </Label>
-                        <NamedSelect
-                          id="frb-status-select"
-                          disabled={saving}
-                          value={activeItem.status}
-                          onChange={(nextStatus) => handleStatusUpdate(activeItem, nextStatus)}
-                          className="h-9 w-36 xl:h-9"
-                          options={SUBMISSION_STATUSES.map((s) => ({ value: s.value, label: s.label }))}
-                        />
-                      </div>
-                    ) : null}
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="frb-status-select" className="text-xs font-semibold uppercase tracking-wide">
+                        Lane
+                      </Label>
+                      <NamedSelect
+                        id="frb-status-select"
+                        disabled={saving}
+                        value={activeItem.status}
+                        onChange={(nextStatus) => handleStatusUpdate(activeItem, nextStatus)}
+                        className="h-9 w-48 xl:h-9"
+                        options={
+                          activeItem.isDetailing
+                            ? [
+                                activeItem.status,
+                                ...(BOOKING_STATUS_TRANSITIONS[activeItem.status] || []),
+                              ]
+                                .filter((v, i, arr) => v && v !== 'for_payment' && arr.indexOf(v) === i)
+                                .map((s) => ({
+                                  value: s,
+                                  label: formResultStatusLabel(s, 'detailing'),
+                                }))
+                            : SUBMISSION_STATUSES.map((s) => ({ value: s.value, label: s.label }))
+                        }
+                      />
+                    </div>
                     <Button
                       type="button"
                       size="sm"
@@ -1061,6 +1029,91 @@ export default function FormResultsBoardPage() {
           ) : null}
         </DialogContent>
       </Dialog>
+    </>
+  )
+
+  const headerMeta = (
+    <span className="inline-flex items-center gap-1.5">
+      <span className="font-semibold text-foreground tabular-nums">{filteredItems.length}</span>
+      <span>showing of {allItems.length} permanent responses</span>
+      {!isOwner ? (
+        <span className="inline-flex items-center gap-1 text-muted-foreground">
+          · <Lock className="size-3" aria-hidden /> Owner-only edit/delete
+        </span>
+      ) : null}
+    </span>
+  )
+
+  const headerActions = (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="min-h-11"
+        onClick={() => copyPermanentUrl(permanentUrlPath, 'page')}
+      >
+        {copiedKey === 'page' ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+        Copy permanent link
+      </Button>
+      {embedded ? (
+        <Button type="button" variant="outline" size="sm" className="min-h-11" asChild>
+          <Link to={permanentUrlPath}>
+            <ExternalLink className="size-3.5" />
+            Full results page
+          </Link>
+        </Button>
+      ) : null}
+      {targetScope.form?.slug && targetScope.form?.public_enabled && targetScope.form?.status === 'published' ? (
+        <Button type="button" variant="outline" size="sm" className="min-h-11" asChild>
+          <a href={shareFormUrl(targetScope.form.slug)} target="_blank" rel="noreferrer">
+            <ExternalLink className="size-3.5" />
+            Open public form
+          </a>
+        </Button>
+      ) : null}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="min-h-11"
+        disabled={refreshing}
+        onClick={() => load({ silent: true })}
+      >
+        <RefreshCw className={`size-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+        Refresh
+      </Button>
+    </div>
+  )
+
+  if (embedded) {
+    return (
+      <div className="frb-page frb-embedded space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="text-sm text-muted-foreground">{headerMeta}</div>
+          {headerActions}
+        </div>
+        {boardContent}
+      </div>
+    )
+  }
+
+  return (
+    <OpsPageShell
+      className="frb-page"
+      eyebrow="Permanent results archive"
+      title={pageTitle}
+      description={pageDescription}
+      icon={ClipboardList}
+      breadcrumbs={[
+        { label: 'Planner & Forms', to: '/operations/planning?tab=forms' },
+        ...(formSlug ? [{ label: 'All Results', to: '/operations/forms/results' }] : []),
+        { label: formSlug ? targetScope.label : 'Forms Results Board' },
+      ]}
+      meta={headerMeta}
+      actions={headerActions}
+    >
+      {boardContent}
     </OpsPageShell>
   )
 }
@@ -1126,6 +1179,13 @@ function FullFormAnswerView({ item, copiedKey, onCopyLink }) {
           ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
+          {item.isDetailing ? (
+            <Button type="button" size="sm" variant="default" asChild>
+              <Link to="/operations/bookings">
+                <ExternalLink className="size-3.5" /> Open Detailing Schedule →
+              </Link>
+            </Button>
+          ) : null}
           <Button type="button" size="sm" variant="outline" onClick={onCopyLink}>
             {copiedKey === 'modal' ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
             Permanent form results link

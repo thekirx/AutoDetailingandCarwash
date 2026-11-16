@@ -25,12 +25,65 @@ function row(partial) {
     channel: 'both',
     audience: 'customer',
     enabled: true,
+    allow_multipart: false,
     tokens: BOOKING_TOKENS,
     description: '',
     title: '',
     body: '',
     sms_body: '',
     ...partial,
+  }
+}
+
+const TRIGGER_META_BY_KEY = {
+  'booking.pending.customer': { trigger_event: 'Booking submitted (/book or detailing form)', trigger_route: '/account', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS)' },
+  'booking.confirmed.customer': { trigger_event: 'Staff confirms booking', trigger_route: '/account', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS)' },
+  'booking.waiting.customer': { trigger_event: 'Car checked into bay queue', trigger_route: '/account/queue', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS)' },
+  'booking.in_progress.customer': { trigger_event: 'Detailing / wash started', trigger_route: '/account/queue', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS)' },
+  'booking.final_checking.customer': { trigger_event: 'Bay marks Final QC', trigger_route: '/account/queue', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS)' },
+  'booking.for_payment.customer': { trigger_event: 'Bay sends car to POS cashier', trigger_route: '/account/queue', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS)' },
+  'booking.completed.customer': { trigger_event: 'POS payment completed', trigger_route: '/account', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS)' },
+  'booking.cancelled.customer': { trigger_event: 'Booking cancelled', trigger_route: '/account', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS)' },
+  'booking.photos_ready.customer': { trigger_event: 'After-photos uploaded for booking', trigger_route: '/account', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS)' },
+  'birthday.greeting': { trigger_event: 'Daily 08:00 Manila birthday scan', trigger_route: '/account/vouchers', recipient_summary: 'Birthday customers (Push, Inbox & BusyBee SMS)' },
+  'lifecycle.welcome_app': { trigger_event: 'First customer account signup', trigger_route: '/account', recipient_summary: 'New customer (BusyBee SMS)' },
+  'lifecycle.loyalty_claim': { trigger_event: 'Loyalty reward redeemed at POS', trigger_route: '/account/vouchers', recipient_summary: 'Customer (BusyBee SMS)' },
+  'lifecycle.rate_visit': { trigger_event: '15 mins after completed visit', trigger_route: '/account', recipient_summary: 'Customer (BusyBee SMS)' },
+  'ops.crew_assigned': { trigger_event: 'Crew member assigned to queue car', trigger_route: '/operations/my-tasks', recipient_summary: 'Assigned Detailer / Staff / TL (In-App + Push)' },
+  'ops.sheet_submitted': { trigger_event: 'Branch daily sheet submitted', trigger_route: '/operations/finance?tab=sheets', recipient_summary: 'BossMich & ASA Finance (In-App + Push)' },
+  'ops.sheet_reviewed': { trigger_event: 'Owner approves or returns daily sheet', trigger_route: '/operations/pos?tab=sheet', recipient_summary: 'Submitting Branch Admin (In-App + Push)' },
+  'ops.cash_advance_submitted': { trigger_event: 'Employee requests cash advance', trigger_route: '/operations/pos?tab=sheet', recipient_summary: 'Branch Admin (In-App + Push)' },
+  'ops.cash_advance_approved': { trigger_event: 'Cash advance approved with code', trigger_route: '/operations/pos?tab=sheet', recipient_summary: 'Branch Admin (In-App + Push)' },
+  'ops.attendance_location_alert': { trigger_event: 'Blocked GPS / tampered clock-in attempt', trigger_route: '/operations/attendance', recipient_summary: 'BossMich, ASA & Branch Admin (Push)' },
+  'ops.booking_reschedule': { trigger_event: 'Customer requests booking reschedule', trigger_route: '/operations/bookings', recipient_summary: 'Admin, TL, Sales, ASA & BossMich (In-App + Push)' },
+  'ops.complaint': { trigger_event: 'Customer complaint form submitted', trigger_route: '/operations/forms/results', recipient_summary: 'BossMich, ASA & Branch Admin (In-App + Push)' },
+  'ops.review': { trigger_event: 'Customer visit feedback submitted', trigger_route: '/operations/forms/results', recipient_summary: 'BossMich, ASA, Ops Lead & Admin (In-App + Push)' },
+  'reminder.paint_maintenance': { trigger_event: '6-month Ceramic/PPF maintenance schedule', trigger_route: '/book', recipient_summary: 'Detailing customers (Push & BusyBee SMS)' },
+}
+
+export function templateTriggerMeta(sys) {
+  if (!sys) return { trigger_event: 'System trigger', trigger_route: '/operations', recipient_summary: 'Targeted users' }
+  if (TRIGGER_META_BY_KEY[sys.key]) return TRIGGER_META_BY_KEY[sys.key]
+  if (sys.key?.startsWith('lifecycle.visit_reward_')) {
+    return {
+      trigger_event: 'Completed visit hits loyalty milestone',
+      trigger_route: '/account/vouchers',
+      recipient_summary: 'Customer (BusyBee SMS)',
+    }
+  }
+  if (sys.audience === 'ops' || sys.key?.endsWith('.ops')) {
+    const isPos = sys.key === 'booking.for_payment.ops'
+    const isBookings = sys.key === 'booking.pending.ops' || sys.key === 'booking.confirmed.ops' || sys.key === 'booking.cancelled.ops'
+    return {
+      trigger_event: sys.description || 'Queue / booking update',
+      trigger_route: isPos ? '/operations/pos' : isBookings ? '/operations/bookings' : '/operations/queue',
+      recipient_summary: 'Branch ops crew & Super Admin (In-App + Push)',
+    }
+  }
+  return {
+    trigger_event: sys.description || 'Automated notification trigger',
+    trigger_route: '/account',
+    recipient_summary: sys.audience === 'ops' ? 'Operations staff' : 'Customers',
   }
 }
 
@@ -299,6 +352,110 @@ export const SYSTEM_TEMPLATES = [
     body: '{name} @ {branch}',
     display_order: 250,
   }),
+  row({
+    key: 'ops.crew_assigned',
+    category: 'ops_status',
+    audience: 'ops',
+    channel: 'push',
+    label: 'Ops · Crew assigned to car',
+    description: 'Detailer / crew push when assigned to a bay ticket',
+    kind: 'crew_assigned',
+    tokens: ['plate', 'service', 'branch'],
+    title: 'New car assigned',
+    body: '{plate} · {service} @ {branch}',
+    display_order: 185,
+  }),
+  row({
+    key: 'ops.sheet_submitted',
+    category: 'ops_forms',
+    audience: 'ops',
+    channel: 'push',
+    label: 'Ops · Daily sheet submitted',
+    description: 'SA & Finance ASA push when a branch submits the Daily Sheet',
+    kind: 'sheet_submitted',
+    tokens: ['name', 'branch', 'when'],
+    title: 'Daily sheet to approve · {branch}',
+    body: '{name} submitted {when}. Approve or return in Finance.',
+    display_order: 252,
+  }),
+  row({
+    key: 'ops.sheet_reviewed',
+    category: 'ops_forms',
+    audience: 'ops',
+    channel: 'push',
+    label: 'Ops · Daily sheet approved / returned',
+    description: 'Branch Admin push when Owner reviews their Daily Sheet',
+    kind: 'sheet_reviewed',
+    tokens: ['branch', 'when'],
+    title: 'Daily sheet reviewed · {branch}',
+    body: '{when}: Daily sheet status updated — check POS sheet tab.',
+    display_order: 254,
+  }),
+  row({
+    key: 'ops.cash_advance_submitted',
+    category: 'ops_forms',
+    audience: 'ops',
+    channel: 'push',
+    label: 'Ops · Cash advance request',
+    description: 'Branch Admin push when an employee submits a cash advance request',
+    kind: 'cash_advance_submitted',
+    tokens: ['name', 'branch'],
+    title: 'Cash advance request',
+    body: '{name} requested a cash advance @ {branch}.',
+    display_order: 255,
+  }),
+  row({
+    key: 'ops.cash_advance_approved',
+    category: 'ops_forms',
+    audience: 'ops',
+    channel: 'push',
+    label: 'Ops · Cash advance approved',
+    description: 'Branch Admin push with release code when cash advance is approved',
+    kind: 'cash_advance_approved',
+    tokens: ['name', 'branch', 'code'],
+    title: 'Cash advance approved',
+    body: '{name} @ {branch} · Code {code}. Enter on Daily Sheet to release cash.',
+    display_order: 256,
+  }),
+  row({
+    key: 'ops.attendance_location_alert',
+    category: 'ops_forms',
+    audience: 'ops',
+    channel: 'push',
+    label: 'Ops · Tampered GPS clock-in alert',
+    description: 'Security push when staff tries to clock in with spoofed/mock GPS',
+    kind: 'attendance_location_alert',
+    tokens: ['name', 'branch'],
+    title: 'Time-in blocked · {branch}',
+    body: '{name} tried to time in with a faked or tampered location. Review on Attendance.',
+    display_order: 257,
+  }),
+  row({
+    key: 'ops.booking_reschedule',
+    category: 'ops_forms',
+    audience: 'ops',
+    channel: 'push',
+    label: 'Ops · Customer reschedule request',
+    description: 'Ops push when a customer asks to move their booking date',
+    kind: 'booking_reschedule',
+    tokens: ['name', 'plate'],
+    title: 'Customer wants a new date',
+    body: '{name} · {plate} asked to reschedule. Call them to confirm a new time.',
+    display_order: 258,
+  }),
+  row({
+    key: 'ops.review',
+    category: 'ops_forms',
+    audience: 'ops',
+    channel: 'push',
+    label: 'Ops · Customer visit review',
+    description: 'Ops push when a customer submits a visit rating/review',
+    kind: 'review',
+    tokens: ['name', 'branch'],
+    title: 'New customer review',
+    body: '{name} @ {branch} submitted visit feedback.',
+    display_order: 259,
+  }),
 
   row({
     key: 'reminder.paint_maintenance',
@@ -328,9 +485,19 @@ export function mergeNotificationTemplates(dbRows = []) {
   const byKey = new Map((dbRows || []).map((row) => [row.key, row]))
   return SYSTEM_TEMPLATES.map((sys) => {
     const db = byKey.get(sys.key)
-    if (!db) return { ...sys }
+    const meta = templateTriggerMeta(sys)
+    const defaults = {
+      ...meta,
+      default_title: sys.title,
+      default_body: sys.body,
+      default_sms_body: sys.sms_body,
+      has_override: Boolean(db),
+      allow_multipart: Boolean(db?.allow_multipart),
+    }
+    if (!db) return { ...sys, ...defaults }
     return {
       ...sys,
+      ...defaults,
       title: db.title != null && String(db.title).trim() !== '' ? String(db.title) : sys.title,
       body: db.body != null && String(db.body).trim() !== '' ? String(db.body) : sys.body,
       sms_body: db.sms_body != null && String(db.sms_body).trim() !== '' ? String(db.sms_body) : sys.sms_body,

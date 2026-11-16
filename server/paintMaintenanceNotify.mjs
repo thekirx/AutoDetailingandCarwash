@@ -2,7 +2,7 @@
  * Shared paint-maintenance reminder send (cron + ops manual send).
  */
 import { busybeeSendSms } from './busybee.mjs'
-import { sendWebPushToUsers } from './webPush.mjs'
+import { deliverUserNotifications, sendWebPushToUsers } from './webPush.mjs'
 import { renderNotificationMessage } from '../src/lib/notificationCopy.js'
 import { PAINT_MAINTENANCE_SLUG } from '../src/lib/paintMaintenance.js'
 
@@ -89,18 +89,18 @@ export async function sendPaintMaintenanceReminder({
 
   if (channel === 'push' || channel === 'both') {
     if (row.customer_id) {
-      try {
-        result.push = await sendWebPushToUsers({
-          userIds: [row.customer_id],
-          title,
-          body: message,
-          url: '/account/book?service=paint-maintenance',
-          tag: `maintenance-${row.id}-${row.next_due_at}`,
-          kind: 'maintenance_reminder',
-        })
-      } catch (err) {
-        result.push = { ok: false, error: String(err?.message || err) }
-      }
+      const delivered = await deliverUserNotifications(db, {
+        userIds: [row.customer_id],
+        kind: 'maintenance_reminder',
+        title,
+        body: message,
+        url: '/account/book?service=paint-maintenance',
+        tag: `maintenance-${row.id}-${row.next_due_at}`,
+        inbox: true,
+        checkCustomerPrefs: true,
+        sendPush: sendWebPushToUsers,
+      })
+      result.push = delivered.skipped ? { ok: false, status: 'muted' } : delivered.push
     } else {
       result.push = { ok: false, status: 'no_customer_id' }
     }

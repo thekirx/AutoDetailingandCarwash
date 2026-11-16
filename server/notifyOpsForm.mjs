@@ -2,13 +2,14 @@
  * Ops form (complaint) push + inbox fan-out.
  * Targets: Super Admin + ASA (all) + Branch Admin for the complaint branch only (none when unbranched).
  */
+import { permanentFormResultsPath } from '../src/lib/formResults.js'
 import { applyTemplateText } from '../src/lib/notificationTemplates.js'
 import { GLOBAL_NOTIFY_ROLES, NOTIFY_EVENTS } from '../src/lib/notifyRouting.js'
 import { loadTemplateMap, templateEnabled } from './notificationTemplatesDb.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
 import { notifyRecipients, resolveStaffRecipients } from './webPush.mjs'
 
-export function buildComplaintNotifyCopy({ formName, payload = {}, submissionId, template = null }) {
+export function buildComplaintNotifyCopy({ formName, formSlug = '', payload = {}, submissionId, template = null }) {
   const who = payload.customer_name || payload.name || 'Customer'
   const branch = String(payload.branch || payload.branch_slug || '').trim() || 'unspecified'
   const category = payload.category ? ` · ${payload.category}` : ''
@@ -17,7 +18,7 @@ export function buildComplaintNotifyCopy({ formName, payload = {}, submissionId,
     kind: 'ops_complaint',
     title: applyTemplateText(template?.title, vars, 'New complaint'),
     body: applyTemplateText(template?.body, vars, `${who} @ ${branch}${category}`),
-    url: '/operations/planning?tab=forms',
+    url: permanentFormResultsPath(formSlug),
     tag: submissionId ? `ops-complaint-${submissionId}` : `ops-complaint-${Date.now()}`,
     formName: formName || 'Customer Complaints',
   }
@@ -28,6 +29,7 @@ export function buildComplaintNotifyCopy({ formName, payload = {}, submissionId,
  */
 export async function notifyOpsFormComplaint({
   formName,
+  formSlug = '',
   payload = {},
   submissionId,
   branch = null,
@@ -52,6 +54,7 @@ export async function notifyOpsFormComplaint({
   }
   const copy = buildComplaintNotifyCopy({
     formName,
+    formSlug,
     payload,
     submissionId,
     template: templates?.['ops.complaint'],
@@ -59,7 +62,8 @@ export async function notifyOpsFormComplaint({
   try {
     const rule = NOTIFY_EVENTS.complaint
     const roles = resolvedBranch ? rule.roles : rule.roles.filter((r) => GLOBAL_NOTIFY_ROLES.includes(r))
-    const recipients = await resolveStaffRecipients(db, { ...rule, roles, branch: resolvedBranch })
+    const urls = [...new Set([copy.url, ...(rule.urls || [])].filter(Boolean))]
+    const recipients = await resolveStaffRecipients(db, { ...rule, roles, urls, branch: resolvedBranch })
     return { ...(await notifyRecipients(db, recipients, copy)), branch: resolvedBranch }
   } catch (err) {
     return { error: String(err.message || err), targets: 0, branch: resolvedBranch }

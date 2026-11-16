@@ -38,11 +38,3 @@ export function updateFormSubmissionAsOwner({ id, status, payload, respondent_la
 export function deleteFormSubmissionAsOwner(id) {
   return callFormsResultsApi({ action: 'delete-form-submission', id })
 }
-
-export function updateEventRegistrationAsOwner({ id, name, phone, email }) {
-  return callFormsResultsApi({ action: 'update-event-registration', id, name, phone, email })
-}
-
-export function deleteEventRegistrationAsOwner(id) {
-  return callFormsResultsApi({ action: 'delete-event-registration', id })
-}

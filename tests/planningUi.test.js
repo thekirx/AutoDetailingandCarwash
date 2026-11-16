@@ -114,11 +114,15 @@ assert.match(
 
 const branded = readFileSync(join(root, 'src/components/BrandedOpsForm.jsx'), 'utf8')
 const publicForm = readFileSync(join(root, 'src/pages/PublicFormPage.jsx'), 'utf8')
+const serverOpsForm = readFileSync(join(root, 'server/publicOpsForm.mjs'), 'utf8')
+const publicInquiryClient = readFileSync(join(root, 'src/lib/publicInquiryApi.js'), 'utf8')
 assert.match(branded, /hakum-form-shell/)
 assert.match(branded, /hakum-form-logo/)
 assert.match(branded, /Customer preview/)
 assert.match(publicForm, /BrandedOpsForm/)
-assert.match(publicForm, /notify-ops-form/)
+assert.match(publicForm, /submitPublicOpsFormViaApi/)
+assert.match(publicInquiryClient, /\/api\/public-inquiry/)
+assert.match(serverOpsForm, /notifyOpsFormComplaint/)
 assert.match(forms, /setPreviewForm/)
 assert.match(forms, /BrandedOpsForm/)
 

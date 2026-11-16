@@ -2,13 +2,14 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import { describe, it } from 'node:test'
 import {
+  DETAILING_RESULT_COLUMNS,
   FORM_RESULT_KIND_TABS,
+  bookingStatusToSubmissionStatus,
   buildSubmissionAnswerRows,
-  eventQuickResultsSlug,
   filterFormResultItems,
+  formResultStatusLabel,
   groupResultsByStatus,
   matchesDateRange,
-  normalizeEventRegistrationItem,
   normalizeSubmissionItem,
   permanentFormResultsPath,
   resolveFormResultTarget,
@@ -19,14 +20,14 @@ import { opsRouteKeyFromPath } from '../src/auth/authRedirect.js'
 
 const sampleForms = [
   {
-    id: 'form-event-1',
-    name: 'Sunday Midnight Meet RSVP',
-    kind: 'event',
-    slug: 'sunday-midnight-meet',
-    event_id: 'ev-1',
+    id: 'form-detailing-1',
+    name: 'Detailing Inquiry',
+    kind: 'detailing',
+    slug: 'detailing-inquiry',
     fields: [
-      { key: 'full_name', label: 'Full name', type: 'text', required: true },
+      { key: 'customer_name', label: 'Full name', type: 'text', required: true },
       { key: 'plate', label: 'Plate number', type: 'text', required: true },
+      { key: 'service', label: 'Detailing service', type: 'select', required: true, options: ['Ceramic Coating', 'PPF'] },
       { key: 'branch', label: 'Preferred branch', type: 'branch', required: true },
       { key: 'notes', label: 'Build notes', type: 'textarea', required: false },
     ],
@@ -53,14 +54,6 @@ const sampleForms = [
 const sampleEvents = [
   {
     id: 'ev-1',
-    title: 'Sunday Midnight Meet',
-    slug: 'sunday-meet',
-    branch: 'bacoor',
-    starts_at: '2026-11-22T18:00:00.000Z',
-    form_id: 'form-event-1',
-  },
-  {
-    id: 'ev-2',
     title: 'Ceramic Demo Day',
     slug: 'ceramic-demo-day',
     branch: 'batangas',
@@ -70,46 +63,29 @@ const sampleEvents = [
 ]
 
 describe('form results board helpers', () => {
-  it('exposes sub-tabs for All forms, Events RSVP, and every form kind', () => {
+  it('exposes sub-tabs for All forms and every active form kind without Events RSVP', () => {
     const tabIds = FORM_RESULT_KIND_TABS.map((t) => t.id)
     assert.equal(tabIds[0], 'all')
-    assert.equal(tabIds[1], 'event')
+    assert.equal(tabIds.includes('event'), false, 'Events RSVP must be retired')
     for (const kind of FORM_KINDS) {
       assert.ok(tabIds.includes(kind.value), `missing sub-tab for ${kind.value}`)
     }
   })
 
-  it('builds permanent form results routes and resolves attached forms and quick-RSVP events', () => {
+  it('builds permanent form results routes and resolves form slugs', () => {
     assert.equal(permanentFormResultsPath(), '/operations/forms/results')
     assert.equal(
-      permanentFormResultsPath('sunday-midnight-meet'),
-      '/operations/forms/results/sunday-midnight-meet',
+      permanentFormResultsPath('detailing-inquiry'),
+      '/operations/forms/results/detailing-inquiry',
     )
-    const quickSlug = eventQuickResultsSlug(sampleEvents[1])
-    assert.equal(quickSlug, 'event-ceramic-demo-day')
 
-    const byForm = resolveFormResultTarget('sunday-midnight-meet', {
+    const byForm = resolveFormResultTarget('detailing-inquiry', {
       forms: sampleForms,
       events: sampleEvents,
     })
-    assert.equal(byForm.formKey, 'sunday-midnight-meet')
-    assert.equal(byForm.kindTab, 'event')
-    assert.equal(byForm.event?.id, 'ev-1')
-
-    const byAttachedEvent = resolveFormResultTarget('event-sunday-meet', {
-      forms: sampleForms,
-      events: sampleEvents,
-    })
-    assert.equal(byAttachedEvent.formKey, 'sunday-midnight-meet')
-    assert.equal(byAttachedEvent.kindTab, 'event')
-
-    const byQuickEvent = resolveFormResultTarget(quickSlug, {
-      forms: sampleForms,
-      events: sampleEvents,
-    })
-    assert.equal(byQuickEvent.formKey, 'event-ceramic-demo-day')
-    assert.equal(byQuickEvent.kindTab, 'event')
-    assert.equal(byQuickEvent.event?.id, 'ev-2')
+    assert.equal(byForm.formKey, 'detailing-inquiry')
+    assert.equal(byForm.kindTab, 'detailing')
+    assert.equal(byForm.form?.id, 'form-detailing-1')
   })
 
   it('matches date presets and custom local-day From/To date ranges', () => {
@@ -143,44 +119,55 @@ describe('form results board helpers', () => {
     )
   })
 
-  it('normalizes submissions + quick registrations, filters by kind/search/date/branch, and groups into board lanes', () => {
+  it('maps detailing submissions directly into Booking Placeholder and mirrors Detailing Schedule lanes', () => {
     const formsById = new Map(sampleForms.map((f) => [f.id, f]))
-    const eventsById = new Map(sampleEvents.map((e) => [e.id, e]))
-    const eventsByFormId = new Map(sampleEvents.filter((e) => e.form_id).map((e) => [e.form_id, e]))
 
-    const item1 = normalizeSubmissionItem(
+    const detNew = normalizeSubmissionItem(
       {
         id: 'sub-1',
-        form_id: 'form-event-1',
-        status: 'in_review',
+        form_id: 'form-detailing-1',
+        status: 'new',
         source: 'public',
         respondent_label: 'Carlo Mendoza',
         created_at: '2026-11-15T06:00:00.000Z',
         calendar_at: '2026-11-22T18:00:00.000Z',
+        booking_id: 'bk-1',
+        linked_booking: { id: 'bk-1', status: 'pending', branch: 'bacoor' },
         payload: {
-          full_name: 'Carlo Mendoza',
+          customer_name: 'Carlo Mendoza',
           plate: 'ABC-1234',
+          service: 'Ceramic Coating',
           branch: 'bacoor',
           notes: 'Supra MK5 midnight silver',
           utm_source: 'fb',
         },
       },
-      { formsById, eventsById, eventsByFormId },
+      { formsById },
     )
-    const item2 = normalizeEventRegistrationItem(
-      {
-        id: 'reg-1',
-        event_id: 'ev-2',
-        name: 'Jules Santos',
-        phone: '09171234567',
-        email: 'jules@example.com',
-        created_at: '2026-11-01T08:00:00.000Z',
-      },
-      { eventsById },
-    )
-    const item3 = normalizeSubmissionItem(
+    assert.equal(detNew.status, 'pending')
+    assert.equal(detNew.submissionStatus, 'new')
+    assert.equal(formResultStatusLabel(detNew.status, detNew.formKind), 'Booking Placeholder')
+
+    const detProgress = normalizeSubmissionItem(
       {
         id: 'sub-2',
+        form_id: 'form-detailing-1',
+        status: 'in_review',
+        source: 'public',
+        respondent_label: 'Marco Santos',
+        created_at: '2026-11-15T07:00:00.000Z',
+        linked_booking: { id: 'bk-2', status: 'in_progress', branch: 'batangas' },
+        payload: { customer_name: 'Marco Santos', plate: 'XYZ-888', branch: 'batangas' },
+      },
+      { formsById },
+    )
+    assert.equal(detProgress.status, 'in_progress')
+    assert.equal(detProgress.submissionStatus, 'in_review')
+    assert.equal(bookingStatusToSubmissionStatus('completed'), 'resolved')
+
+    const fbResolved = normalizeSubmissionItem(
+      {
+        id: 'sub-3',
         form_id: 'form-feedback-1',
         status: 'resolved',
         source: 'staff',
@@ -188,22 +175,23 @@ describe('form results board helpers', () => {
         created_at: '2026-11-14T10:00:00.000Z',
         payload: { customer_name: 'Ana Reyes', rating: '5', branch: 'dasma' },
       },
-      { formsById, eventsById, eventsByFormId },
+      { formsById },
     )
 
-    const all = [item1, item2, item3]
-    const eventOnly = filterFormResultItems(all, { kindTab: 'event' })
-    assert.equal(eventOnly.length, 2)
+    const all = [detNew, detProgress, fbResolved]
+    const detailingOnly = filterFormResultItems(all, { kindTab: 'detailing' })
+    assert.equal(detailingOnly.length, 2)
+
+    const detailingCols = groupResultsByStatus(detailingOnly, { mode: 'detailing' })
+    assert.deepEqual(
+      detailingCols.map((c) => c.id),
+      DETAILING_RESULT_COLUMNS.map((c) => c.id),
+    )
+    assert.equal(detailingCols.find((c) => c.id === 'pending')?.items.length, 1)
+    assert.equal(detailingCols.find((c) => c.id === 'in_progress')?.items.length, 1)
 
     const searchSupra = filterFormResultItems(all, { query: 'supra abc-1234' })
     assert.deepEqual(searchSupra.map((x) => x.id), ['sub-1'])
-
-    const calendarRange = filterFormResultItems(all, {
-      dateField: 'calendar',
-      dateFrom: '2026-11-24',
-      dateTo: '2026-11-26',
-    })
-    assert.deepEqual(calendarRange.map((x) => x.id), ['reg-1'])
 
     const lanes = groupResultsByStatus(all)
     assert.deepEqual(
@@ -216,12 +204,13 @@ describe('form results board helpers', () => {
       ],
     )
 
-    const fullRows = buildSubmissionAnswerRows(item1)
+    const fullRows = buildSubmissionAnswerRows(detNew)
     assert.deepEqual(
       fullRows.map((r) => [r.key, r.displayValue, r.required]),
       [
-        ['full_name', 'Carlo Mendoza', true],
+        ['customer_name', 'Carlo Mendoza', true],
         ['plate', 'ABC-1234', true],
+        ['service', 'Ceramic Coating', true],
         ['branch', 'bacoor', true],
         ['notes', 'Supra MK5 midnight silver', false],
         ['utm_source', 'fb', false],
@@ -253,18 +242,21 @@ describe('form results RBAC and route wiring', () => {
     assert.equal(opsRouteKeyFromPath('/operations/forms/results/sunday-meet'), 'planning')
   })
 
-  it('enforces ownerOnly on server mutations and wires permanent links across planning and events', () => {
-    const serverSrc = readFileSync(new URL('../server/provisionStaff.mjs', import.meta.url), 'utf8')
+  it('enforces ownerOnly on server mutations, retires Events RSVP, and syncs detailing bookings', () => {
+    const gatewaySrc = readFileSync(new URL('../server/provisionStaff.mjs', import.meta.url), 'utf8')
+    assert.match(gatewaySrc, /handleFormResultsAction/)
+    const serverSrc = readFileSync(new URL('../server/formResultsStore.mjs', import.meta.url), 'utf8')
     for (const action of [
       "action === 'list-form-results'",
       "action === 'update-form-submission'",
       "action === 'delete-form-submission'",
-      "action === 'update-event-registration'",
-      "action === 'delete-event-registration'",
     ]) {
       assert.ok(serverSrc.includes(action), `missing server action ${action}`)
     }
+    assert.match(serverSrc, /status:\s*410/)
     assert.match(serverSrc, /if \(ownerOnly\) \{[\s\S]*staff\.role !== SUPER/)
+    assert.match(serverSrc, /parseOptionalIsoDate/)
+    assert.match(serverSrc, /buildBookingSyncPatch/)
 
     const appSrc = readFileSync(new URL('../src/App.jsx', import.meta.url), 'utf8')
     assert.ok(appSrc.includes('path="forms/results"'))
@@ -272,6 +264,8 @@ describe('form results RBAC and route wiring', () => {
 
     for (const rel of [
       '../src/pages/FormResultsBoardPage.jsx',
+      '../src/pages/PlanningBoardPage.jsx',
+      '../src/pages/InquiriesPage.jsx',
       '../src/pages/planning/PlanningFormsSmartPanel.jsx',
       '../src/pages/planning/PlanningPart6Panels.jsx',
       '../src/pages/ContentAdminPage.jsx',
@@ -280,8 +274,8 @@ describe('form results RBAC and route wiring', () => {
     ]) {
       const src = readFileSync(new URL(rel, import.meta.url), 'utf8')
       assert.ok(
-        src.includes('forms/results') || src.includes('permanentFormResultsPath'),
-        `${rel} should link to permanent form results`,
+        src.includes('forms/results') || src.includes('permanentFormResultsPath') || src.includes('FormResultsBoardPage'),
+        `${rel} should wire Form Results`,
       )
     }
   })

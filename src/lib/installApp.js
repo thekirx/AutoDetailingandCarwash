@@ -23,10 +23,12 @@ export function isChromiumBrowser() {
  */
 export function iosPushBlocked({
   ua = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '',
+  platform = typeof navigator !== 'undefined' ? navigator.platform || '' : '',
+  maxTouchPoints = typeof navigator !== 'undefined' ? navigator.maxTouchPoints || 0 : 0,
   standalone = typeof window !== 'undefined' ? isStandaloneDisplay() : false,
   hasChrome = typeof window !== 'undefined' ? Boolean(window.chrome) : false,
 } = {}) {
-  if (!isIosUa(ua) || standalone) return false
+  if (!isIosUa(ua, platform, maxTouchPoints) || standalone) return false
   if (hasChrome) return false
   return true
 }

@@ -38,6 +38,7 @@ import { notifyOpsEvent } from '@/lib/opsEventNotify'
 import { listBranches } from '@/lib/adminApi'
 import { permanentFormResultsPath } from '@/lib/formResults'
 import { updateFormSubmissionAsOwner } from '@/lib/formResultsApi'
+import { submitPublicOpsFormViaApi } from '@/lib/publicInquiryApi'
 import {
   FIELD_TYPES,
   FORM_KINDS,
@@ -61,7 +62,7 @@ import {
 import { toast } from 'sonner'
 import { enrichCashAdvancePayload } from '@/lib/payroll'
 
-const ACTIVE_FORM_KINDS = FORM_KINDS.filter((k) => k.value !== 'event')
+const ACTIVE_FORM_KINDS = FORM_KINDS
 const FIELD_TYPE_LABELS = new Map(FIELD_TYPES.map((t) => [t.value, t.label]))
 
 function fieldSignature(fields) {
@@ -507,6 +508,33 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, resultsId }) {
       if (cardErr) return toast.error(cardErr.message)
       planCardId = card.id
     }
+    if (activeForm.kind === 'detailing' && activeForm.slug) {
+      const { data: sessionData } = await supabase.auth.getSession()
+      const accessToken = sessionData?.session?.access_token || null
+      const res = await submitPublicOpsFormViaApi({
+        slug: activeForm.slug,
+        payload: submitPayload,
+        calendarAt,
+        respondentLabel:
+          submitPayload.customer_name || submitPayload.name || submitPayload.employee_name || null,
+        source: 'staff',
+        accessToken,
+      })
+      if (!res.ok) {
+        return toast.error(res.error || 'Could not save detailing request')
+      }
+      if (planCardId && res.id) {
+        await supabase.from('ops_form_submissions').update({ plan_card_id: planCardId }).eq('id', res.id)
+      }
+      toast.success(
+        planCardId
+          ? 'Submitted to Detailing Schedule (Booking Placeholder) & Tasks'
+          : 'Submitted to Detailing Schedule (Booking Placeholder)',
+      )
+      setPayload({})
+      load()
+      return
+    }
     const { data: inserted, error } = await supabase
       .from('ops_form_submissions')
       .insert({
@@ -554,7 +582,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, resultsId }) {
       return
     }
     try {
-      await updateFormSubmissionAsOwner(id, { status })
+      await updateFormSubmissionAsOwner({ id, status })
       toast.success(`Marked ${status}`)
       load()
     } catch (err) {
@@ -684,6 +712,13 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, resultsId }) {
                         <ClipboardList className="size-3.5" /> Results board
                       </Link>
                     </Button>
+                    {selectedTemplate?.kind === 'detailing' ? (
+                      <Button size="sm" variant="default" className="cursor-pointer" asChild>
+                        <Link to="/operations/bookings">
+                          <ExternalLink className="size-3.5" /> Detailing Schedule
+                        </Link>
+                      </Button>
+                    ) : null}
                     {selectedTemplate?.public_enabled && selectedTemplate?.status === 'published' ? (
                       <Button size="sm" variant="ghost" className="cursor-pointer" asChild>
                         <a href={shareUrl} target="_blank" rel="noreferrer">
@@ -905,6 +940,13 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, resultsId }) {
               <Button type="button" variant="outline" className="cursor-pointer" asChild>
                 <Link to={permanentFormResultsPath(resultsForm.slug || resultsForm.id)}>
                   <ClipboardList className="size-3.5" /> Open Permanent Results Board
+                </Link>
+              </Button>
+            ) : null}
+            {resultsForm?.kind === 'detailing' ? (
+              <Button type="button" variant="default" className="cursor-pointer" asChild>
+                <Link to="/operations/bookings">
+                  <ExternalLink className="size-3.5" /> Open Detailing Schedule →
                 </Link>
               </Button>
             ) : null}

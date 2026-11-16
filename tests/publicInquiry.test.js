@@ -21,15 +21,18 @@ describe('public inquiry API seam', () => {
     assert.match(server, /builders\[/)
   })
 
-  it('complaints, partnership, and event registration post through shared API client; contact is channels-only', () => {
+  it('complaints, partnership, and public smart forms post through shared /api/public-inquiry; Events RSVP is retired', () => {
     assert.match(apiClient, /export async function submitPublicInquiry/)
     assert.match(complaints, /submitPublicInquiry/)
     assert.doesNotMatch(complaints, /from\('complaints'\)\.insert/)
     assert.match(partnership, /submitPublicInquiry\('partnership'/)
     assert.doesNotMatch(partnership, /from\('partnership_inquiries'\)/)
-    assert.match(server, /event_registration/)
+    const publicForm = readFileSync(join(root, 'src/pages/PublicFormPage.jsx'), 'utf8')
+    assert.match(publicForm, /submitPublicOpsFormViaApi/)
+    assert.match(apiClient, /fetch\('\/api\/public-inquiry'/)
+    assert.doesNotMatch(publicForm, /rpc\('submit_public_ops_form'/)
     const events = readFileSync(join(root, 'src/pages/EventsPage.jsx'), 'utf8')
-    assert.match(events, /submitPublicInquiry\(\s*'event_registration'/)
+    assert.doesNotMatch(events, /event_registration/)
     assert.doesNotMatch(events, /from\('event_registrations'\)\.insert/)
     assert.doesNotMatch(contact, /submitPublicInquiry|postPublicInquiry|from\('contact_inquiries'\)\.insert/)
     assert.match(contact, /Talk to Hakum|Contact us/)

@@ -6,9 +6,18 @@
  */
 export const BUSYBEE_SMS_SINGLE_MAX = 160
 export const BUSYBEE_SMS_CONCAT_SEGMENT = 153
+export const BUSYBEE_SMS_MULTIPART_MAX = 306
+export const BUSYBEE_SMS_UNICODE_SINGLE_MAX = 70
+export const BUSYBEE_SMS_UNICODE_CONCAT_SEGMENT = 67
 export const BUSYBEE_SMS_HARD_MAX = 1000
 export const BUSYBEE_PUSH_TITLE_MAX = 65
 export const BUSYBEE_PUSH_BODY_MAX = 200
+
+const GSM7_BASIC =
+  '@£$¥èéùìòÇ\nØø\rÅåΔ_ΦΓΛΩΠΨΣΘΞ ÆæßÉ !"#¤%&\'()*+,-./0123456789:;<=>?¡ABCDEFGHIJKLMNOPQRSTUVWXYZÄÖÑÜ§¿abcdefghijklmnopqrstuvwxyzäöñüà'
+const GSM7_EXTENDED = '^{}\\[~]|€'
+const GSM7_BASIC_SET = new Set([...GSM7_BASIC])
+const GSM7_EXT_SET = new Set([...GSM7_EXTENDED])
 
 /** Reminder rule scopes for Super Admin smart notifications. */
 export const NOTIFICATION_SCOPES = [
@@ -24,11 +33,11 @@ export function notificationScopeLabel(scope) {
 
 /**
  * Max message length for the chosen channel.
- * SMS / both → BusyBee single-SMS 160; push-only → longer push body.
+ * SMS / both → BusyBee single-SMS 160 (or 306 if allowMultiPart opt-in); push-only → 200.
  */
-export function messageMaxForChannel(channel) {
+export function messageMaxForChannel(channel, { allowMultiPart = false } = {}) {
   if (channel === 'push') return BUSYBEE_PUSH_BODY_MAX
-  return BUSYBEE_SMS_SINGLE_MAX
+  return allowMultiPart ? BUSYBEE_SMS_MULTIPART_MAX : BUSYBEE_SMS_SINGLE_MAX
 }
 
 export function titleMaxForChannel(channel) {
@@ -42,6 +51,134 @@ export function busybeeSmsSegments(text) {
   if (len <= 0) return 0
   if (len <= BUSYBEE_SMS_SINGLE_MAX) return 1
   return Math.ceil(len / BUSYBEE_SMS_CONCAT_SEGMENT)
+}
+
+/**
+ * Inspect SMS copy against BusyBee BrandTxT encoding & credit limits.
+ * Default cap is 160 chars (1 credit); explicit multi-part opt-in allows up to 306 chars (2 credits).
+ */
+export function analyzeBusybeeSms(text, { allowMultiPart = false } = {}) {
+  const src = String(text || '')
+  const length = src.length
+  const maxChars = allowMultiPart ? BUSYBEE_SMS_MULTIPART_MAX : BUSYBEE_SMS_SINGLE_MAX
+  const nonGsm = []
+  let gsmSeptets = 0
+  for (const ch of src) {
+    if (GSM7_BASIC_SET.has(ch)) {
+      gsmSeptets += 1
+    } else if (GSM7_EXT_SET.has(ch)) {
+      gsmSeptets += 2
+    } else {
+      gsmSeptets += 1
+      if (!nonGsm.includes(ch) && nonGsm.length < 5) nonGsm.push(ch)
+    }
+  }
+  const hasUnicode = nonGsm.length > 0
+  const encoding = hasUnicode ? 'UCS-2' : 'GSM-7'
+  let credits = 0
+  if (length > 0) {
+    if (hasUnicode) {
+      credits =
+        length <= BUSYBEE_SMS_UNICODE_SINGLE_MAX
+          ? 1
+          : Math.ceil(length / BUSYBEE_SMS_UNICODE_CONCAT_SEGMENT)
+    } else {
+      credits =
+        gsmSeptets <= BUSYBEE_SMS_SINGLE_MAX
+          ? 1
+          : Math.ceil(gsmSeptets / BUSYBEE_SMS_CONCAT_SEGMENT)
+    }
+  }
+  const exceedsSingle = length > BUSYBEE_SMS_SINGLE_MAX
+  const exceedsLimit = length > maxChars
+  const error = exceedsLimit
+    ? `SMS exceeds BusyBee ${allowMultiPart ? `multi-part (${BUSYBEE_SMS_MULTIPART_MAX})` : `single-SMS (${BUSYBEE_SMS_SINGLE_MAX})`} limit (${length}/${maxChars} chars).`
+    : null
+  const warning =
+    !error && hasUnicode
+      ? `Contains non-GSM characters (${nonGsm.join(' ')}): carriers bill UCS-2 at 70 chars/SMS (${credits} credit${credits === 1 ? '' : 's'}).`
+      : !error && exceedsSingle
+      ? `Multi-part SMS enabled: burns ${credits} BusyBee credits per recipient.`
+      : null
+  return {
+    text: src,
+    length,
+    gsmSeptets,
+    maxChars,
+    encoding,
+    credits,
+    hasUnicode,
+    nonGsmChars: nonGsm,
+    exceedsSingle,
+    exceedsLimit,
+    allowMultiPart: Boolean(allowMultiPart),
+    ok: !error,
+    error,
+    warning,
+  }
+}
+
+/**
+ * Shared validation for Push + BusyBee SMS payloads (used by both UI and API handlers).
+ * Rejects length violations with a clear operator error rather than truncating silently.
+ */
+export function validateNotificationCopy({
+  channel = 'both',
+  title = '',
+  body = '',
+  sms_body = '',
+  allowMultiPart = false,
+  requireTitle = false,
+  requireBody = false,
+  requireSms = false,
+} = {}) {
+  const ch = ['push', 'sms', 'both'].includes(channel) ? channel : 'push'
+  const cleanTitle = String(title || '').trim()
+  const cleanBody = String(body || '').trim()
+  const cleanSms = String(sms_body || '').trim()
+
+  if (requireTitle && !cleanTitle) {
+    return { ok: false, error: 'Title is required.' }
+  }
+  if (requireBody && !cleanBody) {
+    return { ok: false, error: 'Message body is required.' }
+  }
+  if (requireSms && !cleanSms) {
+    return { ok: false, error: 'SMS text is required.' }
+  }
+
+  const tMax = titleMaxForChannel(ch)
+  if (cleanTitle.length > tMax) {
+    return {
+      ok: false,
+      error: `Title must be ${tMax} characters or fewer (${cleanTitle.length}/${tMax}).`,
+    }
+  }
+
+  if (ch === 'push') {
+    if (cleanBody.length > BUSYBEE_PUSH_BODY_MAX) {
+      return {
+        ok: false,
+        error: `Push body must be ${BUSYBEE_PUSH_BODY_MAX} characters or fewer (${cleanBody.length}/${BUSYBEE_PUSH_BODY_MAX}).`,
+      }
+    }
+    return { ok: true, smsAnalysis: null }
+  }
+
+  if (cleanBody && ch === 'both' && cleanBody.length > BUSYBEE_PUSH_BODY_MAX) {
+    return {
+      ok: false,
+      error: `Push body must be ${BUSYBEE_PUSH_BODY_MAX} characters or fewer (${cleanBody.length}/${BUSYBEE_PUSH_BODY_MAX}).`,
+    }
+  }
+
+  const smsSource = cleanSms || (ch === 'sms' || ch === 'both' ? cleanBody : '')
+  const smsAnalysis = analyzeBusybeeSms(smsSource, { allowMultiPart })
+  if (!smsAnalysis.ok) {
+    return { ok: false, error: smsAnalysis.error, smsAnalysis }
+  }
+
+  return { ok: true, smsAnalysis }
 }
 
 /**
@@ -93,26 +230,28 @@ export function insertMessageToken(text, token, caret = null) {
 }
 
 /**
- * Substitute smart tokens in a custom reminder / SMS message.
- * Tokens: {plate} {service} {name} {branch} {when} {appUrl}
- * Missing vars keep the token when keepMissing is true (broadcast draft preview);
- * reminders use defaults for a finished SMS.
+ * Substitute smart tokens in a custom reminder / SMS / system template message.
+ * Known tokens: {plate} {service} {name} {branch} {when} {appUrl} {code}
+ * plus any custom `{key}` present in `vars`.
+ * Missing known vars keep the token when keepMissing is true (broadcast draft preview).
  */
 export function renderNotificationMessage(template, vars = {}, { keepMissing = false } = {}) {
   const fallback = `Hakum Auto Care: ${vars.plate || 'your vehicle'} is due for its ${vars.service || 'detailing'} maintenance. Book at hakumautocare.com/book.`
   const raw = String(template || '').trim() || fallback
-  const pick = (key, def) => {
-    const v = vars[key]
-    if (v != null && String(v).trim() !== '') return String(v)
-    return keepMissing ? `{${key}}` : def
+  const defaults = {
+    plate: 'your vehicle',
+    service: 'detailing',
+    name: 'there',
+    branch: 'Hakum',
+    when: '',
+    appUrl: 'hakumautocare.com',
   }
-  return raw
-    .replaceAll('{plate}', pick('plate', 'your vehicle'))
-    .replaceAll('{service}', pick('service', 'detailing'))
-    .replaceAll('{name}', pick('name', 'there'))
-    .replaceAll('{branch}', pick('branch', 'Hakum'))
-    .replaceAll('{when}', pick('when', ''))
-    .replaceAll('{appUrl}', pick('appUrl', 'hakumautocare.com'))
+  return raw.replace(/\{([a-zA-Z0-9_]+)\}/g, (match, key) => {
+    const v = vars?.[key]
+    if (v != null && String(v).trim() !== '') return String(v)
+    if (key in defaults) return keepMissing ? match : defaults[key]
+    return keepMissing ? match : match
+  })
 }
 
 export function clampNotificationCopy({ channel, title, message } = {}) {

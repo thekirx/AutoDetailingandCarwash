@@ -300,6 +300,7 @@ function stampRouteHtml(template, route) {
       </main>`
 
   html = html.replace(/<div id="root">[\s\S]*?<\/div>/, `<div id="root">${semanticBody}</div>`)
+  html = html.replace(/<noscript>[\s\S]*?<\/noscript>\s*/g, '')
   return html
 }
 

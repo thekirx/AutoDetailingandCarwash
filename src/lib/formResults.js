@@ -1,4 +1,9 @@
 import {
+  DETAILING_BOARD_STATUSES,
+  SALES_BOARD_STATUSES,
+  detailingBoardStatusLabel,
+} from './detailingBoardStatuses.js'
+import {
   FORM_KINDS,
   SUBMISSION_STATUSES,
   extractSubmissionBranch,
@@ -11,8 +16,7 @@ import {
 
 export const FORM_RESULT_KIND_TABS = Object.freeze([
   { id: 'all', label: 'All forms' },
-  { id: 'event', label: 'Events RSVP' },
-  ...FORM_KINDS.filter((k) => k.value !== 'event').map((k) => ({ id: k.value, label: k.label })),
+  ...FORM_KINDS.map((k) => ({ id: k.value, label: k.label })),
 ])
 
 export const DATE_FILTER_PRESETS = Object.freeze([
@@ -24,23 +28,46 @@ export const DATE_FILTER_PRESETS = Object.freeze([
   { id: 'custom', label: 'Date range' },
 ])
 
-export const QUICK_EVENT_FIELDS = Object.freeze(
-  normalizeFields([
-    { key: 'name', label: 'Full name', type: 'text', required: true },
-    { key: 'phone', label: 'Phone number', type: 'phone', required: true },
-    { key: 'email', label: 'Email address', type: 'email', required: false },
-  ]),
-)
+export const VALID_DETAILING_BOARD_STATUSES = Object.freeze([
+  ...new Set([...SALES_BOARD_STATUSES, 'no_show', 'for_releasing']),
+])
+
+export const DETAILING_RESULT_COLUMNS = Object.freeze([
+  ...DETAILING_BOARD_STATUSES.map((s) => ({ id: s.id, label: s.label })),
+  { id: 'cancelled', label: 'Cancelled' },
+])
+
+export function bookingStatusToSubmissionStatus(bookingStatus) {
+  const s = String(bookingStatus || 'pending').trim()
+  if (s === 'completed') return 'resolved'
+  if (s === 'cancelled' || s === 'no_show') return 'archived'
+  if (s === 'pending' || !s) return 'new'
+  return 'in_review'
+}
+
+export function submissionStatusToDetailingDefault(subStatus) {
+  const s = String(subStatus || 'new').trim()
+  if (s === 'resolved') return 'completed'
+  if (s === 'archived') return 'cancelled'
+  if (s === 'in_review') return 'confirmed'
+  return 'pending'
+}
+
+export function formResultStatusLabel(status, formKind = '') {
+  const key = String(status || '')
+  if (formKind === 'detailing' || VALID_DETAILING_BOARD_STATUSES.includes(key)) {
+    if (key === 'cancelled') return 'Cancelled'
+    if (key === 'redo') return 'Redo'
+    if (key === 'no_show') return 'No show'
+    const detailingLabel = detailingBoardStatusLabel(key, { detailing: true })
+    if (detailingLabel) return detailingLabel
+  }
+  return SUBMISSION_STATUSES.find((s) => s.value === key)?.label || 'New'
+}
 
 export function permanentFormResultsPath(formSlugOrKey = '') {
   const clean = String(formSlugOrKey || '').trim()
   return clean ? `/operations/forms/results/${encodeURIComponent(clean)}` : '/operations/forms/results'
-}
-
-export function eventQuickResultsSlug(event) {
-  if (!event) return ''
-  const key = String(event.slug || event.id || '').trim()
-  return key ? `event-${key}` : ''
 }
 
 function localDayStartMs(dateStr) {
@@ -99,15 +126,18 @@ export function matchesDateRange(isoTimestamp, { datePreset = 'all', dateFrom = 
   return true
 }
 
-export function normalizeSubmissionItem(row, { formsById, eventsById, eventsByFormId, branches = [] } = {}) {
+export function normalizeSubmissionItem(row, { formsById, eventsById, eventsByFormId, bookingsById, branches = [] } = {}) {
   const payload = row?.payload && typeof row.payload === 'object' ? row.payload : {}
   const form = formsById?.get(row.form_id) || row.ops_forms || null
   const formKind = form?.kind || 'custom'
+  const isDetailing = formKind === 'detailing'
   const formSlug = form?.slug || row.form_id || ''
   const linkedEvent =
     (form?.event_id && eventsById?.get(form.event_id)) ||
     eventsByFormId?.get(row.form_id) ||
     null
+  const bookingId = row.booking_id || payload.booking_id || null
+  const linkedBooking = row.linked_booking || (bookingId ? bookingsById?.get?.(bookingId) : null) || null
   const settings = normalizeFormSettings(form?.settings, formKind)
   const fields = normalizeFields(form?.fields || [])
   const branch = extractSubmissionBranch(row)
@@ -124,6 +154,15 @@ export function normalizeSubmissionItem(row, { formsById, eventsById, eventsByFo
     payload.phone || payload.mobile || payload.email || payload.plate || payload.car_model || '',
   ).trim()
 
+  const baseSubStatus = SUBMISSION_STATUSES.some((s) => s.value === row.status) ? row.status : 'new'
+  const liveBookingStatus = [linkedBooking?.status, row.booking_status, payload.booking_status].find((candidate) =>
+    VALID_DETAILING_BOARD_STATUSES.includes(String(candidate || '')),
+  )
+  const status = isDetailing
+    ? liveBookingStatus || submissionStatusToDetailingDefault(baseSubStatus)
+    : baseSubStatus
+  const submissionStatus = isDetailing ? bookingStatusToSubmissionStatus(status) : baseSubStatus
+
   return {
     id: row.id,
     recordType: 'submission',
@@ -134,13 +173,17 @@ export function normalizeSubmissionItem(row, { formsById, eventsById, eventsByFo
     formDescription: form?.description || '',
     formKind,
     formKindLabel: formKindLabel(formKind),
+    isDetailing,
+    bookingId: linkedBooking?.id || bookingId || null,
+    linkedBooking,
     eventId: linkedEvent?.id || form?.event_id || null,
     eventTitle: linkedEvent?.title || '',
     eventSlug: linkedEvent?.slug || '',
-    status: SUBMISSION_STATUSES.some((s) => s.value === row.status) ? row.status : 'new',
+    status,
+    submissionStatus,
     source: row.source === 'public' ? 'public' : 'staff',
-    branch,
-    branchLabel: branch ? formatBranchSlugLabel(branch, branches) : '',
+    branch: linkedBooking?.branch || branch,
+    branchLabel: (linkedBooking?.branch || branch) ? formatBranchSlugLabel(linkedBooking?.branch || branch, branches) : '',
     respondentLabel,
     contactHint,
     payload,
@@ -149,54 +192,13 @@ export function normalizeSubmissionItem(row, { formsById, eventsById, eventsByFo
     shareUrl: form?.slug ? shareFormUrl(form.slug) : '',
     permanentResultsPath: permanentFormResultsPath(formSlug),
     createdAt: row.created_at,
-    calendarAt: row.calendar_at || null,
+    calendarAt: linkedBooking?.scheduled_start || row.calendar_at || null,
     dueAt: row.due_at || null,
     planCardId: row.plan_card_id || null,
   }
 }
 
-export function normalizeEventRegistrationItem(row, { eventsById, branches = [] } = {}) {
-  const ev = row?.events || eventsById?.get(row.event_id) || null
-  const quickSlug = eventQuickResultsSlug(ev) || `event-${row.event_id || row.id}`
-  const branch = extractSubmissionBranch({ branch: ev?.branch })
-  const payload = {
-    name: String(row?.name || '').trim(),
-    phone: String(row?.phone || '').trim(),
-    email: String(row?.email || '').trim(),
-  }
-
-  return {
-    id: row.id,
-    recordType: 'event_registration',
-    formId: null,
-    formKey: quickSlug,
-    formSlug: '',
-    formName: ev?.title ? `${ev.title} · Event RSVP` : 'Event Registration',
-    formDescription: 'Submitted via the public event page quick registration form.',
-    formKind: 'event',
-    formKindLabel: formKindLabel('event'),
-    eventId: row.event_id || ev?.id || null,
-    eventTitle: ev?.title || '',
-    eventSlug: ev?.slug || '',
-    status: 'new',
-    source: 'public',
-    branch,
-    branchLabel: branch ? formatBranchSlugLabel(branch, branches) : '',
-    respondentLabel: payload.name || 'Guest attendee',
-    contactHint: [payload.phone, payload.email].filter(Boolean).join(' · '),
-    payload,
-    fields: QUICK_EVENT_FIELDS,
-    settings: normalizeFormSettings({}, 'event'),
-    shareUrl: '',
-    permanentResultsPath: permanentFormResultsPath(quickSlug),
-    createdAt: row.created_at,
-    calendarAt: ev?.starts_at || null,
-    dueAt: null,
-    planCardId: null,
-  }
-}
-
-/** Resolve `:formSlug` URL param into form/event target so `/operations/forms/results/:formSlug` stays permanent. */
+/** Resolve `:formSlug` URL param into form target so `/operations/forms/results/:formSlug` stays permanent. */
 export function resolveFormResultTarget(formSlugParam, { forms = [], events = [] } = {}) {
   const param = String(formSlugParam || '').trim()
   if (!param) {
@@ -210,20 +212,6 @@ export function resolveFormResultTarget(formSlugParam, { forms = [], events = []
       label: matchedForm.name,
       form: matchedForm,
       event: (events || []).find((e) => e.id === matchedForm.event_id || e.form_id === matchedForm.id) || null,
-    }
-  }
-  if (param.startsWith('event-')) {
-    const rawEventKey = param.slice('event-'.length)
-    const ev = (events || []).find((e) => e.slug === rawEventKey || e.id === rawEventKey)
-    if (ev) {
-      const attached = ev.form_id ? (forms || []).find((f) => f.id === ev.form_id) || null : null
-      return {
-        formKey: attached ? attached.slug || attached.id : `event-${ev.slug || ev.id}`,
-        kindTab: 'event',
-        label: ev.title,
-        form: attached,
-        event: ev,
-      }
     }
   }
   return { formKey: param, kindTab: 'all', label: param, form: null, event: null }
@@ -277,7 +265,7 @@ export function filterFormResultItems(
   return (items || []).filter((item) => {
     if (kindTab && kindTab !== 'all' && item.formKind !== kindTab) return false
     if (formKey && formKey !== 'all' && item.formKey !== formKey && item.formId !== formKey) return false
-    if (status && status !== 'all' && item.status !== status) return false
+    if (status && status !== 'all' && item.status !== status && item.submissionStatus !== status) return false
     if (source && source !== 'all' && item.source !== source) return false
     if (branch && branch !== 'all' && item.branch !== branch) return false
     const dateValue = dateField === 'calendar' ? item.calendarAt : item.createdAt
@@ -290,7 +278,28 @@ export function filterFormResultItems(
   })
 }
 
-export function groupResultsByStatus(items = []) {
+const DETAILING_COLUMN_ALIAS = {
+  redo: 'in_progress',
+  for_releasing: 'final_checking',
+  no_show: 'cancelled',
+}
+
+export function groupResultsByStatus(items = [], { mode = 'standard' } = {}) {
+  if (mode === 'detailing') {
+    const columns = DETAILING_RESULT_COLUMNS.map((c) => ({
+      id: c.id,
+      label: c.label,
+      items: [],
+    }))
+    const byId = new Map(columns.map((c) => [c.id, c]))
+    for (const item of items) {
+      const resolvedKey = DETAILING_COLUMN_ALIAS[item.status] || item.status
+      const bucket = byId.get(resolvedKey) || byId.get('pending')
+      bucket.items.push(item)
+    }
+    return columns
+  }
+
   const columns = SUBMISSION_STATUSES.map((s) => ({
     id: s.value,
     label: s.label,
@@ -298,7 +307,7 @@ export function groupResultsByStatus(items = []) {
   }))
   const byId = new Map(columns.map((c) => [c.id, c]))
   for (const item of items) {
-    const bucket = byId.get(item.status) || byId.get('new')
+    const bucket = byId.get(item.submissionStatus || item.status) || byId.get('new')
     bucket.items.push(item)
   }
   return columns

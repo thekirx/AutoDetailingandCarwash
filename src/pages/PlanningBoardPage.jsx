@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/auth/AuthProvider'
@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs } from '@/components/ui/tabs'
 import { toast } from 'sonner'
-import { CalendarDays, ClipboardList, FileText, FolderKanban, Inbox, LayoutList, Plus, Settings2, Table2 } from 'lucide-react'
+import { CalendarDays, ClipboardCheck, ClipboardList, FileText, FolderKanban, Inbox, LayoutList, Plus, Settings2, Table2 } from 'lucide-react'
 import OpsGuideCard from '@/components/ops/OpsGuideCard'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import OpsTabList from '@/components/ops/OpsTabBar'
@@ -25,10 +25,13 @@ import PlanningConfigurePanel from '@/pages/planning/PlanningConfigurePanel'
 import PlanningReviewPanel from '@/pages/planning/PlanningReviewPanel'
 import TaskModal from '@/pages/planning/TaskModal'
 
+const FormResultsBoardPage = lazy(() => import('@/pages/FormResultsBoardPage'))
+
 const TAB_ICONS = {
   board: FolderKanban,
   calendar: CalendarDays,
   forms: ClipboardList,
+  results: ClipboardCheck,
   events: FileText,
   review: Inbox,
   configure: Settings2,
@@ -38,7 +41,7 @@ const TAB_ICONS = {
 const PLANNING_SHELL_TABS = Object.freeze(
   Object.entries(TAB_ICONS).map(([id, icon]) => ({
     id,
-    label: ({ board: 'Board', calendar: 'Calendar', forms: 'Forms', events: 'Events', review: 'Review', configure: 'Configure' })[id],
+    label: ({ board: 'Board', calendar: 'Calendar', forms: 'Forms', results: 'Form Results', events: 'Events', review: 'Review', configure: 'Configure' })[id],
     icon,
   })),
 )
@@ -534,6 +537,12 @@ export default function PlanningBoardPage() {
           lists={lists}
           resultsId={searchParams.get('results')}
         />
+      )}
+
+      {tab === 'results' && (
+        <Suspense fallback={<p className="py-6 text-sm text-muted-foreground">Loading form results…</p>}>
+          <FormResultsBoardPage embedded initialFormSlug={searchParams.get('results') || ''} />
+        </Suspense>
       )}
 
       {tab === 'events' && (

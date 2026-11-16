@@ -72,4 +72,11 @@ describe('Production shell contract (CSP + stale chunks)', () => {
     assert.match(vite, /configurePreviewServer\s*\(\s*server\s*\)\s*\{[\s\S]*attachHakumApis\s*\(\s*server\s*\)/)
     assert.match(vite, /\/api\/customer-auth-lookup/)
   })
+
+  it('keeps #root clean for JS mount with noscript SEO fallback and keeps dev Workbox caching off', () => {
+    assert.match(indexHtml, /<div id="root"><\/div>/)
+    assert.match(indexHtml, /<noscript>[\s\S]*<h1>Hakum Auto Care/)
+    assert.match(vite, /devOptions:\s*\{[\s\S]*enabled:\s*false/)
+    assert.match(main, /if\s*\(\s*import\.meta\.env\.DEV/)
+  })
 })

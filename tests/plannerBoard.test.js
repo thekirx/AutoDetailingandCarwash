@@ -70,12 +70,12 @@ describe('plannerBoard', () => {
     assert.equal(plannerTabFromSearch('nope'), 'board')
     assert.equal(plannerTabFromSearch(new URLSearchParams('tab=review')), 'review')
     assert.equal(plannerTabFromSearch(new URLSearchParams('tab=review'), ['board', 'calendar', 'events']), 'board')
-    assert.deepEqual(PLANNER_TABS.map((t) => t.label), ['Tasks', 'Calendar', 'Forms', 'Events', 'Review', 'Configure'])
+    assert.deepEqual(PLANNER_TABS.map((t) => t.label), ['Tasks', 'Calendar', 'Forms', 'Form Results', 'Events', 'Review', 'Configure'])
     assert.ok(PLANNER_TABS.every((t) => t.icon && t.hint))
-    assert.deepEqual(plannerTabsForAccess({ canEdit: false }).map((t) => t.id), ['board', 'calendar', 'forms', 'events'])
+    assert.deepEqual(plannerTabsForAccess({ canEdit: false }).map((t) => t.id), ['board', 'calendar', 'forms', 'results', 'events'])
     assert.deepEqual(
       plannerTabsForAccess({ canEdit: true }).map((t) => t.id),
-      ['board', 'calendar', 'forms', 'events', 'review', 'configure'],
+      ['board', 'calendar', 'forms', 'results', 'events', 'review', 'configure'],
     )
     assert.equal(plannerTabFromSearch('configure'), 'configure')
     assert.equal(plannerTabFromSearch(new URLSearchParams('tab=configure'), ['board', 'calendar']), 'board')

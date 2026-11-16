@@ -298,6 +298,7 @@ function FloorAppShell({
 
             </div>
             <div className="flex shrink-0 items-center gap-1">
+              <PushToggle audience="ops" compact allowUnsupportedInCompact surface="light" />
               <NotificationBell variant="floor" homeUrl={homeUrl} homeLabel={homeLabel} />
               <button type="button" className="floor-icon-btn" aria-label="Settings" onClick={() => setSettingsOpen(true)}>
                 <Settings size={18} />
@@ -649,7 +650,7 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
           >
             <Search className="size-4" />
           </Button>
-          <PushToggle audience="ops" compact surface="light" className="hidden md:inline-flex" />
+          <PushToggle audience="ops" compact allowUnsupportedInCompact surface="light" className="inline-flex" />
           <NotificationBell
             homeUrl={isBranchAdmin(profile) ? '/operations/pos' : resolvePostLoginPath(profile, null)}
             homeLabel={isBranchAdmin(profile) ? 'Open POS' : 'Home'}

@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict'
+import { mkdir } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { test } from 'node:test'
 import { launchPuppeteer } from './puppeteerLaunch.js'
-const origin = process.env.PUBLIC_TEST_URL || 'http://127.0.0.1:5173'
+const origin = process.env.PUBLIC_TEST_URL || 'http://127.0.0.1:4173'
+const screenshotDir = join(tmpdir(), 'hakum-hero-qa')
 
 for (const [width, height, scenes] of [
   [1440, 1000, [[1, true], [7, false], [14, true], [15, true], [0.1, true]]],
@@ -42,7 +46,10 @@ for (const [width, height, scenes] of [
         assert.equal(state.overflow, false)
         const canFocus = await page.$eval('.bd-hero-cta a', link => { link.focus(); return document.activeElement === link })
         assert.equal(canFocus, !hidden, `only visible actions can receive keyboard focus at ${time}s`)
-        if (time === 1 || time === 7 || time === 10) await page.screenshot({ path: `/tmp/hakum-hero-a-${width}-${time}.png` })
+        if (time === 1 || time === 7 || time === 10) {
+          await mkdir(screenshotDir, { recursive: true })
+          await page.screenshot({ path: join(screenshotDir, `hakum-hero-a-${width}-${time}.png`) })
+        }
       }
       assert.deepEqual(errors, [])
     } finally { await browser.close() }

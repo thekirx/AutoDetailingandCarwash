@@ -259,7 +259,8 @@ export default defineConfig({
       },
       injectRegister: null,
       devOptions: {
-        enabled: true,
+        // Keep Workbox navigation caching off in `vite dev` so localhost never sticks on stale HTML/chunks
+        enabled: false,
         type: 'classic',
       },
     }),

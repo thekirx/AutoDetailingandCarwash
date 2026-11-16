@@ -1,27 +1,44 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
-import { Bell, ListTree, Megaphone, Pencil, Plus, ShieldCheck, Trash2 } from 'lucide-react'
+import {
+  AlertTriangle,
+  Bell,
+  Copy,
+  ListTree,
+  Megaphone,
+  Pencil,
+  Plus,
+  ShieldCheck,
+  Trash2,
+  Users,
+} from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
 import {
+  ROLES,
   canAccessNotifications,
   canManageNotifications,
   canSendBroadcast,
 } from '@/auth/permissions'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import {
+  BUSYBEE_SMS_MULTIPART_MAX,
   BUSYBEE_SMS_SINGLE_MAX,
   MESSAGE_TOKENS,
   NOTIFICATION_SCOPES,
+  analyzeBusybeeSms,
   busybeeSmsSegments,
   insertMessageToken,
   messageMaxForChannel,
   notificationScopeLabel,
+  renderNotificationMessage,
   titleMaxForChannel,
+  validateNotificationCopy,
 } from '@/lib/notificationCopy'
 import { PAINT_MAINTENANCE_SLUG } from '@/lib/paintMaintenance'
 import { filterFloorDetailingServices } from '@/lib/serviceKinds'
 import { supabase } from '@/lib/supabase'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -592,19 +609,55 @@ function ReminderRulesPanel() {
   )
 }
 
+const EMPLOYEE_ROLE_CHOICES = [
+  { id: ROLES.TEAM_LEAD, label: 'Team Lead' },
+  { id: ROLES.ADMIN, label: 'Branch Admin' },
+  { id: ROLES.DETAILER, label: 'Detailer' },
+  { id: ROLES.STAFF, label: 'Staff' },
+  { id: ROLES.ASSISTANT_SUPER_ADMIN, label: 'Assistant Super Admin' },
+  { id: ROLES.SALES, label: 'Sales' },
+  { id: ROLES.MARKETING, label: 'Marketing' },
+  { id: ROLES.VIDEO_EDITOR, label: 'Video Editor' },
+  { id: ROLES.OPERATIONS_LEAD, label: 'Ops Lead' },
+  { id: ROLES.SUPER_ADMIN, label: 'Super Admin' },
+]
+
+const BROADCAST_PREVIEW_VARS = Object.freeze({
+  name: 'Ana',
+  plate: 'ABC-1234',
+  service: 'Ceramic Coating',
+  branch: 'Bacoor',
+  when: ', Nov 20, 10:00 AM',
+  appUrl: 'hakumautocare.com',
+})
+
+const AUDIENCE_GROUP_LABELS = Object.freeze({
+  customers: 'Customers',
+  employees: 'Employees (Inbox + Push)',
+  both: 'Employees & Customers',
+})
+
 function BroadcastPanel({ canManageKinds = false }) {
+  const canTargetEmployees = canManageKinds
   const [branches, setBranches] = useState([])
   const [kinds, setKinds] = useState([])
   const [history, setHistory] = useState([])
   const [sending, setSending] = useState(false)
+  const [editingRow, setEditingRow] = useState(null)
+  const [savingEdit, setSavingEdit] = useState(false)
   const [form, setForm] = useState({
     kind: 'promo',
+    audience_group: 'customers',
     channel: 'push',
     title: '',
     body: '',
     url: '/account',
+    staff_url: '/operations/dashboard',
     target_audience: 'all',
+    employee_scope: 'all',
+    employee_roles: [],
     branch_slug: '',
+    allow_multipart: false,
   })
 
   const loadKinds = useCallback(async () => {
@@ -617,15 +670,14 @@ function BroadcastPanel({ canManageKinds = false }) {
     if (!res.ok) {
       setKinds([
         { slug: 'promo', label: 'Promo', is_active: true },
+        { slug: 'announcement', label: 'Shop announcement', is_active: true },
+        { slug: 'ops_notice', label: 'Team notice', is_active: true },
         { slug: 'we_missed', label: 'We missed you', is_active: true },
         { slug: 'aftercare', label: 'Aftercare check-in', is_active: true },
         { slug: 'package_nudge', label: 'Package upsell', is_active: true },
         { slug: 'loyalty_nudge', label: 'Loyalty nudge', is_active: true },
         { slug: 'thank_you', label: 'Thank you', is_active: true },
         { slug: 'reminder', label: 'Service due', is_active: true },
-        { slug: 'promo', label: 'Promo', is_active: true },
-        { slug: 'custom', label: 'Custom', is_active: true },
-        { slug: 'reminder', label: 'Reminder', is_active: true },
         { slug: 'custom', label: 'Custom', is_active: true },
       ])
       return
@@ -633,20 +685,29 @@ function BroadcastPanel({ canManageKinds = false }) {
     setKinds(data.kinds || [])
   }, [canManageKinds])
 
+  const loadHistory = useCallback(async () => {
+    const token = await getAccessTokenFresh()
+    const res = await fetch('/api/notification-broadcast', {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    if (res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setHistory(data.broadcasts || [])
+      return
+    }
+    const { data } = await supabase
+      .from('notification_broadcasts')
+      .select('id, kind, channel, title, body, url, target_audience, branch_slug, sent_count, failed_count, sent_at')
+      .order('sent_at', { ascending: false })
+      .limit(20)
+    setHistory(data || [])
+  }, [])
+
   useEffect(() => {
     supabase.from('branches').select('slug, name').order('name').then(({ data }) => setBranches(data || []))
     loadHistory()
     loadKinds()
-  }, [loadKinds])
-
-  async function loadHistory() {
-    const { data } = await supabase
-      .from('notification_broadcasts')
-      .select('id, kind, channel, title, body, target_audience, branch_slug, sent_count, failed_count, sent_at')
-      .order('sent_at', { ascending: false })
-      .limit(20)
-    setHistory(data || [])
-  }
+  }, [loadHistory, loadKinds])
 
   const activeKinds = useMemo(
     () => (kinds.length ? kinds.filter((k) => k.is_active !== false) : kinds),
@@ -663,18 +724,60 @@ function BroadcastPanel({ canManageKinds = false }) {
 
   function applyKindDefaults(slug) {
     const row = kinds.find((k) => k.slug === slug)
+    const staffKind = slug === 'ops_notice'
     setForm((f) => ({
       ...f,
       kind: slug,
+      audience_group: staffKind && canTargetEmployees && f.audience_group === 'customers' ? 'employees' : f.audience_group,
+      channel: staffKind && canTargetEmployees ? 'push' : f.channel,
       title: row?.default_title || f.title,
       body: row?.default_body || f.body,
     }))
   }
 
-  const titleMax = titleMaxForChannel(form.channel)
-  const messageMax = messageMaxForChannel(form.channel)
-  const smsCredits =
-    form.channel === 'push' ? 0 : busybeeSmsSegments(`${form.title}\n${form.body}`.trim())
+  function setAudienceGroup(group) {
+    setForm((f) => ({
+      ...f,
+      audience_group: group,
+      channel: group === 'employees' ? 'push' : f.channel,
+    }))
+  }
+
+  function toggleEmployeeRole(roleId) {
+    setForm((f) => {
+      const exists = f.employee_roles.includes(roleId)
+      return {
+        ...f,
+        employee_roles: exists
+          ? f.employee_roles.filter((r) => r !== roleId)
+          : [...f.employee_roles, roleId],
+      }
+    })
+  }
+
+  const effectiveChannel = form.audience_group === 'employees' ? 'push' : form.channel
+  const includesCustomers = form.audience_group !== 'employees'
+  const includesEmployees = form.audience_group !== 'customers'
+  const usesCustomerSms = includesCustomers && effectiveChannel !== 'push'
+  const titleMax = titleMaxForChannel(effectiveChannel)
+  const messageMax = messageMaxForChannel(effectiveChannel, {
+    allowMultiPart: usesCustomerSms && form.allow_multipart,
+  })
+  const smsAnalysis = useMemo(() => {
+    if (!usesCustomerSms) return null
+    return analyzeBusybeeSms(form.body, { allowMultiPart: form.allow_multipart })
+  }, [usesCustomerSms, form.body, form.allow_multipart])
+  const combinedSmsCredits =
+    !usesCustomerSms ? 0 : busybeeSmsSegments(`${form.title}\n${form.body}`.trim())
+
+  const copyValidation = validateNotificationCopy({
+    channel: effectiveChannel,
+    title: form.title,
+    body: form.body,
+    allowMultiPart: usesCustomerSms && form.allow_multipart,
+    requireTitle: Boolean(form.title.trim()),
+    requireBody: Boolean(form.body.trim()),
+  })
 
   async function send(e) {
     e.preventDefault()
@@ -682,25 +785,29 @@ function BroadcastPanel({ canManageKinds = false }) {
       toast.error('Title and message are required.')
       return
     }
-    if (form.title.trim().length > titleMax) {
-      toast.error(`Title must be ${titleMax} characters or fewer.`)
+    if (!copyValidation.ok) {
+      toast.error(copyValidation.error)
       return
     }
-    if (form.body.trim().length > messageMax) {
-      toast.error(`Message must be ${messageMax} characters or fewer (BusyBee limit).`)
-      return
-    }
-    // The reminder form above already refuses a per-branch scope with no branch
-    // picked. Without this the composer posted branch_slug: '' and the handler
-    // fell past its compound guard, messaging every customer in the company
-    // while the screen said "One branch".
-    if (form.target_audience === 'branch' && !form.branch_slug) {
+    if (form.target_audience === 'branch' && !form.branch_slug && includesCustomers) {
       toast.error('Pick a branch.')
       return
     }
+    if (includesEmployees && form.employee_scope === 'branch' && !form.branch_slug) {
+      toast.error('Pick a branch for employee targeting.')
+      return
+    }
+    if (includesEmployees && form.employee_scope === 'roles' && !form.employee_roles.length) {
+      toast.error('Select at least one employee role.')
+      return
+    }
+
     setSending(true)
     try {
       const token = await getAccessTokenFresh()
+      const needsBranch =
+        (includesCustomers && form.target_audience === 'branch') ||
+        (includesEmployees && form.employee_scope === 'branch')
       const res = await fetch('/api/notification-broadcast', {
         method: 'POST',
         headers: {
@@ -709,12 +816,17 @@ function BroadcastPanel({ canManageKinds = false }) {
         },
         body: JSON.stringify({
           kind: form.kind,
-          channel: form.channel,
+          audience_group: form.audience_group,
+          channel: effectiveChannel,
           title: form.title.trim(),
           body: form.body.trim(),
-          url: form.url || '/account',
+          url: includesCustomers ? form.url || '/account' : form.staff_url || '/operations/dashboard',
+          staff_url: form.staff_url || '/operations/dashboard',
           target_audience: form.target_audience,
-          branch_slug: form.target_audience === 'branch' ? form.branch_slug : null,
+          employee_scope: form.employee_scope,
+          employee_roles: form.employee_roles,
+          branch_slug: needsBranch ? form.branch_slug : null,
+          allow_multipart: Boolean(usesCustomerSms && form.allow_multipart),
         }),
       })
       const data = await res.json().catch(() => ({}))
@@ -722,29 +834,118 @@ function BroadcastPanel({ canManageKinds = false }) {
         toast.error(data.error || 'Broadcast failed')
         return
       }
-      toast.success(`Sent ${data.sent} · failed ${data.failed}`)
-      setForm({ ...form, title: '', body: '' })
+      toast.success(`Sent ${data.sent} · failed ${data.failed}${data.skipped ? ` · skipped ${data.skipped}` : ''}`)
+      setForm((f) => ({ ...f, title: '', body: '' }))
       loadHistory()
     } finally {
       setSending(false)
     }
   }
 
+  async function saveBroadcastEdit(e) {
+    e.preventDefault()
+    if (!editingRow?.id) return
+    const check = validateNotificationCopy({
+      channel: editingRow.channel || 'push',
+      title: editingRow.title,
+      body: editingRow.body,
+      allowMultiPart: Boolean(editingRow.allow_multipart),
+      requireTitle: true,
+      requireBody: true,
+    })
+    if (!check.ok) {
+      toast.error(check.error)
+      return
+    }
+    setSavingEdit(true)
+    try {
+      const token = await getAccessTokenFresh()
+      const res = await fetch('/api/notification-broadcast', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          id: editingRow.id,
+          kind: editingRow.kind,
+          title: editingRow.title.trim(),
+          body: editingRow.body.trim(),
+          url: editingRow.url || '/account',
+          allow_multipart: Boolean(editingRow.allow_multipart),
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data.error || 'Update failed')
+        return
+      }
+      toast.success('Broadcast record updated')
+      setEditingRow(null)
+      loadHistory()
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
+  async function deleteBroadcast(id) {
+    const token = await getAccessTokenFresh()
+    const res = await fetch(`/api/notification-broadcast?id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) {
+      toast.error(data.error || 'Delete failed')
+      return
+    }
+    toast.success('Broadcast deleted')
+    loadHistory()
+  }
+
+  const branchRequired =
+    (includesCustomers && form.target_audience === 'branch') ||
+    (includesEmployees && form.employee_scope === 'branch')
+
   return (
     <div className="grid gap-5">
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-start">
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:items-start">
         <Card className="border-border/80 shadow-none">
           <CardHeader>
-            <CardTitle className="text-lg">Compose broadcast</CardTitle>
+            <CardTitle className="text-lg">Custom push, announcement &amp; marketing broadcast</CardTitle>
             <CardDescription>
-              Push and/or SMS — SMS goes to each customer&apos;s mobile on file. Tap tokens to insert.
+              Target customers, employees, or both. Employees always receive In-App Inbox + Web Push (zero SMS); customer SMS follows BusyBee length limits.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={send} className="grid gap-4">
+              {canTargetEmployees ? (
+                <div className="grid gap-2">
+                  <Label>Target audience group</Label>
+                  <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-3" role="group" aria-label="Target audience group">
+                    {[
+                      { id: 'customers', label: 'Customers only' },
+                      { id: 'employees', label: 'Employees only' },
+                      { id: 'both', label: 'Employees & Customers' },
+                    ].map((opt) => (
+                      <Button
+                        key={opt.id}
+                        type="button"
+                        variant={form.audience_group === opt.id ? 'default' : 'outline'}
+                        className="min-h-11 justify-center text-xs sm:text-sm"
+                        onClick={() => setAudienceGroup(opt.id)}
+                      >
+                        <Users className="size-4 shrink-0" aria-hidden />
+                        {opt.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="bc-kind">Kind</Label>
+                  <Label htmlFor="bc-kind">Purpose / kind</Label>
                   <Select
                     value={form.kind}
                     onValueChange={applyKindDefaults}
@@ -763,51 +964,88 @@ function BroadcastPanel({ canManageKinds = false }) {
                   </Select>
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="bc-channel">Channel</Label>
+                  <Label htmlFor="bc-channel">Delivery channel</Label>
                   <Select
-                    value={form.channel}
+                    value={effectiveChannel}
+                    disabled={form.audience_group === 'employees'}
                     onValueChange={(v) => setForm({ ...form, channel: v })}
-                    items={[
-                      { value: 'push', label: 'Push' },
-                      { value: 'sms', label: 'SMS (customer mobile)' },
-                      { value: 'both', label: 'Push + SMS' },
-                    ]}
+                    items={
+                      form.audience_group === 'employees'
+                        ? [{ value: 'push', label: 'In-App Inbox + Web Push' }]
+                        : [
+                            { value: 'push', label: 'In-App Inbox + Web Push' },
+                            { value: 'sms', label: 'BusyBee SMS (customers only)' },
+                            { value: 'both', label: 'Push + Customer SMS' },
+                          ]
+                    }
                   >
                     <SelectTrigger id="bc-channel" className="min-h-11 cursor-pointer">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="push">Push</SelectItem>
-                      <SelectItem value="sms">SMS (customer mobile)</SelectItem>
-                      <SelectItem value="both">Push + SMS</SelectItem>
+                      <SelectItem value="push">In-App Inbox + Web Push</SelectItem>
+                      {form.audience_group !== 'employees' ? (
+                        <>
+                          <SelectItem value="sms">BusyBee SMS (customers only)</SelectItem>
+                          <SelectItem value="both">Push + Customer SMS</SelectItem>
+                        </>
+                      ) : null}
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="bc-audience">Audience</Label>
-                  <Select
-                    value={form.target_audience}
-                    onValueChange={(v) => setForm({ ...form, target_audience: v })}
-                    items={[
-                      { value: 'all', label: 'All customers' },
-                      { value: 'detailing', label: 'Detailing customers' },
-                      { value: 'wash', label: 'Wash customers' },
-                      { value: 'branch', label: 'One branch' },
-                    ]}
-                  >
-                    <SelectTrigger id="bc-audience" className="min-h-11 cursor-pointer">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">All customers</SelectItem>
-                      <SelectItem value="detailing">Detailing customers</SelectItem>
-                      <SelectItem value="wash">Wash customers</SelectItem>
-                      <SelectItem value="branch">One branch</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                {form.target_audience === 'branch' ? (
+
+                {includesCustomers ? (
                   <div className="flex flex-col gap-2">
+                    <Label htmlFor="bc-audience">Customer segment</Label>
+                    <Select
+                      value={form.target_audience}
+                      onValueChange={(v) => setForm({ ...form, target_audience: v })}
+                      items={[
+                        { value: 'all', label: 'All customers' },
+                        { value: 'detailing', label: 'Detailing customers' },
+                        { value: 'wash', label: 'Wash customers' },
+                        { value: 'branch', label: 'One branch' },
+                      ]}
+                    >
+                      <SelectTrigger id="bc-audience" className="min-h-11 cursor-pointer">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All customers</SelectItem>
+                        <SelectItem value="detailing">Detailing customers</SelectItem>
+                        <SelectItem value="wash">Wash customers</SelectItem>
+                        <SelectItem value="branch">One branch</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : null}
+
+                {includesEmployees ? (
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="bc-emp-scope">Employee scope</Label>
+                    <Select
+                      value={form.employee_scope}
+                      onValueChange={(v) => setForm({ ...form, employee_scope: v })}
+                      items={[
+                        { value: 'all', label: 'All active staff' },
+                        { value: 'roles', label: 'Selected roles' },
+                        { value: 'branch', label: 'One branch' },
+                      ]}
+                    >
+                      <SelectTrigger id="bc-emp-scope" className="min-h-11 cursor-pointer">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All active staff</SelectItem>
+                        <SelectItem value="roles">Selected roles</SelectItem>
+                        <SelectItem value="branch">One branch</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : null}
+
+                {branchRequired ? (
+                  <div className="flex flex-col gap-2 sm:col-span-2">
                     <Label htmlFor="bc-branch">Branch</Label>
                     <Select
                       value={form.branch_slug}
@@ -828,11 +1066,41 @@ function BroadcastPanel({ canManageKinds = false }) {
                   </div>
                 ) : null}
               </div>
+
+              {includesEmployees && form.employee_scope === 'roles' ? (
+                <div className="grid gap-2 rounded-xl border border-border bg-muted/20 p-3">
+                  <Label>Employee roles</Label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {EMPLOYEE_ROLE_CHOICES.map((r) => {
+                      const active = form.employee_roles.includes(r.id)
+                      return (
+                        <Button
+                          key={r.id}
+                          type="button"
+                          size="sm"
+                          variant={active ? 'default' : 'outline'}
+                          className="min-h-9 text-xs"
+                          onClick={() => toggleEmployeeRole(r.id)}
+                        >
+                          {r.label}
+                        </Button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
+              {includesEmployees ? (
+                <p className="text-xs text-muted-foreground">
+                  Staff announcements deliver strictly via <strong className="text-foreground">In-App Inbox + Web Push</strong> — BusyBee SMS is never sent to staff phones.
+                </p>
+              ) : null}
+
               <div className="flex flex-col gap-2">
                 <div className="flex items-baseline justify-between gap-2">
                   <Label htmlFor="bc-title">Title</Label>
                   <span
-                    className={`text-xs tabular-nums ${form.title.length > titleMax ? 'text-destructive' : 'text-muted-foreground'}`}
+                    className={`text-xs tabular-nums ${form.title.length > titleMax ? 'font-semibold text-destructive' : 'text-muted-foreground'}`}
                   >
                     {form.title.length}/{titleMax}
                   </span>
@@ -851,14 +1119,17 @@ function BroadcastPanel({ canManageKinds = false }) {
                   onChange={(title) => setForm({ ...form, title: title.slice(0, titleMax) })}
                 />
               </div>
+
               <div className="flex flex-col gap-2">
                 <div className="flex items-baseline justify-between gap-2">
                   <Label htmlFor="bc-body">Message</Label>
                   <span
-                    className={`text-xs tabular-nums ${form.body.length > messageMax ? 'text-destructive' : 'text-muted-foreground'}`}
+                    className={`text-xs tabular-nums ${form.body.length > messageMax ? 'font-semibold text-destructive' : 'text-muted-foreground'}`}
                   >
                     {form.body.length}/{messageMax}
-                    {form.channel !== 'push' ? ` · BusyBee ${BUSYBEE_SMS_SINGLE_MAX} · ~${smsCredits} SMS` : ''}
+                    {smsAnalysis
+                      ? ` · ${smsAnalysis.encoding} · ~${combinedSmsCredits} BusyBee SMS`
+                      : ''}
                   </span>
                 </div>
                 <Textarea
@@ -866,25 +1137,82 @@ function BroadcastPanel({ canManageKinds = false }) {
                   required
                   rows={4}
                   value={form.body}
-                  maxLength={messageMax}
+                  maxLength={usesCustomerSms ? BUSYBEE_SMS_MULTIPART_MAX : messageMax}
                   onChange={(e) => setForm({ ...form, body: e.target.value })}
                 />
                 <MessageTokenChips
                   inputId="bc-body"
                   value={form.body}
-                  onChange={(body) => setForm({ ...form, body: body.slice(0, messageMax) })}
+                  onChange={(body) =>
+                    setForm({
+                      ...form,
+                      body: body.slice(0, usesCustomerSms ? BUSYBEE_SMS_MULTIPART_MAX : messageMax),
+                    })
+                  }
                 />
+                {usesCustomerSms ? (
+                  <>
+                    <label className="flex min-h-10 cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+                      <input
+                        type="checkbox"
+                        checked={form.allow_multipart}
+                        onChange={(e) => setForm({ ...form, allow_multipart: e.target.checked })}
+                      />
+                      Allow multi-part BusyBee SMS up to {BUSYBEE_SMS_MULTIPART_MAX} chars (2 credits per customer)
+                    </label>
+                    {smsAnalysis?.error ? (
+                      <p className="flex items-center gap-1.5 text-xs font-medium text-destructive" role="alert">
+                        <AlertTriangle className="size-3.5 shrink-0" aria-hidden />
+                        {smsAnalysis.error}
+                      </p>
+                    ) : smsAnalysis?.warning ? (
+                      <p className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300">
+                        <AlertTriangle className="size-3.5 shrink-0" aria-hidden />
+                        {smsAnalysis.warning}
+                      </p>
+                    ) : null}
+                  </>
+                ) : null}
               </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="bc-url">Tap URL</Label>
-                <Input
-                  id="bc-url"
-                  className="min-h-11"
-                  value={form.url}
-                  onChange={(e) => setForm({ ...form, url: e.target.value })}
-                />
+
+              {(form.title.trim() || form.body.trim()) ? (
+                <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs">
+                  <p className="font-semibold text-foreground">Live preview</p>
+                  <p className="mt-1 font-medium text-foreground">
+                    {renderNotificationMessage(form.title || 'Title', BROADCAST_PREVIEW_VARS)}
+                  </p>
+                  <p className="mt-0.5 text-muted-foreground">
+                    {renderNotificationMessage(form.body || '', BROADCAST_PREVIEW_VARS)}
+                  </p>
+                </div>
+              ) : null}
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                {includesCustomers ? (
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="bc-url">Customer tap URL</Label>
+                    <Input
+                      id="bc-url"
+                      className="min-h-11"
+                      value={form.url}
+                      onChange={(e) => setForm({ ...form, url: e.target.value })}
+                    />
+                  </div>
+                ) : null}
+                {includesEmployees ? (
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="bc-staff-url">Staff tap URL</Label>
+                    <Input
+                      id="bc-staff-url"
+                      className="min-h-11"
+                      value={form.staff_url}
+                      onChange={(e) => setForm({ ...form, staff_url: e.target.value })}
+                    />
+                  </div>
+                ) : null}
               </div>
-              <Button type="submit" disabled={sending} className="min-h-11 w-full sm:w-fit">
+
+              <Button type="submit" disabled={sending || !copyValidation.ok} className="min-h-11 w-full sm:w-fit">
                 {sending ? 'Sending…' : 'Send broadcast'}
               </Button>
             </form>
@@ -893,8 +1221,8 @@ function BroadcastPanel({ canManageKinds = false }) {
 
         <Card className="border-border/80 shadow-none">
           <CardHeader>
-            <CardTitle className="text-lg">Recent broadcasts</CardTitle>
-            <CardDescription>Last 20 sends.</CardDescription>
+            <CardTitle className="text-lg">Recent broadcasts &amp; announcements</CardTitle>
+            <CardDescription>Last 30 sends. Reuse, edit log metadata, or remove entries.</CardDescription>
           </CardHeader>
           <CardContent>
             {history.length === 0 ? (
@@ -902,14 +1230,74 @@ function BroadcastPanel({ canManageKinds = false }) {
             ) : (
               <ul className="divide-y divide-border">
                 {history.map((h) => (
-                  <li key={h.id} className="py-3">
-                    <p className="text-sm font-semibold">{h.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {h.kind} · {h.channel} · {h.target_audience}
-                      {h.branch_slug ? ` · ${h.branch_slug}` : ''} · sent {h.sent_count} · failed{' '}
-                      {h.failed_count}
-                    </p>
-                    {h.body ? <p className="mt-1 text-sm text-muted-foreground">{h.body}</p> : null}
+                  <li key={h.id} className="flex items-start justify-between gap-2 py-3">
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <p className="text-sm font-semibold">{h.title}</p>
+                        {h.audience_group && h.audience_group !== 'customers' ? (
+                          <Badge variant="secondary" className="text-[11px]">
+                            {AUDIENCE_GROUP_LABELS[h.audience_group] || h.audience_group}
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        {h.kind} · {h.channel}
+                        {h.audience_group === 'employees'
+                          ? ` · staff ${h.employee_scope || 'all'}`
+                          : ` · ${h.target_audience}`}
+                        {h.branch_slug ? ` · ${h.branch_slug}` : ''} · sent {h.sent_count} · failed {h.failed_count}
+                      </p>
+                      {h.body ? <p className="text-sm text-muted-foreground">{h.body}</p> : null}
+                    </div>
+                    <div className="flex shrink-0 gap-1">
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="size-9 cursor-pointer"
+                        title="Reuse into composer"
+                        aria-label={`Reuse ${h.title}`}
+                        onClick={() =>
+                          setForm((f) => ({
+                            ...f,
+                            kind: h.kind || f.kind,
+                            audience_group: canTargetEmployees ? h.audience_group || 'customers' : 'customers',
+                            channel: h.channel || 'push',
+                            title: h.title || '',
+                            body: h.body || '',
+                            url: h.url || '/account',
+                            branch_slug: h.branch_slug || '',
+                            allow_multipart: Boolean(h.allow_multipart),
+                          }))
+                        }
+                      >
+                        <Copy className="size-4" />
+                      </Button>
+                      {canTargetEmployees ? (
+                        <>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="size-9 cursor-pointer"
+                            aria-label={`Edit ${h.title}`}
+                            onClick={() => setEditingRow({ ...h })}
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="size-9 cursor-pointer text-destructive"
+                            aria-label={`Delete ${h.title}`}
+                            onClick={() => deleteBroadcast(h.id)}
+                          >
+                            <Trash2 className="size-4" />
+                          </Button>
+                        </>
+                      ) : null}
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -917,6 +1305,58 @@ function BroadcastPanel({ canManageKinds = false }) {
           </CardContent>
         </Card>
       </div>
+
+      <Dialog open={Boolean(editingRow)} onOpenChange={(open) => { if (!open) setEditingRow(null) }}>
+        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
+          {editingRow ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Edit broadcast record</DialogTitle>
+                <DialogDescription>Updates the saved campaign title, copy, kind, or tap URL in history.</DialogDescription>
+              </DialogHeader>
+              <form onSubmit={saveBroadcastEdit} className="grid gap-3">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-bc-title">Title</Label>
+                  <Input
+                    id="edit-bc-title"
+                    className="min-h-11"
+                    required
+                    value={editingRow.title || ''}
+                    onChange={(e) => setEditingRow({ ...editingRow, title: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-bc-body">Message</Label>
+                  <Textarea
+                    id="edit-bc-body"
+                    required
+                    rows={4}
+                    value={editingRow.body || ''}
+                    onChange={(e) => setEditingRow({ ...editingRow, body: e.target.value })}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-bc-url">Tap URL</Label>
+                  <Input
+                    id="edit-bc-url"
+                    className="min-h-11"
+                    value={editingRow.url || ''}
+                    onChange={(e) => setEditingRow({ ...editingRow, url: e.target.value })}
+                  />
+                </div>
+                <DialogFooter>
+                  <Button type="button" variant="outline" className="min-h-11" onClick={() => setEditingRow(null)}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={savingEdit} className="min-h-11">
+                    {savingEdit ? 'Saving…' : 'Save changes'}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </>
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       {canManageKinds ? <BroadcastKindsManager kinds={kinds} onChanged={loadKinds} /> : null}
     </div>

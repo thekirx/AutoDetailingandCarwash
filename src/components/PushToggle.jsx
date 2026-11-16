@@ -23,6 +23,7 @@ export default function PushToggle({
   audience = 'customer',
   autoPrompt = false,
   compact = false,
+  allowUnsupportedInCompact = false,
   variant = 'default',
   surface = 'auto',
   layout = 'chips',
@@ -180,11 +181,12 @@ export default function PushToggle({
   }
 
   if (status === 'unsupported') {
-    if (compact) return null
+    if (compact && !allowUnsupportedInCompact) return null
     const tip =
       reason === 'ios-install'
         ? 'iPhone/iPad: Share, Add to Home Screen, then open Hakum and enable alerts.'
         : 'Install Hakum (Chrome/Edge or Home Screen) to unlock push alerts.'
+    const compactLabel = reason === 'ios-install' ? 'Install app' : 'Alerts info'
     if (layout === 'panel') {
       return (
         <div className={`capp-pref ${className}`}>
@@ -201,9 +203,14 @@ export default function PushToggle({
     }
     return (
       <>
-        <button type="button" className={`push-chip push-chip-muted ${className}`} onClick={() => setOpen(true)}>
+        <button
+          type="button"
+          className={`push-chip push-chip-muted ${lightChips ? 'push-chip-ops' : ''} ${className}`}
+          onClick={() => setOpen(true)}
+          title={tip}
+        >
           <Smartphone className="size-4 shrink-0" aria-hidden />
-          <span className="text-left leading-snug">{tip}</span>
+          <span className="text-left leading-snug">{compact ? compactLabel : tip}</span>
         </button>
         <PushModal ops={ops} open={open} onOpenChange={(v) => (v ? setOpen(true) : dismissPrompt())} busy={busy} status={status} reason={reason} onEnable={turnOn} onDismiss={dismissPrompt} />
       </>

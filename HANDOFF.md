@@ -3,7 +3,7 @@
 **Date:** 2026-11-16 (Asia/Manila)  
 **Repository:** `https://github.com/thekirx/AutoDetailingandCarwash.git` (Branch: `main`)  
 **Production Domain:** `https://www.hakumautocare.com` (Vercel + Supabase `lybxhpzzqqyqswvuwpxv`)  
-**Current Verified Head (code + tests before this doc commit):** `8eb0990`  
+**Current Baseline:** `5487e35` + uncommitted push/redirect/dev-shell/docs fixes ready for final commit & deploy  
 
 This document is the primary onboarding brief for the next AI engineer or technical lead picking up Hakum Auto Care. Read this together with the persistent Graphify knowledge graph before modifying code.
 
@@ -75,32 +75,44 @@ This document is the primary onboarding brief for the next AI engineer or techni
   - **Side-by-side Real-Time Preview**: Inline `<BrandedOpsForm preview />` updating live on every sequence reorder or public-link toggle, plus enlarged `Preview` modal.
   - **Save & Publish controls**: `Reset order`, `Save order`, `Save & Publish`, and `Unpublish`.
 
+### G. Cross-Platform Push Notification, Deep-Link Routing & Dev Shell Hardening (2026-11-16)
+- **Web Push & Inbox Consistency (`server/webPush.mjs`, `server/pushApi.mjs`, `server/notificationBroadcastApi.mjs`, `server/paintMaintenanceNotify.mjs`)**: Added unified `deliverUserNotifications` (single-origin URL normalization, `user_notifications` inbox insert for customer broadcasts & paint-maintenance reminders, and push delivery with `failed` counts) and live role resolution (`resolvePushTargets` queries live `staff_profiles`, `staff_branch_assignments`, and active `customers` rather than stale `push_subscriptions.role`). Removed `user_metadata?.role` fallback in `pushApi.mjs`.
+- **iOS / Android / Desktop Push UX & SPA SW Routing (`public/push-sw.js`, `src/lib/push.js`, `src/lib/installApp.js`, `src/components/PushToggle.jsx`, `OperationsLayout.jsx`, `src/main.jsx`, `InAppNotificationListener.jsx`)**:
+  - Exposed compact Push/Install chip on mobile staff & customer headers (`allowUnsupportedInCompact`) so iOS Safari (`iPhone`/iPadOS desktop UA) shows `"Install app"` with Home Screen steps.
+  - Bounded `navigator.serviceWorker.ready` via `readyRegistrationWithTimeout(3500)`, added plain-text push fallback + visible-client priority in `push-sw.js`, and wired cancelable `HAKUM_NAV` -> `'hakum:sw-navigate'` SPA navigation without reloads.
+- **Auth Redirect & Notification Routing (`src/auth/authRedirect.js`, `LoginPage.jsx`, `CustomerSignInPage.jsx`, `src/lib/notifyRouting.js`, `src/lib/inAppNotifications.js`, `server/provisionStaff.mjs`)**:
+  - Preserved full deep-link queries (`?tab=sheets&sheet=...`, `/account/book?service=...`) across staff & customer sign-in, mapped 7 missing staff ops routes (`vehicle-transfer`, `my-advances`, `payslips`, `approvals`, `monthly-payroll`, `merch-shop`, `vouchers`), routed `review`/`complaint` notifications & `/operations/reviews` to `/operations/forms/results` (with slug when known), defaulted foreground toast clicks via `defaultNotificationHome(role)`, and validated ISO dates (`400`) in `update-form-submission`.
+- **Local Dev & Root SEO Shell (`index.html`, `vite.config.js`, `src/main.jsx`, `scripts/prerender-seo.mjs`)**: Moved the root SEO `<main>` into `<noscript>` (keeping `<div id="root"></div>` clean for React + `prerender-seo.mjs` static shells) and disabled Workbox `devOptions` caching (`enabled: false` + `/sw.js` unregister in dev) so `localhost:5173` never gets stuck on stale HTML/chunks.
+- **Docs & RBAC Reconciliation**: Closed `BUG-054`/`BUG-055` in `docs/qa/BUGS.md` per the settled 19 Oct 2026 RBAC matrix and refreshed `GRAPHIFY_MEMORY.md`, `GRAPHIFY_WORKFLOWS.md`, `GRAPHIFY_SEAMS.md`, and `GRAPHIFY_GAPS.md` to match the live Daily Sheet & 33-service codebase.
+
+### H. Form Results Tabs, Events RSVP Retirement & Detailing Services Placeholder Sync (2026-11-16)
+- **Form Results Tab in Planner & Inquiries (`src/lib/plannerBoard.js`, `PlanningBoardPage.jsx`, `FormResultsBoardPage.jsx`, `InquiriesPage.jsx`)**: Exposed `Form Results` inside `/operations/planning?tab=results` and `/operations/inquiries` (`Form Results` tab) via `<FormResultsBoardPage embedded />`.
+- **Retired Events RSVP (`opsForms.js`, `formResults.js`, `formResultsApi.js`, `permissions.js`, `EventsPage.jsx`, `EventSharePage.jsx`, `ContentAdminPage.jsx`, `ContentStudioModal.jsx`, `PlanningPart6Panels.jsx`, `server/publicInquiry.mjs`, `server/provisionStaff.mjs`)**: Removed `Events RSVP` tabs, inline quick registration forms, and `event_registration` UI/API paths; server endpoints return HTTP `410 Gone`.
+- **Detailing Services Direct-to-Placeholder Sync (`server/publicOpsForm.mjs`, `server/detailingBookingIntake.mjs`, `server/formResultsStore.mjs`, `src/lib/publicInquiryApi.js`, `PublicFormPage.jsx`, `PlanningFormsSmartPanel.jsx`, `src/lib/detailingBoardStatuses.js`)**: Submissions to `kind === 'detailing'` (`/f/detailing-inquiry` or direct staff fill with `source: 'staff'`) route through `submitPublicOpsFormAndSync` + shared `detailingBookingIntake.mjs` helpers to atomically insert a linked `public.bookings` row in **`'pending'` (`Booking Placeholder`)** status (defaulting omitted `vehicle_make: 'TBD'` and `vehicle_model: 'Pending'`) and dispatch `notifyBookingStatus`. `server/formResultsStore.mjs` synchronizes status moves and active contact/plate/schedule edits with `public.bookings` (never altering completed/cancelled ledger rows), soft-cancels untouched `pending` placeholders on delete (`status: 'cancelled', is_archived: true`), and powers [FormResultsBoardPage.jsx](file:///c:/Users/jcuad/OneDrive/Documents/AutoDetailingandCarwash/src/pages/FormResultsBoardPage.jsx) Detailing Schedule lanes + direct `/operations/bookings` links.
+- **SQL Migration Added (`supabase/migrations/20261116120000_retire_events_rsvp_and_detailing_form_sync.sql`)**: Archives `kind = 'event'` forms, blocks `'event'` in `get_public_ops_form` / `submit_public_ops_form`, and adds nullable `ops_form_submissions.booking_id` FK + partial index *(server code falls back cleanly to `payload.booking_id` until migration is pushed to Supabase)*.
+
 ---
 
-## 4. Verification Baseline (Current as of `8eb0990`)
+## 4. Verification Baseline (Current as of 2026-11-16 Latest Pass)
 
-The following ran against `8eb0990` directly and passed with exit code `0`:
-- `npm run lint` (`eslint .`) → **0 errors / 0 warnings**
-- `npm test` → **2,645 / 2,645 tests passed across 595 suites** (`0` failed, `0` skipped)
-- `npm run check` (`check:planning`, `check:portal`, `check:settings-auth`, `check:customer`, `check:live-queue`) → **ok**
-- `npm run audit:api-auth` → **36 handlers scanned, 0 unauthenticated leaks, 0 unscoped leaks**
-- `npm run build` → **Vite production bundle + PWA SW precache + 23 static prerendered SEO HTML files built cleanly**
-- **Puppeteer UI check (`vite preview` + mocked `BossMich` session)** on `/operations/planning?tab=forms` & `?tab=events` → confirmed `Events RSVP` absent, builder buttons absent, `"Move Service down"` updates `"Real-time preview"` DOM order immediately, `"Save & Publish"` dispatches `PATCH` with reordered `fields` & `status: 'published'`, mobile (`390×844`) overflow `false`, and `pageErrors: []`.
+All code/test/DB checks ran against the current working tree after the final code/test edit:
+- `npm run lint` (`0`), `npm test` (`2674+`), `npm run check` (`ok`), `npm run audit:api-auth` (`37` handlers ok), `npm run build` (`dist/sw.js` + 23 static SEO HTML shells), and `npm run test:browser` (`41/41`).
+- Live Supabase (`lybxhpzzqqyqswvuwpxv`) already has all migrations through `20261116190000` applied cleanly (`20261116120000`, `20261116180000`, `20261116190000`), with `0` unindexed FKs and `0` redundant prefix indexes.
 
-> **Stale / Prior-Stamp Checks Notice:** Live Supabase DB E2E scripts (`e2e-role-qa-wave.mjs`, `e2e-ui-money.mjs`, `e2e-daily-sheet-money.mjs`) and live production domain Playwright/Puppeteer verification (`https://www.hakumautocare.com`) last ran cleanly on `ba3ae8a` / `cb96fdc` (2026-11-15). Re-run live production verification after deploying `8eb0990` (`2a709c8`..`8eb0990`) to confirm Vercel SSR/static prerendered routes, `/operations/forms/results`, PWA update banner, and Planner Forms/Configure in production.
+> **Note on Production & Vercel:** Commit/push `main` to deploy to `www.hakumautocare.com` / `hakumauto.vercel.app`.
 
 ---
 
 ## 5. Open Items & Operational Blockers (Do Not Auto-Mark Done)
 
-1. **Vercel Deployment & Env Parity**: Ensure `8eb0990+` deploys cleanly on Vercel production (`www.hakumautocare.com`) and verify all `.env.example` keys (especially `VITE_VAPID_PUBLIC_KEY` / `VAPID_*`, `SUPABASE_SERVICE_ROLE_KEY`, `BUSYBEE_*`, `RESEND_*`) match Vercel Production environment variables.
-2. **BrandTxt / BusyBee SMS Egress Whitelisting (`BUG-002`)**: Production SMS calls require the outgoing IP (Vercel Static IPs / office egress) to be whitelisted by BrandTxt (`app.brandtxt.io`); previous checks hit `ErrorCode -1` / `11`.
-3. **Floor / Staff Web Push Opt-In (`BUG-062`)**: Code, `public/push-sw.js`, and `InAppNotificationListener.jsx` are wired, but live staff devices must still click **"Enable alerts"** in the portal/browser (previously `0 / 34` active subscriptions in live DB audit).
+1. **Deploy `main` & Verify Vercel Production Env Vars**: Commit/push to deploy to Vercel (`www.hakumautocare.com`, plus test domain `hakumauto.vercel.app` where Easy Login chips remain visible). Verify `.env.example` / Vercel keys: `VITE_VAPID_PUBLIC_KEY`/`VAPID_*`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, `BUSYBEE_*` (and optional `BUSYBEE_RELAY_*`).
+2. **BrandTxt / BusyBee SMS Egress Whitelisting (`BUG-002`)**: Production SMS calls (`app_settings.sms_notifications = true`) require outgoing IP (Vercel Static IPs / relay) whitelisted by BrandTxt (`app.brandtxt.io`).
+3. **Floor / Staff Web Push Opt-In (`BUG-062`)**: Code, `public/push-sw.js`, and `InAppNotificationListener.jsx` are wired, but live staff devices must still click **"Enable alerts"** in the portal/browser (`0 / 34` active staff subscriptions in live DB audit).
 4. **Supabase Dashboard Ops**:
-   - Configure custom SMTP / verify Auth password-reset & signup emails arrive in inbox (`Gate 10.1`).
-   - Enable **HaveIBeenPwned Leaked Password Protection** in Supabase Auth settings.
+   - Configure custom SMTP (`smtp_host` currently `null`) / verify Auth password-reset & signup emails arrive in inbox (`Gate 10.1`).
+   - Enable **HaveIBeenPwned Leaked Password Protection** (`password_hibp_enabled` currently `false`) in Supabase Auth settings.
    - Optional: Have owner confirm and run the **BUG-061** void SQL if cleaning the 2 pre-existing 2026-09-29 test handoffs (`₱5,397.50`).
-5. **Working Tree Hygiene**: Avoid committing `tmp-*.txt` / `tmp-*.json` / scratch scripts at the repo root (notice pre-existing untracked `tmp-*` artifacts in working directory — check `git status -s` carefully and stage files explicitly by path).
+5. **Working Tree Hygiene**: Avoid committing `tmp-*` / `*-FAIL.png` QA failure artifacts; stage files intentionally before commit.
 
 ---
 

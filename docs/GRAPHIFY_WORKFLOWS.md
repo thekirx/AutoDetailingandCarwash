@@ -1,6 +1,6 @@
 # Hakum — live workflows, DB enums, API (Graphify gap fill)
 
-Verified 2026-09-15 against live Postgres + `src/` + `vite.config.js`. Pair with `docs/GRAPHIFY_MEMORY.md` (tables/RPCs) and `docs/OPS/MONEY-CONTRACT.md` (money law).
+Verified **2026-11-16** against live Postgres + `src/` + `vite.config.js` + `server/`. Pair with `docs/GRAPHIFY_MEMORY.md` (tables/RPCs) and `docs/OPS/MONEY-CONTRACT.md` (money law).
 
 ## Gap this file closes
 

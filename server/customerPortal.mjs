@@ -700,6 +700,7 @@ export async function mutateCustomerPortal({ accessToken, body }) {
         try {
           await notifyOpsFormComplaint({
             formName: 'Customer Complaints',
+            formSlug: 'customer-complaints',
             payload: complaint,
             submissionId: complaint_id,
             branch: booking.branch || null,

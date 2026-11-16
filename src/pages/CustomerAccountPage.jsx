@@ -331,7 +331,7 @@ export default function CustomerAccountPage() {
                     Book a service
                   </Link>
                 )}
-                <PushToggle audience="customer" compact autoPrompt />
+                <PushToggle audience="customer" compact allowUnsupportedInCompact autoPrompt />
               </div>
             </div>
             {activeVisit ? (

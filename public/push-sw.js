@@ -15,9 +15,17 @@ self.addEventListener('message', (event) => {
 self.addEventListener('push', (event) => {
   let data = { title: 'Hakum Auto Care', body: 'You have an update.', url: '/', tag: 'hakum' }
   try {
-    if (event.data) data = { ...data, ...event.data.json() }
+    if (event.data) {
+      const parsed = event.data.json()
+      if (parsed && typeof parsed === 'object') data = { ...data, ...parsed }
+    }
   } catch {
-    /* ignore */
+    try {
+      const txt = event.data?.text?.()
+      if (txt) data.body = txt
+    } catch {
+      /* ignore */
+    }
   }
   const badgeNum = Number(data.badgeCount)
   const badgeTask =
@@ -61,12 +69,17 @@ self.addEventListener('notificationclick', (event) => {
   event.waitUntil(
     (async () => {
       const all = await clients.matchAll({ type: 'window', includeUncontrolled: true })
-      for (const client of all) {
+      const ordered = [...all].sort(
+        (a, b) =>
+          Number(Boolean(b.focused || b.visibilityState === 'visible')) -
+          Number(Boolean(a.focused || a.visibilityState === 'visible')),
+      )
+      for (const client of ordered) {
         if (!client.url.startsWith(self.location.origin)) continue
         try {
           if (typeof client.navigate === 'function') {
             await client.navigate(path)
-            await client.focus()
+            if (typeof client.focus === 'function') await client.focus().catch(() => {})
             return
           }
         } catch {
@@ -74,7 +87,7 @@ self.addEventListener('notificationclick', (event) => {
         }
         try {
           client.postMessage({ type: 'HAKUM_NAV', url: path })
-          await client.focus()
+          if (typeof client.focus === 'function') await client.focus().catch(() => {})
           return
         } catch {
           /* try next client */
