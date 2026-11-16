@@ -7,8 +7,17 @@ import { supabase } from '@/lib/supabase'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { fetchPortal, portalAction } from '@/lib/customerPortalClient'
 import { normalizePromoCode, promoDiscountedPriceMinor } from '@/lib/promoVoucher'
-import { formatSizePriceRange, PRICING_SIZES, resolveServicePriceMinor, normalizePricingSize } from '@/lib/servicePricing'
+import { PRICING_SIZES, resolveServicePriceMinor, normalizePricingSize } from '@/lib/servicePricing'
 import { filterFloorDetailingServices } from '@/lib/serviceKinds'
+import {
+  assessmentServiceFor,
+  bookingFamilyOf,
+  bookingFamilySteps,
+  COATED_CHOICES,
+  familyPickItems,
+  groupBookingFamilies,
+  isMaintenanceService,
+} from '@/lib/bookingFamilies'
 import { packagesForService, bookedDetailingServiceId } from '@/lib/detailingPackages'
 import { pointsLabel } from '@/lib/loyaltyPoints'
 import { seedBookingFromVehicle } from '@/lib/uiDeadControls'
@@ -111,6 +120,8 @@ export default function CustomerBookPage() {
   const [step, setStep] = useState(0)
   const [sent, setSent] = useState(false)
   const [otherCar, setOtherCar] = useState(false)
+  const [familyKey, setFamilyKey] = useState('')
+  const [coated, setCoated] = useState('')
   const openedFromLink = useRef(false)
 
   const { branches, nearestSlug, pin, selectBranch } = useCustomerBranch(portal?.branches || [], { wanted: params.get('branch') || '' })
@@ -172,6 +183,10 @@ export default function CustomerBookPage() {
       // A link that names a service (website buttons, "Book maintenance") opens the steps straight away.
       if (serviceId && !openedFromLink.current) {
         openedFromLink.current = true
+        const linked = detailing.find((s) => s.id === serviceId)
+        const fam = bookingFamilyOf(linked)
+        setFamilyKey(fam)
+        setCoated(fam === 'ceramic' ? (isMaintenanceService(linked) ? 'hakum' : 'no') : '')
         setFlowOpen(true)
       }
     })
@@ -195,6 +210,10 @@ export default function CustomerBookPage() {
     }))
   }
 
+  const families = groupBookingFamilies(services)
+  const family = families.find((f) => f.key === familyKey) || null
+  const assess = familyKey === 'ceramic' && coated === 'elsewhere'
+  const pickItems = familyPickItems(family, coated)
   const selected = services.find((s) => s.id === form.service_id)
   const packages = packagesForService(catalog, form.service_id)
   const selectedPackage = packages.find((p) => p.id === form.package_id) || null
@@ -203,7 +222,7 @@ export default function CustomerBookPage() {
     : selected
       ? resolveServicePriceMinor(selected, form.vehicle_type)
       : 0
-  const quote = basePriceMinor > 0 ? formatPeso(basePriceMinor) : selectedPackage ? 'Ask for price' : ''
+  const quote = assess ? 'After our team checks' : basePriceMinor > 0 ? formatPeso(basePriceMinor) : selectedPackage ? 'Ask for price' : ''
   const discountedPriceMinor = appliedVoucher
     ? promoDiscountedPriceMinor(basePriceMinor, appliedVoucher)
     : basePriceMinor
@@ -214,12 +233,17 @@ export default function CustomerBookPage() {
   const savedCar = vehicles.find((v) => v.plate_number === form.vehicle_plate) || null
   const showCarFields = otherCar || !vehicles.length || !savedCar
 
-  /* Car first (size comes from My cars), a package only when the service has them, then the
-     schedule, the branch + where they heard about us, and the summary with the price last. */
-  const steps = ['car', ...(packages.length ? ['package'] : []), 'when', 'details', 'review']
+  /* Car first (size comes from My cars), Ceramic asks whether the car is already coated, then the
+     customer picks the package (priced for their car), a sub-package only when the service has them,
+     then the schedule, the branch + where they heard about us, and the summary with the price last. */
+  const steps = bookingFamilySteps(familyKey, { hasPackages: packages.length > 0 && !assess })
   const stepId = steps[Math.min(step, steps.length - 1)]
   const stepReady =
-    stepId === 'package'
+    stepId === 'coated'
+      ? Boolean(coated)
+      : stepId === 'pick'
+        ? Boolean(form.service_id)
+        : stepId === 'package'
       ? Boolean(form.package_id)
       : stepId === 'car'
         ? !plateValidationError(form.vehicle_plate)
@@ -256,12 +280,28 @@ export default function CustomerBookPage() {
     }
   }
 
-  function openFlow(serviceId) {
-    setForm((f) => ({ ...f, service_id: serviceId, package_id: '' }))
+  function openFlow(key) {
+    setFamilyKey(key)
+    setCoated('')
+    setAppliedVoucher(null)
+    setForm((f) => ({ ...f, service_id: '', package_id: '' }))
     setStep(0)
     setSent(false)
     setError('')
     setFlowOpen(true)
+  }
+
+  function pickCoated(id) {
+    setCoated(id)
+    setAppliedVoucher(null)
+    const only = familyPickItems(family, id)
+    const target = id === 'elsewhere' ? assessmentServiceFor(family) : only.length === 1 ? only[0] : null
+    setForm((f) => ({ ...f, service_id: target?.id || '', package_id: '' }))
+  }
+
+  function pickService(id) {
+    setAppliedVoucher(null)
+    setForm((f) => ({ ...f, service_id: id, package_id: '' }))
   }
 
   function closeFlow() {
@@ -289,7 +329,7 @@ export default function CustomerBookPage() {
       setError('Pick a service first.')
       return
     }
-    if (packages.length && !form.package_id) {
+    if (packages.length && !form.package_id && !assess) {
       setError('Pick a package for this service.')
       return
     }
@@ -304,9 +344,10 @@ export default function CustomerBookPage() {
         headers,
         body: JSON.stringify({
         ...form,
-        service_id: bookedDetailingServiceId(form.service_id, form.package_id, packages),
+        service_id: assess ? form.service_id : bookedDetailingServiceId(form.service_id, form.package_id, packages),
         scheduled_start: `${day}T${time}`,
-        voucher_code: appliedVoucher ? appliedVoucher.code : undefined,
+        voucher_code: appliedVoucher && !assess ? appliedVoucher.code : undefined,
+        needs_assessment: assess || undefined,
       }),
       })
       const body = await res.json().catch(() => ({}))
@@ -321,7 +362,15 @@ export default function CustomerBookPage() {
     }
   }
 
-  const stepTitles = { package: 'Pick a package', car: 'Which car?', when: 'Book your schedule', details: 'Branch and last details', review: 'Summary' }
+  const serviceName = assess ? 'Ceramic coating assessment' : selected?.name || ''
+  const stepTitles = {
+    coated: 'Is the car already ceramic coated?',
+    pick: assess
+      ? 'We’ll assess your coating'
+      : coated === 'hakum' && pickItems.length === 1
+        ? pickItems[0].name
+        : family?.pickTitle || 'Pick your package',
+    package: 'Pick a package', car: 'Which car?', when: 'Book your schedule', details: 'Branch and last details', review: 'Summary' }
   const branchName = branchRow ? branchRow.name.replace(/^Hakum Auto Care\s*/i, '') : ''
   const carLine = [form.vehicle_plate, [form.vehicle_make, form.vehicle_model].filter(Boolean).join(' '), sizeLabel].filter(Boolean).join(' · ')
   const whenLine = `${new Date(`${day}T00:00`).toLocaleDateString('en-PH', { weekday: 'short', month: 'short', day: 'numeric' })} · ${slotLabel(time)}`
@@ -329,27 +378,31 @@ export default function CustomerBookPage() {
   return (
     <CustomerAppFrame title="Book" subtitle="Protection services are booked ahead. Pick one to start." navTitle="Book">
       <div className="capp-sect">
-        <h2>Select a detailing service</h2>
+        <h2>Pick a service</h2>
       </div>
       {loading ? (
         <Skeleton n={3} />
       ) : (
         <div className="capp-svc-list" role="list" aria-label="Service">
-          {services.map((s, i) => (
-            <button key={s.id} type="button" role="listitem" className="capp-svc" onClick={() => openFlow(s.id)}>
-              <img className="capp-svc-bg" src={resolveServicePhoto(s.slug)} alt="" loading="lazy" />
+          {families.map((fam, i) => (
+            <button key={fam.key} type="button" role="listitem" className="capp-svc" onClick={() => openFlow(fam.key)}>
+              <img className="capp-svc-bg" src={resolveServicePhoto(fam.items[0]?.slug)} alt="" loading="lazy" />
               <span className="capp-no" aria-hidden>
                 {String(i + 1).padStart(2, '0')}
               </span>
               <span className="capp-svc-in">
                 <span className="min-w-0">
-                  <strong>{s.name}</strong>
-                  {s.points_award > 0 ? <em>Earn {pointsLabel(s.points_award)}</em> : null}
+                  <strong>{fam.title}</strong>
+                  <em>
+                    {fam.items.length} {fam.items.length === 1 ? 'package' : 'packages'} · {fam.blurb}
+                  </em>
                 </span>
-                <span className="capp-svc-from">
-                  From
-                  <b>{formatSizePriceRange(s, formatPeso)}</b>
-                </span>
+                {fam.fromMinor > 0 ? (
+                  <span className="capp-svc-from">
+                    From
+                    <b>{formatPeso(fam.fromMinor)}</b>
+                  </span>
+                ) : null}
               </span>
             </button>
           ))}
@@ -418,7 +471,7 @@ export default function CustomerBookPage() {
             </span>
             <h3>Thank you for submitting!</h3>
             <p>
-              Your {selected?.name || 'booking'} request{form.vehicle_plate ? ` for ${form.vehicle_plate}` : ''} is now with the {branchName || 'branch'} team. They&apos;ll
+              Your {serviceName || 'booking'} request{form.vehicle_plate ? ` for ${form.vehicle_plate}` : ''} is now with the {branchName || 'branch'} team. They&apos;ll
               text you to confirm the final day.
             </p>
             <p className="capp-meta">{[whenLine, branchName, quote].filter(Boolean).join(' · ')}</p>
@@ -429,6 +482,68 @@ export default function CustomerBookPage() {
               {String(step + 1).padStart(2, '0')}
             </span>
             <h3 className="capp-flow-h">{stepId === 'package' && selected ? selected.name : stepTitles[stepId]}</h3>
+
+            {stepId === 'coated' ? (
+              <>
+                <p className="capp-flow-sub">Cars coated at Hakum only need a maintenance visit.</p>
+                <div className="capp-opts" role="radiogroup" aria-label="Already coated">
+                  {COATED_CHOICES.map((c) => (
+                    <button key={c.id} type="button" role="radio" aria-checked={coated === c.id} className="capp-opt" onClick={() => pickCoated(c.id)}>
+                      <span className="capp-opt-rd" aria-hidden />
+                      <span className="capp-row-body">
+                        <strong>{c.label}</strong>
+                        <em>{c.hint}</em>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : null}
+
+            {stepId === 'pick' ? (
+              assess ? (
+                <>
+                  <p className="capp-flow-sub">Your car was coated somewhere else, so our team checks it at the branch first and tells you what it needs.</p>
+                  <div className="capp-opts" role="radiogroup" aria-label="Assessment">
+                    <button type="button" role="radio" aria-checked className="capp-opt">
+                      <span className="capp-opt-rd" aria-hidden />
+                      <span className="capp-row-body">
+                        <strong>Coating assessment</strong>
+                        <em>Our team checks the coating, then recommends maintenance or a new coating.</em>
+                      </span>
+                      <span className="capp-opt-price">After check</span>
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="capp-flow-sub">Prices are for your {sizeLabel} car.</p>
+                  <div className="capp-opts" role="radiogroup" aria-label="Package">
+                    {pickItems.map((svc) => {
+                      const price = resolveServicePriceMinor(svc, form.vehicle_type)
+                      return (
+                        <button
+                          key={svc.id}
+                          type="button"
+                          role="radio"
+                          aria-checked={svc.id === form.service_id}
+                          className="capp-opt"
+                          onClick={() => pickService(svc.id)}
+                        >
+                          <span className="capp-opt-rd" aria-hidden />
+                          <span className="capp-row-body">
+                            <strong>{svc.name}</strong>
+                            {svc.description ? <em>{svc.description}</em> : null}
+                            {svc.points_award > 0 ? <em>Earn {pointsLabel(svc.points_award)}</em> : null}
+                          </span>
+                          <span className="capp-opt-price">{price > 0 ? formatPeso(price) : 'Ask for price'}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </>
+              )
+            ) : null}
 
             {stepId === 'package' ? (
               <>
@@ -640,7 +755,7 @@ export default function CustomerBookPage() {
                 <dl className="capp-sum">
                   <div>
                     <dt>Service</dt>
-                    <dd>{selected?.name || '—'}</dd>
+                    <dd>{serviceName || '—'}</dd>
                   </div>
                   {selectedPackage ? (
                     <div>
@@ -692,6 +807,8 @@ export default function CustomerBookPage() {
                   ) : null}
                 </dl>
 
+                {assess ? null : (
+                <>
                 <div className="capp-sect mt-3">
                   <h2>Promo voucher</h2>
                 </div>
@@ -780,6 +897,8 @@ export default function CustomerBookPage() {
                     </>
                   )}
                 </div>
+                </>
+                )}
                 <div className="capp-sect">
                   <h2>Contact</h2>
                 </div>

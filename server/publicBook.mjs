@@ -21,6 +21,8 @@ import { adminClient as admin } from './supabaseAdmin.mjs'
  * Public online booking — works with or without customer account.
  * Inserts booking via service role, then BusyBee SMS (+ push if logged in).
  */
+export const ASSESSMENT_NOTE = 'Coating assessment: car was ceramic coated somewhere else. Check the coating at the branch, then confirm maintenance or a new coating and the price with the customer.'
+
 export async function handlePublicBookRequest(req, res) {
   setCors(res, 'POST, OPTIONS')
   if (req.method === 'OPTIONS') {
@@ -45,6 +47,8 @@ export async function handlePublicBookRequest(req, res) {
     const scheduled_start = body.scheduled_start ? new Date(body.scheduled_start).toISOString() : null
 
     const vehicle_type = String(body.vehicle_type || 'medium').trim().toLowerCase() || 'medium'
+    // Customer app Ceramic: "coated somewhere else" books an assessment visit; the team sets the job after checking.
+    const needs_assessment = body.needs_assessment === true
 
     if (!customer_name || !customer_phone || !service_id || !branch || !scheduled_start) {
       return json(res, 400, { error: 'Name, phone, service, branch, and schedule are required.' })
@@ -211,6 +215,7 @@ export async function handlePublicBookRequest(req, res) {
       promo_voucher_id: appliedVoucher ? appliedVoucher.id : null,
       promo_discount_minor: promoDiscountMinor,
       promo_applied_at: appliedVoucher ? new Date().toISOString() : null,
+      ...(needs_assessment ? { notes: ASSESSMENT_NOTE } : {}),
     }
 
     const { data: booking, error } = await db.from('bookings').insert(insert).select('*').single()
