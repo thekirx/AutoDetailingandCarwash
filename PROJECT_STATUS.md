@@ -1,7 +1,16 @@
 # Project Status
 
-**Last Updated:** 2026-11-15 (Asia/Manila) — Blog Editorial Redesign, Full CRUD, Full-Screen Preview & Services Backend Hardening  
-**Overall Status:** Verified locally & against live Supabase (`lybxhpzzqqyqswvuwpxv`); ready to deploy cleanly to `origin/main`.
+**Last Updated:** 2026-11-16 (Asia/Manila) — Fixed Planner Forms, Configure UX, Form Results Board, Local Near-Me SEO, PWA Updates & Handoff  
+**Overall Status:** Verified locally (`8eb0990` + handoff docs) & pushed to `origin/main`; ready for Vercel production verification. For full AI/engineering onboarding see [`HANDOFF.md`](HANDOFF.md).
+
+## Executive Summary (2026-11-16 — Form Results Board, Local SEO/PWA Updates, Planner Configure & Fixed Forms)
+
+- **Header Identity & CMS Card Alignment (`7e5eedf`)**: Signed-in public header (`PublicLayout.jsx`) now displays the authenticated user's name instead of Sign In / Sign Up buttons, with aligned card CMS actions.
+- **Permanent Form Results Board (`2a709c8`)**: Shipped `/operations/forms/results` & `/operations/forms/results/:slug` (`FormResultsBoardPage.jsx`, `formResults.js`, `formResultsApi.js`, `server/provisionStaff.mjs`) with form-kind sub-tabs, board cards, click-to-view full submission modal, search, status/branch/date-range filters, and Owner-only (`BossMich`) edit/delete enforcement.
+- **Local Near-Me SEO, AI Visibility, PWA Auto-Update & Realtime Alerts (`3c20c2b`)**: Shipped `LOCAL_BRANCH_PAGES` (`/near-me/*` hubs for Bacoor, Imus, Cavite, Batangas City), `NearestBranchFinder.jsx`, Blog & Branch Schema.org JSON-LD, `scripts/prerender-seo.mjs` (23 static SEO HTML shells), cross-platform `PwaUpdateBanner.jsx` (`/version.json` drift detection + safe non-interrupting auto-reload + `navigator.storage.persist()`), and global realtime toast/chime/app-badge + `public/push-sw.js` push notifications.
+- **Planner Configure UX (`6af72a1`)**: Rebuilt `PlanningConfigurePanel.jsx` (`planCategoryRoles.js`, `plannerBoard.js`) to show live saved settings alongside pending changes and explicit role visibility checklists.
+- **Fixed Forms, Sequence Reordering & Events RSVP Removal (`8eb0990`)**: Removed Events RSVP form creation/selection from Planner Forms & Events (`PlanningFormsSmartPanel.jsx`, `PlanningPart6Panels.jsx`, `PlanningBoardPage.jsx`), and converted operational forms to fixed non-editable schemas with `FixedSequenceList` (`moveFormField`) sequence reordering, side-by-side real-time `<BrandedOpsForm preview />`, and `Reset order` / `Save order` / `Save & Publish` / `Unpublish` controls.
+- **Verification on `8eb0990`**: `npm run lint` (`0`), `npm test` (`2645/2645` across `595` suites), `npm run check` (`ok`), `npm run audit:api-auth` (`36` handlers ok), `npm run build` (23 static SEO shells + SW precache), and Puppeteer `vite preview` verification (`0` page errors, `0` mobile overflow).
 
 ## Executive Summary (2026-11-15 — Blog Redesign, Full-Screen Studio & Services Hardening)
 
