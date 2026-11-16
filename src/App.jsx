@@ -56,6 +56,7 @@ const FinancePage = lazy(() => import('./pages/FinancePage'))
 const CrmPage = lazy(() => import('./pages/CrmPage'))
 const BookingBoardPage = lazy(() => import('./pages/BookingBoardPage'))
 const PlanningBoardPage = lazy(() => import('./pages/PlanningBoardPage'))
+const FormResultsBoardPage = lazy(() => import('./pages/FormResultsBoardPage'))
 const AccessDeniedPage = lazy(() => import('./pages/AccessDeniedPage'))
 const SettingsHubPage = lazy(() => import('./pages/SettingsHubPage'))
 const PosSettingsPage = lazy(() => import('./pages/settings/PosSettingsPage'))
@@ -232,6 +233,8 @@ export default function App() {
             <Route path="sms" element={gate('crm', <Navigate to="/operations/crm?tab=sms" replace />)} />
             <Route path="bookings" element={gate('bookings', <BookingBoardPage />)} />
             <Route path="planning" element={gate('planning', <PlanningBoardPage />)} />
+            <Route path="forms/results" element={gate('planning', <FormResultsBoardPage />)} />
+            <Route path="forms/results/:formSlug" element={gate('planning', <FormResultsBoardPage />)} />
             <Route path="roadmap" element={<Navigate to="/operations" replace />} />
             <Route path="settings" element={gate('settings', <SettingsHubPage />)} />
             <Route path="settings/tint-finder" element={gate('settings', <TintFinderSettingsPage />)} />

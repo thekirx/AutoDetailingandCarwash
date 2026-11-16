@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import {
   CalendarDays,
+  ClipboardList,
   Copy,
   CopyPlus,
   ExternalLink,
@@ -28,6 +29,7 @@ import BlogArticlePreview from '@/components/content/BlogArticlePreview'
 import { MediaLibraryDialog } from '@/components/content/ContentBlockEditor'
 import ContentBlockRenderer from '@/components/content/ContentBlockRenderer'
 import ContentStudioModal from '@/components/content/ContentStudioModal'
+import { eventQuickResultsSlug, permanentFormResultsPath } from '@/lib/formResults'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -536,18 +538,25 @@ export default function ContentAdminPage() {
                 ))}
               </div>
             </div>
-            <Button
-              type="button"
-              className="cursor-pointer"
-              onClick={() =>
-                setStudioModal({
-                  kind: 'event',
-                  data: createEmptyEventDraft(defaultBranchSlug),
-                })
-              }
-            >
-              <Plus className="mr-1.5 size-4" /> New Event
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="outline" className="cursor-pointer" asChild>
+                <Link to="/operations/forms/results">
+                  <ClipboardList className="mr-1.5 size-4" /> Form Results
+                </Link>
+              </Button>
+              <Button
+                type="button"
+                className="cursor-pointer"
+                onClick={() =>
+                  setStudioModal({
+                    kind: 'event',
+                    data: createEmptyEventDraft(defaultBranchSlug),
+                  })
+                }
+              >
+                <Plus className="mr-1.5 size-4" /> New Event
+              </Button>
+            </div>
           </div>
 
           <Card>
@@ -605,6 +614,16 @@ export default function ContentAdminPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex flex-wrap justify-end gap-1">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="cursor-pointer"
+                              asChild
+                            >
+                              <Link to={permanentFormResultsPath(ev.ops_forms?.slug || eventQuickResultsSlug(ev))}>
+                                <ClipboardList className="mr-1 size-3.5" /> Results
+                              </Link>
+                            </Button>
                             <Button
                               size="sm"
                               variant="outline"

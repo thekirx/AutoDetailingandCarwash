@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Pencil, Plus, Settings2, Trash2 } from 'lucide-react'
+import { ClipboardList, Pencil, Plus, Settings2, Trash2 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canManageSiteContent } from '@/auth/permissions'
 import ContentStudioModal from '@/components/content/ContentStudioModal'
@@ -13,6 +13,7 @@ import {
   prepareEventForEditor,
   saveCmsEvent,
 } from '@/lib/contentCmsApi'
+import { eventQuickResultsSlug, permanentFormResultsPath } from '@/lib/formResults'
 import { createPublicFormGuard, validatePublicFormGuard } from '@/lib/publicFormGuard'
 import { submitPublicInquiry } from '@/lib/publicInquiryApi'
 import { supabase } from '@/lib/supabase'
@@ -220,6 +221,9 @@ export default function EventsPage() {
                 >
                   {showDrafts ? 'Showing Drafts & Published' : 'Show Draft Events'}
                 </button>
+                <Link className="bd-btn bd-btn-quiet" to="/operations/forms/results">
+                  <ClipboardList size={15} aria-hidden="true" /> Form Results
+                </Link>
                 <Link className="bd-btn bd-btn-quiet" to="/operations/content?tab=events">
                   <Settings2 size={15} aria-hidden="true" /> Manage All
                 </Link>
@@ -282,6 +286,12 @@ export default function EventsPage() {
                   </div>
                   {canEdit && (
                     <div className="bd-cms-card-actions">
+                      <Link
+                        className="bd-cms-inline-btn"
+                        to={permanentFormResultsPath(attached?.slug || eventQuickResultsSlug(item))}
+                      >
+                        <ClipboardList size={13} aria-hidden="true" /> Results
+                      </Link>
                       <button
                         type="button"
                         className="bd-cms-inline-btn"

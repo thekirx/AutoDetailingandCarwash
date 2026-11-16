@@ -633,6 +633,11 @@ export function canManageOpsFormTemplates(profile) {
   return canEditPlanning(profile)
 }
 
+/** Strictly Owner (`BossMich`) only — edit and delete permanent form results and answers. */
+export function canEditDeleteFormResults(profile) {
+  return isSuperAdmin(profile)
+}
+
 export function canUseOperations(profile) {
   return has(profile, OPS_LOGIN_ROLES)
 }

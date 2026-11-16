@@ -1,5 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
+  ClipboardList,
   Copy,
   ExternalLink,
   Eye,
@@ -13,6 +15,7 @@ import FormQrCard from '@/components/FormQrCard'
 import { useAuth } from '@/auth/AuthProvider'
 import {
   canApproveCashAdvance,
+  canEditDeleteFormResults,
   canManageOpsFormTemplates,
   canSubmitOpsFormKind,
   getBranchScopeList,
@@ -31,6 +34,8 @@ import { supabase } from '@/lib/supabase'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { notifyOpsEvent } from '@/lib/opsEventNotify'
 import { listBranches } from '@/lib/adminApi'
+import { permanentFormResultsPath } from '@/lib/formResults'
+import { updateFormSubmissionAsOwner } from '@/lib/formResultsApi'
 import {
   DEFAULT_FORM_LOGO,
   FIELD_TYPES,
@@ -263,6 +268,7 @@ function emptyEditorFromForm(form, branchSlugs = []) {
 export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateKind, resultsId }) {
   const { profile } = useAuth()
   const manageTemplates = canEdit && canManageOpsFormTemplates(profile)
+  const canEditDeleteSubmissions = canEditDeleteFormResults(profile)
   const approveCash = canApproveCashAdvance(profile)
   const scopeList = getBranchScopeList(profile)
   const [forms, setForms] = useState([])
@@ -613,24 +619,39 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
   }
 
   async function setSubmissionStatus(id, status) {
-    const { error } = await supabase.from('ops_form_submissions').update({ status }).eq('id', id)
-    if (error) toast.error(error.message)
-    else {
+    if (!canEditDeleteSubmissions) {
+      toast.error('Only Owner can edit form results.')
+      return
+    }
+    try {
+      await updateFormSubmissionAsOwner(id, { status })
       toast.success(`Marked ${status}`)
       load()
+    } catch (err) {
+      toast.error(err.message || 'Could not update status')
     }
   }
 
   const shareUrl = selectedTemplate?.slug ? shareFormUrl(selectedTemplate.slug) : ''
+  const permanentResultsHref = selectedTemplate
+    ? permanentFormResultsPath(selectedTemplate.slug || selectedTemplate.id)
+    : '/operations/forms/results'
 
   return (
     <div className="planner-forms flex flex-col gap-6">
-      <div>
-        <h2 className="text-lg font-semibold text-foreground">Forms</h2>
-        <p className="mt-1 max-w-[65ch] text-sm text-muted-foreground">
-          Company templates, detailing services and custom forms. Each public form gets a permanent{' '}
-          <code className="text-xs">/f/…</code> link and downloadable QR.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-foreground">Forms</h2>
+          <p className="mt-1 max-w-[65ch] text-sm text-muted-foreground">
+            Company templates, detailing services and custom forms. Each public form gets a permanent{' '}
+            <code className="text-xs">/f/…</code> link, permanent results board, and downloadable QR.
+          </p>
+        </div>
+        <Button type="button" variant="outline" size="sm" className="min-h-10 cursor-pointer" asChild>
+          <Link to="/operations/forms/results">
+            <ClipboardList className="size-4" /> Form Results Board
+          </Link>
+        </Button>
       </div>
 
       <div className="grid gap-3 sm:max-w-xl sm:grid-cols-2">
@@ -770,6 +791,11 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
                 <div className="mt-2 flex flex-wrap gap-2">
                   <Button size="sm" variant="outline" className="cursor-pointer" onClick={() => copyShare(selectedTemplate)}>
                     <Copy className="size-3.5" /> Copy link
+                  </Button>
+                  <Button size="sm" variant="outline" className="cursor-pointer" asChild>
+                    <Link to={permanentResultsHref}>
+                      <ClipboardList className="size-3.5" /> Results board
+                    </Link>
                   </Button>
                   {selectedTemplate?.public_enabled && selectedTemplate?.status === 'published' ? (
                     <Button size="sm" variant="ghost" className="cursor-pointer" asChild>
@@ -1101,6 +1127,13 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
             {resultsForm?.slug && (
               <Button type="button" variant="outline" className="cursor-pointer" onClick={() => copyShare(resultsForm)}>Copy share link</Button>
             )}
+            {resultsForm ? (
+              <Button type="button" variant="outline" className="cursor-pointer" asChild>
+                <Link to={permanentFormResultsPath(resultsForm.slug || resultsForm.id)}>
+                  <ClipboardList className="size-3.5" /> Open Permanent Results Board
+                </Link>
+              </Button>
+            ) : null}
           </div>
           <div className="planning-event-list">
             {resultsRows.map((row) => {
@@ -1116,7 +1149,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
                   {rowBranch ? <Badge variant="outline">{formatBranchSlugLabel(rowBranch)}</Badge> : null}
                   {row.plan_card_id ? <Badge variant="secondary">On Tasks</Badge> : null}
                 </div>
-                <Select value={row.status || 'new'} onValueChange={(status) => setSubmissionStatus(row.id, status)} disabled={!manageTemplates}>
+                <Select value={row.status || 'new'} onValueChange={(status) => setSubmissionStatus(row.id, status)} disabled={!canEditDeleteSubmissions}>
                   <SelectTrigger className="h-10 cursor-pointer"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {SUBMISSION_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}
@@ -1173,7 +1206,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, initialCreateK
                   </TableCell>
                   <TableCell className="capitalize">{row.source}</TableCell>
                   <TableCell>
-                    <Select value={row.status || 'new'} onValueChange={(status) => setSubmissionStatus(row.id, status)} disabled={!manageTemplates}>
+                    <Select value={row.status || 'new'} onValueChange={(status) => setSubmissionStatus(row.id, status)} disabled={!canEditDeleteSubmissions}>
                       <SelectTrigger className="h-8 w-32 cursor-pointer"><SelectValue /></SelectTrigger>
                       <SelectContent>
                         {SUBMISSION_STATUSES.map((s) => <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>)}

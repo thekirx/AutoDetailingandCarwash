@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Edit3, Eye, EyeOff, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { ClipboardList, Edit3, Eye, EyeOff, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import ContentBlockRenderer from '@/components/content/ContentBlockRenderer'
 import ContentStudioModal from '@/components/content/ContentStudioModal'
@@ -9,6 +9,7 @@ import { canManageSiteContent } from '@/auth/permissions'
 import { supabase } from '@/lib/supabase'
 import { listBranches } from '@/lib/adminApi'
 import { shareFormUrl } from '@/lib/opsForms'
+import { eventQuickResultsSlug, permanentFormResultsPath } from '@/lib/formResults'
 import { createPublicFormGuard, validatePublicFormGuard } from '@/lib/publicFormGuard'
 import { submitPublicInquiry } from '@/lib/publicInquiryApi'
 import { usePageMeta } from '@/lib/pageMeta'
@@ -221,6 +222,13 @@ export default function EventSharePage() {
                   <Trash2 size={14} />
                   Delete
                 </button>
+                <Link
+                  to={permanentFormResultsPath(attached?.slug || eventQuickResultsSlug(event))}
+                  className="bd-cms-btn is-link"
+                >
+                  <ClipboardList size={14} />
+                  Form Results
+                </Link>
                 <Link to="/operations/content" className="bd-cms-btn is-link">
                   CMS Studio
                 </Link>
