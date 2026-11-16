@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node scripts/prerender-seo.mjs",
     "generate:brand-meta": "node scripts/generate-brand-meta-assets.mjs",
     "generate:flowcharts-pdf": "node scripts/export-flowcharts-pdf.mjs",
     "generate:owner-stories": "node scripts/export-user-stories-pdf.mjs",

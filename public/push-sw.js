@@ -1,5 +1,17 @@
 /* global clients, self */
-/* Hakum Auto Care — push handlers (imported by vite-plugin-pwa workbox). No secrets. */
+/* Hakum Auto Care — push & lifecycle handlers (imported by vite-plugin-pwa workbox). No secrets. */
+self.addEventListener('activate', (event) => {
+  if (clients && typeof clients.claim === 'function') {
+    event.waitUntil(clients.claim())
+  }
+})
+
+self.addEventListener('message', (event) => {
+  if (event?.data?.type === 'SKIP_WAITING' && typeof self.skipWaiting === 'function') {
+    self.skipWaiting()
+  }
+})
+
 self.addEventListener('push', (event) => {
   let data = { title: 'Hakum Auto Care', body: 'You have an update.', url: '/', tag: 'hakum' }
   try {
@@ -7,17 +19,26 @@ self.addEventListener('push', (event) => {
   } catch {
     /* ignore */
   }
+  const badgeNum = Number(data.badgeCount)
+  const badgeTask =
+    self.navigator && typeof self.navigator.setAppBadge === 'function'
+      ? self.navigator.setAppBadge(Number.isFinite(badgeNum) && badgeNum > 0 ? badgeNum : 1).catch(() => {})
+      : Promise.resolve()
+
   event.waitUntil(
-    self.registration.showNotification(data.title || 'Hakum Auto Care', {
-      body: data.body,
-      icon: data.icon || '/apple-touch-icon.png',
-      badge: '/push-badge.png',
-      tag: data.tag || 'hakum',
-      renotify: true,
-      // Chrome: must be user-visible; requireInteraction keeps important alerts on screen
-      requireInteraction: Boolean(data.requireInteraction),
-      data: { url: data.url || '/' },
-    }),
+    Promise.all([
+      badgeTask,
+      self.registration.showNotification(data.title || 'Hakum Auto Care', {
+        body: data.body,
+        icon: data.icon || '/apple-touch-icon.png',
+        badge: '/push-badge.png',
+        tag: data.tag || 'hakum',
+        renotify: true,
+        // Chrome: must be user-visible; requireInteraction keeps important alerts on screen
+        requireInteraction: Boolean(data.requireInteraction),
+        data: { url: data.url || '/' },
+      }),
+    ]),
   )
 })
 

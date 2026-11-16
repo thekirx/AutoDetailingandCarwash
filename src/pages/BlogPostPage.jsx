@@ -30,6 +30,9 @@ function decoratePost(row) {
     region: meta.region || row.region || 'all',
     regionLabel: row.regionLabel || meta.region || 'Cavite & Batangas',
     ai_summary: meta.ai_summary || row.ai_summary || row.excerpt || '',
+    seo_title: meta.seo_title || row.seo_title || '',
+    seo_description: meta.seo_description || row.seo_description || '',
+    seo_keywords: meta.seo_keywords || row.seo_keywords || '',
     read_minutes: Number(meta.read_minutes || row.read_minutes || stats.readMinutes || 4),
     is_featured: Boolean(meta.is_featured ?? row.is_featured ?? row.featured),
   }
@@ -104,8 +107,8 @@ export default function BlogPostPage() {
   // Post links get pasted into Facebook and WhatsApp; before this every one of
   // them scraped as the homepage (BUG-051).
   usePageMeta({
-    title: post?.title,
-    description: post?.ai_summary || post?.excerpt,
+    title: post?.seo_title || post?.title,
+    description: post?.seo_description || post?.ai_summary || post?.excerpt,
     path: slug ? `/blog/${slug}` : '/events',
     image: post?.cover_url || '/og-image.png',
     jsonLd: articleJsonLd,

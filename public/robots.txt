@@ -1,6 +1,25 @@
 User-agent: *
 Allow: /
 
+# Search & AI answer crawlers (explicitly welcome public marketing, branch & blog guides)
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Applebot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
 # Back-of-house and account surfaces have nothing to index and are gated
 # anyway; keeping them out of the crawl budget stops them being surfaced
 # through link equity from the public pages.

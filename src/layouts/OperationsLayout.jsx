@@ -67,6 +67,7 @@ import { internalRoleLabel } from '../auth/internalRoles'
 import { resolvePostLoginPath } from '../auth/authRedirect'
 import { supabase } from '@/lib/supabase'
 import NotificationBell from '@/components/NotificationBell'
+import PushToggle from '@/components/PushToggle'
 import UserSettingsModal from '@/components/UserSettingsModal'
 import { OpsInstallPopup } from '@/components/InstallGuide'
 import CommandMenu from '@/components/ops/CommandMenu'
@@ -648,6 +649,7 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
           >
             <Search className="size-4" />
           </Button>
+          <PushToggle audience="ops" compact surface="light" className="hidden md:inline-flex" />
           <NotificationBell
             homeUrl={isBranchAdmin(profile) ? '/operations/pos' : resolvePostLoginPath(profile, null)}
             homeLabel={isBranchAdmin(profile) ? 'Open POS' : 'Home'}

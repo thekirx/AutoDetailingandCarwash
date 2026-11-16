@@ -16,7 +16,28 @@ import './styles/daily-sheet.css'
 import './styles-customer-app.css'
 import './styles/bredesign.css'
 
-registerSW({ immediate: true })
+const updateSW = registerSW({
+  immediate: true,
+  onNeedRefresh() {
+    if (typeof window !== 'undefined') {
+      window.__hakumNeedRefresh = true
+      window.dispatchEvent(new CustomEvent('hakum:sw-update', { detail: { waiting: true } }))
+    }
+  },
+  onRegisteredSW(_swUrl, registration) {
+    if (typeof window !== 'undefined' && registration) {
+      window.__hakumSwRegistration = registration
+      if (registration.waiting) {
+        window.__hakumNeedRefresh = true
+        window.dispatchEvent(new CustomEvent('hakum:sw-update', { detail: { waiting: true } }))
+      }
+    }
+  },
+})
+
+if (typeof window !== 'undefined') {
+  window.__hakumUpdateSW = updateSW
+}
 
 // Service worker notificationclick → SPA deep link when WindowClient.navigate is unavailable
 if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {

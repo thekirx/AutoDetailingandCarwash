@@ -126,6 +126,23 @@ export function BdBranches({ branches = [] }) {
             </Link>
           </div>
         )}
+        <div className="bd-cta-row bd-reveal" style={{ marginTop: 18 }}>
+          <Link className="bd-all-link" to="/branches">
+            Find nearest car wash &amp; detailing studio near you <ArrowRight size={14} aria-hidden="true" />
+          </Link>
+          <Link className="bd-all-link" to="/branches/bacoor">
+            Bacoor
+          </Link>
+          <Link className="bd-all-link" to="/branches/batangas">
+            Batangas City
+          </Link>
+          <Link className="bd-all-link" to="/branches/imus">
+            Imus
+          </Link>
+          <Link className="bd-all-link" to="/branches/cavite">
+            Cavite
+          </Link>
+        </div>
       </div>
     </section>
   )

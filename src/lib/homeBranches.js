@@ -18,7 +18,7 @@ export function branchPhone(slug) {
    on 2026-09-28. The coordinates in the branches table are rough (the Bacoor
    pin sat ~7 km away, Batangas on the city centre), so directions use these.
    A branch not listed here falls back to its table coordinates. */
-const BRANCH_MAP_LISTINGS = {
+export const BRANCH_MAP_LISTINGS = {
   bacoor: { cid: '38179785010672017', lat: 14.4075665, lng: 120.977126 },
   batangas: { cid: '9079854389115198830', lat: 13.7762991, lng: 121.0664943 },
 }

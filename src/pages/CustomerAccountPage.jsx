@@ -16,6 +16,7 @@ import { COMPLAINT_CATEGORIES, thumbDownComplaintPayload } from '@/lib/opsForms'
 import { latestFinishedVisit, latestReviewableVisit, reviewDelayRemainingMs } from '@/lib/visitReviewDelay'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
 import NotificationBell from '@/components/NotificationBell'
+import PushToggle from '@/components/PushToggle'
 import ActiveVisitCard from '@/components/customer/ActiveVisitCard'
 import BranchWeather from '@/components/customer/BranchWeather'
 import { BirthdayGreetingSheet, BirthdayHomeCard } from '@/components/customer/BirthdayGreeting'
@@ -330,6 +331,7 @@ export default function CustomerAccountPage() {
                     Book a service
                   </Link>
                 )}
+                <PushToggle audience="customer" compact autoPrompt />
               </div>
             </div>
             {activeVisit ? (

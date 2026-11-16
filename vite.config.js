@@ -2,6 +2,7 @@ import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
+import { writeFileSync, mkdirSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { handleProvisionRequest } from './server/provisionCustomer.mjs'
@@ -15,6 +16,27 @@ import { handlePushSubscribeRequest, handleSendPushRequest } from './server/push
 import { handleBusybeeRequest } from './server/busybeeApi.mjs'
 
 const root = path.dirname(fileURLToPath(import.meta.url))
+const BUILD_VERSION = `${Date.now().toString(36)}`
+
+function versionManifestPlugin() {
+  const payload = () => JSON.stringify({ version: BUILD_VERSION, builtAt: new Date().toISOString() })
+  return {
+    name: 'hakum-version-manifest',
+    configureServer(server) {
+      server.middlewares.use('/version.json', (_req, res) => {
+        res.statusCode = 200
+        res.setHeader('Content-Type', 'application/json')
+        res.setHeader('Cache-Control', 'no-store')
+        res.end(payload())
+      })
+    },
+    writeBundle(options) {
+      const outDir = options?.dir || path.join(root, 'dist')
+      mkdirSync(outDir, { recursive: true })
+      writeFileSync(path.join(outDir, 'version.json'), payload(), 'utf8')
+    },
+  }
+}
 
 function readBody(req) {
   return new Promise((resolve, reject) => {
@@ -192,12 +214,16 @@ function provisionApiPlugin() {
 }
 
 export default defineConfig({
+  define: {
+    __APP_BUILD_VERSION__: JSON.stringify(BUILD_VERSION),
+  },
   plugins: [
     react(),
     tailwindcss(),
     provisionApiPlugin(),
+    versionManifestPlugin(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['favicon.svg', 'favicon.png', 'apple-touch-icon.png', 'og-image.png', 'manifest.webmanifest'],
       manifest: false,
       workbox: {
@@ -209,7 +235,7 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff2}'],
         // Scroll-sequence frames are fetched on demand by the PPF section —
         // precaching ~220 of them would balloon the install payload.
-        globIgnores: ['**/ppf-frames/**'],
+        globIgnores: ['**/ppf-frames/**', '**/version.json'],
         maximumFileSizeToCacheInBytes: 4 * 1024 * 1024,
         runtimeCaching: [
           {
@@ -226,7 +252,7 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: ({ url }) => url.pathname.startsWith('/api/'),
+            urlPattern: ({ url }) => url.pathname === '/version.json' || url.pathname.startsWith('/api/'),
             handler: 'NetworkOnly',
           },
         ],

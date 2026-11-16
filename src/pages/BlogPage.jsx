@@ -19,8 +19,10 @@ import {
   SEO_COMPARISON_ROWS,
   SEO_LOCAL_FAQS,
   SEO_REGIONAL_PILLARS,
+  buildEventsBlogSeoJsonLd,
   mergeBlogPostsWithGuides,
 } from '../lib/seoLocalGuides'
+import { usePageMeta } from '../lib/pageMeta'
 
 const REGION_FILTERS = [
   { id: 'all', label: 'All Guides & Stories' },
@@ -479,6 +481,21 @@ export function BlogListSection() {
 
 export default function BlogPage() {
   useReveal()
+  const blogJsonLd = useMemo(
+    () =>
+      buildEventsBlogSeoJsonLd(
+        typeof window !== 'undefined' ? window.location.origin : 'https://www.hakumautocare.com',
+      ),
+    [],
+  )
+  usePageMeta({
+    title: 'Auto Detailing, PPF & Car Wash Blog Philippines',
+    description:
+      'Detailing craft, ceramic coating protection, PPF insights, and local studio guides for Bacoor, Imus, Cavite, and Batangas City by Hakum Auto Care.',
+    path: '/blog',
+    jsonLd: blogJsonLd,
+    jsonLdId: 'hakum-blog-hub-jsonld',
+  })
   return (
     <>
       <BdPageHero

@@ -562,6 +562,39 @@ export default function ContentStudioModal({
                         />
                       </div>
 
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor="cms-seo-title">
+                          Custom SEO Title ({String(draft.seo_title || draft.title || '').length}/60 chars)
+                        </Label>
+                        <Input
+                          id="cms-seo-title"
+                          value={draft.seo_title || ''}
+                          onChange={(e) => updateDraft({ seo_title: e.target.value })}
+                          placeholder={draft.title || 'Best Car Wash & Detailing in Bacoor'}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor="cms-seo-keywords">Focus Keywords (comma-separated)</Label>
+                        <Input
+                          id="cms-seo-keywords"
+                          value={draft.seo_keywords || ''}
+                          onChange={(e) => updateDraft({ seo_keywords: e.target.value })}
+                          placeholder="car wash near me, detailing Bacoor, ceramic coating Cavite"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5 sm:col-span-2">
+                        <Label htmlFor="cms-seo-desc">
+                          Meta Description ({String(draft.seo_description || draft.ai_summary || draft.excerpt || '').length}/160 chars)
+                        </Label>
+                        <Textarea
+                          id="cms-seo-desc"
+                          rows={2}
+                          value={draft.seo_description || ''}
+                          onChange={(e) => updateDraft({ seo_description: e.target.value })}
+                          placeholder="Concise summary shown in Google Search results (aim for 120–158 characters)…"
+                        />
+                      </div>
+
                       {/* Live Google SERP Preview */}
                       <div className="rounded-lg border border-border bg-background/80 p-3 sm:col-span-2">
                         <p className="mb-1 flex items-center gap-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
@@ -571,10 +604,11 @@ export default function ContentStudioModal({
                           https://www.hakumautocare.com/blog/{previewSlug}
                         </p>
                         <p className="truncate text-sm font-semibold text-blue-400">
-                          {draft.title || 'Untitled Blog Post'} · Hakum Auto Care
+                          {draft.seo_title || draft.title || 'Untitled Blog Post'} · Hakum Auto Care
                         </p>
                         <p className="line-clamp-2 text-xs text-muted-foreground">
-                          {draft.ai_summary ||
+                          {draft.seo_description ||
+                            draft.ai_summary ||
                             draft.excerpt ||
                             'Explore car wash, auto detailing, ceramic coating, and PPF guides from Hakum Auto Care.'}
                         </p>
