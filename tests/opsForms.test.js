@@ -15,6 +15,7 @@ import {
   isDetailingFormKind,
   isFixedFormKind,
   isFormSlugLocked,
+  moveFormField,
   normalizeFields,
   shareFormUrl,
   slugifyFormName,
@@ -210,5 +211,27 @@ describe('complaint notify targets', () => {
     })
     assert.equal(copy.kind, 'ops_complaint')
     assert.match(copy.body, /Ana @ bacoor/)
+  })
+})
+
+describe('moveFormField', () => {
+  it('reorders fixed fields immutably and blocks cross-step moves on wizard forms', () => {
+    const flat = [
+      { key: 'a', label: 'A', type: 'text', required: true },
+      { key: 'b', label: 'B', type: 'phone', required: false },
+      { key: 'c', label: 'C', type: 'email', required: false },
+    ]
+    const moved = moveFormField(flat, 0, 2)
+    assert.deepEqual(moved.map((f) => f.key), ['b', 'c', 'a'])
+    assert.deepEqual(flat.map((f) => f.key), ['a', 'b', 'c'])
+
+    const steps = [{ id: 's1', title: 'Step 1' }, { id: 's2', title: 'Step 2' }]
+    const wizard = [
+      { key: 'a', label: 'A', type: 'text', step: 's1' },
+      { key: 'b', label: 'B', type: 'text', step: 's1' },
+      { key: 'c', label: 'C', type: 'text', step: 's2' },
+    ]
+    assert.deepEqual(moveFormField(wizard, 0, 1, steps).map((f) => f.key), ['b', 'a', 'c'])
+    assert.deepEqual(moveFormField(wizard, 0, 2, steps).map((f) => f.key), ['a', 'b', 'c'])
   })
 })

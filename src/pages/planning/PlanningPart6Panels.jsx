@@ -32,7 +32,7 @@ import { toast } from 'sonner'
 
 export { default as PlanningFormsPanel } from './PlanningFormsSmartPanel'
 
-export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
+export function PlanningEventsPanel({ canEdit, highlightId }) {
   const [events, setEvents] = useState([])
   const [opsForms, setOpsForms] = useState([])
   const [branchOptions, setBranchOptions] = useState([])
@@ -63,6 +63,7 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
         .select('id, name, slug, status, public_enabled')
         .eq('is_active', true)
         .neq('status', 'archived')
+        .neq('kind', 'event')
         .order('name'),
       listBranches().catch(() => []),
     ])
@@ -271,9 +272,6 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
                   Form Results Board
                 </Link>
               </Button>
-              {onCreateForm ? (
-                <Button type="button" variant="outline" className="min-h-11" onClick={onCreateForm}>Create event form</Button>
-              ) : null}
               <Button type="button" variant="outline" className="min-h-11" onClick={openStudioCreate}>
                 <Edit3 size={16} className="mr-1.5" aria-hidden />
                 Studio Editor

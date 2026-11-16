@@ -532,7 +532,6 @@ export default function PlanningBoardPage() {
         <PlanningFormsSmartPanel
           canEdit={canEdit}
           lists={lists}
-          initialCreateKind={searchParams.get('create')}
           resultsId={searchParams.get('results')}
         />
       )}
@@ -541,14 +540,6 @@ export default function PlanningBoardPage() {
         <PlanningEventsPanel
           canEdit={canEdit}
           highlightId={searchParams.get('event')}
-          onCreateForm={() =>
-            setSearchParams((prev) => {
-              const params = new URLSearchParams(prev)
-              params.set('tab', 'forms')
-              params.set('create', 'event')
-              return params
-            }, { replace: true })
-          }
         />
       )}
 

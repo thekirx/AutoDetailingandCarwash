@@ -19,9 +19,12 @@ it('widens the kinds and preserves every existing role branch, adding custom lik
   assert.equal(current.get('custom'),current.get('detailing'))
   assert.match(sql,/revoke all on function public.can_submit_ops_form\(text\) from public, anon/)
 })
-it('includes template editor controls and accessible wizard markup', () => {
+it('enforces fixed sequence reordering, live preview, save/publish, and excludes event forms in Forms panel', () => {
   const panel = readFileSync(new URL('../src/pages/planning/PlanningFormsSmartPanel.jsx',import.meta.url),'utf8')
-  for(const text of ['Start from a template','Use this template','Show as steps','New custom form']) assert.ok(panel.includes(text),text)
+  for(const text of ['Input sequence','Real-time preview','Save &amp; Publish',"k.value !== 'event'"]) assert.ok(panel.includes(text),text)
+  for(const forbidden of ['Add field','New custom form','Start from a template']) assert.ok(!panel.includes(forbidden),`unexpected editable/template control: ${forbidden}`)
+  const eventsPanel = readFileSync(new URL('../src/pages/planning/PlanningPart6Panels.jsx',import.meta.url),'utf8')
+  assert.ok(!eventsPanel.includes('Create event form'))
   const renderer = readFileSync(new URL('../src/components/BrandedOpsForm.jsx',import.meta.url),'utf8')
   assert.match(renderer,/role="progressbar"/)
   assert.match(renderer,/Check and send/)

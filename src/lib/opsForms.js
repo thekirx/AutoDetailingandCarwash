@@ -516,3 +516,21 @@ export function draftFromTemplate(template, { branchSlugs = [] } = {}) {
     settings: normalizeFormSettings({ ...copy.settings, slug_locked: false }, kind), slug: '',
   }
 }
+
+/** Move a fixed form field up/down or to another index within its step group without mutating input metadata. */
+export function moveFormField(fields, fromIndex, toIndex, steps = null) {
+  const rows = normalizeFields(fields)
+  if (fromIndex < 0 || fromIndex >= rows.length || toIndex < 0 || toIndex >= rows.length || fromIndex === toIndex) {
+    return rows
+  }
+  const groupFor = (field) => {
+    if (!Array.isArray(steps) || !steps.length) return 0
+    const idx = steps.findIndex((s) => s.id === field?.step)
+    return idx >= 0 ? idx : 0
+  }
+  if (groupFor(rows[fromIndex]) !== groupFor(rows[toIndex])) return rows
+  const next = [...rows]
+  const [moved] = next.splice(fromIndex, 1)
+  next.splice(toIndex, 0, moved)
+  return next
+}
