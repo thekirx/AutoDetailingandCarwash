@@ -42,10 +42,10 @@
     "semantic_hash": "eeb32565c45050d62d53773762caa702"
   },
   "api/staff.js": {
-    "mtime": 1794649163.3281858,
-    "seen": 1794750478.5138817,
-    "ast_hash": "5ae2b68a871948851c07b2fac9d7f326",
-    "semantic_hash": "5ae2b68a871948851c07b2fac9d7f326"
+    "mtime": 1794886340.109483,
+    "seen": 1794887303.838557,
+    "ast_hash": "00ec2590afb44dffb4b236599ea1d6d8",
+    "semantic_hash": ""
   },
   "components.json": {
     "mtime": 1784543682.1186223,
@@ -1092,10 +1092,10 @@
     "semantic_hash": "0c143fd3e45db0245b187e58b735a1a0"
   },
   "src/components/ops/CommandMenu.jsx": {
-    "mtime": 1788518634.1797743,
-    "seen": 1789446852.7408063,
-    "ast_hash": "7ab7663d2493c81693c18f34b920a582",
-    "semantic_hash": "7ab7663d2493c81693c18f34b920a582"
+    "mtime": 1794886472.0489888,
+    "seen": 1794887303.8399646,
+    "ast_hash": "b69db0234ba4718e502b58124540dabb",
+    "semantic_hash": ""
   },
   "src/components/ops/ConfirmDialog.jsx": {
     "mtime": 1788518624.957322,
@@ -1356,9 +1356,9 @@
     "semantic_hash": "21cadcc97434bd72c2e17fe9cdadb88a"
   },
   "src/layouts/OperationsLayout.jsx": {
-    "mtime": 1794794169.3810575,
-    "seen": 1794800220.656492,
-    "ast_hash": "3a19e2b5be259a91fb9fbf4511635ae1",
+    "mtime": 1794886479.2621405,
+    "seen": 1794887303.8401508,
+    "ast_hash": "721201e0131c9598d30d1eb706349588",
     "semantic_hash": ""
   },
   "src/layouts/PublicLayout.jsx": {
@@ -3750,9 +3750,9 @@
     "semantic_hash": "ca9f0b7211380a51afb3ddb52fc57742"
   },
   "tests/apiGatewayRoutes.test.js": {
-    "mtime": 1794839918.4099343,
-    "seen": 1794840226.8867483,
-    "ast_hash": "13fbedcacd24e8919113d2d910d3ab9b",
+    "mtime": 1794886342.3054795,
+    "seen": 1794887303.8429253,
+    "ast_hash": "fc63b7c63a5b65fb1218cec0a181a771",
     "semantic_hash": ""
   },
   "tests/appShell.test.js": {
@@ -4944,9 +4944,9 @@
     "semantic_hash": "b2fd8c1a303fa745eeb26b3fac07046c"
   },
   "CHANGELOG.md": {
-    "mtime": 1794841528.15895,
-    "seen": 1794842958.0374138,
-    "ast_hash": "7e24a29413eec6ce299349837c401910",
+    "mtime": 1794887186.4053478,
+    "seen": 1794887303.8444433,
+    "ast_hash": "2813b2d8101c6603c2ee770e178258e8",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
@@ -4974,9 +4974,9 @@
     "semantic_hash": "983fbeb6e7617283c5643ec1912d89f8"
   },
   "PROJECT_STATUS.md": {
-    "mtime": 1794841528.2240157,
-    "seen": 1794842958.0374546,
-    "ast_hash": "d7f2b8614aac92a3ec8b77ecf5e5bf46",
+    "mtime": 1794887188.180313,
+    "seen": 1794887303.8444777,
+    "ast_hash": "d21fcbc520078bdfa2172441f4d2c2a3",
     "semantic_hash": ""
   },
   "SECURITY_AUDIT.md": {
@@ -8778,8 +8778,8 @@
     "semantic_hash": "5f0a507b4ebe0b4950384ecca333492a"
   },
   "src/lib/demoSignIn.js": {
-    "mtime": 1794842864.7393942,
-    "seen": 1794842958.0337863,
+    "mtime": 1794843798.1591575,
+    "seen": 1794887303.8404047,
     "ast_hash": "70a886a789938e4d5aedb7f9669589ed",
     "semantic_hash": ""
   },
@@ -8838,8 +8838,8 @@
     "semantic_hash": "efac1ab2f8cf60200da3d2e811bf8ff6"
   },
   "tests/demoLoginQaKey.test.js": {
-    "mtime": 1794842866.478571,
-    "seen": 1794842958.0361943,
+    "mtime": 1794843798.2374997,
+    "seen": 1794887303.8433275,
     "ast_hash": "b7c925e5b9573e4cbd06579a4bc94d1d",
     "semantic_hash": ""
   },
@@ -10650,9 +10650,9 @@
     "semantic_hash": "e39ebdc343e36488738cb6898262aa63"
   },
   "HANDOFF.md": {
-    "mtime": 1794842867.7976732,
-    "seen": 1794842958.037437,
-    "ast_hash": "ee32ba4cd9f5fa21b4dc8c363b0c2bf8",
+    "mtime": 1794887190.0049548,
+    "seen": 1794887303.8444633,
+    "ast_hash": "73e784ceb050cd0fe9d6563a92e00101",
     "semantic_hash": ""
   },
   "docs/seo-ai-visibility.md": {
@@ -10731,6 +10731,24 @@
     "mtime": 1794840942.8082867,
     "seen": 1794841136.7973187,
     "ast_hash": "d48a821113b9a4a61c50381bc6f11d77",
+    "semantic_hash": ""
+  },
+  "server/smartSearchApi.mjs": {
+    "mtime": 1794886704.6786833,
+    "seen": 1794887303.8396912,
+    "ast_hash": "01315ed560c588264c5c8c764c299c1b",
+    "semantic_hash": ""
+  },
+  "src/lib/smartSearchCatalog.js": {
+    "mtime": 1794886335.5702631,
+    "seen": 1794887303.8408453,
+    "ast_hash": "6d4a1f2f828d0b08389c666e53c3637b",
+    "semantic_hash": ""
+  },
+  "tests/smartSearchRbac.test.js": {
+    "mtime": 1794886755.7396786,
+    "seen": 1794887303.8442745,
+    "ast_hash": "b6210b351896dc874dd825ab11627eb7",
     "semantic_hash": ""
   }
 }

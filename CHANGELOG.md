@@ -1,3 +1,14 @@
+## 2026-11-17 - Universal Staff Smart Search Across Sidebar & Topbar with Strict RBAC
+
+- **Cmdk Provider Fix & Live Smart Search (`CommandMenu.jsx`, `smartSearchCatalog.js`, `server/smartSearchApi.mjs`, `api/staff.js`)**:
+  - Wrapped `CommandMenu` inside `<Command shouldFilter={false}>` (fixing a pre-existing missing `cmdk` provider error when opening Search) and kept per-user Recent Jumps validated against `allowRoute`.
+  - Built `buildSmartSearchDestinations` + `describeSearchCapabilities` covering Operations pages, sub-tabs, and settings links strictly filtered by each role's RBAC predicates (`permissions.js`).
+  - Added authenticated `GET /api/staff?operation=smart-search&q=...` (`sanitizeSearchTerm`, `resolveSearchScope`, branch boundary filtering via `staff_branch_assignments` including `branches` scoping) searching Bookings & Queue, Customers, Vehicles/Plates, Tasks & Form Results, Services & Products, Staff, Vouchers, and Branches strictly per role.
+- **Daylight UI Search Triggers on Both Shells (`OperationsLayout.jsx`, `ops-daylight.css`)**:
+  - Mounted `<CommandMenu />` in both `CommandShell` and `FloorAppShell`.
+  - Added navy pill sidebar search buttons (`.command-rail-search` collapsible to an icon button with tooltip in `CommandShell`, `.floor-rail-search` in `FloorAppShell`) alongside upper-right topbar search triggers (`⌘K` desktop pills and `44px` mobile search icon buttons) across all Operations pages.
+- **Tests (`tests/smartSearchRbac.test.js`, `tests/apiGatewayRoutes.test.js`)**: Verified 11 staff roles, ASA grant toggles, fail-closed branch scoping, HTTP `401`/`405` guards, `2687` unit tests, `41/41` browser tests, and Puppeteer E2E UI + live Supabase handler checks across BossMich, Team Lead, and Staff on desktop (`1440px`) and mobile (`390px`).
+
 ## 2026-11-16 - Super Admin Notifications & SMS Hub, BusyBee Limits, Trigger Linkage & Employee/Both Broadcasts
 
 - **Settings Hub Entry & Notifications UX (`SettingsHubPage.jsx`, `NotificationTemplatesPanel.jsx`, `NotificationsPage.jsx`, `SmsPage.jsx`)**:

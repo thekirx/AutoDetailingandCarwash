@@ -52,6 +52,30 @@
 .floor-daylight .floor-topbar button { color: #fff; }
 .floor-daylight .floor-rail-aside { width: 232px; background: var(--navy); border: 0; }
 .floor-daylight .floor-rail-nav { width: 100%; padding: 20px 12px; }
+.floor-daylight .floor-rail-search-wrap { margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid var(--rule); }
+.floor-daylight .floor-rail-search {
+  display: flex; align-items: center; gap: 10px; width: 100%; min-height: 44px; padding: 0 14px;
+  border: 1px solid var(--rule); border-radius: 999px; background: rgb(157 180 255 / .10);
+  color: #CDD5F5; font-size: 13.5px; font-weight: 600; text-align: left; cursor: pointer;
+  transition: background-color 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+.floor-daylight .floor-rail-search:hover { background: rgb(157 180 255 / .18); color: #fff; border-color: rgb(157 180 255 / .35); }
+.floor-daylight .floor-rail-search span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.floor-daylight .floor-rail-search kbd {
+  padding: 2px 6px; border-radius: 6px; border: 1px solid var(--rule); background: rgb(2 10 49 / .55);
+  color: var(--accent); font-family: ui-monospace, monospace; font-size: 10px; font-weight: 700;
+}
+.floor-daylight .floor-topbar-search {
+  align-items: center; gap: 8px; min-height: 40px; padding: 0 12px;
+  border: 1px solid var(--rule); border-radius: 999px; background: rgb(157 180 255 / .12);
+  color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: background-color 140ms ease, border-color 140ms ease;
+}
+.floor-daylight .floor-topbar-search:hover { background: rgb(157 180 255 / .22); border-color: rgb(157 180 255 / .4); }
+.floor-daylight .floor-topbar-search kbd {
+  padding: 1px 5px; border-radius: 5px; border: 1px solid var(--rule); background: rgb(2 10 49 / .55);
+  color: var(--accent); font-family: ui-monospace, monospace; font-size: 10px; font-weight: 700;
+}
 .floor-daylight .floor-rail-list { gap: 8px; }
 .floor-daylight .floor-rail-item { width: 100%; border: 0; min-height: 46px; background: transparent; color: #CDD5F5; border-radius: 999px; font-size: 14px; font-weight: 700; text-align: left; }
 .floor-daylight .floor-rail-item.is-active,
@@ -299,6 +323,27 @@
 .command-daylight .command-nav-group [data-slot="sidebar-menu"] { gap: 4px; }
 .command-daylight .command-nav-btn { color: #CDD5F5; border-radius: 999px; font-weight: 600; font-size: 14px; }
 .command-daylight .command-nav-btn:hover { background: rgb(157 180 255 / .12); color: #fff; }
+.command-daylight .command-nav-btn.command-rail-search {
+  border: 1px solid var(--rule);
+  background: rgb(157 180 255 / .10);
+  min-height: 40px;
+}
+.command-daylight .command-nav-btn.command-rail-search:hover {
+  background: rgb(157 180 255 / .18);
+  border-color: rgb(157 180 255 / .38);
+  color: #fff;
+}
+.command-daylight .command-rail-kbd {
+  margin-left: auto;
+  padding: 2px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--rule);
+  background: rgb(2 10 49 / .55);
+  color: var(--accent);
+  font-family: ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 700;
+}
 .command-daylight .command-nav-btn[data-active],
 .command-daylight .command-nav-btn[aria-current="page"] { background: #fff; color: var(--blue); box-shadow: none; font-weight: 700; }
 .command-daylight .command-nav-btn:focus-visible { outline-color: var(--accent); }

@@ -1,9 +1,9 @@
 # Hakum Auto Care — Engineering & Operations Handoff Guide
 
-**Date:** 2026-11-16 (Asia/Manila)  
+**Date:** 2026-11-17 (Asia/Manila)  
 **Repository:** `https://github.com/thekirx/AutoDetailingandCarwash.git` (Branch: `main`)  
 **Production Domain:** `https://www.hakumautocare.com` (Vercel + Supabase `lybxhpzzqqyqswvuwpxv`)  
-**Current Baseline:** `5487e35` + uncommitted push/redirect/dev-shell/docs fixes ready for final commit & deploy  
+**Current Baseline:** `33b138d` + Universal RBAC Smart Search (`CommandMenu.jsx`, `smartSearchCatalog.js`, `smartSearchApi.mjs`, `OperationsLayout.jsx`)  
 
 This document is the primary onboarding brief for the next AI engineer or technical lead picking up Hakum Auto Care. Read this together with the persistent Graphify knowledge graph before modifying code.
 

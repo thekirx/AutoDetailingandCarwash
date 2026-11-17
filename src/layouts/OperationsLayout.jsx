@@ -229,6 +229,7 @@ function FloorAppShell({
   const location = useLocation()
   const [moreOpen, setMoreOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [cmdOpen, setCmdOpen] = useState(false)
   const branch = formatScope(profile, useBranchNames())
   // Approved Daylight design (12 Oct 2026) — every floor role, not just team leads.
   const daylight = true
@@ -236,6 +237,18 @@ function FloorAppShell({
 
   const railNav = (
     <nav className="floor-rail-nav" aria-label="Primary navigation">
+      <div className="floor-rail-search-wrap">
+        <button
+          type="button"
+          className="floor-rail-search"
+          aria-label="Open smart search"
+          onClick={() => setCmdOpen(true)}
+        >
+          <Search size={18} aria-hidden />
+          <span>Search…</span>
+          <kbd>⌘K</kbd>
+        </button>
+      </div>
       <ul className="floor-rail-list">
         {dock.map(({ label, to, icon, primary, end }) => {
           const Icon = iconMap[icon] || ClipboardList
@@ -298,6 +311,24 @@ function FloorAppShell({
 
             </div>
             <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                className="floor-topbar-search hidden md:inline-flex"
+                aria-label="Open smart search"
+                onClick={() => setCmdOpen(true)}
+              >
+                <Search size={15} aria-hidden />
+                <span>Search</span>
+                <kbd>⌘K</kbd>
+              </button>
+              <button
+                type="button"
+                className="floor-icon-btn md:hidden"
+                aria-label="Open smart search"
+                onClick={() => setCmdOpen(true)}
+              >
+                <Search size={18} aria-hidden />
+              </button>
               <PushToggle audience="ops" compact allowUnsupportedInCompact surface="light" />
               <NotificationBell variant="floor" homeUrl={homeUrl} homeLabel={homeLabel} />
               <button type="button" className="floor-icon-btn" aria-label="Settings" onClick={() => setSettingsOpen(true)}>
@@ -384,6 +415,7 @@ function FloorAppShell({
           </div>
         </ResponsiveSheet>
 
+        <CommandMenu open={cmdOpen} onOpenChange={setCmdOpen} />
         <UserSettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} profile={profile} audience="ops" />
         <OpsInstallPopup />
       </div>
@@ -581,6 +613,20 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
       <Sidebar collapsible="icon" variant="inset" className="command-rail">
         <SidebarHeader className="command-rail-header">
           <CommandRailBrand homeTo={resolvePostLoginPath(profile, null) || '/operations'} caption={label} />
+          <SidebarMenu className="mt-2 group-data-[collapsible=icon]:mt-1">
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                className="command-nav-btn command-rail-search"
+                tooltip="Search everything (⌘K)"
+                aria-label="Sidebar smart search"
+                onClick={() => setCmdOpen(true)}
+              >
+                <Search aria-hidden />
+                <span className="truncate">Search all…</span>
+                <kbd className="command-rail-kbd group-data-[collapsible=icon]:hidden">⌘K</kbd>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
         </SidebarHeader>
         <SidebarSeparator className="command-rail-rule" />
         <SidebarContent className="command-rail-body">

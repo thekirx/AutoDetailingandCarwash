@@ -1,7 +1,13 @@
 # Project Status
 
-**Last Updated:** 2026-11-16 (Asia/Manila) — Super Admin Notifications & SMS Hub, BusyBee Limits, Employee/Both Broadcasts & Live DB Hardening  
+**Last Updated:** 2026-11-17 (Asia/Manila) — Universal Staff Smart Search (Sidebar + Upper-Right Topbar) across Command & Floor Shells with Strict RBAC  
 **Overall Status:** Code, live Supabase migrations (`20261116120000`, `20261116180000`, `20261116190000`), and automated checks verified cleanly (`0` unindexed FKs, `0` redundant prefix indexes). For full AI/engineering onboarding see [`HANDOFF.md`](HANDOFF.md).
+
+## Executive Summary (2026-11-17 Latest — Universal Staff Smart Search & RBAC)
+
+- **Smart Search Endpoint & Destinations (`server/smartSearchApi.mjs`, `api/staff.js`, `src/lib/smartSearchCatalog.js`)**: Registered `GET /api/staff?operation=smart-search` with JWT + active staff lookup, PostgREST delimiter sanitization (`sanitizeSearchTerm`), fail-closed `branch_slug`/`staff_branch_assignments` filtering across records and branches, and `buildSmartSearchDestinations` across all 11 staff roles.
+- **UI Placement & `cmdk` Fix (`CommandMenu.jsx`, `OperationsLayout.jsx`, `ops-daylight.css`)**: Fixed missing `<Command shouldFilter={false}>` provider in `CommandMenu`, mounted `<CommandMenu />` in both `CommandShell` and `FloorAppShell`, and added collapsible Daylight navy sidebar search pills (`.command-rail-search`, `.floor-rail-search`) paired with upper-right topbar search triggers (`⌘K` desktop pills + mobile icon buttons).
+- **Verification**: `node --test tests/smartSearchRbac.test.js` (`12/12`), `npm run lint` (`0`), `npm test` (`2687/2687`), `npm run check`, `npm run audit:api-auth`, `npm run build`, `npm run test:browser` (`41/41`), and Puppeteer live Supabase verification across BossMich, Team Lead, and Staff (`0` page errors).
 
 ## Executive Summary (2026-11-16 Latest — Notifications, BusyBee SMS Limits, Broadcasts & Live DB Optimization)
 
