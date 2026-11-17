@@ -2350,7 +2350,7 @@ function PosTileGrid({ items, onAdd, empty, birthdayPerk, loyaltyReady, sizeByKe
                     variant={slug === sz.slug ? 'secondary' : 'ghost'}
                     aria-pressed={slug === sz.slug}
                     aria-label={sz.label}
-                    className={`min-h-9 px-1.5 text-xs font-bold ${named ? '' : 'flex-1 px-1'}`}
+                    className={`min-h-11 min-w-11 px-1.5 text-xs font-bold ${named ? '' : 'flex-1 px-1'}`}
                     onClick={() => onPickSize(item.key, sz.slug)}
                   >
                     {sz.short || sz.label}
@@ -2366,7 +2366,7 @@ function PosTileGrid({ items, onAdd, empty, birthdayPerk, loyaltyReady, sizeByKe
                 type="button"
                 variant="ghost"
                 size="sm"
-                className="min-h-9 flex-1 gap-1 px-1 text-[11px] text-muted-foreground"
+                className="min-h-11 flex-1 gap-1 px-1 text-[11px] text-muted-foreground"
                 onClick={() => onAdd(pricedItem(item), { loyaltyAward: true })}
               >
                 <Gift className="size-3.5" aria-hidden />
@@ -2378,7 +2378,7 @@ function PosTileGrid({ items, onAdd, empty, birthdayPerk, loyaltyReady, sizeByKe
                   type="button"
                   variant="ghost"
                   size="sm"
-                  className="min-h-9 flex-1 gap-1 px-1 text-[11px] text-primary"
+                  className="min-h-11 flex-1 gap-1 px-1 text-[11px] text-primary"
                   onClick={() => onAdd(pricedItem(item), { birthdayAward: true })}
                 >
                   <Cake className="size-3.5" aria-hidden />

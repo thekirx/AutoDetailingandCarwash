@@ -9,7 +9,11 @@
 - **Daylight UI Search Triggers on Both Shells (`OperationsLayout.jsx`, `ops-daylight.css`)**:
   - Mounted `<CommandMenu />` in both `CommandShell` and `FloorAppShell`.
   - Added navy pill sidebar search buttons (`.command-rail-search` collapsible to an icon button with tooltip in `CommandShell`, `.floor-rail-search` in `FloorAppShell`) alongside upper-right topbar search triggers (`⌘K` desktop pills and `44px` mobile search icon buttons) across all Operations pages.
-- **Tests (`tests/smartSearchRbac.test.js`, `tests/pushEnableSw.test.js`, `tests/apiGatewayRoutes.test.js`)**: Verified `15/15` unit/contract assertions, `2690` unit tests, `41/41` browser tests, live Vite dev E2E across all `11` staff roles (`boss`..`video`) + **Hakum Alerts** SW activation, and `0` SQL errors against live Supabase.
+- **Cross-Device, Tablet & Mobile Responsiveness (`OperationsLayout.jsx`, `ops-daylight.css`, `PosPage.jsx`)**:
+  - Fixed the Floor shell `.daylight-identity` vertical character-wrap bug that stretched mobile/tablet headers to `392px–412px` tall (`truncate` single-line identity + branch ellipsis).
+  - Eliminated `320px` SE right-edge header clipping across both shells via compact narrow-phone padding and sub-`380px` icon-only alert pill layout (preserving `Enable alerts` accessible DOM label).
+  - Optimized `768px–1023px` portrait tablet layouts: collapsed `CommandShell` sidebar icon rail (`3.5rem`) by default below `1024px` (`defaultOpen`), narrowed `.floor-rail-aside` (`196px`) below `1024px`, moved topbar `Search ⌘K` text pill to `lg:` (`44x44` icon below `1024px`), added rail `Sign out` for all floor roles (including Sales/Detailer/Video Editor with empty `more` sheets), prevented iOS `<16px` focus zoom on `<=768px` inputs/selects/textareas, added bottom dock safe-area clearance, and raised primary Ops/POS/Crew/TL tap targets to `>=44px` on `<=1024px`.
+- **Tests (`tests/smartSearchRbac.test.js`, `tests/pushEnableSw.test.js`, `tests/apiGatewayRoutes.test.js`)**: Verified `15/15` unit/contract assertions, `2690` unit tests, `41/41` browser tests, live Vite dev E2E across all `11` staff roles (`boss`..`video`) + **Hakum Alerts** SW activation, `0` responsive overflow/header/iOS-zoom issues across `7` viewports (`320`–`1440px` + landscape) × `6` roles, and `0` SQL errors against live Supabase.
 
 ## 2026-11-16 - Super Admin Notifications & SMS Hub, BusyBee Limits, Trigger Linkage & Employee/Both Broadcasts
 

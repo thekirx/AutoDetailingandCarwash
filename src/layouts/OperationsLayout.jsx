@@ -276,6 +276,14 @@ function FloorAppShell({
         })}
         {daylight && more?.length ? <li><button type="button" className="floor-rail-item" aria-label="Open more menu" aria-expanded={moreOpen} onClick={() => setMoreOpen(true)}><Menu size={22} aria-hidden /><span>More</span></button></li> : null}
       </ul>
+      {daylight ? (
+        <div className="floor-rail-footer mt-auto pt-3">
+          <button type="button" className="floor-rail-item" onClick={signOut} aria-label="Sign out">
+            <LogOut size={20} aria-hidden />
+            <span>Sign out</span>
+          </button>
+        </div>
+      ) : null}
     </nav>
   )
 
@@ -313,7 +321,7 @@ function FloorAppShell({
             <div className="flex shrink-0 items-center gap-1">
               <button
                 type="button"
-                className="floor-topbar-search hidden md:inline-flex"
+                className="floor-topbar-search hidden lg:inline-flex"
                 aria-label="Open smart search"
                 onClick={() => setCmdOpen(true)}
               >
@@ -323,7 +331,7 @@ function FloorAppShell({
               </button>
               <button
                 type="button"
-                className="floor-icon-btn md:hidden"
+                className="floor-icon-btn lg:hidden"
                 aria-label="Open smart search"
                 onClick={() => setCmdOpen(true)}
               >
@@ -351,7 +359,7 @@ function FloorAppShell({
             </div>
           </header>
 
-          <main className="floor-main ops-page-chrome min-h-0 flex-1 overflow-y-auto overscroll-y-contain py-3 sm:py-4 md:max-w-5xl md:self-stretch md:px-4">
+          <main className="floor-main ops-page-chrome min-h-0 flex-1 overflow-y-auto overscroll-y-contain pt-3 pb-[calc(4.75rem+env(safe-area-inset-bottom))] sm:pt-4 md:max-w-5xl md:self-stretch md:px-6 md:pb-6">
             <Outlet />
           </main>
 
@@ -607,8 +615,9 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
 
   return (
     <SidebarProvider
+      defaultOpen={typeof window === 'undefined' ? true : window.innerWidth >= 1024}
       className="command-shell command-daylight min-w-0 overflow-x-hidden bg-background text-foreground"
-      style={{ '--sidebar-width': '15rem' }}
+      style={{ '--sidebar-width': '15rem', '--sidebar-width-icon': '3.5rem' }}
     >
       <Sidebar collapsible="icon" variant="inset" className="command-rail">
         <SidebarHeader className="command-rail-header">
@@ -678,7 +687,7 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
           <Button
             type="button"
             variant="outline"
-            className="hidden min-h-11 gap-2 md:inline-flex"
+            className="hidden min-h-11 gap-2 lg:inline-flex"
             onClick={() => setCmdOpen(true)}
             aria-label="Open command menu"
           >
@@ -690,7 +699,7 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
             type="button"
             variant="ghost"
             size="icon"
-            className="min-h-11 min-w-11 md:hidden"
+            className="min-h-11 min-w-11 lg:hidden"
             onClick={() => setCmdOpen(true)}
             aria-label="Open command menu"
           >
@@ -721,7 +730,7 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
             </DropdownMenuContent>
           </DropdownMenu>
         </header>
-        <main className="ops-page-chrome mx-auto min-w-0 w-full max-w-7xl flex-1 p-4 sm:p-6 lg:p-8">
+        <main className="ops-page-chrome mx-auto min-w-0 w-full max-w-7xl flex-1 p-3 sm:p-5 lg:p-8">
           <Outlet />
         </main>
       </SidebarInset>

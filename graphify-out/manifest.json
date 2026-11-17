@@ -1356,9 +1356,9 @@
     "semantic_hash": "21cadcc97434bd72c2e17fe9cdadb88a"
   },
   "src/layouts/OperationsLayout.jsx": {
-    "mtime": 1794886479.2621405,
-    "seen": 1794887303.8401508,
-    "ast_hash": "721201e0131c9598d30d1eb706349588",
+    "mtime": 1794925051.662619,
+    "seen": 1794925303.6562293,
+    "ast_hash": "0b9f5387cb608b919cc2f9042b5a3bd9",
     "semantic_hash": ""
   },
   "src/layouts/PublicLayout.jsx": {
@@ -1890,8 +1890,8 @@
     "semantic_hash": "2ada9ba4c1ec83c1e32bb050f76a7598"
   },
   "src/lib/push.js": {
-    "mtime": 1794923012.0880265,
-    "seen": 1794923242.2888012,
+    "mtime": 1794923698.32129,
+    "seen": 1794925303.656583,
     "ast_hash": "6e62d62ccd746c954e105de970b92b66",
     "semantic_hash": ""
   },
@@ -2286,10 +2286,10 @@
     "semantic_hash": ""
   },
   "src/pages/PosPage.jsx": {
-    "mtime": 1794321285.1581254,
-    "seen": 1794750478.5164235,
-    "ast_hash": "50a859cac8898ff5c6e76c803510c191",
-    "semantic_hash": "50a859cac8898ff5c6e76c803510c191"
+    "mtime": 1794924784.822258,
+    "seen": 1794925303.6568873,
+    "ast_hash": "07877f073779394abc11ed59e458c80a",
+    "semantic_hash": ""
   },
   "src/pages/ProductsManagePage.jsx": {
     "mtime": 1794657279.5943587,
@@ -4944,9 +4944,9 @@
     "semantic_hash": "b2fd8c1a303fa745eeb26b3fac07046c"
   },
   "CHANGELOG.md": {
-    "mtime": 1794923157.0341063,
-    "seen": 1794923242.290566,
-    "ast_hash": "f324f800d2db27da790d313ee1dc452c",
+    "mtime": 1794925241.611641,
+    "seen": 1794925303.6589508,
+    "ast_hash": "fe67b5e1b3b13c6d12b6983bd14e63ad",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
@@ -4974,9 +4974,9 @@
     "semantic_hash": "983fbeb6e7617283c5643ec1912d89f8"
   },
   "PROJECT_STATUS.md": {
-    "mtime": 1794923158.9124973,
-    "seen": 1794923242.2905855,
-    "ast_hash": "f61df6b8ca5fe356371fb4d05f2abd6c",
+    "mtime": 1794925243.5834336,
+    "seen": 1794925303.6589737,
+    "ast_hash": "8ec6e29f59ec059adc4b26ee24debe76",
     "semantic_hash": ""
   },
   "SECURITY_AUDIT.md": {
@@ -10650,9 +10650,9 @@
     "semantic_hash": "e39ebdc343e36488738cb6898262aa63"
   },
   "HANDOFF.md": {
-    "mtime": 1794923160.8879976,
-    "seen": 1794923242.2905767,
-    "ast_hash": "ade598258fe01dafe1245e4455141f25",
+    "mtime": 1794925245.9916685,
+    "seen": 1794925303.658964,
+    "ast_hash": "f743f20c8720204ba17d6e723e9e85f3",
     "semantic_hash": ""
   },
   "docs/seo-ai-visibility.md": {
@@ -10734,8 +10734,8 @@
     "semantic_hash": ""
   },
   "server/smartSearchApi.mjs": {
-    "mtime": 1794922637.639826,
-    "seen": 1794923242.2883003,
+    "mtime": 1794923698.198945,
+    "seen": 1794925303.6559405,
     "ast_hash": "bdcc938d981d440966e8e9fa88e4232b",
     "semantic_hash": ""
   },
