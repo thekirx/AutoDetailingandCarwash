@@ -161,5 +161,11 @@ assert.match(
   readFileSync(join(root, 'src/pages/OperationsPages.jsx'), 'utf8'),
   /proof_required/,
 )
+assert.match(board, /useState\('board'\)/)
+assert.doesNotMatch(board, /useState\(canEdit \? 'table'/)
+assert.doesNotMatch(board, /Lane CSS/)
+assert.doesNotMatch(board, /planner-v2-fab/)
+assert.match(board, /PlannerTaskCard/)
+assert.match(styles, /\.planner-v2-cols[\s\S]*repeat\(auto-fit,\s*minmax\(min\(100%,\s*17\.75rem\),\s*1fr\)\)/)
 
 console.log('planningUi: ok')

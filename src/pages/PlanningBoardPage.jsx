@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Tabs } from '@/components/ui/tabs'
 import { toast } from 'sonner'
-import { CalendarDays, ClipboardCheck, ClipboardList, FileText, FolderKanban, Inbox, LayoutList, Plus, Settings2, Table2 } from 'lucide-react'
+import { CalendarDays, CheckSquare, ClipboardCheck, ClipboardList, Clock, FileText, Filter, FolderKanban, Inbox, LayoutList, Plus, RotateCcw, Settings2, ShieldCheck, Table2 } from 'lucide-react'
 import OpsGuideCard from '@/components/ops/OpsGuideCard'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import OpsTabList from '@/components/ops/OpsTabBar'
@@ -24,6 +24,7 @@ import { PlanningEventsPanel } from '@/pages/planning/PlanningPart6Panels'
 import PlanningConfigurePanel from '@/pages/planning/PlanningConfigurePanel'
 import PlanningReviewPanel from '@/pages/planning/PlanningReviewPanel'
 import TaskModal from '@/pages/planning/TaskModal'
+import '@/styles/planning-board.css'
 
 const FormResultsBoardPage = lazy(() => import('@/pages/FormResultsBoardPage'))
 
@@ -73,6 +74,46 @@ const STATUS_OPTIONS = [
   { id: 'done', label: 'Done' },
 ]
 
+const STATUS_META = {
+  todo: { label: 'To do', tone: 'is-todo' },
+  in_progress: { label: 'In progress', tone: 'is-progress' },
+  for_review: { label: 'For review', tone: 'is-review' },
+  done: { label: 'Done', tone: 'is-done' },
+  unassigned: { label: 'Unassigned', tone: 'is-unassigned' },
+}
+
+const ASSIGNED_LANE_ORDER = ['in_progress', 'for_review', 'todo', 'done', 'unassigned']
+
+function cardWorkflowStatus(card) {
+  const rows = card?.plan_card_assignees || []
+  if (!rows.length) return 'unassigned'
+  if (rows.some((a) => a.status === 'for_review')) return 'for_review'
+  if (rows.some((a) => a.status === 'in_progress')) return 'in_progress'
+  if (rows.every((a) => a.status === 'done')) return 'done'
+  return 'todo'
+}
+
+function cardDueMeta(dueAt, statusKey) {
+  if (!dueAt) return null
+  const date = new Date(dueAt)
+  if (Number.isNaN(date.getTime())) return null
+  const now = new Date()
+  const sameDay = date.getFullYear() === now.getFullYear()
+    && date.getMonth() === now.getMonth()
+    && date.getDate() === now.getDate()
+  const formatted = date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  if (statusKey !== 'done' && sameDay) return { label: 'Due today', tone: 'is-today' }
+  if (statusKey !== 'done' && date.getTime() < now.getTime()) return { label: `Overdue · ${formatted}`, tone: 'is-overdue' }
+  return { label: formatted, tone: 'is-upcoming' }
+}
+
+function initialsForName(name) {
+  const parts = String(name || '').trim().split(/\s+/).filter(Boolean)
+  if (!parts.length) return '?'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+}
+
 export default function PlanningBoardPage() {
   const { profile } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -85,7 +126,8 @@ export default function PlanningBoardPage() {
   const [staff, setStaff] = useState([])
   const [templates, setTemplates] = useState([])
   const [loading, setLoading] = useState(true)
-  const [view, setView] = useState(canEdit ? 'table' : 'list')
+  const [view, setView] = useState('board')
+  const [filtersOpen, setFiltersOpen] = useState(false)
   const [q, setQ] = useState('')
   const [status, setStatus] = useState('all')
   const [categoryId, setCategoryId] = useState('all')
@@ -104,6 +146,30 @@ export default function PlanningBoardPage() {
     () => (canEdit ? categories : filterCategoriesForRole(categories, profile?.role)),
     [canEdit, categories, profile?.role],
   )
+  const categoryMap = useMemo(
+    () => new Map((categories || []).map((c) => [c.id, c])),
+    [categories],
+  )
+  const activeFilterCount = useMemo(
+    () =>
+      [
+        q.trim() !== '',
+        status !== 'all',
+        due !== 'all',
+        canEdit && listFilter !== 'all',
+        canEdit && categoryId !== 'all',
+        canEdit && assigneeId !== 'all',
+      ].filter(Boolean).length,
+    [q, status, due, canEdit, listFilter, categoryId, assigneeId],
+  )
+  function resetFilters() {
+    setQ('')
+    setStatus('all')
+    setDue('all')
+    setListFilter('all')
+    setCategoryId('all')
+    setAssigneeId('all')
+  }
   const cards = useMemo(
     () => (canEdit ? flattenPlannerCards(board) : assignedCards),
     [canEdit, board, assignedCards],
@@ -380,7 +446,7 @@ export default function PlanningBoardPage() {
     >
       <OpsGuideCard
         title="How planner works"
-        description="Board lists, review, calendar, and configure stay on this screen. Lane CSS keeps the kanban usable on phones."
+        description="Track tasks across board stages, review submitted proof, check deadlines on Calendar, and configure lists or forms."
         steps={PLANNING_WORKFLOW_STEPS.filter((s) => s.id !== 'configure' || canEdit)}
         stepIcons={planningStepIcons}
       />
@@ -391,98 +457,181 @@ export default function PlanningBoardPage() {
       </Tabs>
 
       {tab === 'board' && (
-        <div className={`planner-v2-body ${canEdit ? 'has-rail' : ''}`}>
-          {canEdit && (
-            <aside className="planner-v2-rail">
-              <label>
-                Search
-                <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Title or note" />
+        <div className="planner-v2-body">
+          <section className={`planner-v2-rail ${filtersOpen ? 'is-filters-open' : ''}`} aria-label="Task filters and view">
+            <div className="planner-v2-rail-top">
+              <label className="planner-v2-rail-search">
+                <span>Search</span>
+                <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={canEdit ? 'Search title or note…' : 'Search your tasks…'} />
               </label>
+
+              {canEdit && boards.length > 0 && (
+                <label className="planner-v2-rail-board">
+                  <span>Board</span>
+                  <select value={board?.id || ''} onChange={(e) => setSearchParams((p) => { const n = new URLSearchParams(p); n.set('board', e.target.value); return n }, { replace: true })}>
+                    {boards.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  </select>
+                </label>
+              )}
+
+              <div className="planner-v2-rail-actions">
+                <span className="planner-v2-count" aria-live="polite">
+                  {visibleCards.length} {visibleCards.length === 1 ? 'task' : 'tasks'}
+                </span>
+                <div className="planner-v2-view-toggle" role="group" aria-label="Layout view">
+                  <Button type="button" size="sm" variant={view === 'board' ? 'default' : 'outline'} onClick={() => setView('board')}>
+                    <LayoutList className="size-3.5" /> Board
+                  </Button>
+                  <Button type="button" size="sm" variant={view === 'table' ? 'default' : 'outline'} onClick={() => setView('table')}>
+                    <Table2 className="size-3.5" /> Table
+                  </Button>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={filtersOpen || activeFilterCount > 0 ? 'secondary' : 'outline'}
+                  className="planner-v2-filter-toggle"
+                  aria-expanded={filtersOpen}
+                  onClick={() => setFiltersOpen((prev) => !prev)}
+                >
+                  <Filter className="size-3.5" /> Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+                </Button>
+                {activeFilterCount > 0 && (
+                  <Button type="button" size="sm" variant="ghost" onClick={resetFilters}>
+                    <RotateCcw className="size-3.5" /> Reset
+                  </Button>
+                )}
+                {canEdit && (
+                  <Button type="button" size="sm" variant="outline" onClick={() => setTab('configure')}>
+                    <Settings2 className="size-3.5" /> Configure
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="planner-v2-rail-filters">
               <label>
-                Status
+                <span>Status</span>
                 <select value={status} onChange={(e) => setStatus(e.target.value)}>
                   {STATUS_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
                 </select>
               </label>
+              {canEdit && (
+                <label>
+                  <span>List</span>
+                  <select value={listFilter} onChange={(e) => setListFilter(e.target.value)}>
+                    <option value="all">Any list</option>
+                    {lists.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}
+                  </select>
+                </label>
+              )}
+              {canEdit && (
+                <label>
+                  <span>Category</span>
+                  <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+                    <option value="all">Any category</option>
+                    <option value="none">Uncategorized</option>
+                    {visibleCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </label>
+              )}
+              {canEdit && (
+                <label>
+                  <span>Assignee</span>
+                  <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
+                    <option value="all">Anyone</option>
+                    <option value="unassigned">Unassigned</option>
+                    {staff.map((s) => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+                  </select>
+                </label>
+              )}
               <label>
-                List
-                <select value={listFilter} onChange={(e) => setListFilter(e.target.value)}>
-                  <option value="all">Any list</option>
-                  {lists.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}
-                </select>
-              </label>
-              <label>
-                Category
-                <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-                  <option value="all">Any category</option>
-                  <option value="none">Uncategorized</option>
-                  {visibleCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-              </label>
-              <label>
-                Assignee
-                <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
-                  <option value="all">Anyone</option>
-                  <option value="unassigned">Unassigned</option>
-                  {staff.map((s) => <option key={s.id} value={s.id}>{s.full_name}</option>)}
-                </select>
-              </label>
-              <label>
-                Deadline
+                <span>Deadline</span>
                 <select value={due} onChange={(e) => setDue(e.target.value)}>
                   {DUE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
                 </select>
               </label>
-              <label>
-                Board
-                <select value={board?.id || ''} onChange={(e) => setSearchParams((p) => { const n = new URLSearchParams(p); n.set('board', e.target.value); return n }, { replace: true })}>
-                  {boards.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
-                </select>
-              </label>
-              <div className="flex flex-wrap gap-2">
-                <Button type="button" size="sm" variant={view === 'table' ? 'default' : 'outline'} onClick={() => setView('table')}>
-                  <Table2 className="size-3.5" /> Table
-                </Button>
-                <Button type="button" size="sm" variant={view === 'board' ? 'default' : 'outline'} onClick={() => setView('board')}>
-                  <LayoutList className="size-3.5" /> Board
-                </Button>
-                <Button type="button" size="sm" variant="outline" onClick={() => setTab('configure')}>Configure</Button>
-              </div>
-            </aside>
-          )}
+            </div>
+          </section>
 
           <div className="min-w-0">
-            {!canEdit && (
-              <label className="mb-3 block max-w-sm text-xs font-medium text-muted-foreground">
-                Search
-                <Input className="mt-1" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Your tasks" />
-              </label>
-            )}
             {!visibleCards.length ? (
               <div className="planner-empty">
-                <strong>{canEdit ? 'No tasks match' : 'Nothing assigned to you'}</strong>
-                <p>{canEdit ? 'Clear a filter or create a task.' : 'When someone assigns you work, it shows up here.'}</p>
-                {canEdit && <Button type="button" onClick={() => openCard('new')}>New task</Button>}
+                <strong>{canEdit ? 'No tasks match' : activeFilterCount > 0 ? 'No matching assigned tasks' : 'Nothing assigned to you'}</strong>
+                <p>{canEdit ? 'Clear a filter or create a new task.' : activeFilterCount > 0 ? 'Try clearing filters to see all assigned tasks.' : 'When someone assigns you work, it shows up here.'}</p>
+                {activeFilterCount > 0 ? (
+                  <Button type="button" variant="outline" onClick={resetFilters}>Clear filters</Button>
+                ) : (
+                  canEdit && <Button type="button" onClick={() => openCard('new')}>New task</Button>
+                )}
               </div>
-            ) : view === 'board' && canEdit ? (
-              <div className="planner-v2-cols" style={{ '--planning-list-cols': Math.min(Math.max(lists.length, 1), 5) }}>
-                {lists.map((list) => {
-                  const col = visibleCards.filter((c) => c.list_id === list.id)
-                  return (
-                    <section key={list.id}>
-                      <h2>{list.title} <span>{col.length}</span></h2>
-                      {col.map((card) => (
-                        <button key={card.id} type="button" className="planner-v2-card planner-ticket" onClick={() => openCard(card.id)}>
-                          <strong>{card.title}</strong>
-                          {card.ops_forms?.name ? <span>{card.ops_forms.name}</span> : null}
-                          <span>{card.plan_card_assignees?.[0]?.staff_profiles?.full_name || 'Unassigned'}</span>
-                          <em>{(card.plan_card_assignees?.[0]?.status || 'todo').replace('_', ' ')}{card.due_at ? ` · ${new Date(card.due_at).toLocaleDateString()}` : ''}</em>
-                        </button>
-                      ))}
-                    </section>
-                  )
-                })}
-              </div>
+            ) : view === 'board' ? (
+              canEdit ? (
+                <div className="planner-v2-cols" style={{ '--planning-list-cols': Math.min(Math.max(lists.length, 1), 5) }}>
+                  {lists.map((list) => {
+                    const col = visibleCards.filter((c) => c.list_id === list.id)
+                    const doneInLane = col.filter((c) => cardWorkflowStatus(c) === 'done').length
+                    return (
+                      <section key={list.id} className="planner-v2-lane">
+                        <header className="planner-v2-lane-head">
+                          <h2>
+                            <span>{list.title}</span>
+                            <span className="planner-v2-lane-count">{col.length}</span>
+                          </h2>
+                          {col.length > 0 && doneInLane > 0 && (
+                            <span className="planner-v2-lane-done">{doneInLane}/{col.length} done</span>
+                          )}
+                        </header>
+                        {col.length ? (
+                          <div className="planner-v2-lane-cards">
+                            {col.map((card) => (
+                              <PlannerTaskCard
+                                key={card.id}
+                                card={card}
+                                category={categoryMap.get(card.category_id)}
+                                onOpen={openCard}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="planner-v2-lane-empty">
+                            {activeFilterCount > 0 ? 'No matching tasks' : 'No tasks yet'}
+                          </p>
+                        )}
+                      </section>
+                    )
+                  })}
+                </div>
+              ) : (
+                <div className="planner-v2-cols" style={{ '--planning-list-cols': Math.min(Math.max(ASSIGNED_LANE_ORDER.filter((st) => visibleCards.some((c) => cardWorkflowStatus(c) === st)).length, 1), 4) }}>
+                  {ASSIGNED_LANE_ORDER.map((statusKey) => {
+                    const col = visibleCards.filter((c) => cardWorkflowStatus(c) === statusKey)
+                    if (!col.length) return null
+                    const meta = STATUS_META[statusKey] || STATUS_META.todo
+                    return (
+                      <section key={statusKey} className="planner-v2-lane">
+                        <header className="planner-v2-lane-head">
+                          <h2>
+                            <span>{meta.label}</span>
+                            <span className="planner-v2-lane-count">{col.length}</span>
+                          </h2>
+                        </header>
+                        <div className="planner-v2-lane-cards">
+                          {col.map((card) => (
+                            <PlannerTaskCard
+                              key={card.id}
+                              card={card}
+                              category={categoryMap.get(card.category_id)}
+                              showListBadge
+                              onOpen={openCard}
+                            />
+                          ))}
+                        </div>
+                      </section>
+                    )
+                  })}
+                </div>
+              )
             ) : (
               <div className="planner-v2-table-wrap">
                 <table className="planner-v2-table">
@@ -497,18 +646,25 @@ export default function PlanningBoardPage() {
                   </thead>
                   <tbody>
                     {visibleCards.map((card) => {
-                      const a = card.plan_card_assignees?.[0]
+                      const wf = cardWorkflowStatus(card)
+                      const meta = STATUS_META[wf] || STATUS_META.unassigned
+                      const names = (card.plan_card_assignees || []).map((x) => x.staff_profiles?.full_name).filter(Boolean)
+                      const dueMeta = cardDueMeta(card.due_at, wf)
                       return (
                         <tr key={card.id} onClick={() => openCard(card.id)}>
-                          <td>
+                          <td className="planner-v2-table-title">
                             <button type="button" className="planner-v2-row-link" onClick={(e) => { e.stopPropagation(); openCard(card.id) }}>
                               {card.title}
                             </button>
                           </td>
                           <td>{card.list_title}</td>
-                          <td>{a?.staff_profiles?.full_name || '—'}</td>
-                          <td>{card.due_at ? new Date(card.due_at).toLocaleDateString() : '—'}</td>
-                          <td>{a?.status?.replace('_', ' ') || 'unassigned'}</td>
+                          <td>{names.length ? (names.length > 2 ? `${names[0]} +${names.length - 1}` : names.join(', ')) : '—'}</td>
+                          <td>
+                            {dueMeta ? <span className={`planner-v2-due ${dueMeta.tone}`}>{dueMeta.label}</span> : '—'}
+                          </td>
+                          <td>
+                            <span className={`planner-v2-pill ${meta.tone}`}>{meta.label}</span>
+                          </td>
                         </tr>
                       )
                     })}
@@ -577,12 +733,6 @@ export default function PlanningBoardPage() {
         />
       )}
 
-      {canEdit && tab === 'board' && !activeCard && (
-        <button type="button" className="planner-v2-fab md:hidden" onClick={() => openCard('new')} aria-label="New task">
-          <Plus className="size-5" />
-        </button>
-      )}
-
       {activeCard && (
         <TaskModal
           card={activeCard.id === 'new' ? null : activeCard}
@@ -598,6 +748,88 @@ export default function PlanningBoardPage() {
       )}
       </div>
     </OpsPageShell>
+  )
+}
+
+function PlannerTaskCard({ card, category, showListBadge = false, onOpen }) {
+  const wf = cardWorkflowStatus(card)
+  const meta = STATUS_META[wf] || STATUS_META.unassigned
+  const dueMeta = cardDueMeta(card.due_at, wf)
+  const assignees = (card.plan_card_assignees || []).filter((a) => a.staff_profiles?.full_name || a.staff_id)
+  const checklist = card.plan_checklist_items || []
+  const checklistDone = checklist.filter((item) => item.done).length
+  const hasProofSent = assignees.some((a) => a.proof_url || a.proof_note || a.proof_submitted_at)
+  const visibleAssignees = assignees.slice(0, 2)
+  const extraAssignees = assignees.length - visibleAssignees.length
+
+  return (
+    <button
+      type="button"
+      className="planner-v2-card planner-ticket"
+      style={category?.color ? { '--planner-card-accent': category.color } : undefined}
+      onClick={() => onOpen(card.id)}
+    >
+      <div className="planner-v2-card-badges">
+        <span className={`planner-v2-pill ${meta.tone}`}>{meta.label}</span>
+        {showListBadge && card.list_title ? <span className="planner-v2-pill is-list">{card.list_title}</span> : null}
+        {category?.name ? <span className="planner-v2-pill is-cat">{category.name}</span> : null}
+        {card.proof_required ? <span className="planner-v2-pill is-proof">Proof</span> : null}
+      </div>
+
+      <strong className="planner-v2-card-title">{card.title}</strong>
+      {card.description ? <p className="planner-v2-card-desc">{card.description}</p> : null}
+
+      {(card.ops_forms?.name || checklist.length > 0 || hasProofSent) && (
+        <div className="planner-v2-card-chips">
+          {card.ops_forms?.name ? (
+            <span className="planner-v2-chip">
+              <FileText className="size-3.5 shrink-0" />
+              <span className="truncate">{card.ops_forms.name}</span>
+            </span>
+          ) : null}
+          {checklist.length > 0 ? (
+            <span className={`planner-v2-chip ${checklistDone === checklist.length ? 'is-complete' : ''}`}>
+              <CheckSquare className="size-3.5 shrink-0" />
+              <span>{checklistDone}/{checklist.length}</span>
+            </span>
+          ) : null}
+          {hasProofSent ? (
+            <span className="planner-v2-chip is-proof-sent">
+              <ShieldCheck className="size-3.5 shrink-0" />
+              <span>Proof sent</span>
+            </span>
+          ) : null}
+        </div>
+      )}
+
+      <div className="planner-v2-card-foot">
+        <div className="planner-v2-card-who">
+          {visibleAssignees.length ? (
+            <>
+              {visibleAssignees.map((a) => {
+                const name = a.staff_profiles?.full_name || 'Staff'
+                return (
+                  <span key={a.id || a.staff_id || name} className="planner-v2-assignee">
+                    <span className="planner-v2-avatar" aria-hidden="true">{initialsForName(name)}</span>
+                    <span className="truncate">{name}</span>
+                  </span>
+                )
+              })}
+              {extraAssignees > 0 ? <span className="planner-v2-extra">+{extraAssignees}</span> : null}
+            </>
+          ) : (
+            <span className="planner-v2-unassigned">Unassigned</span>
+          )}
+        </div>
+
+        {dueMeta ? (
+          <span className={`planner-v2-due ${dueMeta.tone}`}>
+            <Clock className="size-3 shrink-0" />
+            <span>{dueMeta.label}</span>
+          </span>
+        ) : null}
+      </div>
+    </button>
   )
 }
 

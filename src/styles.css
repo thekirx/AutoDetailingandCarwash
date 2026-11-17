@@ -6426,62 +6426,6 @@ a.home-branch-card:hover { background:#052699; }
   padding: 0.05rem 0.4rem;
   font-variant-numeric: tabular-nums;
 }
-.planner-v2-body.has-rail {
-  display: grid;
-  gap: 1rem;
-}
-@media (min-width: 960px) {
-  .planner-v2-body.has-rail {
-    grid-template-columns: 16.5rem minmax(0, 1fr);
-    align-items: start;
-  }
-}
-.planner-v2-rail {
-  display: grid;
-  gap: 0.75rem;
-  padding: 0.95rem;
-  border: 1px solid var(--border);
-  border-left: 4px solid var(--planner-stub);
-  border-radius: 1rem;
-  background: var(--card);
-  /* Without minmax(0, 1fr) the column grows to the longest <option> and fields spill out of the card. */
-  grid-template-columns: minmax(0, 1fr);
-}
-.planner-v2-rail label {
-  display: grid;
-  gap: 0.3rem;
-  min-width: 0;
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--muted-foreground);
-}
-.planner-v2-rail select,
-.planner-v2-rail input {
-  min-height: 44px;
-  border-radius: 0.75rem;
-  border: 1px solid var(--border);
-  background: var(--background);
-  color: var(--foreground);
-  padding: 0 0.7rem;
-  font-size: 0.875rem;
-  width: 100%;
-  min-width: 0;
-  font-weight: 500;
-  letter-spacing: normal;
-  text-transform: none;
-}
-/* Safari ignores height and radius on native selects, so draw our own chevron. */
-.planner-v2-rail select {
-  appearance: none;
-  -webkit-appearance: none;
-  padding-right: 2.25rem;
-  text-overflow: ellipsis;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='none' stroke='%235D6488' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m4 6 4 4 4-4'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.75rem center;
-}
 .planner-v2-table-wrap {
   overflow-x: auto;
   border: 1px solid var(--border);
@@ -6499,6 +6443,11 @@ a.home-branch-card:hover { background:#052699; }
   text-align: left;
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
+}
+.planner-v2-table td.planner-v2-table-title {
+  white-space: normal;
+  min-width: 12rem;
+  max-width: 24rem;
 }
 .planner-v2-table th {
   font-size: 0.68rem;
@@ -6530,48 +6479,17 @@ a.home-branch-card:hover { background:#052699; }
 }
 .planner-v2-cols {
   display: grid;
-  gap: 0.75rem;
-  grid-template-columns: repeat(var(--planning-list-cols, 3), minmax(0, 1fr));
+  gap: 0.85rem;
+  align-items: start;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17.75rem), 1fr));
 }
-.planner-v2-cols section {
-  min-width: 0;
-  padding: 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 1rem;
-  background: var(--card);
-}
-.planner-v2-cols h2 {
-  display: flex;
-  justify-content: space-between;
-  margin: 0 0 0.65rem;
-  font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.planner-v2-card {
-  display: grid;
-  gap: 0.2rem;
-  width: 100%;
-  min-height: 44px;
-  margin-bottom: 0.5rem;
-  padding: 0.7rem 0.8rem;
-  border: 1px solid var(--border);
-  border-radius: 0.85rem;
-  background: var(--planner-paper);
-  text-align: left;
-  cursor: pointer;
-}
-.planner-v2-card strong { color: var(--planner-ink); }
-.planner-v2-card span { font-size: 0.75rem; color: var(--muted-foreground); }
-.planner-v2-card em {
-  font-style: normal;
-  font-size: 0.7rem;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: var(--planner-navy);
+@media (min-width: 1280px) {
+  .planner-v2-cols {
+    grid-template-columns: repeat(var(--planning-list-cols, 3), minmax(0, 1fr));
+  }
 }
 .planner-ticket {
-  border-left: 4px solid var(--planner-stub, #c4a35a);
+  border-left: 4px solid var(--planner-card-accent, var(--planner-stub, #c4a35a));
 }
 button.planner-ticket,
 a.planner-ticket {
@@ -6579,7 +6497,7 @@ a.planner-ticket {
 }
 button.planner-ticket:active,
 a.planner-ticket:active {
-  transform: scale(0.98);
+  transform: scale(0.985);
 }
 .planner-skel {
   display: block;
@@ -6843,21 +6761,6 @@ a.planner-ticket:active {
   border-radius: 1rem;
   background: var(--card);
 }
-.planner-v2-fab {
-  position: fixed;
-  right: 1rem;
-  bottom: 1.25rem;
-  z-index: 30;
-  display: grid;
-  place-items: center;
-  width: 3.25rem;
-  height: 3.25rem;
-  border: 0;
-  border-radius: 999px;
-  background: var(--planner-navy);
-  color: #fff;
-  box-shadow: 0 12px 28px -12px rgba(5, 38, 153, 0.7);
-}
 .planner-cal-toolbar,
 .planner-cal-filters {
   display: flex;
@@ -6914,7 +6817,6 @@ a.planner-ticket:active {
 .planner-cal-chip.is-booking { background: #e8ecf8; }
 .planner-cal-chip.is-form { background: #f3eee3; }
 @media (max-width: 799px) {
-  .planner-v2-cols { grid-template-columns: 1fr; }
   .planner-cal-cell { min-height: 4.5rem; }
   .planner-skel-grid { grid-template-columns: 1fr; }
   .hakum-pos-hero dl { grid-template-columns: 1fr; }
@@ -6923,7 +6825,6 @@ a.planner-ticket:active {
 @media (prefers-reduced-motion: reduce) {
   .planner-v2-tabs button,
   .planner-v2-table tbody tr,
-  .planner-v2-fab,
   button.planner-ticket,
   a.planner-ticket { transition: none; transform: none; }
   .planner-skel { animation: none; }

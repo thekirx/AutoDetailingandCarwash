@@ -2280,9 +2280,9 @@
     "semantic_hash": "07ff6a89c6aa59c3b974ec839a024f18"
   },
   "src/pages/PlanningBoardPage.jsx": {
-    "mtime": 1794801126.8158188,
-    "seen": 1794801495.209491,
-    "ast_hash": "acbaa183b655158a544e9c6921ae3cd2",
+    "mtime": 1794926700.221657,
+    "seen": 1794927431.952538,
+    "ast_hash": "cf02ab043a2c32b582e0621f6c8138b0",
     "semantic_hash": ""
   },
   "src/pages/PosPage.jsx": {
@@ -4488,9 +4488,9 @@
     "semantic_hash": "57317964fa4866ea4a35358601a700da"
   },
   "tests/planningUi.test.js": {
-    "mtime": 1794831902.3175118,
-    "seen": 1794833110.2720387,
-    "ast_hash": "2f418b3c606558364b8d643e32085b8c",
+    "mtime": 1794926570.6022131,
+    "seen": 1794927431.9549603,
+    "ast_hash": "0ffe81ee086385a5aef190acac39d91a",
     "semantic_hash": ""
   },
   "tests/plateSuggest.test.js": {
@@ -4944,9 +4944,9 @@
     "semantic_hash": "b2fd8c1a303fa745eeb26b3fac07046c"
   },
   "CHANGELOG.md": {
-    "mtime": 1794926068.1730177,
-    "seen": 1794926166.8699884,
-    "ast_hash": "e155e45818ece695987ff47874d32a3e",
+    "mtime": 1794927331.6485848,
+    "seen": 1794927431.9555333,
+    "ast_hash": "69b4f339055e9b7d96374af97c2d73a7",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
@@ -4974,9 +4974,9 @@
     "semantic_hash": "983fbeb6e7617283c5643ec1912d89f8"
   },
   "PROJECT_STATUS.md": {
-    "mtime": 1794926071.1224043,
-    "seen": 1794926166.870018,
-    "ast_hash": "9d4804fa38d42e6b2436be1899c4c416",
+    "mtime": 1794927335.227471,
+    "seen": 1794927431.9555683,
+    "ast_hash": "7b9b405d1ea8d33773bb83ce52992913",
     "semantic_hash": ""
   },
   "SECURITY_AUDIT.md": {
@@ -10650,9 +10650,9 @@
     "semantic_hash": "e39ebdc343e36488738cb6898262aa63"
   },
   "HANDOFF.md": {
-    "mtime": 1794926074.216017,
-    "seen": 1794926166.870005,
-    "ast_hash": "a3703162aa91da6a122fd444131ef02d",
+    "mtime": 1794927366.3479428,
+    "seen": 1794927431.9555528,
+    "ast_hash": "41f1185c1f931d8adadde9996c23ecaf",
     "semantic_hash": ""
   },
   "docs/seo-ai-visibility.md": {
