@@ -1,5 +1,6 @@
 import { bearer, json, setCors } from './httpUtil.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
+import { filterSubmissionsByBranchScope } from '../src/lib/opsForms.js'
 import {
   ROLES,
   allowRoute,
@@ -44,7 +45,7 @@ export function sanitizeSearchTerm(raw) {
  * Fail-closed: branch-scoped roles with zero assigned branches receive `branchSlugs: []`.
  */
 export function resolveSearchScope(profile, extraBranchSlugs = []) {
-  if (!profile || profile.is_active === false || !profile.role) {
+  if (!profile || profile.is_active === false || profile.is_archived === true || !profile.role) {
     return null
   }
   const hydrated = {
@@ -119,29 +120,55 @@ function catalogProductRoute(profile) {
   return null
 }
 
-async function runScopedQueries(db, scope, term) {
-  const { profile, branchSlugs } = scope
-  if (branchSlugs && branchSlugs.length === 0) {
-    // Still permit company-wide items the role explicitly owns (tasks/catalog/vouchers/branches).
+function unwrapRows(label, result) {
+  if (result?.error) {
+    console.error(`[smart-search] ${label}:`, result.error.message || result.error)
+    return []
   }
+  return Array.isArray(result?.data) ? result.data : []
+}
 
+function boardVisibleToProfile(board, profile) {
+  if (!board) return false
+  if (isSuperAdmin(profile) || isAssistantSuperAdmin(profile) || isOperationsLead(profile)) return true
+  const allowed = board.visible_roles
+  if (!Array.isArray(allowed) || allowed.length === 0) return true
+  return allowed.includes(profile?.role)
+}
+
+export async function runScopedQueries(db, scope, term) {
+  const { profile, branchSlugs } = scope
+  const safeBranches = Array.isArray(branchSlugs)
+    ? branchSlugs.map((s) => String(s || '').trim()).filter((s) => /^[a-z0-9_-]+$/i.test(s))
+    : null
   const pattern = `%${term}%`
   const jobs = []
 
   // 1. Bookings & Floor Queue
-  if (scope.canBookings && (branchSlugs === null || branchSlugs.length > 0)) {
+  if (scope.canBookings && (safeBranches === null || safeBranches.length > 0)) {
+    const investorOnly = isInvestor(profile)
+    const orParts = [
+      `vehicle_plate.ilike.${pattern}`,
+      `vehicle_make.ilike.${pattern}`,
+      `vehicle_model.ilike.${pattern}`,
+    ]
+    if (!investorOnly) {
+      orParts.push(`customer_name.ilike.${pattern}`)
+      if (scope.includeBookingPhone) orParts.push(`customer_phone.ilike.${pattern}`)
+    }
+
     let q = db
       .from('bookings')
       .select('id, branch, status, vehicle_plate, vehicle_make, vehicle_model, customer_name, queue_number, scheduled_start, services(name, slug, pay_category)')
-      .or(`vehicle_plate.ilike.${pattern},customer_name.ilike.${pattern},vehicle_make.ilike.${pattern},vehicle_model.ilike.${pattern}`)
+      .or(orParts.join(','))
       .eq('is_archived', false)
       .order('created_at', { ascending: false })
       .limit(12)
-    if (branchSlugs) q = q.in('branch', branchSlugs)
+    if (safeBranches) q = q.in('branch', safeBranches)
     jobs.push(
-      q.then(({ data }) => {
+      q.then((res) => {
         const items = []
-        for (const r of data || []) {
+        for (const r of unwrapRows('bookings', res)) {
           if (scope.detailingOnlyBookings && !isDetailingRow(r)) continue
           const to = bookingRoute(profile, r)
           if (!to) continue
@@ -149,7 +176,7 @@ async function runScopedQueries(db, scope, term) {
           items.push({
             id: `booking-${r.id}`,
             category: 'bookings',
-            label: `${r.vehicle_plate || 'Vehicle'}${r.customer_name && !isInvestor(profile) ? ` · ${r.customer_name}` : ''}`,
+            label: `${r.vehicle_plate || 'Vehicle'}${r.customer_name && !investorOnly ? ` · ${r.customer_name}` : ''}`,
             subtitle: `${r.queue_number ? `Q${r.queue_number} · ` : ''}${r.services?.name || 'Visit'} · ${r.branch}${car ? ` · ${car}` : ''}`,
             badge: r.status,
             to,
@@ -171,8 +198,8 @@ async function runScopedQueries(db, scope, term) {
         .eq('is_archived', false)
         .or(`full_name.ilike.${pattern},phone.ilike.${pattern},email.ilike.${pattern}`)
         .limit(6)
-        .then(({ data }) =>
-          (data || []).map((c) => ({
+        .then((res) =>
+          unwrapRows('customers', res).map((c) => ({
             id: `cust-${c.id}`,
             category: 'customers',
             label: c.full_name || c.phone || 'Customer',
@@ -185,25 +212,26 @@ async function runScopedQueries(db, scope, term) {
   }
 
   // 3. Vehicles / Plates
-  if (scope.canVehicles) {
+  if (scope.canVehicles && (safeBranches === null || safeBranches.length > 0)) {
     const dest = allowRoute(profile, 'history') ? '/operations/history' : '/operations/crm'
+    let q = db
+      .from('vehicles')
+      .select('id, plate_number, vehicle_make, vehicle_model, vehicle_type, last_branch')
+      .eq('is_archived', false)
+      .or(`plate_number.ilike.${pattern},vehicle_make.ilike.${pattern},vehicle_model.ilike.${pattern}`)
+      .limit(6)
+    if (safeBranches) q = q.in('last_branch', safeBranches)
     jobs.push(
-      db
-        .from('vehicles')
-        .select('id, plate_number, make, model, vehicle_type')
-        .eq('is_archived', false)
-        .or(`plate_number.ilike.${pattern},make.ilike.${pattern},model.ilike.${pattern}`)
-        .limit(6)
-        .then(({ data }) =>
-          (data || []).map((v) => ({
-            id: `veh-${v.id}`,
-            category: 'vehicles',
-            label: v.plate_number || 'Vehicle',
-            subtitle: [v.make, v.model, v.vehicle_type].filter(Boolean).join(' · ') || 'Registered vehicle',
-            badge: 'Plate',
-            to: dest,
-          })),
-        ),
+      q.then((res) =>
+        unwrapRows('vehicles', res).map((v) => ({
+          id: `veh-${v.id}`,
+          category: 'vehicles',
+          label: v.plate_number || 'Vehicle',
+          subtitle: [v.vehicle_make, v.vehicle_model, v.vehicle_type, v.last_branch].filter(Boolean).join(' · ') || 'Registered vehicle',
+          badge: 'Plate',
+          to: dest,
+        })),
+      ),
     )
   }
 
@@ -212,38 +240,40 @@ async function runScopedQueries(db, scope, term) {
     jobs.push(
       db
         .from('plan_cards')
-        .select('id, board_id, title, due_at, branch_slug')
-        .eq('is_archived', false)
+        .select('id, list_id, title, due_at, plan_lists!inner(board_id, plan_boards!inner(name, visible_roles))')
         .ilike('title', pattern)
         .order('updated_at', { ascending: false })
         .limit(8)
-        .then(({ data }) =>
-          (data || [])
-            .filter((c) => !c.branch_slug || !branchSlugs || branchSlugs.includes(c.branch_slug))
+        .then((res) =>
+          unwrapRows('plan_cards', res)
+            .filter((c) => boardVisibleToProfile(c.plan_lists?.plan_boards, profile))
             .slice(0, 5)
-            .map((c) => ({
-              id: `card-${c.id}`,
-              category: 'tasks',
-              label: c.title || 'Planner task',
-              subtitle: [c.branch_slug, c.due_at ? `Due ${String(c.due_at).slice(0, 10)}` : null]
-                .filter(Boolean)
-                .join(' · ') || 'Planner card',
-              badge: 'Task',
-              to: c.board_id ? `/operations/planning?board=${c.board_id}` : '/operations/planning',
-            })),
+            .map((c) => {
+              const boardId = c.plan_lists?.board_id
+              const boardName = c.plan_lists?.plan_boards?.name
+              return {
+                id: `card-${c.id}`,
+                category: 'tasks',
+                label: c.title || 'Planner task',
+                subtitle: [boardName, c.due_at ? `Due ${String(c.due_at).slice(0, 10)}` : null]
+                  .filter(Boolean)
+                  .join(' · ') || 'Planner card',
+                badge: 'Task',
+                to: boardId ? `/operations/planning?board=${boardId}&card=${c.id}` : '/operations/planning',
+              }
+            }),
         ),
     )
   } else if (scope.canAssignedTasksOnly) {
     jobs.push(
       db
         .from('plan_card_assignees')
-        .select('card_id, plan_cards!inner(id, title, due_at, is_archived)')
+        .select('card_id, plan_cards!inner(id, title, due_at)')
         .eq('staff_id', profile.id)
-        .eq('plan_cards.is_archived', false)
         .ilike('plan_cards.title', pattern)
         .limit(5)
-        .then(({ data }) =>
-          (data || []).map((row) => ({
+        .then((res) =>
+          unwrapRows('plan_card_assignees', res).map((row) => ({
             id: `mytask-${row.plan_cards.id}`,
             category: 'tasks',
             label: row.plan_cards.title || 'Assigned task',
@@ -257,47 +287,53 @@ async function runScopedQueries(db, scope, term) {
     )
   }
 
-  // 5. Form Results (excluding retired 'event' forms)
-  if (scope.canFormResults) {
+  // 5. Form Results (excluding retired 'event' forms, respecting canonical branch scope helper)
+  if (scope.canFormResults && (safeBranches === null || safeBranches.length > 0)) {
     jobs.push(
       db
         .from('ops_form_submissions')
-        .select('id, respondent_label, status, created_at, ops_forms!inner(slug, name, kind)')
+        .select('id, respondent_label, status, created_at, payload, ops_forms!inner(slug, name, kind)')
         .neq('ops_forms.kind', 'event')
         .ilike('respondent_label', pattern)
         .order('created_at', { ascending: false })
-        .limit(5)
-        .then(({ data }) =>
-          (data || []).map((s) => ({
-            id: `formsub-${s.id}`,
-            category: 'forms',
-            label: s.respondent_label || s.ops_forms?.name || 'Form submission',
-            subtitle: `${s.ops_forms?.name || 'Form'} · ${String(s.created_at || '').slice(0, 10)}`,
-            badge: s.status || 'new',
-            to: s.ops_forms?.slug ? `/operations/forms/results/${s.ops_forms.slug}` : '/operations/forms/results',
-          })),
+        .limit(8)
+        .then((res) =>
+          filterSubmissionsByBranchScope(unwrapRows('ops_form_submissions', res), {
+            branchFilter: 'all',
+            scopeList: safeBranches,
+          })
+            .slice(0, 5)
+            .map((s) => ({
+              id: `formsub-${s.id}`,
+              category: 'forms',
+              label: s.respondent_label || s.ops_forms?.name || 'Form submission',
+              subtitle: `${s.ops_forms?.name || 'Form'} · ${String(s.created_at || '').slice(0, 10)}`,
+              badge: s.status || 'new',
+              to: s.ops_forms?.slug ? `/operations/forms/results/${s.ops_forms.slug}` : '/operations/forms/results',
+            })),
         ),
     )
   }
 
   // 6. Services & Products
-  if (scope.canCatalog) {
+  if (scope.canCatalog && (safeBranches === null || safeBranches.length > 0)) {
     const svcTo = catalogServiceRoute(profile)
     const prodTo = catalogProductRoute(profile)
     if (svcTo) {
       jobs.push(
         db
           .from('services')
-          .select('id, name, category, pay_category')
+          .select('id, name, slug, pay_category')
           .eq('is_active', true)
-          .or(`name.ilike.${pattern},category.ilike.${pattern}`)
+          .eq('is_archived', false)
+          .or(`name.ilike.${pattern},slug.ilike.${pattern},pay_category.ilike.${pattern}`)
           .limit(5)
-          .then(({ data }) =>
-            (data || []).map((s) => ({
+          .then((res) =>
+            unwrapRows('services', res).map((s) => ({
               id: `svc-${s.id}`,
               category: 'catalog',
               label: s.name,
-              subtitle: [s.category, s.pay_category].filter(Boolean).join(' · ') || 'Service',
+              subtitle: [s.pay_category, s.slug].filter(Boolean).join(' · ') || 'Service',
               badge: 'Service',
               to: s.pay_category === 'detailing' && allowRoute(profile, 'inventory')
                 ? '/operations/inventory?tab=detailing'
@@ -307,40 +343,43 @@ async function runScopedQueries(db, scope, term) {
       )
     }
     if (prodTo) {
+      let pq = db
+        .from('products')
+        .select('id, name, sku, category, branch_slug')
+        .eq('is_active', true)
+        .eq('is_archived', false)
+        .or(`name.ilike.${pattern},sku.ilike.${pattern},category.ilike.${pattern}`)
+        .limit(5)
+      if (safeBranches) pq = pq.or(`branch_slug.is.null,branch_slug.in.(${safeBranches.join(',')})`)
       jobs.push(
-        db
-          .from('products')
-          .select('id, name, sku, category')
-          .eq('is_active', true)
-          .or(`name.ilike.${pattern},sku.ilike.${pattern},category.ilike.${pattern}`)
-          .limit(5)
-          .then(({ data }) =>
-            (data || []).map((p) => ({
-              id: `prod-${p.id}`,
-              category: 'catalog',
-              label: p.name,
-              subtitle: [p.sku, p.category].filter(Boolean).join(' · ') || 'Product',
-              badge: 'Product',
-              to: prodTo,
-            })),
-          ),
+        pq.then((res) =>
+          unwrapRows('products', res).map((p) => ({
+            id: `prod-${p.id}`,
+            category: 'catalog',
+            label: p.name,
+            subtitle: [p.sku, p.category, p.branch_slug].filter(Boolean).join(' · ') || 'Product',
+            badge: 'Product',
+            to: prodTo,
+          })),
+        ),
       )
     }
   }
 
   // 7. Staff directory (People managers & Attendance overrides only)
-  if (scope.canStaff && (branchSlugs === null || branchSlugs.length > 0)) {
+  if (scope.canStaff && (safeBranches === null || safeBranches.length > 0)) {
     const staffDest = allowRoute(profile, 'people') ? '/operations/people' : '/operations/attendance'
     let q = db
       .from('staff_profiles')
       .select('id, full_name, role, branch_slug')
       .eq('is_active', true)
+      .eq('is_archived', false)
       .ilike('full_name', pattern)
       .limit(5)
-    if (branchSlugs) q = q.in('branch_slug', branchSlugs)
+    if (safeBranches) q = q.in('branch_slug', safeBranches)
     jobs.push(
-      q.then(({ data }) =>
-        (data || []).map((st) => ({
+      q.then((res) =>
+        unwrapRows('staff_profiles', res).map((st) => ({
           id: `staff-${st.id}`,
           category: 'staff',
           label: st.full_name || 'Staff member',
@@ -357,14 +396,14 @@ async function runScopedQueries(db, scope, term) {
     jobs.push(
       db
         .from('promo_vouchers')
-        .select('id, code, label, is_active')
-        .or(`code.ilike.${pattern},label.ilike.${pattern}`)
+        .select('id, code, title, is_active')
+        .or(`code.ilike.${pattern},title.ilike.${pattern}`)
         .limit(4)
-        .then(({ data }) =>
-          (data || []).map((v) => ({
+        .then((res) =>
+          unwrapRows('promo_vouchers', res).map((v) => ({
             id: `voucher-${v.id}`,
             category: 'vouchers',
-            label: `${v.code}${v.label ? ` · ${v.label}` : ''}`,
+            label: `${v.code}${v.title ? ` · ${v.title}` : ''}`,
             subtitle: v.is_active === false ? 'Inactive voucher' : 'Active voucher',
             badge: 'Voucher',
             to: '/operations/vouchers',
@@ -374,16 +413,17 @@ async function runScopedQueries(db, scope, term) {
   }
 
   // 9. Branches (filtered to assigned branches when branch-scoped)
-  if (scope.canBranches && (branchSlugs === null || branchSlugs.length > 0)) {
+  if (scope.canBranches && (safeBranches === null || safeBranches.length > 0)) {
     let q = db
       .from('branches')
       .select('slug, name, is_active, coming_soon')
+      .eq('is_archived', false)
       .or(`name.ilike.${pattern},slug.ilike.${pattern}`)
       .limit(4)
-    if (branchSlugs) q = q.in('slug', branchSlugs)
+    if (safeBranches) q = q.in('slug', safeBranches)
     jobs.push(
-      q.then(({ data }) =>
-        (data || []).map((b) => ({
+      q.then((res) =>
+        unwrapRows('branches', res).map((b) => ({
           id: `branch-${b.slug}`,
           category: 'branches',
           label: b.name,
@@ -430,6 +470,7 @@ export async function handleSmartSearchRequest(req, res) {
     .select(STAFF_SELECT)
     .eq('id', userData.user.id)
     .eq('is_active', true)
+    .eq('is_archived', false)
     .maybeSingle()
 
   const { data: extraBranches } = staff

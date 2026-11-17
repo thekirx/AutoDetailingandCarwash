@@ -1,5 +1,5 @@
 /** Client Web Push helpers — VITE_VAPID_PUBLIC_KEY only. */
-import { iosPushBlocked, isIosDevice, isStandaloneDisplay } from '@/lib/installApp'
+import { iosPushBlocked, isIosDevice, isStandaloneDisplay } from './installApp.js'
 
 export { isIosDevice, isStandaloneDisplay, iosPushBlocked }
 
@@ -30,7 +30,8 @@ async function readyRegistrationWithTimeout(timeoutMs = 3500) {
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return null
   try {
     const existing = await navigator.serviceWorker.getRegistration?.()
-    if (existing?.active) return existing
+    if (!existing) return null
+    if (existing.active) return existing
   } catch {
     /* ignore */
   }
@@ -55,29 +56,44 @@ export async function getPushStatus() {
   }
 }
 
-async function waitForServiceWorker() {
-  const reg = await Promise.race([
-    navigator.serviceWorker.ready,
+/** Ensure a push-capable service worker is registered and active (also works in vite dev without Workbox SW). */
+export async function ensurePushServiceWorker(sw = typeof navigator !== 'undefined' ? navigator.serviceWorker : null, timeoutMs = 8000) {
+  if (!sw) throw new Error('Push service worker unavailable in this browser.')
+  let reg = await sw.getRegistration?.().catch(() => null)
+  if ((!reg || (!reg.active && !reg.installing && !reg.waiting)) && typeof sw.register === 'function') {
+    reg = await sw.register('/push-sw.js', { scope: '/' })
+  }
+  if (reg?.active) return reg
+
+  const swTarget = reg?.installing || reg?.waiting
+  if (swTarget && typeof swTarget.addEventListener === 'function') {
+    await new Promise((resolve) => {
+      const done = () => {
+        swTarget.removeEventListener('statechange', onChange)
+        resolve()
+      }
+      const onChange = () => {
+        if (swTarget.state === 'activated' || swTarget.state === 'redundant') done()
+      }
+      swTarget.addEventListener('statechange', onChange)
+      globalThis.setTimeout(done, Math.min(timeoutMs, 4000))
+    })
+    if (reg?.active) return reg
+  }
+
+  return Promise.race([
+    sw.ready,
     new Promise((_, reject) => {
-      window.setTimeout(() => reject(new Error('Service worker did not start. Refresh and try again.')), 8000)
+      globalThis.setTimeout(
+        () => reject(new Error('Service worker did not start. Refresh and try again.')),
+        timeoutMs,
+      )
     }),
   ])
-  // Chrome: subscribe against the active worker after a deploy/update
-  if (reg.installing || reg.waiting) {
-    await new Promise((resolve) => {
-      const sw = reg.installing || reg.waiting
-      if (!sw) return resolve()
-      const onChange = () => {
-        if (sw.state === 'activated' || sw.state === 'redundant') {
-          sw.removeEventListener('statechange', onChange)
-          resolve()
-        }
-      }
-      sw.addEventListener('statechange', onChange)
-      window.setTimeout(resolve, 4000)
-    })
-  }
-  return navigator.serviceWorker.ready
+}
+
+async function waitForServiceWorker() {
+  return ensurePushServiceWorker()
 }
 
 async function subscribeWithKey(reg, publicKey) {
@@ -98,21 +114,29 @@ async function subscribeWithKey(reg, publicKey) {
       /* options may be missing — keep and re-save */
     }
   }
-  if (!sub) {
-    try {
-      sub = await reg.pushManager.subscribe({
+  const subscribeTimed = () =>
+    Promise.race([
+      reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: key,
-      })
+      }),
+      new Promise((_, reject) => {
+        globalThis.setTimeout(
+          () => reject(new Error('Push registration timed out. Check your connection and try again.')),
+          12000,
+        )
+      }),
+    ])
+
+  if (!sub) {
+    try {
+      sub = await subscribeTimed()
     } catch (err) {
       // Chrome: previous subscription can block a new one after SW update
       const stale = await reg.pushManager.getSubscription()
       if (stale) {
         await stale.unsubscribe()
-        sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: key,
-        })
+        sub = await subscribeTimed()
       } else {
         throw err
       }
@@ -148,6 +172,7 @@ export async function enablePush(tokenOrGetter) {
   const res = await fetch('/api/push-subscribe', {
     method: 'POST',
     credentials: 'same-origin',
+    signal: globalThis.AbortSignal?.timeout ? AbortSignal.timeout(10000) : undefined,
     headers: {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${accessToken}`,

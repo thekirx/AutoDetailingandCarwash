@@ -1092,9 +1092,9 @@
     "semantic_hash": "0c143fd3e45db0245b187e58b735a1a0"
   },
   "src/components/ops/CommandMenu.jsx": {
-    "mtime": 1794886472.0489888,
-    "seen": 1794887303.8399646,
-    "ast_hash": "b69db0234ba4718e502b58124540dabb",
+    "mtime": 1794890334.1131127,
+    "seen": 1794923242.2884288,
+    "ast_hash": "d44ff04d0b8397252752a1d8125b907e",
     "semantic_hash": ""
   },
   "src/components/ops/ConfirmDialog.jsx": {
@@ -1890,9 +1890,9 @@
     "semantic_hash": "2ada9ba4c1ec83c1e32bb050f76a7598"
   },
   "src/lib/push.js": {
-    "mtime": 1794794116.1983657,
-    "seen": 1794800220.6577919,
-    "ast_hash": "1422cb042fbb7fe7adb1ad63e98b9664",
+    "mtime": 1794923012.0880265,
+    "seen": 1794923242.2888012,
+    "ast_hash": "6e62d62ccd746c954e105de970b92b66",
     "semantic_hash": ""
   },
   "src/lib/queueCustomerName.js": {
@@ -3750,8 +3750,8 @@
     "semantic_hash": "ca9f0b7211380a51afb3ddb52fc57742"
   },
   "tests/apiGatewayRoutes.test.js": {
-    "mtime": 1794886342.3054795,
-    "seen": 1794887303.8429253,
+    "mtime": 1794889364.4717662,
+    "seen": 1794923242.289758,
     "ast_hash": "fc63b7c63a5b65fb1218cec0a181a771",
     "semantic_hash": ""
   },
@@ -4944,9 +4944,9 @@
     "semantic_hash": "b2fd8c1a303fa745eeb26b3fac07046c"
   },
   "CHANGELOG.md": {
-    "mtime": 1794887186.4053478,
-    "seen": 1794887303.8444433,
-    "ast_hash": "2813b2d8101c6603c2ee770e178258e8",
+    "mtime": 1794923157.0341063,
+    "seen": 1794923242.290566,
+    "ast_hash": "f324f800d2db27da790d313ee1dc452c",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
@@ -4974,9 +4974,9 @@
     "semantic_hash": "983fbeb6e7617283c5643ec1912d89f8"
   },
   "PROJECT_STATUS.md": {
-    "mtime": 1794887188.180313,
-    "seen": 1794887303.8444777,
-    "ast_hash": "d21fcbc520078bdfa2172441f4d2c2a3",
+    "mtime": 1794923158.9124973,
+    "seen": 1794923242.2905855,
+    "ast_hash": "f61df6b8ca5fe356371fb4d05f2abd6c",
     "semantic_hash": ""
   },
   "SECURITY_AUDIT.md": {
@@ -10650,9 +10650,9 @@
     "semantic_hash": "e39ebdc343e36488738cb6898262aa63"
   },
   "HANDOFF.md": {
-    "mtime": 1794887190.0049548,
-    "seen": 1794887303.8444633,
-    "ast_hash": "73e784ceb050cd0fe9d6563a92e00101",
+    "mtime": 1794923160.8879976,
+    "seen": 1794923242.2905767,
+    "ast_hash": "ade598258fe01dafe1245e4455141f25",
     "semantic_hash": ""
   },
   "docs/seo-ai-visibility.md": {
@@ -10734,9 +10734,9 @@
     "semantic_hash": ""
   },
   "server/smartSearchApi.mjs": {
-    "mtime": 1794886704.6786833,
-    "seen": 1794887303.8396912,
-    "ast_hash": "01315ed560c588264c5c8c764c299c1b",
+    "mtime": 1794922637.639826,
+    "seen": 1794923242.2883003,
+    "ast_hash": "bdcc938d981d440966e8e9fa88e4232b",
     "semantic_hash": ""
   },
   "src/lib/smartSearchCatalog.js": {
@@ -10746,9 +10746,15 @@
     "semantic_hash": ""
   },
   "tests/smartSearchRbac.test.js": {
-    "mtime": 1794886755.7396786,
-    "seen": 1794887303.8442745,
-    "ast_hash": "b6210b351896dc874dd825ab11627eb7",
+    "mtime": 1794889875.6625545,
+    "seen": 1794923242.2904787,
+    "ast_hash": "11442455d81602e4bf87f01f4c9b9697",
+    "semantic_hash": ""
+  },
+  "tests/pushEnableSw.test.js": {
+    "mtime": 1794890287.9945166,
+    "seen": 1794923242.2903564,
+    "ast_hash": "bff66fe0f5c2004563d4f85106ce29c8",
     "semantic_hash": ""
   }
 }

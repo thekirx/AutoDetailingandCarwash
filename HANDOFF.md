@@ -3,7 +3,7 @@
 **Date:** 2026-11-17 (Asia/Manila)  
 **Repository:** `https://github.com/thekirx/AutoDetailingandCarwash.git` (Branch: `main`)  
 **Production Domain:** `https://www.hakumautocare.com` (Vercel + Supabase `lybxhpzzqqyqswvuwpxv`)  
-**Current Baseline:** `33b138d` + Universal RBAC Smart Search (`CommandMenu.jsx`, `smartSearchCatalog.js`, `smartSearchApi.mjs`, `OperationsLayout.jsx`)  
+**Current Baseline:** `cfc78c3` + Smart Search Postgres schema & Investor/branch fixes + Push SW `/push-sw.js` bootstrap fix  
 
 This document is the primary onboarding brief for the next AI engineer or technical lead picking up Hakum Auto Care. Read this together with the persistent Graphify knowledge graph before modifying code.
 

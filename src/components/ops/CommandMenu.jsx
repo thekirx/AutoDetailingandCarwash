@@ -18,7 +18,6 @@ import {
 import {
   Command,
   CommandDialog,
-  CommandEmpty,
   CommandGroup,
   CommandInput,
   CommandItem,
@@ -49,13 +48,25 @@ const CATEGORY_META = {
   branches: { heading: 'Branches', Icon: Building2 },
 }
 
+function isRecentAllowed(to, validPaths) {
+  if (!to) return false
+  if (validPaths.has(to)) return true
+  if (to.startsWith('/operations/planning?') && [...validPaths].some((p) => p === '/operations/planning' || p.startsWith('/operations/planning?'))) {
+    return true
+  }
+  if (to.startsWith('/operations/forms/results/') && validPaths.has('/operations/forms/results')) {
+    return true
+  }
+  return false
+}
+
 function readRecents(userId, validPaths) {
   if (!userId) return []
   try {
     const raw = globalThis.localStorage?.getItem(`${RECENT_KEY_PREFIX}${userId}`)
     const parsed = JSON.parse(raw || '[]')
     if (!Array.isArray(parsed)) return []
-    return parsed.filter((item) => item?.to && validPaths.has(item.to)).slice(0, MAX_RECENTS)
+    return parsed.filter((item) => isRecentAllowed(item?.to, validPaths)).slice(0, MAX_RECENTS)
   } catch {
     return []
   }
@@ -142,7 +153,10 @@ export default function CommandMenu({ open: openProp, onOpenChange }) {
     const timer = window.setTimeout(async () => {
       try {
         const token = await getAccessTokenFresh()
-        if (!token || controller.signal.aborted) {
+        if (controller.signal.aborted) return
+        if (!token) {
+          setSearchError('Session expired — sign in again to search live records.')
+          setLiveResults([])
           setSearching(false)
           return
         }
@@ -324,9 +338,9 @@ export default function CommandMenu({ open: openProp, onOpenChange }) {
           ))}
 
           {!searching && !hasAnyMatches ? (
-            <CommandEmpty>
+            <div className="py-6 text-center text-sm text-muted-foreground">
               No matching pages or accessible records for &ldquo;{trimmedQuery}&rdquo;.
-            </CommandEmpty>
+            </div>
           ) : null}
         </CommandList>
 

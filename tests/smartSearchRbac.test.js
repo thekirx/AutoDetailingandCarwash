@@ -11,6 +11,7 @@ import {
 import {
   handleSmartSearchRequest,
   resolveSearchScope,
+  runScopedQueries,
   sanitizeSearchTerm,
 } from '../server/smartSearchApi.mjs'
 
@@ -288,5 +289,88 @@ describe('Smart Search HTTP & UI integration contracts', () => {
     assert.match(opsLayout, /floor-rail-search/)
     assert.match(opsLayout, /floor-topbar-search/)
     assert.ok((opsLayout.match(/<CommandMenu\s+open=/g) || []).length >= 2, 'CommandMenu must mount in both FloorAppShell and CommandShell')
+  })
+
+  it('uses real Postgres column names and enforces Investor & branch filters in runScopedQueries', async () => {
+    const recorded = []
+    function makeDb() {
+      return {
+        from(table) {
+          const entry = { table, select: '', ors: [], ins: [], eqs: [] }
+          recorded.push(entry)
+          const builder = {
+            select(cols) {
+              entry.select = cols
+              return builder
+            },
+            or(expr) {
+              entry.ors.push(expr)
+              return builder
+            },
+            eq(k, v) {
+              entry.eqs.push([k, v])
+              return builder
+            },
+            neq() {
+              return builder
+            },
+            in(k, v) {
+              entry.ins.push([k, v])
+              return builder
+            },
+            ilike() {
+              return builder
+            },
+            order() {
+              return builder
+            },
+            limit() {
+              return builder
+            },
+            then(cb) {
+              return Promise.resolve({ data: [], error: null }).then(cb)
+            },
+          }
+          return builder
+        },
+      }
+    }
+
+    const bossScope = resolveSearchScope({ id: 'boss-1', role: ROLES.SUPER_ADMIN, is_active: true })
+    await runScopedQueries(makeDb(), bossScope, 'civic')
+
+    const veh = recorded.find((r) => r.table === 'vehicles')
+    assert.ok(veh, 'Super Admin must query vehicles')
+    assert.match(veh.select, /vehicle_make/)
+    assert.doesNotMatch(veh.select, /\bmake\b/)
+
+    const cards = recorded.find((r) => r.table === 'plan_cards')
+    assert.ok(cards, 'Super Admin must query plan_cards')
+    assert.doesNotMatch(cards.select.split('plan_lists')[0], /board_id/)
+    assert.match(cards.select, /plan_lists!inner\(board_id/)
+
+    const svc = recorded.find((r) => r.table === 'services')
+    assert.ok(svc, 'Super Admin must query services')
+    assert.doesNotMatch(svc.select, /\bcategory\b/)
+
+    const vouchers = recorded.find((r) => r.table === 'promo_vouchers')
+    assert.ok(vouchers, 'Super Admin must query promo_vouchers')
+    assert.match(vouchers.select, /\btitle\b/)
+    assert.doesNotMatch(vouchers.select, /\blabel\b/)
+
+    recorded.length = 0
+    const invScope = resolveSearchScope({ id: 'inv-1', role: ROLES.INVESTOR, branch_slug: 'bgc', is_active: true })
+    await runScopedQueries(makeDb(), invScope, 'maria')
+    const invBookings = recorded.find((r) => r.table === 'bookings')
+    assert.ok(invBookings, 'Investor queries detailing bookings on their branch')
+    assert.ok(invBookings.ins.some(([col, vals]) => col === 'branch' && vals.includes('bgc')))
+    assert.ok(!invBookings.ors.some((expr) => expr.includes('customer_name') || expr.includes('customer_phone')), 'Investor search must never query by customer name/phone')
+
+    recorded.length = 0
+    const detailerScope = resolveSearchScope({ id: 'd-1', role: ROLES.DETAILER, branch_slug: 'bgc', is_active: true })
+    await runScopedQueries(makeDb(), detailerScope, 'ceramic')
+    const assign = recorded.find((r) => r.table === 'plan_card_assignees')
+    assert.ok(assign, 'Detailer queries assigned tasks')
+    assert.doesNotMatch(assign.select, /is_archived/)
   })
 })
