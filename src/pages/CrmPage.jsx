@@ -4,10 +4,8 @@ import {
   Archive,
   ArrowLeftRight,
   Contact,
-  Crown,
   Inbox,
   MessageSquare,
-  Package,
   Pencil,
   RotateCcw,
   Search,
@@ -18,9 +16,7 @@ import { useAuth } from '@/auth/AuthProvider'
 import {
   canAccessCrm,
   canAccessInquiries,
-  canAccessMemberships,
   canEditCrm,
-  canManageMerchShop,
   canSendCustomerSms,
   canWriteFinance,
   getBranchScopeList,
@@ -57,9 +53,7 @@ import { toast } from 'sonner'
 import { VEHICLE_ICON_PRESETS, normalizeVehicleIcon } from '@/lib/ownerRevisionsPhase7'
 import '@/styles/crm-hub.css'
 
-const MembershipsPage = lazy(() => import('@/pages/MembershipsPage'))
 const InquiriesPage = lazy(() => import('@/pages/InquiriesPage'))
-const MerchShopPage = lazy(() => import('@/pages/MerchShopPage'))
 
 const PRICING_SIZE_ITEMS = PRICING_SIZES.map((sz) => ({ value: sz.slug, label: sz.label }))
 const EXPENSE_KIND_OPTIONS = ['general', 'payroll', 'marketing', 'utilities', 'chemicals', 'equipment'].map((k) => ({ value: k, label: k }))
@@ -69,9 +63,7 @@ const SYNTHETIC_EMAIL = /@customers\.hakumautocare\.com$/i
 const CRM_SHELL_TABS = Object.freeze([
   { id: 'directory', label: 'Directory', icon: Contact },
   { id: 'transfer', label: 'Transfer car', icon: ArrowLeftRight },
-  { id: 'memberships', label: 'Memberships', icon: Crown },
   { id: 'inquiries', label: 'Inquiries', icon: Inbox },
-  { id: 'merch', label: 'Merch shop', icon: Package },
   { id: 'groups', label: 'Smart groups', icon: UserPlus },
   { id: 'insights', label: 'Insights', icon: Search },
   { id: 'sms', label: 'SMS', icon: MessageSquare },
@@ -150,9 +142,7 @@ export default function CrmPage() {
     () =>
       CRM_SHELL_TABS.filter((t) => {
         if (t.id === 'transfer') return canTransferVehicle(profile)
-        if (t.id === 'memberships') return canAccessMemberships(profile)
         if (t.id === 'inquiries') return canAccessInquiries(profile)
-        if (t.id === 'merch') return canManageMerchShop(profile)
         if (t.id === 'sms') return crmEdit && canSendCustomerSms(profile)
         return true
       }),
@@ -691,7 +681,7 @@ export default function CrmPage() {
       title="Customer Users & CRM"
       description={
         crmEdit
-          ? 'Search and manage all customer accounts, vehicles, car ownership transfers, memberships, inquiries, and SMS in one place.'
+          ? 'Search and manage all customer accounts, vehicles, car ownership transfers, inquiries, smart groups, and SMS in one place.'
           : 'View only. Search customers, vehicles, visit history, and insights.'
       }
       actions={
@@ -704,7 +694,7 @@ export default function CrmPage() {
     >
       <OpsGuideCard
         title="How CRM works"
-        description="Find customers, transfer car ownership, manage memberships or inquiries, segment visits, and send SMS from one screen."
+        description="Find customers, transfer car ownership, manage inquiries, segment visits, and send SMS from one screen."
         steps={crmEdit ? CRM_WORKFLOW_STEPS : CRM_WORKFLOW_STEPS.filter((s) => s.id !== 'sms')}
         stepIcons={crmStepIcons}
       />
@@ -957,26 +947,10 @@ export default function CrmPage() {
           </TabsContent>
         ) : null}
 
-        {canAccessMemberships(profile) ? (
-          <TabsContent value="memberships" className="mt-6">
-            <Suspense fallback={<p className="py-6 text-sm text-muted-foreground">Loading memberships…</p>}>
-              <MembershipsPage embedded />
-            </Suspense>
-          </TabsContent>
-        ) : null}
-
         {canAccessInquiries(profile) ? (
           <TabsContent value="inquiries" className="mt-6">
             <Suspense fallback={<p className="py-6 text-sm text-muted-foreground">Loading inquiries…</p>}>
               <InquiriesPage embedded />
-            </Suspense>
-          </TabsContent>
-        ) : null}
-
-        {canManageMerchShop(profile) ? (
-          <TabsContent value="merch" className="mt-6">
-            <Suspense fallback={<p className="py-6 text-sm text-muted-foreground">Loading merch shop…</p>}>
-              <MerchShopPage embedded />
             </Suspense>
           </TabsContent>
         ) : null}

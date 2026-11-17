@@ -85,7 +85,7 @@ function formatVoucherWindow(startsOn, endsOn) {
 }
 
 /** SA / ASA board: create promo codes with a use limit, date window, fixed or percent discount, and optional service scope. */
-export default function VouchersPage() {
+export default function VouchersPage({ embedded = false } = {}) {
   const { profile } = useAuth()
   const [rows, setRows] = useState([])
   const [services, setServices] = useState([])
@@ -373,12 +373,7 @@ export default function VouchersPage() {
 
   const hasActiveFilters = statusFilter !== 'all' || scopeFilter !== 'all' || q.trim() !== ''
 
-  return (
-    <OpsPageShell
-      title="Vouchers"
-      description="Create promo codes. Team Leads apply them on queue tickets, and POS tracks redemptions."
-      icon={TicketPercent}
-    >
+  const inner = (
       <div className="voucher-shell">
         {canMint ? (
           <section className="voucher-composer" aria-label={editingRow ? `Edit voucher ${editingRow.code}` : 'Create voucher'}>
@@ -920,6 +915,17 @@ export default function VouchersPage() {
           )}
         </section>
       </div>
+  )
+
+  if (embedded) return inner
+
+  return (
+    <OpsPageShell
+      title="Vouchers"
+      description="Create promo codes. Team Leads apply them on queue tickets, and POS tracks redemptions."
+      icon={TicketPercent}
+    >
+      {inner}
     </OpsPageShell>
   )
 }

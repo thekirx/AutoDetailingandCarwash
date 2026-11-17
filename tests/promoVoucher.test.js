@@ -81,7 +81,7 @@ describe('promo vouchers', () => {
     assert.match(widened, /team_lead', 'admin', 'BossMich'/)
     assert.match(widened, /Only the Team Lead, Branch Admin, or office can apply a voucher/)
     assert.match(perms, /canManageVouchers/)
-    assert.match(perms, /nav\('Vouchers', '\/operations\/vouchers'/)
+    assert.match(perms, /nav\('Rewards', '\/operations\/rewards/)
     assert.match(editor, /apply_booking_promo_voucher/)
     assert.match(pos, /consume_booking_promo_voucher/)
     assert.match(page, /max_uses/)

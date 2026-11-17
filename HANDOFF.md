@@ -3,7 +3,7 @@
 **Date:** 2026-11-17 (Asia/Manila)  
 **Repository:** `https://github.com/thekirx/AutoDetailingandCarwash.git` (Branch: `main`)  
 **Production Domain:** `https://www.hakumautocare.com` (Vercel + Supabase `lybxhpzzqqyqswvuwpxv`)  
-**Current Baseline:** `dd6df7ea` + Consolidated Customer Users Hub & Sidebar Streamlining (`CrmPage.jsx`, `VehicleTransferPanel.jsx`, `server/customerAdminApi.mjs`, `permissions.js`, `App.jsx`)  
+**Current Baseline:** `8088b869` + Unified Rewards & Loyalty Hub (`RewardsPage.jsx`, `VouchersPage.jsx`, `CrmPage.jsx`, `permissions.js`, `authRedirect.js`, `App.jsx`, `OperationsLayout.jsx`, `smartSearchCatalog.js`)  
 
 This document is the primary onboarding brief for the next AI engineer or technical lead picking up Hakum Auto Care. Read this together with the persistent Graphify knowledge graph before modifying code.
 

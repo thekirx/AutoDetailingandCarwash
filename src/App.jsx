@@ -3,7 +3,7 @@ import { Navigate, Route, Routes, useSearchParams } from 'react-router-dom'
 import ProtectedRoute from './auth/ProtectedRoute'
 import OpsRoleGate from './auth/OpsRoleGate'
 import { useAuth } from './auth/AuthProvider'
-import { canAccessCrm, OPS_LOGIN_ROLES } from './auth/permissions'
+import { canAccessCrm, canAccessRewardsHub, OPS_LOGIN_ROLES } from './auth/permissions'
 import OperationsLayout from './layouts/OperationsLayout'
 import PublicLayout from './layouts/PublicLayout'
 import LoginPage from './pages/LoginPage'
@@ -75,6 +75,7 @@ const BroadcastPage = lazy(() => import('./pages/BroadcastPage'))
 const ReportsPage = lazy(() => import('./pages/ReportsPage'))
 const MembershipsPage = lazy(() => import('./pages/MembershipsPage'))
 const VouchersPage = lazy(() => import('./pages/VouchersPage'))
+const RewardsPage = lazy(() => import('./pages/RewardsPage'))
 const MonthlyPayrollPage = lazy(() => import('./pages/MonthlyPayrollPage'))
 const MyPayslipsPage = lazy(() => import('./pages/MyPayslipsPage'))
 const ApprovalsPage = lazy(() => import('./pages/ApprovalsPage'))
@@ -135,6 +136,18 @@ function CustomerHubRedirect({ tab, subTabParam, fallback }) {
   }
   params.set('tab', tab)
   return <Navigate to={`/operations/crm?${params.toString()}`} replace />
+}
+
+function RewardsHubRedirect({ tab, subTabParam, fallback }) {
+  const { profile } = useAuth()
+  const [searchParams] = useSearchParams()
+  if (!canAccessRewardsHub(profile)) return fallback
+  const params = new URLSearchParams(searchParams)
+  if (subTabParam && params.get('tab')) {
+    params.set(subTabParam, params.get('tab'))
+  }
+  params.set('tab', tab)
+  return <Navigate to={`/operations/rewards?${params.toString()}`} replace />
 }
 
 function RouteFallback() {
@@ -239,7 +252,7 @@ export default function App() {
             <Route path="kpi" element={gate('kpi', <KpiPage />)} />
             <Route path="my-tasks" element={gate('my-tasks', <MyTasksPage />)} />
             <Route path="pos" element={gate('pos', <PosPage />)} />
-            <Route path="merch-shop" element={gate('merch-shop', <CustomerHubRedirect tab="merch" fallback={<MerchShopPage />} />)} />
+            <Route path="merch-shop" element={gate('merch-shop', <RewardsHubRedirect tab="points-shop" fallback={<MerchShopPage />} />)} />
             <Route path="inventory" element={gate('inventory', <InventoryPage />)} />
             <Route path="approvals" element={gate('approvals', <ApprovalsPage />)} />
             <Route path="finance" element={gate('finance', <FinancePage />)} />
@@ -266,8 +279,9 @@ export default function App() {
             <Route path="history" element={gate('history', <HistoryPage />)} />
             <Route path="broadcast" element={gate('notifications', <BroadcastPage />)} />
             <Route path="reports" element={gate('reports', <ReportsPage />)} />
-            <Route path="memberships" element={gate('memberships', <CustomerHubRedirect tab="memberships" subTabParam="mtab" fallback={<MembershipsPage />} />)} />
-            <Route path="vouchers" element={gate('vouchers', <VouchersPage />)} />
+            <Route path="rewards" element={gate('rewards', <RewardsPage />)} />
+            <Route path="memberships" element={gate('memberships', <RewardsHubRedirect tab="memberships" subTabParam="mtab" fallback={<MembershipsPage />} />)} />
+            <Route path="vouchers" element={gate('vouchers', <RewardsHubRedirect tab="vouchers" fallback={<VouchersPage />} />)} />
             <Route path="reviews" element={gate('reviews', <Navigate to="/operations/forms/results" replace />)} />
           </Route>
         </Route>

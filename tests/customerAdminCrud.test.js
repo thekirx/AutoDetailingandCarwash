@@ -13,22 +13,24 @@ describe('Customer Users Hub consolidation & full CRUD', () => {
     const sa = { role: ROLES.SUPER_ADMIN }
     const navUrls = getOperationsNav(sa).map((item) => item.to)
     assert.ok(navUrls.includes('/operations/crm'))
-    for (const legacy of ['/operations/memberships', '/operations/merch-shop', '/operations/inquiries', '/operations/vehicle-transfer']) {
+    for (const legacy of ['/operations/memberships', '/operations/merch-shop', '/operations/inquiries', '/operations/vehicle-transfer', '/operations/vouchers']) {
       assert.equal(navUrls.includes(legacy), false, `${legacy} should not clutter sidebar`)
     }
-    for (const routeKey of ['crm', 'memberships', 'merch-shop', 'inquiries', 'vehicle-transfer']) {
+    for (const routeKey of ['crm', 'rewards', 'memberships', 'merch-shop', 'inquiries', 'vehicle-transfer', 'vouchers']) {
       assert.equal(allowRoute(sa, routeKey), true, `allowRoute must keep ${routeKey} accessible for redirects`)
     }
 
     const appSrc = read('src/App.jsx')
     assert.match(appSrc, /CustomerHubRedirect/)
+    assert.match(appSrc, /RewardsHubRedirect/)
     assert.match(appSrc, /path="vehicle-transfer"[\s\S]{0,120}tab="transfer"/)
-    assert.match(appSrc, /path="memberships"[\s\S]{0,120}tab="memberships"/)
     assert.match(appSrc, /path="inquiries"[\s\S]{0,120}tab="inquiries"/)
-    assert.match(appSrc, /path="merch-shop"[\s\S]{0,120}tab="merch"/)
+    assert.match(appSrc, /path="memberships"[\s\S]{0,120}tab="memberships"/)
+    assert.match(appSrc, /path="merch-shop"[\s\S]{0,120}tab="points-shop"/)
+    assert.match(appSrc, /path="vouchers"[\s\S]{0,120}tab="vouchers"/)
   })
 
-  it('wires full customer CRUD, vehicle CRUD, archived restore, transfer car, memberships, and inquiries into CrmPage', () => {
+  it('wires full customer CRUD, vehicle CRUD, archived restore, transfer car, and inquiries into CrmPage', () => {
     const crm = read('src/pages/CrmPage.jsx')
     assert.match(crm, /New customer/)
     assert.match(crm, /action:\s*'list-archived'/)
@@ -38,12 +40,10 @@ describe('Customer Users Hub consolidation & full CRUD', () => {
     assert.match(crm, /action:\s*'delete'/)
     assert.match(crm, /action:\s*'update-vehicle'/)
     assert.match(crm, /action:\s*'archive-vehicle'/)
-    for (const tabId of ['directory', 'transfer', 'memberships', 'inquiries', 'merch', 'groups', 'insights', 'sms']) {
+    for (const tabId of ['directory', 'transfer', 'inquiries', 'groups', 'insights', 'sms']) {
       assert.match(crm, new RegExp(`id: '${tabId}'`))
     }
-    assert.match(crm, /<MembershipsPage embedded/)
     assert.match(crm, /<InquiriesPage embedded/)
-    assert.match(crm, /<MerchShopPage embedded/)
     assert.match(crm, /<VehicleTransferPanel/)
 
     const dlg = read('src/pages/crm/CustomerProfileDialog.jsx')

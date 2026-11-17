@@ -776,6 +776,16 @@ export function canAccessMemberships(profile) {
   return false
 }
 
+/** Unified Rewards hub: memberships, vouchers, points shop, and referral bonuses. */
+export function canAccessRewardsHub(profile) {
+  return (
+    canAccessMemberships(profile) ||
+    canViewVouchers(profile) ||
+    canManageMerchShop(profile) ||
+    isSuperAdmin(profile)
+  )
+}
+
 export function canAccessDataCenter(profile) {
   return isSuperAdmin(profile)
 }
@@ -855,7 +865,7 @@ export function getOperationsNav(profile) {
       nav('Carwash Queue', '/operations/queue', 'ClipboardList', 'insight'),
       nav('Detailing Schedule', '/operations/bookings', 'Kanban', 'insight'),
       nav('Point of Sales', '/operations/pos', 'ShoppingCart', 'insight'),
-      nav('Vouchers', '/operations/vouchers', 'TicketPercent', 'insight'),
+      nav('Rewards', '/operations/rewards?tab=vouchers', 'Gift', 'insight'),
       nav('Financials', '/operations/finance', 'Wallet', 'insight'),
     ]
   }
@@ -969,9 +979,6 @@ export function getOperationsNav(profile) {
   if (canAccessPos(profile)) {
     items.push(nav('Point of Sales', '/operations/pos', 'ShoppingCart', 'insight'))
   }
-  if (canManageVouchers(profile)) {
-    items.push(nav('Vouchers', '/operations/vouchers', 'TicketPercent', 'insight'))
-  }
   if (canAccessInventory(profile)) {
     items.push(nav('Inventory', '/operations/inventory', 'Package', 'insight'))
   }
@@ -1002,10 +1009,11 @@ export function getOperationsNav(profile) {
 
   if (canAccessCrm(profile)) {
     items.push(nav('Customers', '/operations/crm', 'Contact', 'customers'))
-  } else {
-    if (canAccessMemberships(profile)) items.push(nav('Memberships', '/operations/memberships', 'Crown', 'customers'))
-    if (canManageMerchShop(profile)) items.push(nav('Merch shop', '/operations/merch-shop', 'Package', 'customers'))
-    if (canAccessInquiries(profile)) items.push(nav('Inquiries', '/operations/inquiries', 'Inbox', 'customers'))
+  } else if (canAccessInquiries(profile)) {
+    items.push(nav('Inquiries', '/operations/inquiries', 'Inbox', 'customers'))
+  }
+  if (canAccessRewardsHub(profile)) {
+    items.push(nav('Rewards', '/operations/rewards', 'Gift', 'customers'))
   }
 
   if (canManageBranches(profile)) {
@@ -1199,8 +1207,8 @@ export const BRANCH_ADMIN_ROUTE_KEYS = Object.freeze([
   'audit',
 ])
 
-/** Investor chrome: read-only queue, detailing, POS, vouchers, finance. No Floor Board. */
-export const INVESTOR_ROUTE_KEYS = Object.freeze(['queue', 'bookings', 'pos', 'vouchers', 'finance', 'reports'])
+/** Investor chrome: read-only queue, detailing, POS, rewards/vouchers, finance. No Floor Board. */
+export const INVESTOR_ROUTE_KEYS = Object.freeze(['queue', 'bookings', 'pos', 'vouchers', 'rewards', 'finance', 'reports'])
 
 /** Route allow helpers for App.jsx */
 export function allowRoute(profile, key) {
@@ -1236,6 +1244,7 @@ export function allowRoute(profile, key) {
     memberships: canAccessMemberships,
     'merch-shop': canManageMerchShop,
     vouchers: canViewVouchers,
+    rewards: canAccessRewardsHub,
     settings: canAccessSettings,
     content: canManageSiteContent,
     notifications: canAccessNotifications,

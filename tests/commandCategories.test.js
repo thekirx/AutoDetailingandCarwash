@@ -115,7 +115,6 @@ describe('command category IA', () => {
       'Detailing Schedule',
       'Team Planner',
       'Point of Sales',
-      'Vouchers',
       'Inventory',
       'Financials',
       'Monthly salaries',
@@ -135,14 +134,14 @@ describe('command category IA', () => {
     )
     assert.deepEqual(
       groups.find((g) => g.id === 'customers').items.map((item) => item.label),
-      ['Customers'],
+      ['Customers', 'Rewards'],
     )
     assert.deepEqual(
       groups.find((g) => g.id === 'ops-insight').items.map((item) => item.label),
       ['History', 'Notifications', 'Audit', 'Data Center'],
     )
     assert.ok(!sa.some((i) => i.label === 'Console' || i.label === 'KPI' || i.label === 'Reviews' || i.label === 'Month KPI'))
-    assert.ok(sa.some((i) => i.to === '/operations/vouchers' && i.label === 'Vouchers'))
+    assert.ok(sa.some((i) => i.to === '/operations/rewards' && i.label === 'Rewards'))
     assert.ok(!sa.some((i) => i.to === '/operations/payroll' || i.to === '/operations/kpi' || i.to === '/operations/reviews'))
     const layout = readFileSync(join(root, 'src/layouts/OperationsLayout.jsx'), 'utf8')
     const css = readFileSync(join(root, 'src/styles.css'), 'utf8')
