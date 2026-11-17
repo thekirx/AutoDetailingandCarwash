@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Gift, MapPin, Navigation } from 'lucide-react'
+import { ChevronDown, Gift, MapPin, Navigation } from 'lucide-react'
 import { toast } from 'sonner'
 import { Row, SectionHead } from './CustomerUi'
 import Sheet from './Sheet'
@@ -19,8 +19,12 @@ import { branchDistanceKm } from '@/lib/branchGeo'
 import { formatDistanceKm } from '@/lib/customerLocation'
 import { useCustomerBranch } from '@/lib/useCustomerBranch'
 
+/** Items shown before "See all N items". */
+const SHOP_PREVIEW = 4
+
 export default function PointsShop({ data, onRefresh }) {
   const navigate = useNavigate()
+  const [showAll, setShowAll] = useState(false)
   const [selected, setSelected] = useState('')
   const [size, setSize] = useState('')
   const [chooseBranch, setChooseBranch] = useState(false)
@@ -132,7 +136,7 @@ export default function PointsShop({ data, onRefresh }) {
 
           {/* Store grid: picture, name, points, stock, Claim. */}
           <div className="capp-shop-grid">
-            {items.map((row) => {
+            {(showAll ? items : items.slice(0, SHOP_PREVIEW)).map((row) => {
               const atBranch = branchProductStockCount(row, pickup)
               const elsewhere = atBranch > 0 ? [] : otherBranchesInStock(row, pickup, branches)
               const stockNote =
@@ -158,6 +162,12 @@ export default function PointsShop({ data, onRefresh }) {
               )
             })}
           </div>
+          {!showAll && items.length > SHOP_PREVIEW ? (
+            <button type="button" className="capp-btn capp-btn-ghost capp-shop-more" onClick={() => setShowAll(true)}>
+              See all {items.length} items
+              <ChevronDown size={16} strokeWidth={1.75} aria-hidden />
+            </button>
+          ) : null}
           {!items.length ? <p className="capp-empty">Nothing is in the shop yet.</p> : null}
         </section>
       ) : null}

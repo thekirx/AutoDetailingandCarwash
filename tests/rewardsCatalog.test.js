@@ -15,7 +15,7 @@ describe('visit rewards and member tier', () => {
       [6, 12, 18],
     )
     assert.equal(nextVisitReward(18).visit, 24)
-    assert.equal(nextVisitReward(18).label, 'Free back-to-zero add-on')
+    assert.equal(nextVisitReward(18).label, 'Free Bac-to-zero add-on')
     assert.equal(nextVisitReward(30), null)
     assert.equal(latestEarnedVisitReward(18).label, 'Free premium car wash')
     assert.equal(latestEarnedVisitReward(5), null)

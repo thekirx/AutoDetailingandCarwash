@@ -26,6 +26,7 @@ import { earliestBookableDay } from '@/lib/bookingLead'
 import { branchDistanceKm } from '@/lib/branchGeo'
 import { formatDistanceKm, loadCustomerBranch, loadCustomerPin, resolveCustomerBranchChoice } from '@/lib/customerLocation'
 import { useCustomerBranch } from '@/lib/useCustomerBranch'
+import { usePublicBranches } from '@/lib/branches'
 import ReferralSourceFields, { useReferralStaff } from '@/components/bookings/ReferralSourceFields'
 import { friendCodeAccountError, referralRequiredError, referralSourceLabel } from '@/lib/referralSource'
 import { usePageMeta } from '@/lib/pageMeta'
@@ -126,6 +127,9 @@ export default function CustomerBookPage() {
 
   const { branches, nearestSlug, pin, selectBranch } = useCustomerBranch(portal?.branches || [], { wanted: params.get('branch') || '' })
   const vehicles = portal?.vehicles || []
+  // Coming-soon branches show in the branch step with a tag; they can't be picked yet.
+  const { branches: visibleBranches } = usePublicBranches({ mode: 'visible' })
+  const soonBranches = visibleBranches.filter((b) => b.coming_soon)
 
   useEffect(() => {
     let cancelled = false
@@ -735,6 +739,19 @@ export default function CustomerBookPage() {
                             {[nearestSlug === b.slug ? 'Closest to you' : '', km != null ? formatDistanceKm(km) : '', b.address].filter(Boolean).join(' · ')}
                           </em>
                         </span>
+                      </button>
+                    )
+                  })}
+                  {soonBranches.map((b) => {
+                    const km = pin ? branchDistanceKm(pin, b) : null
+                    return (
+                      <button key={b.slug} type="button" role="radio" aria-checked={false} aria-disabled="true" disabled className="capp-opt is-soon">
+                        <span className="capp-opt-rd" aria-hidden />
+                        <span className="capp-row-body">
+                          <strong>{b.name.replace(/^Hakum Auto Care\s*/i, '')}</strong>
+                          <em>{[km != null ? formatDistanceKm(km) : '', b.address].filter(Boolean).join(' · ')}</em>
+                        </span>
+                        <span className="capp-soon-tag">Coming soon</span>
                       </button>
                     )
                   })}
