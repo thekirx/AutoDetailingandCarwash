@@ -7472,33 +7472,43 @@ a.planner-ticket:active {
   white-space: nowrap;
 }
 .booking-lane-board .floor-lane-body {
-  gap: 0.45rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-auto-rows: max-content;
+  align-content: start;
+  gap: 0.6rem;
 }
 .booking-lane-board .floor-ticket {
-  padding: 0.65rem 0.75rem;
+  padding: 0.85rem;
   min-height: 0;
-  border-radius: 0.75rem;
+  height: auto;
+  flex-shrink: 0;
+  border-radius: 0.9rem;
 }
 .booking-lane-board .floor-ticket.bk-ticket-compact {
   min-height: 0;
+  overflow: visible;
 }
 .booking-lane-board .floor-ticket p {
   margin: 0;
 }
 .booking-lane-board .floor-ticket .bk-meta {
-  font-size: 0.72rem;
+  font-size: 0.75rem;
 }
-/* Compact booking tickets: detailing type · car - plate */
+/* Board card design (daylight tokens, zero clip across every scenario) */
 .bk-ticket-compact {
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  gap: 0.12rem;
+  gap: 0.45rem;
   width: 100%;
   text-align: left;
-  overflow: hidden;
+  overflow: visible;
   min-height: 0;
   box-sizing: border-box;
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 2px rgba(2, 10, 49, 0.04);
+  transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
 }
 button.bk-ticket-compact {
   appearance: none;
@@ -7511,9 +7521,64 @@ button.bk-ticket-compact {
 }
 .bk-ticket-openable:hover,
 .bk-ticket-openable:focus-visible {
-  border-color: color-mix(in oklab, var(--primary) 45%, var(--border));
-  box-shadow: 0 4px 14px rgba(5, 38, 153, 0.1);
-  outline: none;
+  border-color: color-mix(in oklab, var(--primary) 48%, var(--border));
+  box-shadow: 0 8px 20px rgba(5, 38, 153, 0.10);
+  transform: translateY(-1px);
+  outline: 2px solid color-mix(in oklab, var(--primary) 65%, transparent);
+  outline-offset: 2px;
+}
+.bk-card-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  width: 100%;
+  min-width: 0;
+}
+.bk-card-plate-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.375rem;
+  background: var(--navy, #020A31);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+}
+.bk-card-plate-tag.is-tbd {
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+.bk-card-badges {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+.bk-card-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.14rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--muted);
+  color: var(--foreground);
+  font-size: 0.68rem;
+  font-weight: 600;
+  line-height: 1.3;
+  max-width: 100%;
+}
+.bk-card-chip-warn {
+  border-color: color-mix(in oklab, var(--status-late) 45%, transparent);
+  background: var(--status-late-soft);
+  color: var(--status-late);
 }
 .bk-ticket-header {
   width: 100%;
@@ -7521,24 +7586,97 @@ button.bk-ticket-compact {
 }
 .bk-ticket-service {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: 0.92rem;
   font-weight: 700;
-  line-height: 1.25;
+  line-height: 1.3;
   letter-spacing: -0.01em;
   color: var(--primary);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 .bk-ticket-car-plate {
-  margin: 0;
+  margin: 0.12rem 0 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--foreground);
+  opacity: 0.84;
+  overflow-wrap: anywhere;
+}
+.bk-card-meta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem 0.65rem;
   font-size: 0.72rem;
   font-weight: 500;
-  line-height: 1.3;
   color: var(--muted-foreground);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.35;
+}
+.bk-card-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  min-width: 0;
+}
+.bk-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-top: 0.35rem;
+  border-top: 1px solid color-mix(in oklab, var(--border) 75%, transparent);
+  font-size: 0.72rem;
+}
+.bk-card-price {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+}
+.bk-card-open-cue {
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+.bk-board-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+}
+.bk-board-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+.bk-seg-group {
+  display: inline-flex;
+  padding: 0.18rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--muted);
+  gap: 0.15rem;
+}
+.bk-seg-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 2.25rem;
+  padding: 0 0.75rem;
+  border-radius: 999px;
+  border: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.bk-seg-btn.is-active {
+  background: var(--card);
+  color: var(--primary);
+  box-shadow: 0 1px 2px rgba(2, 10, 49, 0.08);
 }
 .bk-ticket-plate {
   margin: 0;
@@ -7641,6 +7779,11 @@ button.bk-ticket-compact {
     transition: none;
   }
 }
+@media (max-width: 1024px) {
+  .bk-seg-btn {
+    min-height: 2.75rem;
+  }
+}
 @container bk-board (max-width: 43.99rem) {
   .bk-lane-dimmed {
     display: none;
@@ -7665,6 +7808,23 @@ button.bk-ticket-compact {
     max-height: calc(100svh - 12.5rem);
     scroll-snap-align: start;
     scroll-margin-inline: 0.5rem;
+  }
+  .booking-lane-board.bk-board-grid {
+    overflow-x: visible;
+    grid-auto-flow: row;
+    grid-auto-columns: unset;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+    align-items: start;
+    scroll-snap-type: none;
+    min-height: 0;
+    gap: 0.9rem;
+    touch-action: pan-y;
+  }
+  .booking-lane-board.bk-board-grid .floor-lane {
+    min-width: 0;
+    max-width: none;
+    max-height: min(38rem, 72svh);
+    scroll-snap-align: none;
   }
 }
 /* SA/ASA queue: stacked on a narrow pane; equal columns when wide — never H-scroll. */
