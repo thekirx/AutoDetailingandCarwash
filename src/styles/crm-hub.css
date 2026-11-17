@@ -1,0 +1,257 @@
+/* Customer Hub (/operations/crm) — Hakum Daylight Operate UI */
+
+.crm-dir-shell {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.crm-dir-toolbar {
+  display: grid;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--card);
+  min-width: 0;
+}
+
+.crm-filter-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.crm-filter-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 44px;
+  padding: 0 0.85rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--background);
+  color: var(--planner-ink);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.crm-filter-pill:hover {
+  border-color: color-mix(in oklab, var(--planner-navy) 35%, var(--border));
+}
+
+.crm-filter-pill.is-selected {
+  background: var(--planner-navy);
+  border-color: var(--planner-navy);
+  color: var(--color-white);
+}
+
+.crm-filter-pill span {
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
+  opacity: 0.85;
+}
+
+.crm-search-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.crm-search-box {
+  position: relative;
+  flex: 1 1 16rem;
+  min-width: 0;
+}
+
+.crm-search-box input {
+  min-height: 44px;
+  padding-left: 2.35rem;
+  font-size: 1rem;
+}
+
+@media (min-width: 768px) {
+  .crm-search-box input {
+    font-size: 0.875rem;
+  }
+}
+
+.crm-search-icon {
+  position: absolute;
+  left: 0.8rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 1rem;
+  height: 1rem;
+  color: var(--muted-foreground);
+  pointer-events: none;
+}
+
+.crm-plate-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.14rem 0.48rem;
+  border-radius: 0.4rem;
+  border: 1px solid var(--border);
+  background: var(--planner-paper);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--planner-ink);
+  letter-spacing: 0.03em;
+}
+
+.crm-plates-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.crm-status-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.16rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.crm-status-pill.is-active {
+  background: var(--status-ready-soft);
+  color: var(--status-ready);
+}
+
+.crm-status-pill.is-disabled {
+  background: var(--status-late-soft);
+  color: var(--status-late);
+}
+
+.crm-status-pill.is-archived {
+  background: var(--status-void-soft);
+  color: var(--status-void);
+}
+
+.crm-status-pill.is-member {
+  background: var(--status-queued-soft);
+  color: var(--status-queued);
+}
+
+.crm-mobile-cards {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.crm-table-wrap {
+  display: none;
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--card);
+}
+
+@media (min-width: 768px) {
+  .crm-mobile-cards {
+    display: none;
+  }
+
+  .crm-table-wrap {
+    display: block;
+  }
+}
+
+.crm-mobile-card {
+  display: grid;
+  gap: 0.65rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: var(--card);
+  min-width: 0;
+}
+
+.crm-mobile-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.45rem;
+}
+
+.crm-mobile-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding-top: 0.55rem;
+  border-top: 1px dashed var(--border);
+}
+
+.crm-mobile-actions button {
+  min-height: 44px;
+}
+
+/* Transfer Car Workbench */
+.crm-transfer-grid {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.crm-transfer-cols {
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+@media (min-width: 900px) {
+  .crm-transfer-cols {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+  }
+}
+
+.crm-transfer-list {
+  display: grid;
+  gap: 0.5rem;
+  max-height: 22rem;
+  overflow-y: auto;
+  padding-right: 0.15rem;
+}
+
+.crm-pick-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  min-height: 44px;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 0.8rem;
+  background: var(--background);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.crm-pick-row:hover {
+  border-color: color-mix(in oklab, var(--planner-navy) 35%, var(--border));
+}
+
+.crm-pick-row.is-selected {
+  border-color: var(--planner-navy);
+  background: color-mix(in oklab, var(--planner-navy) 6%, var(--card));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crm-filter-pill,
+  .crm-pick-row {
+    transition: none;
+  }
+}

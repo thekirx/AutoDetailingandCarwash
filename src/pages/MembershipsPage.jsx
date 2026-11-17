@@ -96,13 +96,13 @@ function settingsToProgramForm(row) {
   }
 }
 
-export default function MembershipsPage() {
+export default function MembershipsPage({ embedded = false } = {}) {
   const { profile } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const superAdmin = isSuperAdmin(profile)
   const defaultTab = superAdmin ? 'program' : 'tiers'
   const allowedTabs = superAdmin ? MEMBERSHIP_TAB_IDS : MEMBERSHIP_TAB_IDS.filter((id) => id !== 'program')
-  const tab = resolveOpsTab(searchParams.get('tab'), allowedTabs, defaultTab)
+  const tab = resolveOpsTab(searchParams.get(embedded ? 'mtab' : 'tab'), allowedTabs, defaultTab)
   const visibleTabs = MEMBERSHIPS_SHELL_TABS.filter((item) => allowedTabs.includes(item.id))
   const [tiers, setTiers] = useState([])
   const [milestones, setMilestones] = useState([])
@@ -150,7 +150,16 @@ export default function MembershipsPage() {
   if (!canAccessMemberships(profile)) return <Navigate to="/operations/access-denied" replace />
 
   function setShellTab(next) {
-    setSearchParams(opsTabSearchParams(next, defaultTab), { replace: true })
+    if (!embedded) {
+      setSearchParams(opsTabSearchParams(next, defaultTab), { replace: true })
+      return
+    }
+    setSearchParams((prev) => {
+      const n = new URLSearchParams(prev)
+      if (next === defaultTab) n.delete('mtab')
+      else n.set('mtab', next)
+      return n
+    }, { replace: true })
   }
 
   const membershipStepIcons = {
@@ -317,19 +326,16 @@ export default function MembershipsPage() {
     }
   }
 
-  return (
-    <OpsPageShell
-      className="hakum-memberships"
-      eyebrow="Membership"
-      title="Plans and loyalty"
-      description="Super Admin controls the whole loyalty program — stamps, points, memberships, carwash-only earn, and per-service scores. POS honors these settings live."
-    >
-      <OpsGuideCard
-        title="How memberships work"
-        description="Program toggles, tiers, stamp milestones, and service weights feed POS and CRM on the next checkout."
-        steps={MEMBERSHIPS_WORKFLOW_STEPS.filter((step) => step.id !== 'program' || superAdmin)}
-        stepIcons={membershipStepIcons}
-      />
+  const inner = (
+    <>
+      {!embedded ? (
+        <OpsGuideCard
+          title="How memberships work"
+          description="Program toggles, tiers, stamp milestones, and service weights feed POS and CRM on the next checkout."
+          steps={MEMBERSHIPS_WORKFLOW_STEPS.filter((step) => step.id !== 'program' || superAdmin)}
+          stepIcons={membershipStepIcons}
+        />
+      ) : null}
 
       <Tabs value={tab} onValueChange={setShellTab}>
         <OpsTabList tabs={visibleTabs} aria-label="Membership sections" />
@@ -904,6 +910,19 @@ export default function MembershipsPage() {
           )}
         </DialogContent>
       </Dialog>
+    </>
+  )
+
+  if (embedded) return <div className="hakum-memberships flex flex-col gap-5">{inner}</div>
+
+  return (
+    <OpsPageShell
+      className="hakum-memberships"
+      eyebrow="Membership"
+      title="Plans and loyalty"
+      description="Super Admin controls the whole loyalty program — stamps, points, memberships, carwash-only earn, and per-service scores. POS honors these settings live."
+    >
+      {inner}
     </OpsPageShell>
   )
 }

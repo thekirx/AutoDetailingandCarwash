@@ -129,10 +129,13 @@ describe('command category IA', () => {
         'Detailing Packages',
         'Vehicle List',
         'RBAC Delegation',
-        'Transfer car',
         'Content',
         'Settings',
       ],
+    )
+    assert.deepEqual(
+      groups.find((g) => g.id === 'customers').items.map((item) => item.label),
+      ['Customers'],
     )
     assert.deepEqual(
       groups.find((g) => g.id === 'ops-insight').items.map((item) => item.label),

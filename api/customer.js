@@ -7,6 +7,7 @@ import { handleVehicleTransferRequest } from '../server/vehicleTransferApi.mjs'
 import { bearer, readJsonBody, setCors } from '../server/httpUtil.mjs'
 import { handlePublicInquiryRequest } from '../server/publicInquiry.mjs'
 import { handleProvisionRequest } from '../server/provisionCustomer.mjs'
+import { handleManageCustomerRequest } from '../server/customerAdminApi.mjs'
 import { handleReferralRequest } from '../server/referral.mjs'
 
 export const operations = Object.freeze({
@@ -44,6 +45,11 @@ export const operations = Object.freeze({
       },
     })
   },
+  'manage-customer': (req, res) =>
+    handleManageCustomerRequest(req, res, {
+      getBody: () => readJsonBody(req),
+      getAccessToken: () => bearer(req),
+    }),
 })
 
 export default createGateway(operations)

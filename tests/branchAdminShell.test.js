@@ -41,7 +41,6 @@ describe('Branch Admin simplified shell', () => {
         '/operations/payslips',
         '/operations/history',
         '/operations/audit',
-        '/operations/vehicle-transfer',
       ],
     )
     assert.equal(getOperationsNav(p).some((i) => i.label === 'Floor Board'), false)

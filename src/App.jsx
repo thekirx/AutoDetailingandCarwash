@@ -1,8 +1,9 @@
 import { lazy, Suspense } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useSearchParams } from 'react-router-dom'
 import ProtectedRoute from './auth/ProtectedRoute'
 import OpsRoleGate from './auth/OpsRoleGate'
-import { OPS_LOGIN_ROLES } from './auth/permissions'
+import { useAuth } from './auth/AuthProvider'
+import { canAccessCrm, OPS_LOGIN_ROLES } from './auth/permissions'
 import OperationsLayout from './layouts/OperationsLayout'
 import PublicLayout from './layouts/PublicLayout'
 import LoginPage from './pages/LoginPage'
@@ -124,6 +125,18 @@ function gate(routeKey, el) {
   return <OpsRoleGate routeKey={routeKey}>{el}</OpsRoleGate>
 }
 
+function CustomerHubRedirect({ tab, subTabParam, fallback }) {
+  const { profile } = useAuth()
+  const [searchParams] = useSearchParams()
+  if (!canAccessCrm(profile)) return fallback
+  const params = new URLSearchParams(searchParams)
+  if (subTabParam && params.get('tab')) {
+    params.set(subTabParam, params.get('tab'))
+  }
+  params.set('tab', tab)
+  return <Navigate to={`/operations/crm?${params.toString()}`} replace />
+}
+
 function RouteFallback() {
   return (
     <div data-loading="true" className="flex min-h-[40vh] items-center justify-center p-8 text-sm text-muted-foreground">
@@ -212,10 +225,10 @@ export default function App() {
             <Route path="people" element={gate('people', <PeopleManagePage />)} />
             <Route path="branches" element={gate('branches', <BranchesManagePage />)} />
             <Route path="cars" element={gate('cars', <CarsCatalogPage />)} />
-            <Route path="vehicle-transfer" element={gate('vehicle-transfer', <VehicleTransferPage />)} />
+            <Route path="vehicle-transfer" element={gate('vehicle-transfer', <CustomerHubRedirect tab="transfer" fallback={<VehicleTransferPage />} />)} />
             <Route path="audit" element={gate('audit', <AuditLogPage />)} />
             <Route path="data-center" element={gate('data-center', <DataCenterPage />)} />
-            <Route path="inquiries" element={gate('inquiries', <InquiriesPage />)} />
+            <Route path="inquiries" element={gate('inquiries', <CustomerHubRedirect tab="inquiries" fallback={<InquiriesPage />} />)} />
             <Route path="dashboard" element={gate('dashboard', <OperationsDashboardPage />)} />
             <Route path="queue" element={gate('queue', <OperationsQueuePage />)} />
             <Route path="queue/new" element={gate('queue-new', <NewQueueTicketPage />)} />
@@ -226,7 +239,7 @@ export default function App() {
             <Route path="kpi" element={gate('kpi', <KpiPage />)} />
             <Route path="my-tasks" element={gate('my-tasks', <MyTasksPage />)} />
             <Route path="pos" element={gate('pos', <PosPage />)} />
-            <Route path="merch-shop" element={gate('merch-shop', <MerchShopPage />)} />
+            <Route path="merch-shop" element={gate('merch-shop', <CustomerHubRedirect tab="merch" fallback={<MerchShopPage />} />)} />
             <Route path="inventory" element={gate('inventory', <InventoryPage />)} />
             <Route path="approvals" element={gate('approvals', <ApprovalsPage />)} />
             <Route path="finance" element={gate('finance', <FinancePage />)} />
@@ -253,7 +266,7 @@ export default function App() {
             <Route path="history" element={gate('history', <HistoryPage />)} />
             <Route path="broadcast" element={gate('notifications', <BroadcastPage />)} />
             <Route path="reports" element={gate('reports', <ReportsPage />)} />
-            <Route path="memberships" element={gate('memberships', <MembershipsPage />)} />
+            <Route path="memberships" element={gate('memberships', <CustomerHubRedirect tab="memberships" subTabParam="mtab" fallback={<MembershipsPage />} />)} />
             <Route path="vouchers" element={gate('vouchers', <VouchersPage />)} />
             <Route path="reviews" element={gate('reviews', <Navigate to="/operations/forms/results" replace />)} />
           </Route>

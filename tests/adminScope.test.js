@@ -67,7 +67,6 @@ describe('Admin capability matrix', () => {
         '/operations/payslips',
         '/operations/history',
         '/operations/audit',
-        '/operations/vehicle-transfer',
       ],
     )
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/cars'))

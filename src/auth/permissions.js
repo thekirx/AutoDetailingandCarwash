@@ -916,7 +916,6 @@ export function getOperationsNav(profile) {
       nav('Payslips', '/operations/payslips', 'Banknote', 'hr'),
       nav('History', '/operations/history', 'History', 'ops-insight'),
       nav('Audit', '/operations/audit', 'ScrollText', 'ops-insight'),
-      nav('Transfer car', '/operations/vehicle-transfer', 'ArrowLeftRight', 'config'),
     ]
   }
 
@@ -1003,13 +1002,10 @@ export function getOperationsNav(profile) {
 
   if (canAccessCrm(profile)) {
     items.push(nav('Customers', '/operations/crm', 'Contact', 'customers'))
-  }
-  if (canAccessMemberships(profile)) {
-    items.push(nav('Memberships', '/operations/memberships', 'Crown', 'customers'))
-  }
-  if (canManageMerchShop(profile)) items.push(nav('Merch shop', '/operations/merch-shop', 'Package', 'customers'))
-  if (canAccessInquiries(profile)) {
-    items.push(nav('Inquiries', '/operations/inquiries', 'Inbox', 'customers'))
+  } else {
+    if (canAccessMemberships(profile)) items.push(nav('Memberships', '/operations/memberships', 'Crown', 'customers'))
+    if (canManageMerchShop(profile)) items.push(nav('Merch shop', '/operations/merch-shop', 'Package', 'customers'))
+    if (canAccessInquiries(profile)) items.push(nav('Inquiries', '/operations/inquiries', 'Inbox', 'customers'))
   }
 
   if (canManageBranches(profile)) {
@@ -1027,7 +1023,7 @@ export function getOperationsNav(profile) {
   if (canManagePeople(profile)) {
     items.push(nav('RBAC Delegation', '/operations/people', 'UserPlus', 'config'))
   }
-  if (canTransferVehicle(profile)) {
+  if (canTransferVehicle(profile) && !canAccessCrm(profile)) {
     items.push(nav('Transfer car', '/operations/vehicle-transfer', 'ArrowLeftRight', 'config'))
   }
   if (canManageSiteContent(profile)) {

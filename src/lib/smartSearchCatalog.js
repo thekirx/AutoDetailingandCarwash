@@ -2,10 +2,12 @@ import {
   ROLES,
   allowRoute,
   canAccessInquiries,
+  canAccessMemberships,
   canAccessNotifications,
   canAccessPos,
   canAccessReviews,
   canEditPlanning,
+  canManageMerchShop,
   canManageServices,
   canOpenFinanceHub,
   canSendCustomerSms,
@@ -38,6 +40,7 @@ import {
   canViewVouchers,
   canManageBranches,
 } from '../auth/permissions.js'
+import { canTransferVehicle } from '../lib/vehicleTransfer.js'
 
 function roleFloorItems(profile) {
   const role = profile?.role
@@ -132,11 +135,35 @@ const SUB_DESTINATIONS = [
     allow: (p) => canAccessReviews(p),
   },
   {
-    routeKey: 'inquiries',
-    label: 'Inquiries · Partnership & Form Results',
-    to: '/operations/inquiries',
+    routeKey: 'vehicle-transfer',
+    label: 'Customers · Transfer Car Ownership',
+    to: '/operations/crm?tab=transfer',
     group: 'Customers & Messaging',
-    keywords: 'partnership franchise inquiry leads',
+    keywords: 'transfer car vehicle plate move owner buyer seller',
+    allow: (p) => canTransferVehicle(p),
+  },
+  {
+    routeKey: 'memberships',
+    label: 'Customers · Memberships & Loyalty Tiers',
+    to: '/operations/crm?tab=memberships',
+    group: 'Customers & Messaging',
+    keywords: 'memberships tiers loyalty stamps points milestone rewards',
+    allow: (p) => canAccessMemberships(p),
+  },
+  {
+    routeKey: 'merch-shop',
+    label: 'Customers · Merch Shop & Points Redemptions',
+    to: '/operations/crm?tab=merch',
+    group: 'Customers & Messaging',
+    keywords: 'merch shop points pickup gift redeem stock',
+    allow: (p) => canManageMerchShop(p),
+  },
+  {
+    routeKey: 'inquiries',
+    label: 'Customers · Inquiries, Collabs & Complaints',
+    to: '/operations/crm?tab=inquiries',
+    group: 'Customers & Messaging',
+    keywords: 'partnership franchise inquiry leads complaints contact form results',
     allow: (p) => canAccessInquiries(p),
   },
   {

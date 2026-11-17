@@ -125,7 +125,7 @@ const ROW_RENDERERS = {
   complaints: ComplaintRow,
 }
 
-export default function InquiriesPage() {
+export default function InquiriesPage({ embedded = false } = {}) {
   const { profile } = useAuth()
   const [tab, setTab] = useState('partnership')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -227,20 +227,17 @@ export default function InquiriesPage() {
   const filteredRows =
     statusFilter === 'all' ? rows : rows.filter((row) => String(row.status || '') === statusFilter)
 
-  return (
-    <OpsPageShell
-      className="hakum-inquiries inquiries-page"
-      eyebrow="Inbox"
-      title="Inquiries"
-      icon={Inbox}
-      description="Messages submitted from the public website. Visible to Super Admin and Assistant Super Admin only."
-      actions={
-        <button type="button" onClick={load} disabled={loading} className="inquiries-refresh">
-          <RefreshCw size={14} aria-hidden="true" />
-          Refresh
-        </button>
-      }
-    >
+  const inner = (
+    <>
+      {embedded ? (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-muted-foreground">Messages and partnership leads submitted from the public website.</p>
+          <button type="button" onClick={load} disabled={loading} className="inquiries-refresh">
+            <RefreshCw size={14} aria-hidden="true" />
+            Refresh
+          </button>
+        </div>
+      ) : null}
       <div className="inquiries-tabs" role="tablist">
         {TABS.map((t) => (
           <button
@@ -332,6 +329,26 @@ export default function InquiriesPage() {
           </Card>
         </>
       )}
+    </>
+  )
+
+  if (embedded) return <div className="hakum-inquiries inquiries-page">{inner}</div>
+
+  return (
+    <OpsPageShell
+      className="hakum-inquiries inquiries-page"
+      eyebrow="Inbox"
+      title="Inquiries"
+      icon={Inbox}
+      description="Messages submitted from the public website. Visible to Super Admin and Assistant Super Admin only."
+      actions={
+        <button type="button" onClick={load} disabled={loading} className="inquiries-refresh">
+          <RefreshCw size={14} aria-hidden="true" />
+          Refresh
+        </button>
+      }
+    >
+      {inner}
     </OpsPageShell>
   )
 }

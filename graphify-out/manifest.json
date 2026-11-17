@@ -12,10 +12,10 @@
     "semantic_hash": "14a39f1d0594b0688c02a0daf6acf3b2"
   },
   "api/customer.js": {
-    "mtime": 1792590002.72167,
-    "seen": 1794750478.5138495,
-    "ast_hash": "92b412130a4ad94661575583674d753f",
-    "semantic_hash": "92b412130a4ad94661575583674d753f"
+    "mtime": 1794929418.3558338,
+    "seen": 1794930984.8700984,
+    "ast_hash": "b90dffeaf0e96ff6533dfa6b79b99424",
+    "semantic_hash": ""
   },
   "api/data-center.js": {
     "mtime": 1791717168.86007,
@@ -780,10 +780,10 @@
     "semantic_hash": "c7764ffbdcbf2b9b0738c0b1ea1e265c"
   },
   "server/provisionCustomer.mjs": {
-    "mtime": 1794708779.3604317,
-    "seen": 1794750478.5149684,
-    "ast_hash": "eebc61150961204efb13262c7dea80d3",
-    "semantic_hash": "eebc61150961204efb13262c7dea80d3"
+    "mtime": 1794930609.086154,
+    "seen": 1794930984.871027,
+    "ast_hash": "99022d91913dfccf08801f7d6a63a0fb",
+    "semantic_hash": ""
   },
   "server/provisionSms.mjs": {
     "mtime": 1785390125.9137437,
@@ -846,9 +846,9 @@
     "semantic_hash": ""
   },
   "src/App.jsx": {
-    "mtime": 1794794208.5988145,
-    "seen": 1794800220.6555083,
-    "ast_hash": "8004c993aea37934e06368ef0f24afb0",
+    "mtime": 1794929939.0401323,
+    "seen": 1794930984.871104,
+    "ast_hash": "da03ebb7906a0b85a7a65e289e0f9f2f",
     "semantic_hash": ""
   },
   "src/auth/AuthProvider.jsx": {
@@ -876,9 +876,9 @@
     "semantic_hash": ""
   },
   "src/auth/permissions.js": {
-    "mtime": 1794802618.1398907,
-    "seen": 1794833110.2689176,
-    "ast_hash": "e7053dae489ca02ae61325fa94ef8209",
+    "mtime": 1794929939.2017043,
+    "seen": 1794930984.871125,
+    "ast_hash": "740b8f1c763bac266f24af0bd279a2ae",
     "semantic_hash": ""
   },
   "src/components/AppErrorBoundary.jsx": {
@@ -2100,10 +2100,10 @@
     "semantic_hash": "69dd9faa07b3b5db939369090403fbb6"
   },
   "src/pages/CrmPage.jsx": {
-    "mtime": 1792590007.014487,
-    "seen": 1794750478.5162807,
-    "ast_hash": "d09e0f2348f90c244608a517f5111262",
-    "semantic_hash": "d09e0f2348f90c244608a517f5111262"
+    "mtime": 1794930363.408076,
+    "seen": 1794930984.872157,
+    "ast_hash": "9d003cf95519853695051f37695d6b02",
+    "semantic_hash": ""
   },
   "src/pages/CustomerAccountPage.jsx": {
     "mtime": 1794794206.319002,
@@ -2202,9 +2202,9 @@
     "semantic_hash": "0afd7cad1ed98bf6b9a2d2f8a655265a"
   },
   "src/pages/InquiriesPage.jsx": {
-    "mtime": 1794801162.3019202,
-    "seen": 1794801495.209297,
-    "ast_hash": "e0fa9b1e2d6367f25b6d0d7b83abd0b7",
+    "mtime": 1794929939.7420642,
+    "seen": 1794930984.872239,
+    "ast_hash": "7a569aec9f4aec06306b10a30dc07ec9",
     "semantic_hash": ""
   },
   "src/pages/InventoryPage.jsx": {
@@ -2232,10 +2232,10 @@
     "semantic_hash": ""
   },
   "src/pages/MembershipsPage.jsx": {
-    "mtime": 1794321216.7732005,
-    "seen": 1794750478.5163815,
-    "ast_hash": "9e447a14965083c4ab1bbe8725def76b",
-    "semantic_hash": "9e447a14965083c4ab1bbe8725def76b"
+    "mtime": 1794929939.8584979,
+    "seen": 1794930984.872255,
+    "ast_hash": "3480339286e89aced0d4ec507eafabd1",
+    "semantic_hash": ""
   },
   "src/pages/NotFoundPage.jsx": {
     "mtime": 1785824637.0468228,
@@ -3738,10 +3738,10 @@
     "semantic_hash": "c0af1160c14229aff07560834016369c"
   },
   "tests/adminScope.test.js": {
-    "mtime": 1793019873.9570992,
-    "seen": 1794750478.5177464,
-    "ast_hash": "0fd9c7193e577ac989fa10ff95195768",
-    "semantic_hash": "0fd9c7193e577ac989fa10ff95195768"
+    "mtime": 1794929940.201255,
+    "seen": 1794930984.8736448,
+    "ast_hash": "06d7de89242d38c7b34319d50eb378f5",
+    "semantic_hash": ""
   },
   "tests/apiGateway.test.js": {
     "mtime": 1785824636.9894986,
@@ -3750,9 +3750,9 @@
     "semantic_hash": "ca9f0b7211380a51afb3ddb52fc57742"
   },
   "tests/apiGatewayRoutes.test.js": {
-    "mtime": 1794889364.4717662,
-    "seen": 1794923242.289758,
-    "ast_hash": "fc63b7c63a5b65fb1218cec0a181a771",
+    "mtime": 1794930608.9969397,
+    "seen": 1794930984.873659,
+    "ast_hash": "c4b3b986577f248133c53b829a276fb2",
     "semantic_hash": ""
   },
   "tests/appShell.test.js": {
@@ -3852,10 +3852,10 @@
     "semantic_hash": "2d91016c35aba7f4a64f2ead6fe566d1"
   },
   "tests/branchAdminShell.test.js": {
-    "mtime": 1793019874.1400714,
-    "seen": 1794750478.517898,
-    "ast_hash": "c75983ed6d372c1fd4007291af35088f",
-    "semantic_hash": "c75983ed6d372c1fd4007291af35088f"
+    "mtime": 1794929940.241649,
+    "seen": 1794930984.8737729,
+    "ast_hash": "b96aa11e574b3d42dba8a71abcdaf53b",
+    "semantic_hash": ""
   },
   "tests/branchFinanceHardening.test.js": {
     "mtime": 1790936364.3817468,
@@ -3942,9 +3942,9 @@
     "semantic_hash": "768eac42ce8e1446c8e10c489318ca5e"
   },
   "tests/commandCategories.test.js": {
-    "mtime": 1794832033.8095517,
-    "seen": 1794833110.2715387,
-    "ast_hash": "7240682f1938e64cd0c4bdcba0b043c1",
+    "mtime": 1794930608.824878,
+    "seen": 1794930984.873854,
+    "ast_hash": "2c5f487c981567f707255a676c3c3ef6",
     "semantic_hash": ""
   },
   "tests/concurrencyGuards.test.js": {
@@ -4446,10 +4446,10 @@
     "semantic_hash": "6a12b6f20ae1ffb2041d868c72a8186d"
   },
   "tests/permissions.test.js": {
-    "mtime": 1794648978.9851346,
-    "seen": 1794750478.5186102,
-    "ast_hash": "f64a19284706447f9eb2b72d4f8480fd",
-    "semantic_hash": "f64a19284706447f9eb2b72d4f8480fd"
+    "mtime": 1794929940.313677,
+    "seen": 1794930984.8744094,
+    "ast_hash": "0df1539f0e383d66b208738a267a7a81",
+    "semantic_hash": ""
   },
   "tests/phVehicleSizes.test.js": {
     "mtime": 1789445654.3054056,
@@ -4926,9 +4926,9 @@
     "semantic_hash": "d2ee12f095a65ce06b83856ee9735d8e"
   },
   "vite.config.js": {
-    "mtime": 1794799731.2443216,
-    "seen": 1794800220.6667502,
-    "ast_hash": "55ca6692e4bebb070efc35d4fc363bd3",
+    "mtime": 1794929420.7335956,
+    "seen": 1794930984.8749435,
+    "ast_hash": "5675c40466d3ea3ae6ef5ba83e2d0b7c",
     "semantic_hash": ""
   },
   "AUDIT.md": {
@@ -4944,9 +4944,9 @@
     "semantic_hash": "b2fd8c1a303fa745eeb26b3fac07046c"
   },
   "CHANGELOG.md": {
-    "mtime": 1794928975.6485991,
-    "seen": 1794929075.97607,
-    "ast_hash": "ca69eb38fa61bb45812ae20084a027c4",
+    "mtime": 1794930869.3285449,
+    "seen": 1794930984.8749537,
+    "ast_hash": "31a172d2ab023ec6681388010d7dc0ac",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
@@ -4974,9 +4974,9 @@
     "semantic_hash": "983fbeb6e7617283c5643ec1912d89f8"
   },
   "PROJECT_STATUS.md": {
-    "mtime": 1794928978.0076547,
-    "seen": 1794929075.9761019,
-    "ast_hash": "007a26d2356c2efb8cb8f5a46e36ae87",
+    "mtime": 1794930872.0527549,
+    "seen": 1794930984.874985,
+    "ast_hash": "bd9c2e8e31c0bc939f42680062f01a72",
     "semantic_hash": ""
   },
   "SECURITY_AUDIT.md": {
@@ -8124,10 +8124,10 @@
     "semantic_hash": "0d3876a7f2dc5c5cab72e9e6cab9be3c"
   },
   "src/pages/crm/CustomerProfileDialog.jsx": {
-    "mtime": 1794321400.0236561,
-    "seen": 1794750478.5165002,
-    "ast_hash": "210173403e2fd805dda96805a1e754e4",
-    "semantic_hash": "210173403e2fd805dda96805a1e754e4"
+    "mtime": 1794929940.0709562,
+    "seen": 1794930984.8723838,
+    "ast_hash": "29c5b23f4e180ab558dce14c7ace4b94",
+    "semantic_hash": ""
   },
   "tests/crmSmartGroups.test.js": {
     "mtime": 1791532861.3456416,
@@ -8568,10 +8568,10 @@
     "semantic_hash": "8cb810511f3ad8a2b657c1be4b1050c8"
   },
   "scripts/audit-api-auth.mjs": {
-    "mtime": 1792590006.9056728,
-    "seen": 1794750478.5141523,
-    "ast_hash": "ec6024b7ac25fa8387e5d27233fb2bf8",
-    "semantic_hash": "ec6024b7ac25fa8387e5d27233fb2bf8"
+    "mtime": 1794929452.4289973,
+    "seen": 1794930984.8703203,
+    "ast_hash": "901189ee06c28c43380ea79a6cadbdeb",
+    "semantic_hash": ""
   },
   "tests/apiAuthAudit.test.js": {
     "mtime": 1791637487.1181014,
@@ -8874,10 +8874,10 @@
     "semantic_hash": "f579de2aba1187d06528524fb6d3b9ef"
   },
   "server/vehicleTransferApi.mjs": {
-    "mtime": 1794708779.374405,
-    "seen": 1794750478.5150325,
-    "ast_hash": "d8a738ccfdc381961984bcb27a210738",
-    "semantic_hash": "d8a738ccfdc381961984bcb27a210738"
+    "mtime": 1794929425.6043372,
+    "seen": 1794930984.8710976,
+    "ast_hash": "5201c99a3b7e9374de84d454962e7c64",
+    "semantic_hash": ""
   },
   "src/lib/vehicleTransfer.js": {
     "mtime": 1792590003.546437,
@@ -8886,10 +8886,10 @@
     "semantic_hash": "37cd92e05f0c58d033aa7982cefdd1f7"
   },
   "src/pages/VehicleTransferPage.jsx": {
-    "mtime": 1792590003.575361,
-    "seen": 1794750478.5164874,
-    "ast_hash": "1e6cfdfad96bf8229033133ecb682d9f",
-    "semantic_hash": "1e6cfdfad96bf8229033133ecb682d9f"
+    "mtime": 1794929939.9960344,
+    "seen": 1794930984.8723698,
+    "ast_hash": "aabe23fcd49b09af07781d5e94ed8cfd",
+    "semantic_hash": ""
   },
   "supabase/migrations/20261015090000_revoke_legacy_checkout_rpcs.sql": {
     "mtime": 1792590003.593077,
@@ -10224,10 +10224,10 @@
     "semantic_hash": "a3f8aa6a77af7e8c4ae82341744d1549"
   },
   "src/pages/MerchShopPage.jsx": {
-    "mtime": 1793968609.9991908,
-    "seen": 1794750478.5163846,
-    "ast_hash": "cc3a63cebf432f41208c1e005a036ac3",
-    "semantic_hash": "cc3a63cebf432f41208c1e005a036ac3"
+    "mtime": 1794929939.9564426,
+    "seen": 1794930984.872258,
+    "ast_hash": "6fe64ccbf458a01a7f0bba79a5d99ea3",
+    "semantic_hash": ""
   },
   "src/pages/finance/FinanceDrilldownSheet.jsx": {
     "mtime": 1793520047.341076,
@@ -10338,10 +10338,10 @@
     "semantic_hash": "a3c5714109b566cb220a03666f4ae095"
   },
   "tests/pointsShopServer.test.js": {
-    "mtime": 1793968610.093109,
-    "seen": 1794750478.518663,
-    "ast_hash": "53bc4a502cfdbd502eca75019e900c26",
-    "semantic_hash": "53bc4a502cfdbd502eca75019e900c26"
+    "mtime": 1794930608.941213,
+    "seen": 1794930984.8744547,
+    "ast_hash": "1f42fd16f74150d93c585d407e161743",
+    "semantic_hash": ""
   },
   "docs/HAKUM_MASTER_TEST_PLAN.md": {
     "mtime": 1793970826.4086182,
@@ -10650,9 +10650,9 @@
     "semantic_hash": "e39ebdc343e36488738cb6898262aa63"
   },
   "HANDOFF.md": {
-    "mtime": 1794928980.6030693,
-    "seen": 1794929075.976088,
-    "ast_hash": "c48c9e4f1b6d7c6daa2280d5ea2ce51b",
+    "mtime": 1794930874.3020384,
+    "seen": 1794930984.8749714,
+    "ast_hash": "3f14c03b8db9e80dacc70515916f0e4d",
     "semantic_hash": ""
   },
   "docs/seo-ai-visibility.md": {
@@ -10740,9 +10740,9 @@
     "semantic_hash": ""
   },
   "src/lib/smartSearchCatalog.js": {
-    "mtime": 1794886335.5702631,
-    "seen": 1794887303.8408453,
-    "ast_hash": "6d4a1f2f828d0b08389c666e53c3637b",
+    "mtime": 1794929939.3001914,
+    "seen": 1794930984.8720307,
+    "ast_hash": "68fecc679fa8a1198f7de4bfa5b934af",
     "semantic_hash": ""
   },
   "tests/smartSearchRbac.test.js": {
@@ -10755,6 +10755,24 @@
     "mtime": 1794890287.9945166,
     "seen": 1794923242.2903564,
     "ast_hash": "bff66fe0f5c2004563d4f85106ce29c8",
+    "semantic_hash": ""
+  },
+  "server/customerAdminApi.mjs": {
+    "mtime": 1794929916.3101,
+    "seen": 1794930984.8708951,
+    "ast_hash": "e914d7419c2d2c2e2f7cc626e6464b98",
+    "semantic_hash": ""
+  },
+  "src/pages/crm/VehicleTransferPanel.jsx": {
+    "mtime": 1794929653.224279,
+    "seen": 1794930984.872387,
+    "ast_hash": "25338da0ff992987f40d0b1b22347318",
+    "semantic_hash": ""
+  },
+  "tests/customerAdminCrud.test.js": {
+    "mtime": 1794929925.2520444,
+    "seen": 1794930984.8739064,
+    "ast_hash": "c7138d6e89ef197e629fb3110215dbc6",
     "semantic_hash": ""
   }
 }

@@ -29,6 +29,39 @@ async function visitBranchesFor(admin, vehicle) {
   return [...branches]
 }
 
+export async function searchTransferCandidates({ accessToken, q = '' }) {
+  const admin = adminClient()
+  await requireTransferStaff(admin, accessToken)
+  const raw = String(q || '').trim()
+  const safe = raw.replace(/[,()*\\]/g, ' ').replace(/[%_]/g, '').trim()
+
+  let vehicleQuery = admin
+    .from('vehicles')
+    .select('id, plate_number, vehicle_make, vehicle_model, vehicle_type, customer_id, customers(id, full_name, phone)')
+    .eq('is_archived', false)
+    .order('created_at', { ascending: false })
+    .limit(40)
+  if (safe) {
+    vehicleQuery = vehicleQuery.or(`plate_number.ilike.%${safe}%,vehicle_make.ilike.%${safe}%,vehicle_model.ilike.%${safe}%`)
+  }
+
+  let customerQuery = admin
+    .from('customers')
+    .select('id, full_name, phone, email')
+    .eq('role', 'customer')
+    .eq('is_archived', false)
+    .order('created_at', { ascending: false })
+    .limit(40)
+  if (safe) {
+    customerQuery = customerQuery.or(`full_name.ilike.%${safe}%,phone.ilike.%${safe}%,email.ilike.%${safe}%`)
+  }
+
+  const [{ data: vehicles, error: vErr }, { data: customers, error: cErr }] = await Promise.all([vehicleQuery, customerQuery])
+  if (vErr) throw Object.assign(new Error(vErr.message), { status: 400 })
+  if (cErr) throw Object.assign(new Error(cErr.message), { status: 400 })
+  return { vehicles: vehicles || [], customers: customers || [] }
+}
+
 async function openMaintenanceRows(admin, vehicle) {
   const plate = vehicle.normalized_plate_number
   let query = admin
@@ -211,6 +244,9 @@ export async function handleVehicleTransferRequest(req, res) {
   try {
     const body = await readJsonBody(req)
     const token = bearer(req)
+    if (body.action === 'search') {
+      return json(res, 200, await searchTransferCandidates({ accessToken: token, q: body.q }))
+    }
     if (body.action === 'lookup') {
       return json(res, 200, await lookupTransfer({ accessToken: token, plate: body.plate, phone: body.phone }))
     }
