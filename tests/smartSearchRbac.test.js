@@ -216,7 +216,10 @@ describe('Smart Search destination catalog RBAC', () => {
       assert.ok(paths.length > 0, `expected at least one destination for ${role}`)
       assert.ok(!paths.some((p) => p.startsWith('/operations/finance') && role !== ROLES.INVESTOR), `${role} must not see finance`)
       assert.ok(!paths.some((p) => p.startsWith('/operations/settings')), `${role} must not see settings`)
-      assert.ok(!paths.some((p) => p.startsWith('/operations/people')), `${role} must not see people`)
+      assert.ok(
+        !paths.some((p) => p.startsWith('/operations/people') || p.includes('tab=employees') || p.includes('tab=access')),
+        `${role} must not see people`,
+      )
       if (role !== ROLES.MARKETING) {
         assert.ok(!paths.some((p) => p.startsWith('/operations/crm')), `${role} must not see crm`)
       }
@@ -263,7 +266,7 @@ describe('Smart Search destination catalog RBAC', () => {
     assert.ok(paths.includes('/operations/bookings'))
     assert.ok(paths.includes('/operations/inventory'))
     assert.ok(!paths.some((p) => p.startsWith('/operations/finance')))
-    assert.ok(!paths.some((p) => p.startsWith('/operations/people')))
+    assert.ok(!paths.some((p) => p.startsWith('/operations/people') || p.includes('tab=employees') || p.includes('tab=access')))
   })
 })
 

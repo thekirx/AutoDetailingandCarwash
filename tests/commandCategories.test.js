@@ -121,13 +121,16 @@ describe('command category IA', () => {
       'Approvals',
     ])
     assert.deepEqual(
+      groups.find((g) => g.id === 'hr').items.map((item) => item.label),
+      ['Payslips', 'Employees'],
+    )
+    assert.deepEqual(
       groups.find((g) => g.id === 'config').items.map((item) => item.label),
       [
         'Branches',
         'Services and Packages',
         'Detailing Packages',
         'Vehicle List',
-        'RBAC Delegation',
         'Content',
         'Settings',
       ],

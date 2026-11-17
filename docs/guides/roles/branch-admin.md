@@ -6,7 +6,7 @@
 
 ## Nav (sidebar)
 
-Carwash Queue (read) · Detailing Schedule (read) · Team Planner (no Cash advance board) · Point of Sales · Financials · Inventory · Attendance · Customers (create / modify) · My advances · History · Audit · Transfer car  
+Carwash Queue (read) · Detailing Schedule (read) · Team Planner (no Cash advance board) · Point of Sales · Financials · Inventory · Employees · Customers (create / modify) · My advances · History · Audit · Transfer car  
 
 No Floor Board. Contract: `docs/OPS/RBAC-MATRIX.md`.
 

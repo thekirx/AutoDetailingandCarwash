@@ -1,4 +1,4 @@
-﻿# Super Admin / Assistant Super Admin
+# Super Admin / Assistant Super Admin
 
 **Home:** Super Admin `/operations/dashboard` (Floor Board). General Admin (Assistant Super Admin) `/operations/queue` — no Floor Board.  
 **Shell:** CommandShell  
@@ -7,7 +7,7 @@
 
 ## Nav
 
-Floor Insight · Carwash Queue · Detailing Schedule · Team Planner · Point of Sales · Inventory · Financials · Monthly salaries · Approvals · Payslips · Attendance · Customers · Rewards · Branches · Services and Packages · Detailing Packages · Vehicle List · RBAC Delegation · Content · Settings · History · Notifications · Audit · Data Center
+Floor Insight · Carwash Queue · Detailing Schedule · Team Planner · Point of Sales · Inventory · Financials · Monthly salaries · Approvals · Payslips · Employees · Customers · Rewards · Branches · Services and Packages · Detailing Packages · Vehicle List · Content · Settings · History · Notifications · Audit · Data Center
 
 Retired from this nav: **Console** (off since the Floor Board became the landing surface) and **Payroll / Crew** (`canAccessConsole()` returns `false`; `crew` is denied).
 

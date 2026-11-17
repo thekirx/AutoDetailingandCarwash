@@ -61,7 +61,7 @@ describe('Admin capability matrix', () => {
         '/operations/pos',
         '/operations/finance',
         '/operations/inventory',
-        '/operations/attendance',
+        '/operations/employees',
         '/operations/crm',
         '/operations/my-advances',
         '/operations/payslips',

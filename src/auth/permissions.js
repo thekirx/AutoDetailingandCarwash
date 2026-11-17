@@ -920,7 +920,7 @@ export function getOperationsNav(profile) {
       nav('Point of Sales', '/operations/pos', 'ShoppingCart', 'insight'),
       nav('Financials', '/operations/finance', 'Wallet', 'insight'),
       nav('Inventory', '/operations/inventory', 'Package', 'insight'),
-      nav('Attendance', '/operations/attendance', 'Clock', 'hr'),
+      nav('Employees', '/operations/employees', 'Users', 'hr'),
       nav('Customers', '/operations/crm', 'Contact', 'customers'),
       nav('My advances', '/operations/my-advances', 'Wallet', 'hr'),
       nav('Payslips', '/operations/payslips', 'Banknote', 'hr'),
@@ -997,8 +997,8 @@ export function getOperationsNav(profile) {
     items.push(nav('Payslips', '/operations/payslips', 'Banknote', 'hr'))
   }
 
-  if (canViewQueueOperations(profile) || (canAccessAttendance(profile) && profile?.role !== ROLES.STAFF)) {
-    items.push(nav('Attendance', '/operations/attendance', 'Clock', 'hr'))
+  if (canManagePeople(profile) || canViewQueueOperations(profile) || (canAccessAttendance(profile) && profile?.role !== ROLES.STAFF)) {
+    items.push(nav('Employees', '/operations/employees', 'Users', 'hr'))
   }
   if (canAccessMyAdvances(profile) && profile?.role !== ROLES.STAFF) {
     items.push(nav('My advances', '/operations/my-advances', 'Wallet', 'hr'))
@@ -1027,9 +1027,6 @@ export function getOperationsNav(profile) {
   }
   if (canManageVehicleCatalog(profile)) {
     items.push(nav('Vehicle List', '/operations/cars', 'CarFront', 'config'))
-  }
-  if (canManagePeople(profile)) {
-    items.push(nav('RBAC Delegation', '/operations/people', 'UserPlus', 'config'))
   }
   if (canTransferVehicle(profile) && !canAccessCrm(profile)) {
     items.push(nav('Transfer car', '/operations/vehicle-transfer', 'ArrowLeftRight', 'config'))
@@ -1195,6 +1192,7 @@ export const BRANCH_ADMIN_ROUTE_KEYS = Object.freeze([
   'vehicle-transfer',
   'bookings',
   'attendance',
+  'employees',
   'my-advances',
   'payslips',
   'pos',
@@ -1217,6 +1215,7 @@ export function allowRoute(profile, key) {
   const map = {
     planning: canViewPlanning,
     people: canManagePeople,
+    employees: (p) => canManagePeople(p) || canAccessAttendance(p),
     branches: canManageBranches,
     cars: canManageVehicleCatalog,
     'vehicle-transfer': canTransferVehicle,

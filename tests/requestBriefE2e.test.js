@@ -66,12 +66,15 @@ describe('request.md floor + people', () => {
     assert.deepEqual(tiles.find((t) => t.role === 'video_editor').names, ['Rico Films'])
   })
 
-  it('Create account is a modal; directory has tabs, search, supervisor, attendance', () => {
+  it('Create employee is a modal; directory + EmployeesHub tabs include attendance, register, employee list, RBAC', () => {
     const people = read('src/pages/PeopleManagePage.jsx')
-    assert.match(people, /Create account/)
+    const hub = read('src/pages/EmployeesHubPage.jsx')
+    assert.match(people, /Add employee/)
     assert.match(people, /setCreateOpen\(true\)/)
     assert.match(people, /PEOPLE_DIRECTORY_TABS/)
-    assert.match(people, /dirTab === 'attendance'/)
+    for (const tabId of ['clock', 'attendance', 'register', 'employees', 'access', 'settings']) {
+      assert.match(hub, new RegExp(`id: '${tabId}'`))
+    }
     assert.match(people, /Tag as supervisor/)
     assert.match(people, /Reports to/)
     assert.match(people, /attendance_enabled/)

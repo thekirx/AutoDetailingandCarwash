@@ -3,7 +3,7 @@ import { Navigate, Route, Routes, useSearchParams } from 'react-router-dom'
 import ProtectedRoute from './auth/ProtectedRoute'
 import OpsRoleGate from './auth/OpsRoleGate'
 import { useAuth } from './auth/AuthProvider'
-import { canAccessCrm, canAccessRewardsHub, OPS_LOGIN_ROLES } from './auth/permissions'
+import { allowRoute, canAccessCrm, canAccessRewardsHub, OPS_LOGIN_ROLES, usesFloorAppShell } from './auth/permissions'
 import OperationsLayout from './layouts/OperationsLayout'
 import PublicLayout from './layouts/PublicLayout'
 import LoginPage from './pages/LoginPage'
@@ -48,6 +48,7 @@ const CustomerCarsPage = lazy(() => import('./pages/CustomerCarsPage'))
 const ContentAdminPage = lazy(() => import('./pages/ContentAdminPage'))
 
 const PeopleManagePage = lazy(() => import('./pages/PeopleManagePage'))
+const EmployeesHubPage = lazy(() => import('./pages/EmployeesHubPage'))
 const BranchesManagePage = lazy(() => import('./pages/BranchesManagePage'))
 const CarsCatalogPage = lazy(() => import('./pages/CarsCatalogPage'))
 const VehicleTransferPage = lazy(() => import('./pages/VehicleTransferPage'))
@@ -150,6 +151,24 @@ function RewardsHubRedirect({ tab, subTabParam, fallback }) {
   return <Navigate to={`/operations/rewards?${params.toString()}`} replace />
 }
 
+function EmployeesHubRedirect({ defaultTab = 'employees', preserveTabParam = false, fallback }) {
+  const { profile } = useAuth()
+  const [searchParams] = useSearchParams()
+  if (!allowRoute(profile, 'employees') || usesFloorAppShell(profile)) return fallback
+  const params = new URLSearchParams(searchParams)
+  const incomingTab = params.get('tab')
+  const hubTabs = new Set(['clock', 'attendance', 'register', 'employees', 'access', 'settings'])
+  if (preserveTabParam && incomingTab && hubTabs.has(incomingTab)) {
+    params.set('tab', incomingTab)
+  } else {
+    if (incomingTab && ['crew', 'tl', 'admins', 'office'].includes(incomingTab)) {
+      params.set('dtab', incomingTab)
+    }
+    params.set('tab', defaultTab)
+  }
+  return <Navigate to={`/operations/employees?${params.toString()}`} replace />
+}
+
 function RouteFallback() {
   return (
     <div data-loading="true" className="flex min-h-[40vh] items-center justify-center p-8 text-sm text-muted-foreground">
@@ -235,7 +254,8 @@ export default function App() {
         <Route element={<ProtectedRoute allowedRoles={opsRoles} />}>
           <Route path="/operations" element={<OperationsLayout />}>
             <Route index element={<OpsIndexRedirect />} />
-            <Route path="people" element={gate('people', <PeopleManagePage />)} />
+            <Route path="employees" element={gate('employees', <EmployeesHubPage />)} />
+            <Route path="people" element={gate('people', <EmployeesHubRedirect defaultTab="employees" preserveTabParam fallback={<PeopleManagePage />} />)} />
             <Route path="branches" element={gate('branches', <BranchesManagePage />)} />
             <Route path="cars" element={gate('cars', <CarsCatalogPage />)} />
             <Route path="vehicle-transfer" element={gate('vehicle-transfer', <CustomerHubRedirect tab="transfer" fallback={<VehicleTransferPage />} />)} />
@@ -247,7 +267,7 @@ export default function App() {
             <Route path="queue/new" element={gate('queue-new', <NewQueueTicketPage />)} />
             <Route path="queue/:id" element={gate('queue', <QueueTicketPage />)} />
             <Route path="crew" element={<Navigate to="/operations/attendance" replace />} />
-            <Route path="attendance" element={gate('attendance', <AttendancePage />)} />
+            <Route path="attendance" element={gate('attendance', <EmployeesHubRedirect defaultTab="attendance" preserveTabParam fallback={<AttendancePage />} />)} />
             <Route path="my-advances" element={gate('my-advances', <MyCashAdvancesPage />)} />
             <Route path="kpi" element={gate('kpi', <KpiPage />)} />
             <Route path="my-tasks" element={gate('my-tasks', <MyTasksPage />)} />

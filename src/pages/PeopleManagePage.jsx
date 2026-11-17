@@ -1,19 +1,33 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
-import { Pencil, Plus, UserPlus } from 'lucide-react'
+import {
+  Clock,
+  KeyRound,
+  MapPin,
+  Pencil,
+  Plus,
+  ShieldCheck,
+  UserCheck,
+  UserCog,
+  UserPlus,
+  Users,
+} from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import {
   ROLES,
   ASSISTANT_GRANT_KEYS,
+  ASSISTANT_GRANT_LABELS,
   DEFAULT_ASSISTANT_GRANTS,
   canCreateAdminAccounts,
   canEditAssistantGrants,
   canManagePeople,
+  countEnabledAssistantGrants,
   isSuperAdmin,
   normalizeAssistantGrants,
 } from '@/auth/permissions'
 import AssistantGrantsEditor from '@/components/AssistantGrantsEditor'
 import OpsPageShell from '@/components/ops/OpsPageShell'
+import OpsStatTile from '@/components/ops/OpsStatTile'
 import {
   deactivateStaffPerson,
   listBranches,
@@ -30,6 +44,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
@@ -41,14 +56,15 @@ import {
 import {
   filterDirectoryPeople,
   PEOPLE_DIRECTORY_TABS,
+  personDirectoryTab,
   showBranchPicker,
   supervisorCandidates,
   usesMultiBranch,
 } from '@/lib/peopleDirectory'
-import { summarizeTodayAttendance } from '@/lib/attendanceInsights'
 import { BASELINE_TEMPLATES, validateRoleDefinition } from '@/lib/roleDefinitions'
 import { generalAdminSheetGrants, internalRoleLabel, roleAccessSummary } from '@/auth/internalRoles'
 import { cn } from '@/lib/utils'
+import '@/styles/employees-hub.css'
 
 const ROLE_LABELS = {
   admin: internalRoleLabel('admin'),
@@ -64,6 +80,12 @@ const ROLE_LABELS = {
   BossMich: internalRoleLabel('BossMich'),
 }
 
+const ROLE_DEF_COLS = 'role_key, label, baseline_template, grants, is_active'
+const DIRECTORY_FILTER_PILLS = Object.freeze([
+  { id: 'all', label: 'All employees' },
+  ...PEOPLE_DIRECTORY_TABS,
+])
+
 function toggleSlug(list, slug) {
   const set = new Set(list || [])
   if (set.has(slug)) set.delete(slug)
@@ -71,44 +93,86 @@ function toggleSlug(list, slug) {
   return [...set]
 }
 
-function DirectoryPersonActions({ profile, row, onEdit, onDeactivate }) {
-  if (!canMutateDirectoryPerson(profile, row)) return null
-  return (
-    <div className="people-directory-actions">
-      <Button
-        size="sm"
-        variant="outline"
-        onClick={() =>
-          onEdit({
-            ...row,
-            branch_slugs: row.branch_slugs || (row.branch_slug ? [row.branch_slug] : []),
-            permission_grants: normalizeAssistantGrants(row.permission_grants),
-          })
-        }
-      >
-        <Pencil size={14} className="mr-1" /> Edit
-      </Button>
-      {row.is_active && (
-        <Button size="sm" variant="ghost" onClick={() => onDeactivate(row, false)}>Deactivate</Button>
-      )}
-      <Button size="sm" variant="ghost" onClick={() => onDeactivate(row, true)}>Archive</Button>
-    </div>
-  )
+function initialsOf(name) {
+  const parts = String(name || '')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+  if (!parts.length) return 'ST'
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase()
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase()
+}
+
+function formatBranchScopeLabel(row, branchMap) {
+  const slugs = row.branch_slugs?.length ? row.branch_slugs : row.branch_slug ? [row.branch_slug] : []
+  if (!slugs.length) return 'All branches / HQ'
+  return slugs.map((slug) => branchMap.get(slug) || slug).join(', ')
 }
 
 function canMutateDirectoryPerson(actor, target) {
   if (!target || target.role === 'BossMich') return false
   if (isSuperAdmin(actor)) return true
-  // ASA/Admin peers: only Super Admin may edit or deactivate
   if (target.role === 'assistant_super_admin' || target.role === 'admin') return false
   return canManagePeople(actor)
 }
 
-export default function PeopleManagePage() {
+function openEditDraft(row, onEdit) {
+  onEdit({
+    ...row,
+    branch_slugs: row.branch_slugs || (row.branch_slug ? [row.branch_slug] : []),
+    permission_grants: normalizeAssistantGrants(row.permission_grants),
+  })
+}
+
+function DirectoryPersonActions({ profile, row, onEdit, onDeactivate, compact = false }) {
+  if (!canMutateDirectoryPerson(profile, row)) return null
+  return (
+    <div className={cn('flex flex-wrap items-center gap-1.5', compact ? 'justify-start' : 'justify-end')}>
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="min-h-10 gap-1"
+        onClick={() => openEditDraft(row, onEdit)}
+      >
+        <Pencil className="size-3.5" aria-hidden />
+        Edit
+      </Button>
+      {row.is_active ? (
+        <Button type="button" size="sm" variant="ghost" className="min-h-10" onClick={() => onDeactivate(row, false)}>
+          Deactivate
+        </Button>
+      ) : null}
+      <Button type="button" size="sm" variant="ghost" className="min-h-10 text-muted-foreground" onClick={() => onDeactivate(row, true)}>
+        Archive
+      </Button>
+    </div>
+  )
+}
+
+function EmployeesSkeleton() {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="emp-summary-grid">
+        {[1, 2, 3, 4].map((i) => (
+          <Skeleton key={i} className="h-24 rounded-2xl" />
+        ))}
+      </div>
+      <Skeleton className="h-72 rounded-2xl" />
+    </div>
+  )
+}
+
+/**
+ * Employee Directory + RBAC Delegation manager.
+ * Mounts standalone at /operations/people or embedded inside EmployeesHubPage (view="directory" | "access").
+ */
+export default function PeopleManagePage({ embedded = false, view = 'all', openCreateSignal = 0 } = {}) {
   const { profile } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const [people, setPeople] = useState([])
   const [branches, setBranches] = useState([])
+  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [editing, setEditing] = useState(null)
   const [createOpen, setCreateOpen] = useState(false)
@@ -116,9 +180,11 @@ export default function PeopleManagePage() {
   const [tempTlOpen, setTempTlOpen] = useState(false)
   const [dirQuery, setDirQuery] = useState('')
   const [dirBranch, setDirBranch] = useState('')
-  const [dirStatus, setDirStatus] = useState('all')
-  const [todayAttendance, setTodayAttendance] = useState({ present: 0, late: 0, absent: 0, empty: 0, total: 0, onSite: 0 })
-  const [todayAttRows, setTodayAttRows] = useState([])
+  const [dirStatus, setDirStatus] = useState('active')
+  const [localRoleFilter, setLocalRoleFilter] = useState(() => {
+    const p = searchParams.get('dtab') || (!embedded ? searchParams.get('tab') : '')
+    return PEOPLE_DIRECTORY_TABS.some((t) => t.id === p) ? p : 'all'
+  })
   const [form, setForm] = useState({
     full_name: '',
     email: '',
@@ -148,6 +214,18 @@ export default function PeopleManagePage() {
   })
   const [overrides, setOverrides] = useState([])
 
+  const showDirectory = view === 'all' || view === 'directory'
+  const showAccess = view === 'all' || view === 'access'
+  const needRbacData = showAccess && (isSuperAdmin(profile) || canCreateStaffRoleOverride(profile))
+  const lastCreateSignalRef = useRef(0)
+
+  useEffect(() => {
+    if (view !== 'access' && openCreateSignal > lastCreateSignalRef.current) {
+      lastCreateSignalRef.current = openCreateSignal
+      setCreateOpen(true)
+    }
+  }, [openCreateSignal, view])
+
   const roleOptions = useMemo(() => {
     const base = [
       { value: 'team_lead', label: 'Team Lead' },
@@ -170,77 +248,98 @@ export default function PeopleManagePage() {
   }, [profile])
 
   const load = useCallback(async () => {
-    const [p, b, defs, ov] = await Promise.all([
-      listStaffPeople({ includeInactive: true }),
-      listBranches(),
-      supabase.from('role_definitions').select('*').eq('is_active', true).order('label'),
-      supabase
-        .from('staff_role_overrides')
-        .select('id, staff_id, role, branch_slug, on_date, created_at')
-        .gte('on_date', getLocalCalendarDate())
-        .order('on_date', { ascending: true })
-        .limit(40),
-    ])
-    const scopedBranches = filterBranchesForProfile(b, profile)
-    const scopedPeople = filterPeopleForProfile(p, profile)
-    setPeople(scopedPeople)
-    setBranches(scopedBranches)
-    const today = getLocalCalendarDate()
-    const { data: att } = await supabase
-      .from('staff_attendance')
-      .select('staff_id, status, attendance_date')
-      .eq('attendance_date', today)
-    setTodayAttRows(att || [])
-    setTodayAttendance(
-      summarizeTodayAttendance(
-        scopedPeople.filter((p) => p.attendance_enabled !== false),
-        att || [],
-        today,
-      ),
-    )
-    if (!defs.error) setRoleDefs(defs.data || [])
-    if (!ov.error) setOverrides(ov.data || [])
-    const defaultBranch = pickDefaultBranchSlug(profile, scopedBranches)
-    setForm((f) => ({
-      ...f,
-      branch_slug: f.branch_slug || defaultBranch,
-      branch_slugs: f.branch_slugs.length ? f.branch_slugs : defaultBranch ? [defaultBranch] : [],
-    }))
-    setOverrideForm((f) => ({
-      ...f,
-      branch_slug: f.branch_slug || defaultBranch,
-    }))
-  }, [profile])
+    setLoading(true)
+    try {
+      const [p, b, defs, ov] = await Promise.all([
+        listStaffPeople({ includeInactive: true }),
+        listBranches(),
+        needRbacData && isSuperAdmin(profile)
+          ? supabase.from('role_definitions').select(ROLE_DEF_COLS).eq('is_active', true).order('label')
+          : Promise.resolve({ data: null, error: null }),
+        needRbacData && canCreateStaffRoleOverride(profile)
+          ? supabase
+              .from('staff_role_overrides')
+              .select('id, staff_id, role, branch_slug, on_date, created_at')
+              .gte('on_date', getLocalCalendarDate())
+              .order('on_date', { ascending: true })
+              .limit(40)
+          : Promise.resolve({ data: null, error: null }),
+      ])
+      const scopedBranches = filterBranchesForProfile(b, profile)
+      const scopedPeople = filterPeopleForProfile(p, profile)
+      setPeople(scopedPeople)
+      setBranches(scopedBranches)
+      if (!defs?.error && Array.isArray(defs?.data)) setRoleDefs(defs.data)
+      if (!ov?.error && Array.isArray(ov?.data)) setOverrides(ov.data)
+      const defaultBranch = pickDefaultBranchSlug(profile, scopedBranches)
+      setForm((f) => ({
+        ...f,
+        branch_slug: f.branch_slug || defaultBranch,
+        branch_slugs: f.branch_slugs.length ? f.branch_slugs : defaultBranch ? [defaultBranch] : [],
+      }))
+      setOverrideForm((f) => ({
+        ...f,
+        branch_slug: f.branch_slug || defaultBranch,
+      }))
+    } finally {
+      setLoading(false)
+    }
+  }, [profile, needRbacData])
 
   useEffect(() => {
     if (canManagePeople(profile)) load().catch((e) => toast.error(e.message))
   }, [load, profile])
 
-  const dirTab = PEOPLE_DIRECTORY_TABS.some((t) => t.id === searchParams.get('tab'))
-    ? searchParams.get('tab')
-    : searchParams.get('tab') === 'attendance'
-      ? 'attendance'
-      : 'crew'
+  const dirTab = embedded
+    ? localRoleFilter
+    : PEOPLE_DIRECTORY_TABS.some((t) => t.id === searchParams.get('tab'))
+      ? searchParams.get('tab')
+      : localRoleFilter
+
   const directory = useMemo(
     () =>
-      dirTab === 'attendance'
-        ? []
-        : filterDirectoryPeople(people, { tab: dirTab, q: dirQuery, branch: dirBranch, status: dirStatus }),
+      filterDirectoryPeople(people, { tab: dirTab, q: dirQuery, branch: dirBranch, status: dirStatus }),
     [people, dirTab, dirQuery, dirBranch, dirStatus],
   )
+
+  const branchMap = useMemo(
+    () => new Map(branches.map((b) => [b.slug, b.name || b.slug])),
+    [branches],
+  )
+  const peopleById = useMemo(() => new Map(people.map((p) => [p.id, p])), [people])
   const supervisors = useMemo(() => supervisorCandidates(people), [people])
-  const roster = useMemo(() => people.filter((p) => p.attendance_enabled !== false && p.is_active), [people])
-  const attendanceExceptions = useMemo(() => {
-    const today = getLocalCalendarDate()
-    const byStaff = new Map(
-      (todayAttRows || []).filter((row) => row.attendance_date === today).map((row) => [row.staff_id, row]),
-    )
-    return roster
-      .map((member) => ({ member, status: byStaff.get(member.id)?.status || null }))
-      .filter((row) => row.status === 'late' || row.status === 'absent' || !row.status)
-  }, [roster, todayAttRows])
+
+  const dirStats = useMemo(() => {
+    let active = 0
+    let onCallOrNoClock = 0
+    let supervisorsCount = 0
+    const byGroup = { all: people.length, crew: 0, tl: 0, admins: 0, office: 0 }
+    for (const row of people) {
+      const grp = personDirectoryTab(row.role)
+      byGroup[grp] = (byGroup[grp] || 0) + 1
+      if (row.is_active) active += 1
+      if (row.is_active && row.is_supervisor) supervisorsCount += 1
+      if (row.employment_type === 'on_call' || row.attendance_enabled === false) onCallOrNoClock += 1
+    }
+    return { active, inactive: people.length - active, supervisorsCount, onCallOrNoClock, byGroup }
+  }, [people])
+
+  const generalAdmins = useMemo(
+    () => people.filter((row) => row.role === ROLES.ASSISTANT_SUPER_ADMIN),
+    [people],
+  )
 
   if (!canManagePeople(profile)) return <Navigate to="/operations/access-denied" replace />
+
+  function setDirTab(id) {
+    setLocalRoleFilter(id)
+    if (!embedded) {
+      const next = new URLSearchParams(searchParams)
+      if (!id || id === 'all') next.delete('tab')
+      else next.set('tab', id)
+      setSearchParams(next, { replace: true })
+    }
+  }
 
   async function createTempTl(event) {
     event.preventDefault()
@@ -307,7 +406,7 @@ export default function PeopleManagePage() {
         geofence_enabled: form.geofence_enabled,
         employment_type: form.employment_type,
       })
-      toast.success('Account created')
+      toast.success('Employee account created')
       setForm((f) => ({ ...f, full_name: '', email: '', phone: '', temporary_password: '', is_supervisor: false, reports_to: '' }))
       setCreateOpen(false)
       await load()
@@ -345,7 +444,6 @@ export default function PeopleManagePage() {
       if (editing.role === ROLES.ASSISTANT_SUPER_ADMIN && canEditAssistantGrants(profile)) {
         payload.permission_grants = editing.permission_grants
       }
-      // Keep branch_slugs when scoped ASA (branches_all false)
       if (editing.role === ROLES.ASSISTANT_SUPER_ADMIN && grants?.branches_all === false) {
         payload.branch_slugs = editing.branch_slugs || []
       }
@@ -356,7 +454,7 @@ export default function PeopleManagePage() {
           temporary_password: editing.temporary_password.trim(),
         })
       }
-      toast.success('Staff updated')
+      toast.success('Employee updated')
       setEditing(null)
       await load()
     } catch (err) {
@@ -378,557 +476,349 @@ export default function PeopleManagePage() {
     }
   }
 
-  function setDirTab(id) {
-    const next = new URLSearchParams(searchParams)
-    if (!id || id === 'crew') next.delete('tab')
-    else next.set('tab', id)
-    setSearchParams(next, { replace: true })
-  }
+  const directorySection = showDirectory ? (
+    <div className="flex flex-col gap-5">
+      {loading && !people.length ? (
+        <EmployeesSkeleton />
+      ) : (
+        <>
+          <div className="emp-summary-grid">
+            <OpsStatTile label="Active employees" value={dirStats.active} hint={`${dirStats.inactive} inactive`} icon={UserCheck} mono />
+            <OpsStatTile label="Crew & Detailers" value={dirStats.byGroup.crew || 0} hint="Floor bay roster" icon={Users} mono />
+            <OpsStatTile label="Leads & Admins" value={(dirStats.byGroup.tl || 0) + (dirStats.byGroup.admins || 0)} hint={`${dirStats.supervisorsCount} tagged supervisors`} icon={UserCog} mono />
+            <OpsStatTile label="Clock off / On-call" value={dirStats.onCallOrNoClock} hint="Exempt or flexible schedule" icon={Clock} mono />
+          </div>
 
-  return (
-    <OpsPageShell
-      className="hakum-people"
-      eyebrow="Users and access"
-      title="Users and access"
-      description={
-        isSuperAdmin(profile)
-          ? 'Create accounts using the access sheet. General Admin grants start with finance write and planning edit on. Reload after edits.'
-          : canEditAssistantGrants(profile)
-            ? 'Manage people and General Admin grants. Branch-scoped roles follow the branch you assign.'
-            : 'Create Team Leads and staff for your assigned branch.'
-      }
-      actions={
-        <Button type="button" className="min-h-11" onClick={() => setCreateOpen(true)}>
-          <UserPlus size={16} className="mr-1.5" aria-hidden />
-          Create account
-        </Button>
-      }
-    >
-
-      {isSuperAdmin(profile) ? (
-        <Card>
-          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
-            <div className="flex min-w-0 flex-col gap-1.5">
-              <CardTitle>Custom roles</CardTitle>
-              <CardDescription>
-                Option A: baseline system template + grants overlay. Assign via custom_role_key on a person (keeps profile_role enum).
-              </CardDescription>
-            </div>
-            <Button type="button" variant="outline" className="min-h-11" onClick={() => setRoleOpen(true)}>
-              <Plus size={16} className="mr-1.5" aria-hidden />
-              New role
-            </Button>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Dialog open={roleOpen} onOpenChange={setRoleOpen}>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>New custom role</DialogTitle>
-                  <DialogDescription>Baseline system template plus a grants overlay.</DialogDescription>
-                </DialogHeader>
-            <form
-              className="flex flex-col gap-3"
-              onSubmit={async (e) => {
-                e.preventDefault()
-                const check = validateRoleDefinition({
-                  roleKey: roleDefForm.role_key,
-                  label: roleDefForm.label,
-                  baselineTemplate: roleDefForm.baseline_template,
-                  grants: roleDefForm.grants,
-                })
-                if (!check.ok) {
-                  toast.error(Object.values(check.errors)[0])
-                  return
-                }
-                const { error } = await supabase.from('role_definitions').upsert({
-                  role_key: check.role_key,
-                  label: check.label,
-                  baseline_template: check.baseline_template,
-                  grants: check.grants,
-                  is_active: true,
-                  updated_at: new Date().toISOString(),
-                })
-                if (error) toast.error(error.message)
-                else {
-                  toast.success('Role definition saved')
-                  setRoleDefForm({ role_key: '', label: '', baseline_template: 'staff', grants: { ...DEFAULT_ASSISTANT_GRANTS } })
-                  setRoleOpen(false)
-                  load()
-                }
-              }}
-            >
-              <Input
-                aria-label="Role key"
-                placeholder="role_key (snake_case)"
-                className="min-h-11"
-                value={roleDefForm.role_key}
-                onChange={(e) => setRoleDefForm((f) => ({ ...f, role_key: e.target.value }))}
-              />
-              <Input
-                aria-label="Label"
-                placeholder="Label"
-                className="min-h-11"
-                value={roleDefForm.label}
-                onChange={(e) => setRoleDefForm((f) => ({ ...f, label: e.target.value }))}
-              />
-              <Select
-                value={roleDefForm.baseline_template}
-                onValueChange={(baseline_template) => setRoleDefForm((f) => ({ ...f, baseline_template }))}
-              >
-                <SelectTrigger className="min-h-11 w-full"><SelectValue placeholder="Baseline template" /></SelectTrigger>
-                <SelectContent>
-                  {BASELINE_TEMPLATES.map((t) => (
-                    <SelectItem key={t} value={t}>{ROLE_LABELS[t] || t}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Grant keys whitelist: {ASSISTANT_GRANT_KEYS.slice(0, 6).join(', ')}…
-              </p>
-              <DialogFooter>
-                <Button type="button" variant="outline" className="min-h-11" onClick={() => setRoleOpen(false)}>Cancel</Button>
-                <Button type="submit" className="min-h-11">Save definition</Button>
-              </DialogFooter>
-            </form>
-              </DialogContent>
-            </Dialog>
-            <ul className="space-y-2 text-sm">
-              {roleDefs.map((d) => (
-                <li key={d.role_key} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border px-3 py-2">
-                  <span>
-                    <strong>{d.label}</strong> · {d.role_key} → {d.baseline_template}
-                  </span>
-                </li>
-              ))}
-              {!roleDefs.length ? <li className="text-muted-foreground">No custom roles yet.</li> : null}
-            </ul>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Create account</DialogTitle>
-          </DialogHeader>
-            <form onSubmit={onSubmit} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="p-name">Full name</Label>
-                <Input id="p-name" required value={form.full_name} onChange={(e) => setForm((f) => ({ ...f, full_name: e.target.value }))} />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="p-email">Email</Label>
-                <Input id="p-email" type="email" required value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="p-phone">Phone (optional)</Label>
-                <Input id="p-phone" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label>Role</Label>
-                <Select
-                  value={form.role}
-                  onValueChange={(role) =>
-                    setForm((f) => ({
-                      ...f,
-                      role,
-                      attendance_enabled: role === 'operations_lead' ? false : f.attendance_enabled,
-                      permission_grants: role === ROLES.ASSISTANT_SUPER_ADMIN ? generalAdminSheetGrants() : f.permission_grants,
-                    }))
-                  }
-                >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {roleOptions.map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {roleAccessSummary(form.role) ? (
-                  <p className="text-sm text-muted-foreground">{roleAccessSummary(form.role)}</p>
+          <Card className="border-border/80 shadow-sm">
+            <CardHeader className="gap-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                  <CardTitle>Employee directory</CardTitle>
+                  <CardDescription>
+                    Showing <span className="font-mono tabular-nums text-foreground">{directory.length}</span> of{' '}
+                    <span className="font-mono tabular-nums text-foreground">{people.length}</span> profiles
+                  </CardDescription>
+                </div>
+                {embedded ? (
+                  <Button type="button" className="min-h-11 gap-1.5" onClick={() => setCreateOpen(true)}>
+                    <UserPlus className="size-4" aria-hidden />
+                    Add employee
+                  </Button>
                 ) : null}
               </div>
-              {!showBranchPicker(form.role, form.permission_grants) ? (
-                <p className="text-sm text-muted-foreground">Branch access: all branches.</p>
-              ) : null}
-              {showBranchPicker(form.role, form.permission_grants) && usesMultiBranch(form.role, form.permission_grants) && (
-                <div className="flex flex-col gap-2">
-                  <Label>Branches (multi)</Label>
-                  <div className="max-h-40 space-y-2 overflow-y-auto rounded-xl border border-border p-3">
-                    {branches.map((b) => (
-                      <label key={b.slug} className="flex cursor-pointer items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          checked={form.branch_slugs.includes(b.slug)}
-                          onChange={() => setForm((f) => ({ ...f, branch_slugs: toggleSlug(f.branch_slugs, b.slug) }))}
-                        />
-                        {b.name}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {showBranchPicker(form.role, form.permission_grants) && !usesMultiBranch(form.role, form.permission_grants) && (
-                <div className="flex flex-col gap-2">
-                  <Label>Branch</Label>
-                  <Select
-                    value={form.branch_slug}
-                    onValueChange={(branch_slug) => setForm((f) => ({ ...f, branch_slug, branch_slugs: [branch_slug] }))}
-                    disabled={!isSuperAdmin(profile) && Boolean(profile?.branch_slug)}
-                  >
-                    <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
-                    <SelectContent>
-                      {branches.map((b) => (
-                        <SelectItem key={b.slug} value={b.slug}>{b.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-              {form.role === ROLES.ASSISTANT_SUPER_ADMIN && canEditAssistantGrants(profile) && (
-                <AssistantGrantsEditor
-                  grants={form.permission_grants}
-                  onChange={(permission_grants) => setForm((f) => ({ ...f, permission_grants }))}
-                />
-              )}
-              <div className="flex flex-col gap-3 rounded-xl border border-border p-3">
-                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Staff toggles</Label>
-                <label className="flex cursor-pointer items-center gap-2 text-sm">
-                  <input type="checkbox" checked={form.attendance_enabled} onChange={() => setForm((f) => ({ ...f, attendance_enabled: !f.attendance_enabled }))} />
-                  Attendance clock enabled
-                </label>
-                <label className="flex cursor-pointer items-center gap-2 text-sm">
-                  <input type="checkbox" checked={form.geofence_enabled} onChange={() => setForm((f) => ({ ...f, geofence_enabled: !f.geofence_enabled }))} />
-                  Geofence enabled
-                </label>
-                <div className="flex flex-col gap-1">
-                  <Label className="text-sm">Employment type</Label>
-                  <Select value={form.employment_type} onValueChange={(employment_type) => setForm((f) => ({ ...f, employment_type }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="permanent">Permanent</SelectItem>
-                      <SelectItem value="on_call">On-call</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              {isSuperAdmin(profile) ? (
-                <div className="flex flex-col gap-3 rounded-xl border border-border p-3">
-                  <label className="flex cursor-pointer items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(form.is_supervisor)}
-                      onChange={() => setForm((f) => ({ ...f, is_supervisor: !f.is_supervisor }))}
-                    />
-                    Tag as supervisor
-                  </label>
-                  <div className="flex flex-col gap-2">
-                    <Label>Reports to</Label>
-                    <Select
-                      value={form.reports_to || 'none'}
-                      onValueChange={(v) => setForm((f) => ({ ...f, reports_to: v === 'none' ? '' : v }))}
-                    >
-                      <SelectTrigger className="min-h-11"><SelectValue placeholder="No supervisor" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">No supervisor</SelectItem>
-                        {supervisors.map((p) => (
-                          <SelectItem key={p.id} value={p.id}>
-                            {p.full_name} ({ROLE_LABELS[p.role] || p.role})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              ) : null}
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="p-pass">Temporary password (optional)</Label>
-                <Input id="p-pass" type="text" value={form.temporary_password} onChange={(e) => setForm((f) => ({ ...f, temporary_password: e.target.value }))} />
-              </div>
-              <Button type="submit" disabled={saving}>{saving ? 'Creating…' : 'Create account'}</Button>
-            </form>
-        </DialogContent>
-      </Dialog>
 
-        <Card>
-          <CardHeader className="gap-4">
-            <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <CardTitle>Directory</CardTitle>
-                <CardDescription>
-                  {dirTab === 'attendance'
-                    ? 'Today’s clock-in picture across this directory.'
-                    : `${directory.length} of ${people.length} profiles`}
-                </CardDescription>
+              <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="Employee role groups">
+                {DIRECTORY_FILTER_PILLS.map((pill) => {
+                  const count = dirStats.byGroup[pill.id] ?? 0
+                  const selected = dirTab === pill.id
+                  return (
+                    <button
+                      key={pill.id}
+                      type="button"
+                      role="tab"
+                      aria-selected={selected}
+                      className={cn(
+                        'min-h-11 cursor-pointer rounded-full border px-3.5 text-xs font-semibold transition',
+                        selected
+                          ? 'border-primary bg-primary text-primary-foreground shadow-xs'
+                          : 'border-border bg-card text-muted-foreground hover:bg-muted/40 hover:text-foreground',
+                      )}
+                      onClick={() => setDirTab(pill.id)}
+                    >
+                      {pill.label} <span className="ml-1 font-mono opacity-80">{count}</span>
+                    </button>
+                  )
+                })}
               </div>
-            </div>
-            <div className="flex flex-wrap gap-1" role="tablist" aria-label="People groups">
-              {PEOPLE_DIRECTORY_TABS.map((tab) => (
-                <button
-                  key={tab.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={dirTab === tab.id}
-                  className={cn(
-                    'min-h-11 cursor-pointer rounded-full border px-3 text-xs font-semibold',
-                    dirTab === tab.id ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground',
-                  )}
-                  onClick={() => setDirTab(tab.id)}
-                >
-                  {tab.label}
-                </button>
-              ))}
-              <button
-                type="button"
-                role="tab"
-                aria-selected={dirTab === 'attendance'}
-                className={cn(
-                  'min-h-11 cursor-pointer rounded-full border px-3 text-xs font-semibold',
-                  dirTab === 'attendance' ? 'border-primary bg-primary/10 text-primary' : 'border-border text-muted-foreground',
-                )}
-                onClick={() => setDirTab('attendance')}
-              >
-                Attendance
-              </button>
-            </div>
-            {dirTab !== 'attendance' ? (
-              <div className="grid gap-3 sm:grid-cols-3">
+
+              <div className="emp-filter-bar">
                 <Input
                   type="search"
                   value={dirQuery}
                   onChange={(e) => setDirQuery(e.target.value)}
-                  placeholder="Search name, phone, role…"
-                  aria-label="Search directory"
+                  placeholder="Search name, phone, role, branch…"
+                  aria-label="Search employees"
                   className="min-h-11"
                 />
                 <Select value={dirBranch || 'all'} onValueChange={(v) => setDirBranch(v === 'all' ? '' : v)}>
-                  <SelectTrigger className="min-h-11"><SelectValue placeholder="All branches" /></SelectTrigger>
+                  <SelectTrigger className="min-h-11 w-full" aria-label="Filter by branch">
+                    <SelectValue placeholder="All branches" />
+                  </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All branches</SelectItem>
                     {branches.map((b) => (
-                      <SelectItem key={b.slug} value={b.slug}>{b.name || b.slug}</SelectItem>
+                      <SelectItem key={b.slug} value={b.slug}>
+                        {b.name || b.slug}
+                      </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
                 <Select value={dirStatus} onValueChange={setDirStatus}>
-                  <SelectTrigger className="min-h-11"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="min-h-11 w-full" aria-label="Filter by status">
+                    <SelectValue />
+                  </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="active">Active only</SelectItem>
+                    <SelectItem value="inactive">Inactive only</SelectItem>
                     <SelectItem value="all">All statuses</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            ) : null}
-          </CardHeader>
-          <CardContent>
-            {dirTab === 'attendance' ? (
-              <div className="space-y-4">
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                  <div className="rounded-2xl border border-border bg-background p-4 sm:col-span-2">
-                    <p className="text-[10px] font-bold tracking-[0.16em] text-muted-foreground uppercase">On site</p>
-                    <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
-                      {todayAttendance.onSite}
-                      <span className="ml-1 text-sm font-medium text-muted-foreground">/ {todayAttendance.total} roster</span>
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">Present or late vs attendance-enabled people</p>
-                  </div>
-                  <div className="rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4">
-                    <p className="text-[10px] font-bold tracking-[0.16em] text-amber-800 uppercase">Late</p>
-                    <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">{todayAttendance.late}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">Checked in late</p>
-                  </div>
-                  <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4">
-                    <p className="text-[10px] font-bold tracking-[0.16em] text-destructive uppercase">Absent + no stamp</p>
-                    <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">{todayAttendance.absent + todayAttendance.empty}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{todayAttendance.absent} absent · {todayAttendance.empty} no stamp</p>
-                  </div>
-                </div>
-                {attendanceExceptions.length ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Needs action</TableHead>
-                        <TableHead>Role</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {attendanceExceptions.map(({ member, status }) => (
-                        <TableRow key={member.id}>
-                          <TableCell className="font-medium">{member.full_name}</TableCell>
-                          <TableCell className="text-xs">{ROLE_LABELS[member.role] || member.role}</TableCell>
-                          <TableCell>
-                            <Badge variant={status === 'absent' ? 'destructive' : 'outline'}>
-                              {status === 'late' ? 'Late' : status === 'absent' ? 'Absent' : 'No stamp'}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Everyone on the roster has an on-time stamp.</p>
-                )}
-              </div>
-            ) : (
-              <>
-            <ul className="people-directory-cards">
-              {directory.map((row) => (
-                <li key={row.id} className="people-directory-card">
-                  <div>
-                    <strong>{row.full_name}</strong>
-                    <p>{row.phone || 'No phone'}</p>
-                    <p>{(row.branch_slugs || []).join(', ') || row.branch_slug || 'All / HQ'}</p>
-                  </div>
-                  <div className="people-directory-card-meta">
-                    <Badge variant="secondary">{ROLE_LABELS[row.role] || row.role}</Badge>
-                    {row.is_active ? <Badge>Active</Badge> : <Badge variant="outline">Inactive</Badge>}
-                  </div>
-                  <DirectoryPersonActions
-                    profile={profile}
-                    row={row}
-                    onEdit={setEditing}
-                    onDeactivate={onDeactivate}
-                  />
-                </li>
-              ))}
-            </ul>
-            <div className="people-directory-table overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Branch</TableHead>
-                  <TableHead>Reports to</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-              {directory.map((row) => (
-                  <TableRow key={row.id}>
-                    <TableCell className="font-medium">
-                      <div>{row.full_name}</div>
-                      <div className="text-xs text-muted-foreground">{row.phone || '—'}</div>
-                    </TableCell>
-                    <TableCell><Badge variant="secondary">{ROLE_LABELS[row.role] || row.role}</Badge></TableCell>
-                    <TableCell className="max-w-[10rem] truncate text-xs">
-                      {(row.branch_slugs || []).join(', ') || row.branch_slug || 'All / HQ'}
-                    </TableCell>
-                    <TableCell className="text-xs">
-                      {row.is_supervisor ? <Badge variant="outline">Supervisor</Badge> : null}
-                      <span className="ml-1 text-muted-foreground">
-                        {people.find((p) => p.id === row.reports_to)?.full_name || (row.is_supervisor ? '' : '—')}
-                      </span>
-                    </TableCell>
-                    <TableCell>
-                      {row.is_active ? <Badge>Active</Badge> : <Badge variant="outline">Inactive</Badge>}
-                    </TableCell>
-                    <TableCell className="text-right">
+            </CardHeader>
+
+            <CardContent className="flex flex-col gap-4">
+              <ul className="people-directory-cards emp-dir-cards" aria-label="Employee cards">
+                {directory.map((row) => {
+                  const supervisor = row.reports_to ? peopleById.get(row.reports_to) : null
+                  return (
+                    <li key={row.id} className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 shadow-xs">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <span className="emp-avatar" aria-hidden>
+                            {initialsOf(row.full_name)}
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold text-foreground">{row.full_name}</p>
+                            <p className="truncate text-xs text-muted-foreground">{row.phone || 'No phone on file'}</p>
+                          </div>
+                        </div>
+                        <span className={cn('emp-status-pill shrink-0', row.is_active ? 'is-active' : 'is-inactive')}>
+                          {row.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Badge variant="secondary">{ROLE_LABELS[row.role] || row.role}</Badge>
+                        {row.is_supervisor ? <Badge variant="outline">Supervisor</Badge> : null}
+                        {row.employment_type === 'on_call' ? <span className="emp-flag-tag">On-call</span> : null}
+                        {row.attendance_enabled === false ? <span className="emp-flag-tag">No clock</span> : null}
+                      </div>
+
+                      <div className="flex flex-col gap-1 text-xs text-muted-foreground">
+                        <span className="flex items-center gap-1.5">
+                          <MapPin className="size-3.5 shrink-0" aria-hidden />
+                          {formatBranchScopeLabel(row, branchMap)}
+                        </span>
+                        {supervisor ? (
+                          <span>Reports to: <strong className="font-medium text-foreground">{supervisor.full_name}</strong></span>
+                        ) : null}
+                      </div>
+
                       <DirectoryPersonActions
                         profile={profile}
                         row={row}
                         onEdit={setEditing}
                         onDeactivate={onDeactivate}
+                        compact
                       />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                    </li>
+                  )
+                })}
+              </ul>
+
+              <div className="emp-dir-table overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Employee</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Branches</TableHead>
+                      <TableHead>Supervisor & schedule</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {directory.map((row) => {
+                      const supervisor = row.reports_to ? peopleById.get(row.reports_to) : null
+                      return (
+                        <TableRow key={row.id}>
+                          <TableCell>
+                            <div className="flex items-center gap-3">
+                              <span className="emp-avatar" aria-hidden>
+                                {initialsOf(row.full_name)}
+                              </span>
+                              <div className="min-w-0">
+                                <div className="font-semibold text-foreground">{row.full_name}</div>
+                                <div className="text-xs text-muted-foreground tabular-nums">{row.phone || 'No phone'}</div>
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">{ROLE_LABELS[row.role] || row.role}</Badge>
+                          </TableCell>
+                          <TableCell className="max-w-[13rem] text-xs text-muted-foreground">
+                            {formatBranchScopeLabel(row, branchMap)}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                              {row.is_supervisor ? <Badge variant="outline">Supervisor</Badge> : null}
+                              {supervisor ? <span className="text-foreground">{supervisor.full_name}</span> : !row.is_supervisor ? <span className="text-muted-foreground">—</span> : null}
+                              {row.employment_type === 'on_call' ? <span className="emp-flag-tag">On-call</span> : null}
+                              {row.attendance_enabled === false ? <span className="emp-flag-tag">Clock off</span> : null}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className={cn('emp-status-pill', row.is_active ? 'is-active' : 'is-inactive')}>
+                              {row.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <DirectoryPersonActions
+                              profile={profile}
+                              row={row}
+                              onEdit={setEditing}
+                              onDeactivate={onDeactivate}
+                            />
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+
+              {!directory.length ? (
+                <div className="rounded-xl border border-dashed border-border px-4 py-8 text-center">
+                  <p className="text-sm font-medium text-foreground">No employees match the current filters.</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Switch role group pills, clear the search query, or include inactive profiles.
+                  </p>
+                </div>
+              ) : null}
+            </CardContent>
+          </Card>
+        </>
+      )}
+    </div>
+  ) : null
+
+  const accessSection = showAccess ? (
+    <div className="flex flex-col gap-5">
+      {canEditAssistantGrants(profile) || isSuperAdmin(profile) ? (
+        <Card className="border-border/80 shadow-sm">
+          <CardHeader>
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <ShieldCheck className="size-5 text-primary" aria-hidden />
+                  RBAC Delegation · General Admins
+                </CardTitle>
+                <CardDescription>
+                  Fine-grained permissions for each General Admin (Assistant Super Admin). Edit grants directly without leaving the Employees hub.
+                </CardDescription>
+              </div>
+              {isSuperAdmin(profile) ? (
+                <Button type="button" variant="outline" className="min-h-11 gap-1.5" onClick={() => setCreateOpen(true)}>
+                  <UserPlus className="size-4" aria-hidden />
+                  Add General Admin
+                </Button>
+              ) : null}
             </div>
-            {!directory.length ? (
-              <p className="mt-4 text-sm text-muted-foreground">No people in this filter. Try another tab or search.</p>
-            ) : null}
-              </>
+          </CardHeader>
+          <CardContent>
+            {generalAdmins.length ? (
+              <div className="emp-rbac-grid">
+                {generalAdmins.map((adminRow) => {
+                  const grants = normalizeAssistantGrants(adminRow.permission_grants)
+                  const enabledCount = countEnabledAssistantGrants(grants)
+                  const activeKeys = ASSISTANT_GRANT_KEYS.filter((k) => grants[k])
+                  const canEditRow = canMutateDirectoryPerson(profile, adminRow) && canEditAssistantGrants(profile)
+                  return (
+                    <article
+                      key={adminRow.id}
+                      className="flex flex-col justify-between gap-4 rounded-2xl border border-border bg-card p-4 shadow-xs"
+                    >
+                      <div className="flex flex-col gap-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex min-w-0 items-center gap-3">
+                            <span className="emp-avatar" aria-hidden>
+                              {initialsOf(adminRow.full_name)}
+                            </span>
+                            <div className="min-w-0">
+                              <h3 className="truncate font-semibold text-foreground">{adminRow.full_name}</h3>
+                              <p className="text-xs text-muted-foreground">
+                                {grants.branches_all === false
+                                  ? `Branch scope: ${formatBranchScopeLabel(adminRow, branchMap)}`
+                                  : 'Branch scope: All branches'}
+                              </p>
+                            </div>
+                          </div>
+                          <span className="emp-status-pill shrink-0 is-active font-mono tabular-nums">
+                            {enabledCount} / {ASSISTANT_GRANT_KEYS.length} on
+                          </span>
+                        </div>
+
+                        <div className="emp-grant-chips" aria-label={`Enabled permissions for ${adminRow.full_name}`}>
+                          {activeKeys.slice(0, 8).map((key) => (
+                            <span key={key} className="emp-grant-chip">
+                              {ASSISTANT_GRANT_LABELS[key] || key}
+                            </span>
+                          ))}
+                          {activeKeys.length > 8 ? (
+                            <span className="emp-grant-chip is-muted">+{activeKeys.length - 8} more</span>
+                          ) : null}
+                          {!activeKeys.length ? (
+                            <span className="emp-grant-chip is-muted">Read-only baseline</span>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      {canEditRow ? (
+                        <div className="flex justify-end border-t border-border/70 pt-3">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="min-h-11 gap-1.5"
+                            onClick={() => openEditDraft(adminRow, setEditing)}
+                          >
+                            <KeyRound className="size-4" aria-hidden />
+                            Configure RBAC grants
+                          </Button>
+                        </div>
+                      ) : null}
+                    </article>
+                  )
+                })}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No General Admin (Assistant Super Admin) accounts yet. Create one to delegate branch or finance capabilities.
+              </p>
             )}
           </CardContent>
         </Card>
+      ) : null}
 
       {canCreateStaffRoleOverride(profile) ? (
-        <Card className="mt-6">
+        <Card className="border-border/80 shadow-sm">
           <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
             <div className="flex min-w-0 flex-col gap-1.5">
-              <CardTitle>Temp Team Lead</CardTitle>
+              <CardTitle>Temp Team Lead delegation</CardTitle>
               <CardDescription>
-                Assign crew as Team Lead for one Manila calendar day (branch-scoped). Super Admin can revoke.
+                Promote crew as acting Team Lead for one Manila calendar day (branch-scoped). Super Admin can revoke any time.
               </CardDescription>
             </div>
-            <Button type="button" variant="outline" className="min-h-11" onClick={() => setTempTlOpen(true)}>
-              <Plus size={16} className="mr-1.5" aria-hidden />
+            <Button type="button" variant="outline" className="min-h-11 gap-1.5" onClick={() => setTempTlOpen(true)}>
+              <Plus className="size-4" aria-hidden />
               Assign temp TL
             </Button>
           </CardHeader>
           <CardContent className="space-y-4">
-            <Dialog open={tempTlOpen} onOpenChange={setTempTlOpen}>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Assign temp Team Lead</DialogTitle>
-                  <DialogDescription>One Manila calendar day, scoped to the branch you pick.</DialogDescription>
-                </DialogHeader>
-            <form onSubmit={createTempTl} className="grid gap-3 sm:grid-cols-2">
-              <div className="flex flex-col gap-2 sm:col-span-2">
-                <Label>Crew</Label>
-                <Select
-                  value={overrideForm.staff_id}
-                  onValueChange={(staff_id) => setOverrideForm((f) => ({ ...f, staff_id }))}
-                >
-                  <SelectTrigger className="min-h-11 w-full"><SelectValue placeholder="Select staff" /></SelectTrigger>
-                  <SelectContent>
-                    {people
-                      .filter((p) => p.is_active && ['staff', 'team_lead'].includes(p.role))
-                      .map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.full_name} ({p.role})
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label>Branch</Label>
-                <Select
-                  value={overrideForm.branch_slug}
-                  onValueChange={(branch_slug) => setOverrideForm((f) => ({ ...f, branch_slug }))}
-                >
-                  <SelectTrigger className="min-h-11 w-full"><SelectValue placeholder="Branch" /></SelectTrigger>
-                  <SelectContent>
-                    {branches.map((b) => (
-                      <SelectItem key={b.slug} value={b.slug}>{b.name || b.slug}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label>Date</Label>
-                <Input
-                  type="date"
-                  className="min-h-11"
-                  value={overrideForm.on_date}
-                  onChange={(e) => setOverrideForm((f) => ({ ...f, on_date: e.target.value }))}
-                />
-              </div>
-              <DialogFooter className="sm:col-span-2">
-                <Button type="button" variant="outline" className="min-h-11" onClick={() => setTempTlOpen(false)}>Cancel</Button>
-                <Button type="submit" className="min-h-11" disabled={saving}>
-                  {saving ? 'Saving…' : 'Assign temp TL'}
-                </Button>
-              </DialogFooter>
-            </form>
-              </DialogContent>
-            </Dialog>
             <ul className="space-y-2 text-sm">
               {overrides.map((row) => {
-                const name = people.find((p) => p.id === row.staff_id)?.full_name || row.staff_id.slice(0, 8)
+                const name = peopleById.get(row.staff_id)?.full_name || row.staff_id.slice(0, 8)
                 return (
-                  <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border px-3 py-2">
-                    <span>
-                      {name} · {row.branch_slug} · {String(row.on_date).slice(0, 10)} · {row.role}
+                  <li key={row.id} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border px-3.5 py-2.5">
+                    <span className="min-w-0">
+                      <strong className="text-foreground">{name}</strong>{' '}
+                      <span className="text-muted-foreground">
+                        · {branchMap.get(row.branch_slug) || row.branch_slug} ·{' '}
+                        <span className="font-mono tabular-nums">{String(row.on_date).slice(0, 10)}</span> · {ROLE_LABELS[row.role] || row.role}
+                      </span>
                     </span>
                     {canRevokeStaffRoleOverride(profile) ? (
-                      <Button size="sm" variant="ghost" disabled={saving} onClick={() => revokeOverride(row.id)}>
+                      <Button type="button" size="sm" variant="ghost" className="min-h-10" disabled={saving} onClick={() => revokeOverride(row.id)}>
                         Revoke
                       </Button>
                     ) : null}
@@ -936,32 +826,355 @@ export default function PeopleManagePage() {
                 )
               })}
               {!overrides.length ? (
-                <li className="text-muted-foreground">No upcoming day overrides.</li>
+                <li className="text-muted-foreground">No active or upcoming Team Lead overrides.</li>
               ) : null}
             </ul>
           </CardContent>
         </Card>
       ) : null}
 
-      <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
-        <DialogContent className="max-h-[90svh] overflow-y-auto">
+      {isSuperAdmin(profile) ? (
+        <Card className="border-border/80 shadow-sm">
+          <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <CardTitle>Custom role templates</CardTitle>
+              <CardDescription>
+                Baseline system role + grant overlay (`role_definitions`). Assign via custom role key on an employee account.
+              </CardDescription>
+            </div>
+            <Button type="button" variant="outline" className="min-h-11 gap-1.5" onClick={() => setRoleOpen(true)}>
+              <Plus className="size-4" aria-hidden />
+              New role
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-2 text-sm">
+              {roleDefs.map((d) => (
+                <li key={d.role_key} className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border px-3.5 py-2.5">
+                  <span>
+                    <strong className="text-foreground">{d.label}</strong>{' '}
+                    <span className="font-mono text-xs text-muted-foreground">({d.role_key})</span> →{' '}
+                    <Badge variant="secondary">{ROLE_LABELS[d.baseline_template] || d.baseline_template}</Badge>
+                  </span>
+                </li>
+              ))}
+              {!roleDefs.length ? <li className="text-muted-foreground">No custom role templates defined yet.</li> : null}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
+    </div>
+  ) : null
+
+  const modals = (
+    <>
+      <Dialog open={roleOpen} onOpenChange={setRoleOpen}>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Edit staff</DialogTitle>
+            <DialogTitle>New custom role</DialogTitle>
+            <DialogDescription>Baseline system template plus a grants overlay.</DialogDescription>
           </DialogHeader>
-          {editing && (
-            <form onSubmit={saveEdit} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <Label>Full name</Label>
-                <Input required value={editing.full_name} onChange={(e) => setEditing((r) => ({ ...r, full_name: e.target.value }))} />
+          <form
+            className="flex flex-col gap-3"
+            onSubmit={async (e) => {
+              e.preventDefault()
+              const check = validateRoleDefinition({
+                roleKey: roleDefForm.role_key,
+                label: roleDefForm.label,
+                baselineTemplate: roleDefForm.baseline_template,
+                grants: roleDefForm.grants,
+              })
+              if (!check.ok) {
+                toast.error(Object.values(check.errors)[0])
+                return
+              }
+              const { error } = await supabase.from('role_definitions').upsert({
+                role_key: check.role_key,
+                label: check.label,
+                baseline_template: check.baseline_template,
+                grants: check.grants,
+                is_active: true,
+                updated_at: new Date().toISOString(),
+              })
+              if (error) toast.error(error.message)
+              else {
+                toast.success('Role definition saved')
+                setRoleDefForm({ role_key: '', label: '', baseline_template: 'staff', grants: { ...DEFAULT_ASSISTANT_GRANTS } })
+                setRoleOpen(false)
+                load()
+              }
+            }}
+          >
+            <Input
+              aria-label="Role key"
+              placeholder="role_key (snake_case)"
+              className="min-h-11"
+              value={roleDefForm.role_key}
+              onChange={(e) => setRoleDefForm((f) => ({ ...f, role_key: e.target.value }))}
+            />
+            <Input
+              aria-label="Label"
+              placeholder="Label"
+              className="min-h-11"
+              value={roleDefForm.label}
+              onChange={(e) => setRoleDefForm((f) => ({ ...f, label: e.target.value }))}
+            />
+            <Select
+              value={roleDefForm.baseline_template}
+              onValueChange={(baseline_template) => setRoleDefForm((f) => ({ ...f, baseline_template }))}
+            >
+              <SelectTrigger className="min-h-11 w-full"><SelectValue placeholder="Baseline template" /></SelectTrigger>
+              <SelectContent>
+                {BASELINE_TEMPLATES.map((t) => (
+                  <SelectItem key={t} value={t}>{ROLE_LABELS[t] || t}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              Grant keys whitelist: {ASSISTANT_GRANT_KEYS.slice(0, 6).join(', ')}…
+            </p>
+            <DialogFooter>
+              <Button type="button" variant="outline" className="min-h-11" onClick={() => setRoleOpen(false)}>Cancel</Button>
+              <Button type="submit" className="min-h-11">Save definition</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={tempTlOpen} onOpenChange={setTempTlOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Assign temp Team Lead</DialogTitle>
+            <DialogDescription>One Manila calendar day, scoped to the branch you pick.</DialogDescription>
+          </DialogHeader>
+          <form onSubmit={createTempTl} className="grid gap-3 sm:grid-cols-2">
+            <div className="flex flex-col gap-2 sm:col-span-2">
+              <Label>Crew</Label>
+              <Select
+                value={overrideForm.staff_id}
+                onValueChange={(staff_id) => setOverrideForm((f) => ({ ...f, staff_id }))}
+              >
+                <SelectTrigger className="min-h-11 w-full"><SelectValue placeholder="Select staff" /></SelectTrigger>
+                <SelectContent>
+                  {people
+                    .filter((p) => p.is_active && ['staff', 'team_lead'].includes(p.role))
+                    .map((p) => (
+                      <SelectItem key={p.id} value={p.id}>
+                        {p.full_name} ({ROLE_LABELS[p.role] || p.role})
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>Branch</Label>
+              <Select
+                value={overrideForm.branch_slug}
+                onValueChange={(branch_slug) => setOverrideForm((f) => ({ ...f, branch_slug }))}
+              >
+                <SelectTrigger className="min-h-11 w-full"><SelectValue placeholder="Branch" /></SelectTrigger>
+                <SelectContent>
+                  {branches.map((b) => (
+                    <SelectItem key={b.slug} value={b.slug}>{b.name || b.slug}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>Date</Label>
+              <Input
+                type="date"
+                className="min-h-11"
+                value={overrideForm.on_date}
+                onChange={(e) => setOverrideForm((f) => ({ ...f, on_date: e.target.value }))}
+              />
+            </div>
+            <DialogFooter className="sm:col-span-2">
+              <Button type="button" variant="outline" className="min-h-11" onClick={() => setTempTlOpen(false)}>Cancel</Button>
+              <Button type="submit" className="min-h-11" disabled={saving}>
+                {saving ? 'Saving…' : 'Assign temp TL'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Create employee account</DialogTitle>
+            <DialogDescription>
+              Provision a staff profile, role permissions, branch scope, and attendance defaults.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={onSubmit} className="flex flex-col gap-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="flex flex-col gap-2 sm:col-span-2">
+                <Label htmlFor="p-name">Full name</Label>
+                <Input id="p-name" className="min-h-11" required value={form.full_name} onChange={(e) => setForm((f) => ({ ...f, full_name: e.target.value }))} />
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Phone</Label>
-                <Input value={editing.phone || ''} onChange={(e) => setEditing((r) => ({ ...r, phone: e.target.value }))} />
+                <Label htmlFor="p-email">Email</Label>
+                <Input id="p-email" type="email" className="min-h-11" required value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="p-phone">Phone (optional)</Label>
+                <Input id="p-phone" className="min-h-11" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>Role</Label>
+              <Select
+                value={form.role}
+                onValueChange={(role) =>
+                  setForm((f) => ({
+                    ...f,
+                    role,
+                    attendance_enabled: role === 'operations_lead' ? false : f.attendance_enabled,
+                    permission_grants: role === ROLES.ASSISTANT_SUPER_ADMIN ? generalAdminSheetGrants() : f.permission_grants,
+                  }))
+                }
+              >
+                <SelectTrigger className="min-h-11"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {roleOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {roleAccessSummary(form.role) ? (
+                <p className="text-xs text-muted-foreground">{roleAccessSummary(form.role)}</p>
+              ) : null}
+            </div>
+            {!showBranchPicker(form.role, form.permission_grants) ? (
+              <p className="text-sm text-muted-foreground">Branch access: all branches.</p>
+            ) : null}
+            {showBranchPicker(form.role, form.permission_grants) && usesMultiBranch(form.role, form.permission_grants) ? (
+              <div className="flex flex-col gap-2">
+                <Label>Branches (multi)</Label>
+                <div className="max-h-40 space-y-2 overflow-y-auto rounded-xl border border-border p-3">
+                  {branches.map((b) => (
+                    <label key={b.slug} className="flex cursor-pointer items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={form.branch_slugs.includes(b.slug)}
+                        onChange={() => setForm((f) => ({ ...f, branch_slugs: toggleSlug(f.branch_slugs, b.slug) }))}
+                      />
+                      {b.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+            {showBranchPicker(form.role, form.permission_grants) && !usesMultiBranch(form.role, form.permission_grants) ? (
+              <div className="flex flex-col gap-2">
+                <Label>Branch</Label>
+                <Select
+                  value={form.branch_slug}
+                  onValueChange={(branch_slug) => setForm((f) => ({ ...f, branch_slug, branch_slugs: [branch_slug] }))}
+                  disabled={!isSuperAdmin(profile) && Boolean(profile?.branch_slug)}
+                >
+                  <SelectTrigger className="min-h-11"><SelectValue placeholder="Select branch" /></SelectTrigger>
+                  <SelectContent>
+                    {branches.map((b) => (
+                      <SelectItem key={b.slug} value={b.slug}>{b.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
+            {form.role === ROLES.ASSISTANT_SUPER_ADMIN && canEditAssistantGrants(profile) ? (
+              <AssistantGrantsEditor
+                grants={form.permission_grants}
+                onChange={(permission_grants) => setForm((f) => ({ ...f, permission_grants }))}
+              />
+            ) : null}
+            <div className="flex flex-col gap-3 rounded-xl border border-border p-3">
+              <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Attendance & work schedule</Label>
+              <label className="flex cursor-pointer items-center gap-2 text-sm">
+                <input type="checkbox" checked={form.attendance_enabled} onChange={() => setForm((f) => ({ ...f, attendance_enabled: !f.attendance_enabled }))} />
+                Attendance clock enabled
+              </label>
+              <label className="flex cursor-pointer items-center gap-2 text-sm">
+                <input type="checkbox" checked={form.geofence_enabled} onChange={() => setForm((f) => ({ ...f, geofence_enabled: !f.geofence_enabled }))} />
+                Geofence enabled
+              </label>
+              <div className="flex flex-col gap-1">
+                <Label className="text-sm">Employment type</Label>
+                <Select value={form.employment_type} onValueChange={(employment_type) => setForm((f) => ({ ...f, employment_type }))}>
+                  <SelectTrigger className="min-h-11"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="permanent">Permanent</SelectItem>
+                    <SelectItem value="on_call">On-call</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            {isSuperAdmin(profile) ? (
+              <div className="flex flex-col gap-3 rounded-xl border border-border p-3">
+                <label className="flex cursor-pointer items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={Boolean(form.is_supervisor)}
+                    onChange={() => setForm((f) => ({ ...f, is_supervisor: !f.is_supervisor }))}
+                  />
+                  Tag as supervisor
+                </label>
+                <div className="flex flex-col gap-2">
+                  <Label>Reports to</Label>
+                  <Select
+                    value={form.reports_to || 'none'}
+                    onValueChange={(v) => setForm((f) => ({ ...f, reports_to: v === 'none' ? '' : v }))}
+                  >
+                    <SelectTrigger className="min-h-11"><SelectValue placeholder="No supervisor" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">No supervisor</SelectItem>
+                      {supervisors.map((p) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.full_name} ({ROLE_LABELS[p.role] || p.role})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            ) : null}
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="p-pass">Temporary password (optional)</Label>
+              <Input id="p-pass" type="text" className="min-h-11" value={form.temporary_password} onChange={(e) => setForm((f) => ({ ...f, temporary_password: e.target.value }))} />
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" className="min-h-11" onClick={() => setCreateOpen(false)}>Cancel</Button>
+              <Button type="submit" className="min-h-11" disabled={saving}>{saving ? 'Creating…' : 'Create account'}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(editing)} onOpenChange={(open) => !open && setEditing(null)}>
+        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit employee</DialogTitle>
+            <DialogDescription>
+              Update role, branch assignments, permissions, and attendance settings.
+            </DialogDescription>
+          </DialogHeader>
+          {editing ? (
+            <form onSubmit={saveEdit} className="flex flex-col gap-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="flex flex-col gap-2">
+                  <Label>Full name</Label>
+                  <Input className="min-h-11" required value={editing.full_name} onChange={(e) => setEditing((r) => ({ ...r, full_name: e.target.value }))} />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label>Phone</Label>
+                  <Input className="min-h-11" value={editing.phone || ''} onChange={(e) => setEditing((r) => ({ ...r, phone: e.target.value }))} />
+                </div>
               </div>
               <div className="flex flex-col gap-2">
                 <Label>Role</Label>
                 <Select value={editing.role} onValueChange={(role) => setEditing((r) => ({ ...r, role }))}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="min-h-11"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     {roleOptions.map((opt) => (
                       <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
@@ -969,14 +1182,14 @@ export default function PeopleManagePage() {
                   </SelectContent>
                 </Select>
                 {roleAccessSummary(editing.role) ? (
-                  <p className="text-sm text-muted-foreground">{roleAccessSummary(editing.role)}</p>
+                  <p className="text-xs text-muted-foreground">{roleAccessSummary(editing.role)}</p>
                 ) : null}
               </div>
               {!showBranchPicker(editing.role, editing.permission_grants) ? (
                 <p className="text-sm text-muted-foreground">Branch access: all branches.</p>
               ) : null}
-              {showBranchPicker(editing.role, editing.permission_grants) && (
-                  <div className="flex flex-col gap-2">
+              {showBranchPicker(editing.role, editing.permission_grants) ? (
+                <div className="flex flex-col gap-2">
                   <Label>{usesMultiBranch(editing.role, editing.permission_grants) ? 'Branches (multi)' : 'Branch'}</Label>
                   {usesMultiBranch(editing.role, editing.permission_grants) ? (
                     <div className="max-h-40 space-y-2 overflow-y-auto rounded-xl border border-border p-3">
@@ -998,7 +1211,7 @@ export default function PeopleManagePage() {
                       value={editing.branch_slug || editing.branch_slugs?.[0] || ''}
                       onValueChange={(branch_slug) => setEditing((r) => ({ ...r, branch_slug, branch_slugs: [branch_slug] }))}
                     >
-                      <SelectTrigger><SelectValue placeholder="Select branch" /></SelectTrigger>
+                      <SelectTrigger className="min-h-11"><SelectValue placeholder="Select branch" /></SelectTrigger>
                       <SelectContent>
                         {branches.map((b) => (
                           <SelectItem key={b.slug} value={b.slug}>{b.name}</SelectItem>
@@ -1007,15 +1220,15 @@ export default function PeopleManagePage() {
                     </Select>
                   )}
                 </div>
-              )}
-              {editing.role === ROLES.ASSISTANT_SUPER_ADMIN && canEditAssistantGrants(profile) && (
+              ) : null}
+              {editing.role === ROLES.ASSISTANT_SUPER_ADMIN && canEditAssistantGrants(profile) ? (
                 <AssistantGrantsEditor
                   grants={editing.permission_grants}
                   onChange={(permission_grants) => setEditing((r) => ({ ...r, permission_grants }))}
                 />
-              )}
+              ) : null}
               <div className="flex flex-col gap-3 rounded-xl border border-border p-3">
-                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Staff toggles</Label>
+                <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Attendance & work schedule</Label>
                 <label className="flex cursor-pointer items-center gap-2 text-sm">
                   <input type="checkbox" checked={editing.attendance_enabled !== false} onChange={() => setEditing((r) => ({ ...r, attendance_enabled: !(r.attendance_enabled !== false) }))} />
                   Attendance clock enabled
@@ -1027,7 +1240,7 @@ export default function PeopleManagePage() {
                 <div className="flex flex-col gap-1">
                   <Label className="text-sm">Employment type</Label>
                   <Select value={editing.employment_type || 'permanent'} onValueChange={(employment_type) => setEditing((r) => ({ ...r, employment_type }))}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="min-h-11"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="permanent">Permanent</SelectItem>
                       <SelectItem value="on_call">On-call</SelectItem>
@@ -1040,9 +1253,10 @@ export default function PeopleManagePage() {
                 <Input
                   type="text"
                   autoComplete="new-password"
+                  className="min-h-11"
                   value={editing.temporary_password || ''}
                   onChange={(e) => setEditing((r) => ({ ...r, temporary_password: e.target.value }))}
-                  placeholder="Leave blank to keep the current password"
+                  placeholder="Leave blank to keep current password"
                 />
               </div>
               {isSuperAdmin(profile) ? (
@@ -1082,7 +1296,7 @@ export default function PeopleManagePage() {
                   value={editing.is_active ? 'active' : 'inactive'}
                   onValueChange={(v) => setEditing((r) => ({ ...r, is_active: v === 'active' }))}
                 >
-                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="min-h-11"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="active">Active</SelectItem>
                     <SelectItem value="inactive">Inactive</SelectItem>
@@ -1090,13 +1304,48 @@ export default function PeopleManagePage() {
                 </Select>
               </div>
               <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
-                <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</Button>
+                <Button type="button" variant="outline" className="min-h-11" onClick={() => setEditing(null)}>Cancel</Button>
+                <Button type="submit" className="min-h-11" disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</Button>
               </DialogFooter>
             </form>
-          )}
+          ) : null}
         </DialogContent>
       </Dialog>
+    </>
+  )
+
+  if (embedded) {
+    return (
+      <div className="hakum-employees flex flex-col gap-5">
+        {directorySection}
+        {accessSection}
+        {modals}
+      </div>
+    )
+  }
+
+  return (
+    <OpsPageShell
+      className="hakum-people hakum-employees"
+      eyebrow="Human Resource"
+      title="Employees & RBAC"
+      description={
+        isSuperAdmin(profile)
+          ? 'Manage employee accounts, role permissions, custom role templates, and temporary Team Lead delegation.'
+          : canEditAssistantGrants(profile)
+            ? 'Manage employee profiles and General Admin grants across assigned branches.'
+            : 'Create and manage Team Leads and bay crew for your assigned branch.'
+      }
+      actions={
+        <Button type="button" className="min-h-11 gap-1.5" onClick={() => setCreateOpen(true)}>
+          <UserPlus className="size-4" aria-hidden />
+          Add employee
+        </Button>
+      }
+    >
+      {directorySection}
+      {accessSection}
+      {modals}
     </OpsPageShell>
   )
 }
