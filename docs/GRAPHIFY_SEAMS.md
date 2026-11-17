@@ -1,6 +1,6 @@
 # Graphify seams — machine facts principals re-ask for
 
-Verified live 2026-09-15. Names only — never paste secret values. Complements `GRAPHIFY_MEMORY.md` / `GRAPHIFY_WORKFLOWS.md` / `GRAPHIFY_DB_DETAIL.md`. Gap analysis: `GRAPHIFY_GAPS.md`.
+Verified live **2026-11-16**. Names only — never paste secret values. Complements `GRAPHIFY_MEMORY.md` / `GRAPHIFY_WORKFLOWS.md` / `GRAPHIFY_DB_DETAIL.md`. Gap analysis: `GRAPHIFY_GAPS.md`.
 
 ## Env names (from `.env.example`)
 
@@ -32,9 +32,10 @@ Disk `api/*.js` gateways: `bookings`, `customer`, `data-center`, `finance`, `not
 | `complete_pos_sale` | `payload jsonb` |
 | `complete_pos_sale_impl` | `payload jsonb` |
 | `send_queue_ticket_to_payment` | `input_booking_id uuid` |
-| `submit_shift_close` | `payload jsonb` |
-| `review_shift_close` | `payload jsonb` |
-| `run_payroll` | `payload jsonb` |
+| `save_daily_sheet` | `payload jsonb` |
+| `submit_daily_sheet` | `p_sheet_id uuid, p_over_short_note text` |
+| `review_daily_sheet` | `payload jsonb` |
+| `reopen_daily_sheet` | `payload jsonb` |
 | `assign_daily_queue_number` | `p_branch text, p_queue_date date` |
 | `assign_persistent_queue_number` | `p_branch text` |
 | `sync_queue_assignments` | `input_booking_id uuid, input_staff_ids uuid[]` |

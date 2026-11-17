@@ -2,6 +2,8 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
+  "cleanUrls": true,
+  "trailingSlash": false,
   "rewrites": [
     { "source": "/api/points-shop", "destination": "/api/bookings?operation=points-shop" },
     { "source": "/api/booking-status", "destination": "/api/bookings?operation=booking-status" },

@@ -1,5 +1,6 @@
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
-import { SYSTEM_TEMPLATE_KEYS } from '../src/lib/notificationTemplates.js'
+import { validateNotificationCopy } from '../src/lib/notificationCopy.js'
+import { SYSTEM_TEMPLATE_KEYS, templateByKey } from '../src/lib/notificationTemplates.js'
 import { loadMergedTemplates } from './notificationTemplatesDb.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
 
@@ -18,19 +19,50 @@ async function loadStaff(db, token) {
   return staff
 }
 
-function clampText(value, max) {
+function trimNullable(value) {
   if (value == null) return null
   const text = String(value).trim()
-  if (!text) return null
-  return text.slice(0, max)
+  return text || null
 }
 
 /**
- * GET   /api/notification-templates  — merged catalog
- * PATCH /api/notification-templates  — upsert SA copy for one key
+ * Pure validator for system notification template updates (shared by tests & API).
+ */
+export function validateSystemTemplatePatch(sys, body = {}) {
+  const allowMultiPart = Boolean(body.allow_multipart)
+  const title = body.title !== undefined ? trimNullable(body.title) : null
+  const pushBody = body.body !== undefined ? trimNullable(body.body) : null
+  const smsBody = body.sms_body !== undefined ? trimNullable(body.sms_body) : null
+  if (allowMultiPart && sys.channel === 'push') {
+    return { ok: false, error: 'Multi-part SMS option applies only to SMS-enabled templates.' }
+  }
+  const check = validateNotificationCopy({
+    channel: sys.channel,
+    title: title || '',
+    body: pushBody || '',
+    sms_body: smsBody || '',
+    allowMultiPart,
+  })
+  if (!check.ok) return { ok: false, error: check.error }
+  const row = {
+    key: sys.key,
+    updated_at: new Date().toISOString(),
+  }
+  if (body.title !== undefined) row.title = title
+  if (body.body !== undefined) row.body = pushBody
+  if (body.sms_body !== undefined) row.sms_body = smsBody
+  if (typeof body.enabled === 'boolean') row.enabled = body.enabled
+  if (typeof body.allow_multipart === 'boolean') row.allow_multipart = body.allow_multipart
+  return { ok: true, row }
+}
+
+/**
+ * GET    /api/notification-templates           — merged catalog with trigger links
+ * PATCH  /api/notification-templates           — validate + upsert SA copy override
+ * DELETE /api/notification-templates?key=...   — reset override row back to default
  */
 export async function handleNotificationTemplatesRequest(req, res) {
-  setCors(res, 'GET, PATCH, OPTIONS')
+  setCors(res, 'GET, PATCH, DELETE, OPTIONS')
   if (req.method === 'OPTIONS') {
     res.statusCode = 204
     res.end()
@@ -45,36 +77,56 @@ export async function handleNotificationTemplatesRequest(req, res) {
 
   if (req.method === 'GET') {
     const templates = await loadMergedTemplates(db)
-    return json(res, 200, { templates })
+    return json(res, 200, { templates, can_edit: WRITE_ROLES.has(staff.role) })
+  }
+
+  if (!WRITE_ROLES.has(staff.role)) {
+    return json(res, 403, { error: 'Only Super Admin can edit templates.' })
   }
 
   if (req.method === 'PATCH') {
-    if (!WRITE_ROLES.has(staff.role)) {
-      return json(res, 403, { error: 'Only Super Admin can edit templates.' })
-    }
     const body = await readJsonBody(req)
     const key = String(body.key || '').trim()
+    const sys = SYSTEM_TEMPLATE_KEYS.includes(key) ? templateByKey(key) : null
+    if (!sys) {
+      return json(res, 400, { error: 'Unknown template key.' })
+    }
+    const check = validateSystemTemplatePatch(sys, body)
+    if (!check.ok) {
+      return json(res, 400, { error: check.error })
+    }
+    const patch = { ...check.row, updated_by: staff.id }
+    let { data, error } = await db
+      .from('notification_templates')
+      .upsert(patch, { onConflict: 'key' })
+      .select('key, title, body, sms_body, enabled, allow_multipart, updated_at')
+      .single()
+    if (error && /column .*allow_multipart.* does not exist/i.test(error.message || '')) {
+      const legacy = { ...patch }
+      delete legacy.allow_multipart
+      const retry = await db
+        .from('notification_templates')
+        .upsert(legacy, { onConflict: 'key' })
+        .select('key, title, body, sms_body, enabled, updated_at')
+        .single()
+      data = retry.data
+      error = retry.error
+    }
+    if (error) return json(res, 400, { error: error.message })
+    const templates = await loadMergedTemplates(db)
+    return json(res, 200, { template: data, templates, can_edit: true })
+  }
+
+  if (req.method === 'DELETE') {
+    const url = new URL(req.url, 'http://localhost')
+    const key = String(url.searchParams.get('key') || '').trim()
     if (!SYSTEM_TEMPLATE_KEYS.includes(key)) {
       return json(res, 400, { error: 'Unknown template key.' })
     }
-    const row = {
-      key,
-      title: body.title !== undefined ? clampText(body.title, 160) : undefined,
-      body: body.body !== undefined ? clampText(body.body, 1000) : undefined,
-      sms_body: body.sms_body !== undefined ? clampText(body.sms_body, 1000) : undefined,
-      enabled: typeof body.enabled === 'boolean' ? body.enabled : undefined,
-      updated_at: new Date().toISOString(),
-      updated_by: staff.id,
-    }
-    const patch = Object.fromEntries(Object.entries(row).filter(([, v]) => v !== undefined))
-    const { data, error } = await db
-      .from('notification_templates')
-      .upsert(patch, { onConflict: 'key' })
-      .select('key, title, body, sms_body, enabled, updated_at')
-      .single()
+    const { error } = await db.from('notification_templates').delete().eq('key', key)
     if (error) return json(res, 400, { error: error.message })
     const templates = await loadMergedTemplates(db)
-    return json(res, 200, { template: data, templates })
+    return json(res, 200, { templates, can_edit: true })
   }
 
   return json(res, 405, { error: 'Method not allowed' })

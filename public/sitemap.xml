@@ -51,6 +51,26 @@
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://www.hakumautocare.com/branches/bacoor</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.hakumautocare.com/branches/batangas</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.hakumautocare.com/branches/imus</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.hakumautocare.com/branches/cavite</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
     <loc>https://www.hakumautocare.com/book</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
@@ -64,6 +84,11 @@
     <loc>https://www.hakumautocare.com/events</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.hakumautocare.com/blog</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://www.hakumautocare.com/blog/best-car-wash-detailing-bacoor</loc>

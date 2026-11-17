@@ -28,3 +28,25 @@ export function normalizeVisibleRoles(raw) {
   const allowed = new Set(PLAN_CATEGORY_ROLE_OPTIONS.map((r) => r.id))
   return [...new Set((raw || []).map((x) => String(x || '').trim()).filter((id) => allowed.has(id)))]
 }
+
+const ROLE_LABEL_MAP = new Map([
+  ...PLAN_CATEGORY_ROLE_OPTIONS.map((r) => [r.id, r.label]),
+  ['investor', 'Investor'],
+])
+
+export function roleLabelForId(roleId) {
+  const id = String(roleId || '').trim()
+  return ROLE_LABEL_MAP.get(id) || id
+}
+
+export function formatRoleLabels(roleIds = []) {
+  return normalizeVisibleRoles(roleIds).map((id) => roleLabelForId(id))
+}
+
+export const PLANNER_MANAGEMENT_ROLES = Object.freeze([
+  'BossMich',
+  'assistant_super_admin',
+  'operations_lead',
+  'admin',
+  'team_lead',
+])

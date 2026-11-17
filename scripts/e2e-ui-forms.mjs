@@ -11,6 +11,7 @@ import { spawn } from 'node:child_process'
 import { mkdirSync, writeFileSync, existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { createClient } from '@supabase/supabase-js'
 import puppeteer from 'puppeteer'
 import { isOpsAuthedUrl, isLoginWallUrl } from './screenshotAuth.mjs'
 import { OPS_DEMO_ACCOUNTS } from '../src/lib/demoAccounts.js'
@@ -142,6 +143,7 @@ async function main() {
     defaultViewport: { width: 1440, height: 900 },
   })
   const page = await browser.newPage()
+  let stamp = ''
 
   try {
     await clearSession(page, base)
@@ -249,7 +251,7 @@ async function main() {
     }
 
     // Fill + submit — React-controlled inputs need native value setter + input event
-    const stamp = `QA${Date.now().toString().slice(-6)}`
+    stamp = `QA${Date.now().toString().slice(-6)}`
     await page.evaluate((vals) => {
       function setReactValue(el, value) {
         const proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype
@@ -311,32 +313,76 @@ async function main() {
       await shot(page, 'public-detailing-submit-FAIL')
     }
 
-    // Edit dialog smoke from planner
+    // Fixed-sequence reorder + Real-time preview + Preview modal from planner (`8eb0990`)
     await page.goto(`${base}/operations/planning?tab=forms`, {
       waitUntil: 'domcontentloaded',
       timeout: 60000,
     })
     await page.waitForSelector('.planner-forms .planner-ticket button', { timeout: 20000 }).catch(() => null)
-    await page.evaluate(() => {
-      const scope = document.querySelector('.planner-forms .planner-ticket') || document.querySelector('.planner-forms') || document
-      const edit = [...scope.querySelectorAll('button')].find((b) =>
-        /^edit$/i.test((b.textContent || '').trim()) || /edit/i.test(b.getAttribute('aria-label') || ''),
-      )
-      edit?.click()
+    const fixedState = await page.evaluate(() => {
+      const text = document.body?.innerText || ''
+      const scope = document.querySelector('.planner-forms') || document
+      const previewBtn = [...scope.querySelectorAll('button')].find((b) => /^preview$/i.test((b.textContent || '').trim()))
+      const hasBuilderEdit = [...scope.querySelectorAll('button')].some((b) => /^(add field|edit)$/i.test((b.textContent || '').trim()))
+      previewBtn?.click()
+      return {
+        hasRealTimePreview: /real-time preview/i.test(text),
+        hasSavePublish: /save & publish/i.test(text),
+        hasBuilderEdit,
+      }
     })
     await page.waitForSelector('[role="dialog"]', { timeout: 8000 }).catch(() => null)
-    const dialogOpen = await page.evaluate(() =>
-      Boolean(document.querySelector('[role="dialog"]')) &&
-        /Slug|Status|Public/i.test(document.querySelector('[role="dialog"]')?.innerText || ''),
-    )
-    if (dialogOpen) {
-      pass('planner.forms.edit_dialog', 'edit UI opened')
-      await shot(page, 'planner-forms-edit')
+    const previewOpen = await page.evaluate(() => Boolean(document.querySelector('[role="dialog"]')))
+    if (fixedState.hasRealTimePreview && fixedState.hasSavePublish && !fixedState.hasBuilderEdit && previewOpen) {
+      pass('planner.forms.fixed_preview', 'fixed sequence + real-time preview + Preview modal verified')
+      await shot(page, 'planner-forms-preview')
     } else {
-      fail('planner.forms.edit_dialog', 'edit dialog not found')
-      await shot(page, 'planner-forms-edit-FAIL')
+      fail('planner.forms.fixed_preview', JSON.stringify({ ...fixedState, previewOpen }))
+      await shot(page, 'planner-forms-preview-FAIL')
+    }
+
+    // Permanent Form Results Board (`/operations/forms/results/detailing-inquiry` -> Detailing Placeholder lane + schedule link)
+    await page.goto(`${base}/operations/forms/results/detailing-inquiry`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 60000,
+    })
+    await page
+      .waitForFunction(
+        (needle) => (document.body?.innerText || '').includes(needle),
+        { timeout: 20000 },
+        `QA Forms ${stamp}`,
+      )
+      .catch(() => null)
+    const resultsText = await page.evaluate(() => document.body?.innerText || '')
+    const hasPlaceholderCol = /Booking Placeholder/i.test(resultsText)
+    const hasScheduleLink = /Detailing Schedule/i.test(resultsText)
+    if (resultsText.includes(`QA Forms ${stamp}`) && hasPlaceholderCol && hasScheduleLink) {
+      pass('planner.forms.results_board', `submission QA Forms ${stamp} synced to Booking Placeholder & Detailing Schedule`)
+      await shot(page, 'form-results-board')
+    } else {
+      fail('planner.forms.results_board', JSON.stringify({ hasCard: resultsText.includes(`QA Forms ${stamp}`), hasPlaceholderCol, hasScheduleLink }))
+      await shot(page, 'form-results-board-FAIL')
     }
   } finally {
+    if (process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY && typeof stamp === 'string') {
+      try {
+        const db = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+          auth: { autoRefreshToken: false, persistSession: false },
+        })
+        const { data: subs } = await db
+          .from('ops_form_submissions')
+          .select('id, plan_card_id, payload')
+          .eq('respondent_label', `QA Forms ${stamp}`)
+        for (const s of subs || []) {
+          const linkedBookingId = s.payload?.booking_id
+          await db.from('ops_form_submissions').delete().eq('id', s.id)
+          if (s.plan_card_id) await db.from('plan_cards').delete().eq('id', s.plan_card_id)
+          if (linkedBookingId) await db.from('bookings').delete().eq('id', linkedBookingId)
+        }
+      } catch {
+        /* best-effort cleanup */
+      }
+    }
     await browser.close().catch(() => null)
     await stop().catch(() => null)
   }

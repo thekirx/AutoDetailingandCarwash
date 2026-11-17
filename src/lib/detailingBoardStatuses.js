@@ -16,6 +16,20 @@ export const SALES_BOARD_STATUSES = [
   'cancelled',
 ]
 
+/** Authoritative state machine transitions for Detailing Schedule bookings (shared by server & UI). */
+export const BOOKING_STATUS_TRANSITIONS = {
+  pending: ['confirmed', 'waiting', 'cancelled'],
+  confirmed: ['waiting', 'in_progress', 'cancelled'],
+  waiting: ['in_progress', 'cancelled', 'no_show'],
+  in_progress: ['final_checking', 'redo', 'cancelled'],
+  final_checking: ['completed', 'cancelled'],
+  for_releasing: ['completed', 'cancelled'],
+  redo: ['in_progress', 'cancelled'],
+  completed: [],
+  cancelled: [],
+  no_show: [],
+}
+
 // Retired lane: kept only so old for_releasing rows still render a label.
 const LABEL_BY_ID = { ...Object.fromEntries(DETAILING_BOARD_STATUSES.map((s) => [s.id, s.label])), for_releasing: 'For releasing' }
 const SHORT_BY_ID = { ...Object.fromEntries(DETAILING_BOARD_STATUSES.map((s) => [s.id, s.shortLabel])), for_releasing: 'Releasing' }

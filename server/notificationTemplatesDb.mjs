@@ -8,9 +8,16 @@ import {
 
 export async function loadMergedTemplates(db) {
   if (!db) return mergeNotificationTemplates([])
-  const { data, error } = await db
+  let { data, error } = await db
     .from('notification_templates')
-    .select('key, title, body, sms_body, enabled, updated_at')
+    .select('key, title, body, sms_body, enabled, allow_multipart, updated_at')
+  if (error && /column .*allow_multipart.* does not exist/i.test(error.message || '')) {
+    const fallback = await db
+      .from('notification_templates')
+      .select('key, title, body, sms_body, enabled, updated_at')
+    data = fallback.data
+    error = fallback.error
+  }
   if (error) {
     console.warn('[notify] templates load failed', error.message)
     return mergeNotificationTemplates([])

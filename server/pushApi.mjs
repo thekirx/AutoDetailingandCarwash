@@ -156,10 +156,10 @@ export async function handlePushSubscribeRequest(req, res) {
     const auth = body.keys?.auth || body.auth
     if (!endpoint || !p256dh || !auth) return json(res, 400, { error: 'endpoint and keys required' }, req)
 
-    let role = userData.user.user_metadata?.role || null
+    let role = null
     let branch_slug = null
-    const { data: staff } = await db.from('staff_profiles').select('role, branch_slug').eq('id', userId).maybeSingle()
-    if (staff) {
+    const { data: staff } = await db.from('staff_profiles').select('role, branch_slug, is_active').eq('id', userId).maybeSingle()
+    if (staff && staff.is_active !== false) {
       role = staff.role
       branch_slug = staff.branch_slug
     } else {

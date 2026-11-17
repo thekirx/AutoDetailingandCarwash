@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Edit3, Plus, Trash2 } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { ClipboardList, Edit3, Plus, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -21,6 +22,7 @@ import ContentStudioModal from '@/components/content/ContentStudioModal'
 import { supabase } from '@/lib/supabase'
 import { listBranches } from '@/lib/adminApi'
 import { slugifyEventTitle } from '@/lib/planningPart6'
+import { permanentFormResultsPath } from '@/lib/formResults'
 import {
   deleteCmsEvent,
   prepareEventForEditor,
@@ -30,7 +32,7 @@ import { toast } from 'sonner'
 
 export { default as PlanningFormsPanel } from './PlanningFormsSmartPanel'
 
-export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
+export function PlanningEventsPanel({ canEdit, highlightId }) {
   const [events, setEvents] = useState([])
   const [opsForms, setOpsForms] = useState([])
   const [branchOptions, setBranchOptions] = useState([])
@@ -61,6 +63,7 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
         .select('id, name, slug, status, public_enabled')
         .eq('is_active', true)
         .neq('status', 'archived')
+        .neq('kind', 'event')
         .order('name'),
       listBranches().catch(() => []),
     ])
@@ -263,9 +266,12 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
           </div>
           {canEdit ? (
             <div className="flex flex-wrap gap-2">
-              {onCreateForm ? (
-                <Button type="button" variant="outline" className="min-h-11" onClick={onCreateForm}>Create event form</Button>
-              ) : null}
+              <Button type="button" variant="outline" className="min-h-11" asChild>
+                <Link to="/operations/forms/results">
+                  <ClipboardList size={16} className="mr-1.5" aria-hidden />
+                  Form Results Board
+                </Link>
+              </Button>
               <Button type="button" variant="outline" className="min-h-11" onClick={openStudioCreate}>
                 <Edit3 size={16} className="mr-1.5" aria-hidden />
                 Studio Editor
@@ -294,6 +300,14 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
                 <div className="flex flex-wrap gap-2">
                   {ev.slug ? (
                     <>
+                      {ev.ops_forms?.slug ? (
+                        <Button size="sm" variant="outline" className="max-xl:min-h-11" asChild>
+                          <Link to={permanentFormResultsPath(ev.ops_forms.slug)}>
+                            <ClipboardList size={14} className="mr-1" aria-hidden />
+                            Results
+                          </Link>
+                        </Button>
+                      ) : null}
                       <Button size="sm" variant="outline" className="max-xl:min-h-11" asChild>
                         <a href={`/events/${ev.slug}`} target="_blank" rel="noreferrer">Open page</a>
                       </Button>
@@ -369,6 +383,14 @@ export function PlanningEventsPanel({ canEdit, highlightId, onCreateForm }) {
                           <a className="inline-flex items-center text-sm text-primary underline max-xl:min-h-11" href={`/events/${ev.slug}`} target="_blank" rel="noreferrer">
                             /events/{ev.slug}
                           </a>
+                          {ev.ops_forms?.slug ? (
+                            <Button size="sm" variant="outline" className="cursor-pointer max-xl:min-h-11" asChild>
+                              <Link to={permanentFormResultsPath(ev.ops_forms.slug)}>
+                                <ClipboardList size={13} className="mr-1" aria-hidden />
+                                Results
+                              </Link>
+                            </Button>
+                          ) : null}
                           <Button size="sm" variant="outline" className="cursor-pointer max-xl:min-h-11" onClick={() => copyLink(ev)}>Copy</Button>
                         </>
                       ) : null}

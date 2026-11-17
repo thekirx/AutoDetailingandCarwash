@@ -1,10 +1,13 @@
-import { notifyBookingStatus } from './notifyBooking.mjs'
+import {
+  computeServiceSizePricing,
+  insertBookingPlaceholderAndNotify,
+  resolveOptionalCustomerId,
+} from './detailingBookingIntake.mjs'
 import { bearer, json, readJsonBody, setCors, clientIp, rateLimit } from './httpUtil.mjs'
 import { resolveBookingCustomerId } from './publicBookCustomer.mjs'
 import { friendCodeAccountError, normalizeReferral, referralRequiredError } from '../src/lib/referralSource.js'
 import { listReferralStaff } from './referralStaff.mjs'
 import { plateValidationError } from '../src/lib/customerAuth.js'
-import { inferPhPricingSize } from '../src/lib/phVehicleSizes.js'
 import { isBookingBoardService } from '../src/lib/serviceKinds.js'
 import { isCustomerBookable } from '../src/lib/bookingLead.js'
 import {
@@ -90,37 +93,30 @@ export async function handlePublicBookRequest(req, res) {
 
     const { data: svc } = await db
       .from('services')
-      .select('id, slug, pay_category, price_minor, is_active, service_size_prices(size_slug, price_minor)')
+      .select('id, name, slug, pay_category, price_minor, is_active, is_archived, parent_service_id, service_size_prices(size_slug, price_minor)')
       .eq('id', service_id)
       .maybeSingle()
-    if (!svc || svc.is_active === false) return json(res, 400, { error: 'Service not found.' })
+    if (!svc || svc.is_active === false || svc.is_archived === true) {
+      return json(res, 400, { error: 'Service not found.' })
+    }
     // Online /book is the detailing pipeline only — wash & packages use the shop queue.
     if (!isBookingBoardService(svc)) {
       return json(res, 400, {
         error: 'Online booking is for detailing only (Ceramic, Tint, PPF, Paint Maintenance). Same-day wash and packages use the shop queue.',
       })
     }
-    const sizeMap = Object.fromEntries((svc.service_size_prices || []).map((p) => [p.size_slug, p.price_minor]))
-    const rawSize = String(vehicle_type || '').trim().toLowerCase().replace(/\s+/g, '_')
-    const clientIsPricing = ['small', 'medium', 'large', 'extra_large'].includes(rawSize)
-    const catalogSize = String(catalogHit?.size_slug || '').trim()
-    const pricingSlug = clientIsPricing
-      ? rawSize
-      : catalogSize || inferPhPricingSize(vehicle_make, vehicle_model) || 'medium'
-    const priced =
-      sizeMap[pricingSlug] ?? sizeMap.medium ?? svc.price_minor ?? 0
+    const { pricingSlug, priceMinor: priced } = computeServiceSizePricing({
+      service: svc,
+      catalogSize: catalogHit?.size_slug,
+      vehicleType: vehicle_type,
+      vehicleMake: vehicle_make,
+      vehicleModel: vehicle_model,
+    })
 
     // Attach only when JWT maps to customers.role=customer (never phone / metadata)
-    let customer_id = null
     const token = bearer(req)
-    if (token) {
-      const { data: userData } = await db.auth.getUser(token)
-      const uid = userData?.user?.id
-      if (uid) {
-        const { data: cust } = await db.from('customers').select('id, role').eq('id', uid).maybeSingle()
-        customer_id = resolveBookingCustomerId({ authUid: uid, customerRole: cust?.role })
-      }
-    }
+    const customer_id = await resolveOptionalCustomerId(db, token)
+    void resolveBookingCustomerId
 
     let staff = []
     try {
@@ -218,26 +214,13 @@ export async function handlePublicBookRequest(req, res) {
       ...(needs_assessment ? { notes: ASSESSMENT_NOTE } : {}),
     }
 
-    const { data: booking, error } = await db.from('bookings').insert(insert).select('*').single()
-    if (error) return json(res, 400, { error: error.message })
-
-    if (appliedVoucher) {
-      await db.from('promo_voucher_redemptions').insert({
-        voucher_id: appliedVoucher.id,
-        booking_id: booking.id,
-        customer_id: customer_id || null,
-        discount_minor: promoDiscountMinor,
-        consumed_at: null,
-      })
-    }
-
-    // Best-effort notify — never fail the booking
-    let notify = null
-    try {
-      notify = await notifyBookingStatus(booking, 'pending')
-    } catch (err) {
-      notify = { error: String(err.message || err) }
-    }
+    const { booking, notify } = await insertBookingPlaceholderAndNotify({
+      db,
+      insertRow: insert,
+      appliedVoucher,
+      promoDiscountMinor,
+      customerId: customer_id,
+    })
 
     return json(res, 200, {
       ok: true,

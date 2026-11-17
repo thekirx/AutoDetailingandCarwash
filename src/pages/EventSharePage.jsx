@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { Edit3, Eye, EyeOff, Plus, Sparkles, Trash2 } from 'lucide-react'
+import { ClipboardList, Edit3, Eye, EyeOff, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import ContentBlockRenderer from '@/components/content/ContentBlockRenderer'
 import ContentStudioModal from '@/components/content/ContentStudioModal'
@@ -9,15 +9,13 @@ import { canManageSiteContent } from '@/auth/permissions'
 import { supabase } from '@/lib/supabase'
 import { listBranches } from '@/lib/adminApi'
 import { shareFormUrl } from '@/lib/opsForms'
-import { createPublicFormGuard, validatePublicFormGuard } from '@/lib/publicFormGuard'
-import { submitPublicInquiry } from '@/lib/publicInquiryApi'
+import { permanentFormResultsPath } from '@/lib/formResults'
 import { usePageMeta } from '@/lib/pageMeta'
 import {
   deleteCmsEvent,
   prepareEventForEditor,
   saveCmsEvent,
 } from '@/lib/contentCmsApi'
-import FormLegalNotice from '@/components/FormLegalNotice'
 
 export default function EventSharePage() {
   const { slug } = useParams()
@@ -28,9 +26,6 @@ export default function EventSharePage() {
   const [forms, setForms] = useState([])
   const [branchOptions, setBranchOptions] = useState([])
   const [error, setError] = useState('')
-  const [form, setForm] = useState({ name: '', phone: '', email: '' })
-  const [status, setStatus] = useState('idle')
-  const [guard, setGuard] = useState(() => createPublicFormGuard())
   const [studioOpen, setStudioOpen] = useState(false)
   const [studioDraft, setStudioDraft] = useState(null)
 
@@ -116,59 +111,29 @@ export default function EventSharePage() {
   async function handleTogglePublish() {
     if (!event) return
     const nextPublished = !event.is_published
-    const prepared = prepareEventForEditor({
-      ...event,
-      is_published: nextPublished,
-    })
-    const res = await saveCmsEvent(prepared, { publish: nextPublished })
-    if (!res.ok) {
-      toast.error(res.error || 'Could not update event status')
-      return
+    try {
+      const prepared = prepareEventForEditor({
+        ...event,
+        is_published: nextPublished,
+      })
+      await saveCmsEvent(prepared, { publish: nextPublished })
+      toast.success(nextPublished ? 'Event published' : 'Event moved to draft')
+      await loadEvent()
+    } catch (err) {
+      toast.error(err?.message || 'Could not update event status')
     }
-    toast.success(nextPublished ? 'Event published' : 'Event moved to draft')
-    await loadEvent()
   }
 
   async function handleDeleteEvent() {
     if (!event?.id) return
     if (!window.confirm(`Delete event "${event.title}"?`)) return
-    const res = await deleteCmsEvent(event.id)
-    if (!res.ok) {
-      toast.error(res.error || 'Could not delete event')
-      return
+    try {
+      await deleteCmsEvent(event.id)
+      toast.success('Event deleted')
+      navigate('/events')
+    } catch (err) {
+      toast.error(err?.message || 'Could not delete event')
     }
-    toast.success('Event deleted')
-    navigate('/events')
-  }
-
-  async function register(e) {
-    e.preventDefault()
-    if (!event) return
-    setStatus('loading')
-    const blocked = validatePublicFormGuard(guard)
-    if (blocked) {
-      setError(blocked)
-      setStatus('idle')
-      return
-    }
-    const result = await submitPublicInquiry(
-      'event_registration',
-      {
-        event_id: event.id,
-        name: form.name.trim(),
-        phone: form.phone.trim(),
-        email: form.email.trim() || '',
-      },
-      guard,
-    )
-    if (!result.ok) {
-      setError(result.error)
-      setStatus('idle')
-      return
-    }
-    setStatus('success')
-    setForm({ name: '', phone: '', email: '' })
-    setGuard(createPublicFormGuard())
   }
 
   const attached = event?.ops_forms
@@ -201,7 +166,7 @@ export default function EventSharePage() {
                   {event.is_published ? 'Live Event' : 'Draft Event'}
                 </span>
                 <span className="bd-cms-toolbar-text">
-                  Edit event details, upload banners &amp; gallery photos, attach smart RSVP forms, or publish.
+                  Edit event details, upload banners &amp; gallery photos, attach smart forms, or publish.
                 </span>
               </div>
               <div className="bd-cms-toolbar-actions">
@@ -221,6 +186,15 @@ export default function EventSharePage() {
                   <Trash2 size={14} />
                   Delete
                 </button>
+                {attached?.slug ? (
+                  <Link
+                    to={permanentFormResultsPath(attached.slug)}
+                    className="bd-cms-btn is-link"
+                  >
+                    <ClipboardList size={14} />
+                    Form Results
+                  </Link>
+                ) : null}
                 <Link to="/operations/content" className="bd-cms-btn is-link">
                   CMS Studio
                 </Link>
@@ -229,7 +203,6 @@ export default function EventSharePage() {
           ) : null}
 
           {error && <p className="form-error">{error}</p>}
-          {status === 'success' && <p>Registration confirmed.</p>}
           {event && (
             <>
               {event.banner_url ? (
@@ -255,24 +228,6 @@ export default function EventSharePage() {
                   </a>
                 </p>
               )}
-              {!formOpen && (
-                <form onSubmit={register} className="booking-form" style={{ marginTop: 32 }}>
-                  <label>Name<input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-                  <label>Phone<input required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></label>
-                  <label>Email<input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
-                  <label className="sr-only" aria-hidden="true" style={{ position: 'absolute', left: '-9999px' }}>
-                    Company website
-                    <input
-                      tabIndex={-1}
-                      autoComplete="off"
-                      value={guard.honeypot}
-                      onChange={(e) => setGuard((g) => ({ ...g, honeypot: e.target.value }))}
-                    />
-                  </label>
-                  <FormLegalNotice id="event-share-legal" className="form-legal-notice booking-span-2" />
-                  <button className="button button-blue" disabled={status === 'loading'}>Register</button>
-                </form>
-              )}
             </>
           )}
           <p className="hakum-article-footer">
@@ -290,8 +245,9 @@ export default function EventSharePage() {
           open={studioOpen}
           onOpenChange={setStudioOpen}
           kind="event"
-          initialData={studioDraft}
-          opsForms={forms}
+          profile={profile}
+          initialValue={studioDraft}
+          forms={forms}
           branchOptions={branchOptions}
           onSaved={(saved) => {
             if (saved?.slug && saved.slug !== slug) {

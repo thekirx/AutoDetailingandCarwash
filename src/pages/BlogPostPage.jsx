@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Edit3, Eye, EyeOff, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
-import ContentBlockRenderer from '@/components/content/ContentBlockRenderer'
+import BlogArticlePreview from '@/components/content/BlogArticlePreview'
 import ContentStudioModal from '@/components/content/ContentStudioModal'
 import { useAuth } from '@/auth/AuthProvider'
 import { canManageSiteContent } from '@/auth/permissions'
@@ -22,15 +22,19 @@ import {
 
 function decoratePost(row) {
   if (!row) return null
-  const meta = extractContentMeta(row.content_blocks)
-  const stats = estimateReadingStats(row.content_blocks, row.excerpt)
+  const meta = extractContentMeta(row)
+  const stats = estimateReadingStats(row.content_blocks, row.title, row.excerpt)
   return {
     ...row,
     category: meta.category || row.category || 'Technical Guide',
-    regionLabel: meta.region || row.regionLabel || 'Cavite & Batangas',
+    region: meta.region || row.region || 'all',
+    regionLabel: row.regionLabel || meta.region || 'Cavite & Batangas',
     ai_summary: meta.ai_summary || row.ai_summary || row.excerpt || '',
-    read_minutes: Number(meta.read_minutes || row.read_minutes || stats.minutes || 4),
-    featured: Boolean(meta.featured ?? row.featured),
+    seo_title: meta.seo_title || row.seo_title || '',
+    seo_description: meta.seo_description || row.seo_description || '',
+    seo_keywords: meta.seo_keywords || row.seo_keywords || '',
+    read_minutes: Number(meta.read_minutes || row.read_minutes || stats.readMinutes || 4),
+    is_featured: Boolean(meta.is_featured ?? row.is_featured ?? row.featured),
   }
 }
 
@@ -103,8 +107,8 @@ export default function BlogPostPage() {
   // Post links get pasted into Facebook and WhatsApp; before this every one of
   // them scraped as the homepage (BUG-051).
   usePageMeta({
-    title: post?.title,
-    description: post?.ai_summary || post?.excerpt,
+    title: post?.seo_title || post?.title,
+    description: post?.seo_description || post?.ai_summary || post?.excerpt,
     path: slug ? `/blog/${slug}` : '/events',
     image: post?.cover_url || '/og-image.png',
     jsonLd: articleJsonLd,
@@ -124,47 +128,36 @@ export default function BlogPostPage() {
 
   async function handleTogglePublish() {
     if (!post) return
-    const nextPublished = !(post.is_published !== false && post.status !== 'draft')
-    const prepared = prepareBlogForEditor({
-      ...post,
-      is_published: nextPublished,
-      status: nextPublished ? 'published' : 'draft',
-    })
-    const res = await saveCmsBlog(prepared, { publish: nextPublished })
-    if (!res.ok) {
-      toast.error(res.error || 'Could not update article status')
-      return
+    const currentlyPublished = post.status === 'published' && post.is_published !== false
+    const nextPublished = !currentlyPublished
+    try {
+      const prepared = prepareBlogForEditor({
+        ...post,
+        is_published: nextPublished,
+        status: nextPublished ? 'published' : 'draft',
+      })
+      const res = await saveCmsBlog(prepared, { publish: nextPublished })
+      toast.success(nextPublished ? 'Article published' : 'Article moved to draft')
+      if (res?.data || res?.slug) setPost(decoratePost(res.data || res))
+      else await loadPost()
+    } catch (err) {
+      toast.error(err?.message || 'Could not update article status')
     }
-    toast.success(nextPublished ? 'Article published' : 'Article moved to draft')
-    if (res.data) setPost(decoratePost(res.data))
-    else await loadPost()
   }
 
   async function handleDeletePost() {
     if (!post) return
-    if (!window.confirm(`Delete "${post.title}"?`)) return
-    if (post.isBuiltInGuide && String(post.id || '').startsWith('guide-')) {
-      const archived = prepareBlogForEditor({
-        ...post,
-        is_published: false,
-        status: 'archived',
-      })
-      const res = await saveCmsBlog({ ...archived, status: 'archived', is_published: false }, { publish: false })
-      if (!res.ok) {
-        toast.error(res.error || 'Could not archive guide')
-        return
-      }
-      toast.success('Guide archived')
+    const isBuiltInOnly =
+      Boolean(post.is_builtin_guide || post.isBuiltInGuide) && !/^[0-9a-f-]{36}$/i.test(String(post.id || ''))
+    const verb = isBuiltInOnly ? 'Archive' : 'Delete'
+    if (!window.confirm(`${verb} "${post.title}"?`)) return
+    try {
+      await deleteCmsBlog(post, profile)
+      toast.success(isBuiltInOnly ? 'Guide archived' : 'Article deleted')
       navigate('/blog')
-      return
+    } catch (err) {
+      toast.error(err?.message || `Could not ${verb.toLowerCase()} article`)
     }
-    const res = await deleteCmsBlog(post.id)
-    if (!res.ok) {
-      toast.error(res.error || 'Could not delete article')
-      return
-    }
-    toast.success('Article deleted')
-    navigate('/blog')
   }
 
   const relatedGuides = useMemo(
@@ -172,121 +165,82 @@ export default function BlogPostPage() {
     [slug],
   )
 
-  const isDraft = post && (post.is_published === false || post.status === 'draft')
+  const isDraft = post && (post.is_published === false || post.status === 'draft' || post.status === 'archived')
+
+  const studioToolbar = canEdit && post ? (
+    <div className="bd-cms-toolbar" role="region" aria-label="Article Studio Controls">
+      <div className="bd-cms-toolbar-info">
+        <span className="bd-cms-badge">
+          <Sparkles size={13} />
+          {isDraft ? 'Draft Mode' : 'Live Article'}
+        </span>
+        <span className="bd-cms-toolbar-text">
+          Edit blocks, upload WordPress-style photos, preview full screen in real time, or update status.
+        </span>
+      </div>
+      <div className="bd-cms-toolbar-actions">
+        <button type="button" className="bd-cms-btn is-primary" onClick={openEditPost}>
+          <Edit3 size={14} />
+          Edit Article
+        </button>
+        <button type="button" className="bd-cms-btn" onClick={handleTogglePublish}>
+          {isDraft ? <Eye size={14} /> : <EyeOff size={14} />}
+          {isDraft ? 'Publish Now' : 'Move to Draft'}
+        </button>
+        <button type="button" className="bd-cms-btn" onClick={openNewPost}>
+          <Plus size={14} />
+          New Article
+        </button>
+        <button type="button" className="bd-cms-btn is-danger" onClick={handleDeletePost}>
+          <Trash2 size={14} />
+          Delete
+        </button>
+        <Link to="/operations/content" className="bd-cms-btn is-link">
+          CMS Studio
+        </Link>
+      </div>
+    </div>
+  ) : null
 
   return (
     <>
-      <section className="inner-hero">
-        <div className="public-shell" style={{ maxWidth: 780 }}>
-          <p className="eyebrow eyebrow-light">
-            {post?.regionLabel || post?.category || 'Blog'}
-            {isDraft ? ' · DRAFT PREVIEW' : ''}
-          </p>
-          <h1 className="display-title">{post?.title || 'Blog'}</h1>
-          {post && (
-            <p className="inner-hero-copy">
-              {post.author_label || 'Hakum Auto Care'}
-              {post.read_minutes ? ` · ${post.read_minutes} min read` : ''}
-              {post.published_at ? ` · ${new Date(post.published_at).toLocaleDateString()}` : ''}
+      {error && !post ? (
+        <section className="bredesign bd-sec" style={{ paddingTop: 140, minHeight: '60vh' }}>
+          <div className="bd-wrap" style={{ maxWidth: 780 }}>
+            <p className="bd-eyebrow">Hakum Journal</p>
+            <h1>Article unavailable</h1>
+            <p style={{ marginTop: 14, color: 'rgba(241, 241, 237, 0.84)' }}>{error}</p>
+            <p style={{ marginTop: 24 }}>
+              <Link to="/blog" className="hakum-block-cta is-primary">
+                Back to Journal &amp; Guides
+              </Link>
             </p>
-          )}
-        </div>
-      </section>
-      <section className="content-section">
-        <div className="public-shell hakum-article" style={{ maxWidth: 780 }}>
-          {canEdit && post ? (
-            <div className="bd-cms-toolbar" role="region" aria-label="Article Studio Controls" style={{ marginBottom: 24 }}>
-              <div className="bd-cms-toolbar-info">
-                <span className="bd-cms-badge">
-                  <Sparkles size={13} />
-                  {isDraft ? 'Draft Mode' : 'Live Article'}
-                </span>
-                <span className="bd-cms-toolbar-text">
-                  Edit blocks, upload WordPress-style photos, preview viewports, or manage publication status.
-                </span>
-              </div>
-              <div className="bd-cms-toolbar-actions">
-                <button type="button" className="bd-cms-btn is-primary" onClick={openEditPost}>
-                  <Edit3 size={14} />
-                  Edit Article
-                </button>
-                <button type="button" className="bd-cms-btn" onClick={handleTogglePublish}>
-                  {isDraft ? <Eye size={14} /> : <EyeOff size={14} />}
-                  {isDraft ? 'Publish Now' : 'Move to Draft'}
-                </button>
-                <button type="button" className="bd-cms-btn" onClick={openNewPost}>
-                  <Plus size={14} />
-                  New Article
-                </button>
-                <button type="button" className="bd-cms-btn is-danger" onClick={handleDeletePost}>
-                  <Trash2 size={14} />
-                  Delete
-                </button>
-                <Link to="/operations/content" className="bd-cms-btn is-link">
-                  CMS Studio
-                </Link>
-              </div>
-            </div>
-          ) : null}
-
-          {error && <p className="form-error">{error}</p>}
-          {post?.cover_url ? (
-            <img className="hakum-article-cover" src={post.cover_url} alt={post.title || ''} />
-          ) : null}
-
-          {post?.ai_summary ? (
-            <aside className="bd-article-summary-box" aria-label="Executive summary">
-              <p className="bd-eyebrow">Quick Summary</p>
-              <p className="bd-article-summary-text">{post.ai_summary}</p>
-              {post.branch_info ? (
-                <div className="bd-article-branch-meta">
-                  <strong>{post.branch_info.name}:</strong> {post.branch_info.landmark} ·{' '}
-                  <a href={`tel:${post.branch_info.phone.replace(/\s+/g, '')}`} className="dark-link">
-                    {post.branch_info.phone}
-                  </a>
-                </div>
+          </div>
+        </section>
+      ) : (
+        <BlogArticlePreview
+          post={post || { title: 'Loading Hakum Journal…' }}
+          relatedGuides={relatedGuides}
+          toolbar={
+            <>
+              {studioToolbar}
+              {error ? (
+                <p className="form-error" style={{ marginTop: 12 }}>
+                  {error}
+                </p>
               ) : null}
-            </aside>
-          ) : null}
-
-          {post && <ContentBlockRenderer blocks={post.content_blocks} />}
-
-          {relatedGuides.length > 0 ? (
-            <nav className="bd-article-related" aria-label="Related regional guides">
-              <p className="bd-eyebrow">More Regional &amp; Technical Guides</p>
-              <div className="bd-article-related-grid">
-                {relatedGuides.map((g) => (
-                  <Link key={g.slug} to={`/blog/${g.slug}`} className="bd-article-related-card">
-                    <span className="bd-post-badge">{g.regionLabel || g.category}</span>
-                    <strong>{g.title}</strong>
-                  </Link>
-                ))}
-              </div>
-            </nav>
-          ) : null}
-
-          <p className="hakum-article-footer">
-            <Link className="dark-link" to="/blog">
-              All posts
-            </Link>
-            {' · '}
-            <Link className="dark-link" to="/events">
-              Events
-            </Link>
-            {' · '}
-            <Link className="dark-link" to="/book">
-              Book a visit
-            </Link>
-          </p>
-        </div>
-      </section>
+            </>
+          }
+        />
+      )}
 
       {canEdit ? (
         <ContentStudioModal
           open={studioOpen}
           onOpenChange={setStudioOpen}
           kind="blog"
-          initialData={studioDraft}
+          profile={profile}
+          initialValue={studioDraft}
           onSaved={(saved) => {
             if (saved?.slug && saved.slug !== slug) {
               navigate(`/blog/${saved.slug}`)

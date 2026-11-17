@@ -1,11 +1,11 @@
 import { buildTintLead, validateTintConfig } from '../src/lib/tintFinder.js'
-import { json, readJsonBody, setCors, clientIp, rateLimit } from './httpUtil.mjs'
+import { bearer, json, readJsonBody, setCors, clientIp, rateLimit } from './httpUtil.mjs'
 import { notifyStaffEvent } from './notifyOpsEvent.mjs'
+import { submitPublicOpsFormAndSync } from './publicOpsForm.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
 
 const text = (value) => String(value ?? '').trim()
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const SITE_TYPES = ['commercial_lot', 'mall_retail', 'fuel_station', 'village_condo']
 
 /* Mirrors the client guard: a filled honeypot or a form submitted faster than a
@@ -73,31 +73,10 @@ const builders = {
       },
     }
   },
-
-  event_registration(body) {
-    const eventId = text(body.event_id || body.eventId)
-    const name = text(body.name)
-    const phone = text(body.phone)
-    const emailRaw = text(body.email).toLowerCase()
-    if (!eventId || !name || !phone) {
-      return { error: 'Name, phone, and event are required.' }
-    }
-    if (!UUID_PATTERN.test(eventId)) return { error: 'Invalid event.' }
-    if (emailRaw && !EMAIL_PATTERN.test(emailRaw)) return { error: 'Enter a valid email address.' }
-    return {
-      table: 'event_registrations',
-      row: {
-        event_id: eventId,
-        name,
-        phone,
-        email: emailRaw || null,
-      },
-    }
-  },
 }
 
 /**
- * Public inquiry intake — partnership, complaint, and event registration.
+ * Public inquiry intake — partnership, complaint, tint finder, and smart ops forms.
  * Anon lost direct INSERT on these tables (API geofence migrations),
  * so submissions come through here and are written with the service role.
  */
@@ -111,17 +90,67 @@ export async function handlePublicInquiryRequest(req, res) {
   if (req.method !== 'POST') return json(res, 405, { error: 'Method not allowed' })
 
   try {
-    rateLimit({ key: `public-inquiry:${clientIp(req)}`, limit: 10, windowMs: 60_000 })
     const body = await readJsonBody(req)
+    const kind = text(body.kind)
 
-    const build = builders[text(body.kind)]
-    if (!build && text(body.kind) !== 'tint_finder') return json(res, 400, { error: 'Unknown inquiry type.' })
+    if (kind === 'event_registration') {
+      rateLimit({ key: `public-inquiry:${clientIp(req)}`, limit: 10, windowMs: 60_000 })
+      return json(res, 410, { error: 'Event RSVP registration has been retired.' })
+    }
 
-    const blocked = guardError(body)
+    const build = builders[kind]
+    if (!build && kind !== 'tint_finder' && kind !== 'ops_form') {
+      rateLimit({ key: `public-inquiry:${clientIp(req)}`, limit: 10, windowMs: 60_000 })
+      return json(res, 400, { error: 'Unknown inquiry type.' })
+    }
+
+    const token = bearer(req)
+    let staffId = null
+    let cachedDb = null
+    const getDb = () => (cachedDb ||= admin())
+    if (kind === 'ops_form' && text(body.source) === 'staff' && token) {
+      const { data: userData } = await getDb().auth.getUser(token)
+      if (userData?.user?.id) {
+        const { data: staff } = await getDb()
+          .from('staff_profiles')
+          .select('id, is_active')
+          .eq('id', userData.user.id)
+          .eq('is_active', true)
+          .maybeSingle()
+        if (staff?.is_active) staffId = staff.id
+      }
+    }
+
+    if (staffId) {
+      rateLimit({ key: `public-inquiry-staff:${staffId}`, limit: 60, windowMs: 60_000 })
+    } else {
+      rateLimit({ key: `public-inquiry:${clientIp(req)}`, limit: 10, windowMs: 60_000 })
+    }
+
+    const blocked = staffId ? null : guardError(body)
     if (blocked) return json(res, 400, { error: blocked })
 
-    if (text(body.kind) === 'tint_finder') {
-      const db = admin()
+    if (kind === 'ops_form') {
+      const result = await submitPublicOpsFormAndSync({
+        db: getDb(),
+        slug: body.slug,
+        payload: body.payload,
+        calendarAt: body.calendar_at || null,
+        respondentLabel: body.respondent_label || null,
+        source: staffId ? 'staff' : 'public',
+        authToken: token,
+      })
+      if (result.error) return json(res, result.status || 400, { error: result.error })
+      return json(res, 200, {
+        ok: true,
+        id: result.submission?.id || null,
+        formKind: result.formKind,
+        booking: result.booking,
+      })
+    }
+
+    if (kind === 'tint_finder') {
+      const db = getDb()
       const { data: settings, error: configError } = await db.from('tint_finder_settings').select('config').eq('id', 1).single()
       if (configError || validateTintConfig(settings?.config)) return json(res, 503, { error: 'Tint booking is temporarily unavailable. Please message the branch.' })
       const { row, error: invalid } = buildTintLead(body, settings.config)
@@ -139,11 +168,10 @@ export async function handlePublicInquiryRequest(req, res) {
     const { table, row, error: invalid } = build(body)
     if (invalid) return json(res, 400, { error: invalid })
 
-    const db = admin()
+    const db = getDb()
     const { data: saved, error } = await db.from(table).insert(row).select('id').single()
     if (error) return json(res, 500, { error: 'We could not send that just now. Please try again.' })
 
-    const kind = text(body.kind)
     if (kind === 'partnership' || kind === 'complaint') {
       try {
         await notifyStaffEvent(db, 'inquiry', { id: saved.id, kind, name: row.name || row.customer_name, category: row.category, branch: row.branch, city: row.city })

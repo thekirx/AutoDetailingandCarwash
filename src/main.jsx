@@ -16,7 +16,40 @@ import './styles/daily-sheet.css'
 import './styles-customer-app.css'
 import './styles/bredesign.css'
 
-registerSW({ immediate: true })
+const updateSW = import.meta.env.PROD
+  ? registerSW({
+      immediate: true,
+      onNeedRefresh() {
+        if (typeof window !== 'undefined') {
+          window.__hakumNeedRefresh = true
+          window.dispatchEvent(new CustomEvent('hakum:sw-update', { detail: { waiting: true } }))
+        }
+      },
+      onRegisteredSW(_swUrl, registration) {
+        if (typeof window !== 'undefined' && registration) {
+          window.__hakumSwRegistration = registration
+          if (registration.waiting) {
+            window.__hakumNeedRefresh = true
+            window.dispatchEvent(new CustomEvent('hakum:sw-update', { detail: { waiting: true } }))
+          }
+        }
+      },
+    })
+  : () => Promise.resolve()
+
+// Clear any leftover Workbox `/sw.js` in dev so Vite HMR and localhost routes never serve stale HTML
+if (import.meta.env.DEV && typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
+  navigator.serviceWorker.getRegistrations().then((regs) => {
+    for (const reg of regs) {
+      const scriptUrl = reg.active?.scriptURL || reg.installing?.scriptURL || reg.waiting?.scriptURL || ''
+      if (/\/sw\.js(?:[?#]|$)/.test(scriptUrl)) reg.unregister().catch(() => {})
+    }
+  }).catch(() => {})
+}
+
+if (typeof window !== 'undefined') {
+  window.__hakumUpdateSW = updateSW
+}
 
 // Service worker notificationclick → SPA deep link when WindowClient.navigate is unavailable
 if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
@@ -28,7 +61,9 @@ if (typeof navigator !== 'undefined' && 'serviceWorker' in navigator) {
       if (next.origin !== window.location.origin) return
       const path = `${next.pathname}${next.search}${next.hash}` || '/'
       if (`${window.location.pathname}${window.location.search}${window.location.hash}` === path) return
-      window.location.assign(path)
+      const navEvent = new CustomEvent('hakum:sw-navigate', { cancelable: true, detail: { path } })
+      const notCanceled = window.dispatchEvent(navEvent)
+      if (notCanceled) window.location.assign(path)
     } catch {
       /* ignore malformed */
     }

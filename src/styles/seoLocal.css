@@ -1,0 +1,263 @@
+/* Scoped SEO local finder, city landing, and article breadcrumb styles inside .bredesign */
+.bredesign .bd-near-finder {
+  margin-top: clamp(20px, 3vw, 32px);
+  padding: clamp(18px, 3vw, 28px);
+  border-radius: 16px;
+  border: 1px solid var(--bd-rule);
+  background: linear-gradient(155deg, var(--bd-navy-2) 0%, var(--bd-navy-3) 100%);
+  box-shadow: var(--bd-lit);
+}
+
+.bredesign .bd-near-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.bredesign .bd-near-head h2,
+.bredesign .bd-near-head h3 {
+  margin: 4px 0 0;
+  color: var(--bd-paper);
+}
+
+.bredesign .bd-near-copy {
+  margin: 6px 0 0;
+  max-width: 62ch;
+  color: var(--bd-ink-2);
+  font-size: 0.95rem;
+  line-height: 1.55;
+}
+
+.bredesign .bd-near-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.bredesign .bd-city-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 1px solid var(--bd-rule);
+  background: var(--bd-navy);
+  color: var(--bd-ink-2);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.bredesign .bd-city-chip:hover {
+  border-color: var(--bd-accent);
+  color: var(--bd-paper);
+}
+
+.bredesign .bd-city-chip.is-active {
+  border-color: var(--bd-blue);
+  background: var(--bd-blue);
+  color: var(--bd-paper);
+}
+
+.bredesign .bd-near-results {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+
+@media (min-width: 760px) {
+  .bredesign .bd-near-results {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.bredesign .bd-near-card {
+  display: grid;
+  gap: 10px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  border: 1px solid var(--bd-rule);
+  background: var(--bd-navy);
+}
+
+.bredesign .bd-near-card.is-closest {
+  border-color: var(--bd-blue);
+  box-shadow: 0 0 0 1px var(--bd-blue-soft);
+}
+
+.bredesign .bd-near-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.bredesign .bd-near-card-top h4 {
+  margin: 0;
+  color: var(--bd-paper);
+  font-size: 1.05rem;
+}
+
+.bredesign .bd-near-distance {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--bd-blue-soft);
+  color: var(--bd-accent);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.bredesign .bd-near-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.bredesign .bd-city-directory {
+  margin-top: 22px;
+  display: grid;
+  gap: 12px;
+}
+
+@media (min-width: 760px) {
+  .bredesign .bd-city-directory {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.bredesign .bd-city-tile {
+  display: grid;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--bd-rule);
+  background: var(--bd-navy-2);
+  color: var(--bd-paper);
+  text-decoration: none;
+  transition: border-color 160ms ease, transform 160ms ease;
+}
+
+.bredesign .bd-city-tile:hover {
+  border-color: var(--bd-accent);
+  transform: translateY(-2px);
+}
+
+.bredesign .bd-city-tile p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--bd-ink-2);
+  line-height: 1.45;
+}
+
+.bredesign .bd-city-tile span {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--bd-accent);
+}
+
+.bredesign .bd-breadcrumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 12px;
+  font-size: 0.82rem;
+  color: var(--bd-ink-3);
+}
+
+.bredesign .bd-breadcrumbs a {
+  color: var(--bd-accent);
+  text-decoration: none;
+}
+
+.bredesign .bd-breadcrumbs a:hover {
+  text-decoration: underline;
+}
+
+.bredesign .bd-city-grid {
+  display: grid;
+  gap: 20px;
+}
+
+@media (min-width: 840px) {
+  .bredesign .bd-city-grid {
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+    align-items: start;
+  }
+}
+
+.bredesign .bd-city-panel {
+  padding: 22px;
+  border-radius: 16px;
+  border: 1px solid var(--bd-rule);
+  background: var(--bd-navy-2);
+  color: var(--bd-paper);
+}
+
+.bredesign .bd-city-panel h2,
+.bredesign .bd-city-panel h3 {
+  margin: 0 0 10px;
+  color: var(--bd-paper);
+}
+
+.bredesign .bd-city-panel ul {
+  margin: 12px 0 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+  color: var(--bd-ink-2);
+  line-height: 1.55;
+}
+
+.bredesign .bd-corridor-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.bredesign .bd-corridor-pill {
+  padding: 4px 11px;
+  border-radius: 999px;
+  border: 1px solid var(--bd-rule);
+  background: var(--bd-navy);
+  color: var(--bd-ink-2);
+  font-size: 0.82rem;
+}
+
+.bredesign .bd-ai-callout {
+  margin: 0 0 24px;
+  padding: 18px 20px;
+  border-radius: 14px;
+  border: 1px solid var(--bd-rule);
+  background: var(--bd-navy-2);
+  color: var(--bd-paper);
+}
+
+.bredesign .bd-ai-callout-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 8px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--bd-accent);
+}
+
+.bredesign .bd-ai-callout p {
+  margin: 0;
+  color: var(--bd-ink-2);
+  line-height: 1.6;
+}

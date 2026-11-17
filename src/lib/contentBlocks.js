@@ -175,6 +175,7 @@ export function extractContentMeta(itemOrBlocks = {}) {
     featured: isFeatured,
     seo_title: item?.seo_title || firstMeta.seo_title || '',
     seo_description: item?.seo_description || firstMeta.seo_description || '',
+    seo_keywords: item?.seo_keywords || firstMeta.seo_keywords || '',
   }
 }
 
@@ -193,6 +194,7 @@ export function attachContentMeta(blocks = [], meta = {}) {
     featured: isFeatured,
     seo_title: String(meta.seo_title || '').trim(),
     seo_description: String(meta.seo_description || '').trim(),
+    seo_keywords: String(meta.seo_keywords || '').trim(),
   }
   return list.map((block, index) => (index === 0 ? { ...block, post_meta: cleanMeta } : block))
 }

@@ -1,14 +1,21 @@
 import { useEffect, useLayoutEffect } from 'react'
+import { BRANCH_MAP_LISTINGS } from './homeBranches.js'
 
 const SITE = 'Hakum Auto Care'
+const PRODUCTION_ORIGIN = 'https://www.hakumautocare.com'
 const DEFAULT_DESCRIPTION =
-  'Premium car wash, detailing, ceramic coating, and PPF in Bacoor and Batangas. Book online and track the live queue.'
+  'Hakum Auto Care — One of the fastest-growing and most trusted automotive detailing, paint protection (PPF & ceramic coating), and car wash studios in the Philippines, serving Bacoor, Imus, Cavite, and Batangas.'
 
-function absoluteUrl(path = '/') {
-  if (typeof window === 'undefined') return path
-  const origin = window.location.origin
-  if (!path || path === '/') return origin + '/'
-  return `${origin}${path.startsWith('/') ? path : `/${path}`}`
+const VERIFIED_SOCIAL_PROFILES = [
+  'https://www.facebook.com/share/1GHerg8pxV/',
+  'https://www.instagram.com/_hakumautocare',
+  'https://www.tiktok.com/@hakum_autocare',
+]
+
+function absoluteUrl(path = '/', origin) {
+  const base = origin || (typeof window !== 'undefined' ? window.location.origin : PRODUCTION_ORIGIN)
+  if (!path || path === '/') return `${base}/`
+  return `${base}${path.startsWith('/') ? path : `/${path}`}`
 }
 
 /** Normalise a route to a single leading slash, '/' when absent. */
@@ -106,20 +113,69 @@ export function buildLocalBusinessJsonLd({
   hoursBySlug = {},
   areaServed = ['Bacoor', 'Batangas'],
   telephone = '+639156296096',
+  origin,
 } = {}) {
+  const coreOfferCatalog = {
+    '@type': 'OfferCatalog',
+    name: 'Automotive Detailing, Paint Protection & Car Wash Services',
+    itemListElement: [
+      { '@type': 'Offer', itemOffered: { '@type': 'Service', name: 'Signature pH-Neutral Car Wash' } },
+      { '@type': 'Offer', itemOffered: { '@type': 'Service', name: 'Deep Interior & Exterior Auto Detailing' } },
+      { '@type': 'Offer', itemOffered: { '@type': 'Service', name: 'Multi-Stage Paint Correction' } },
+      { '@type': 'Offer', itemOffered: { '@type': 'Service', name: 'Kisho Ceramic Coating' } },
+      { '@type': 'Offer', itemOffered: { '@type': 'Service', name: 'ClearPro Paint Protection Film (PPF)' } },
+      { '@type': 'Offer', itemOffered: { '@type': 'Service', name: 'Nano Ceramic Window Tint' } },
+    ],
+  }
+
+  const serviceArea = [
+    { '@type': 'City', name: 'Bacoor' },
+    { '@type': 'City', name: 'Imus' },
+    { '@type': 'AdministrativeArea', name: 'Cavite' },
+    { '@type': 'City', name: 'Batangas City' },
+    { '@type': 'AdministrativeArea', name: 'Batangas' },
+    { '@type': 'Country', name: 'Philippines' },
+  ]
+
   const nodes = branches.map((b) => {
     // A branch that has not opened yet publishes an empty specification rather
     // than the defaults the hours table happens to carry.
     const hours = b.coming_soon ? [] : openingHoursSpecification(hoursBySlug[b.slug] || [])
+    const mapInfo = BRANCH_MAP_LISTINGS[b.slug]
+    const lat = Number.isFinite(Number(b.latitude)) ? Number(b.latitude) : mapInfo?.lat
+    const lng = Number.isFinite(Number(b.longitude)) ? Number(b.longitude) : mapInfo?.lng
+    const hasMapUrl = mapInfo?.cid ? `https://www.google.com/maps?cid=${mapInfo.cid}` : undefined
+    const canonicalBranchUrl = ['bacoor', 'batangas', 'imus', 'cavite'].includes(b.slug)
+      ? absoluteUrl(`/branches/${b.slug}`, origin)
+      : absoluteUrl(`/branches#${b.slug}`, origin)
+
     return {
       '@type': 'AutomotiveBusiness',
-      '@id': `${absoluteUrl('/')}#${b.slug}`,
+      additionalType: 'https://schema.org/AutoWash',
+      '@id': `${absoluteUrl('/', origin)}#${b.slug}`,
       name: `${SITE} ${publicName(b)}`.trim(),
-      url: absoluteUrl(`/branches#${b.slug}`),
+      url: canonicalBranchUrl,
+      image: absoluteUrl('/og-image.png', origin),
       areaServed,
+      serviceArea,
+      hasOfferCatalog: coreOfferCatalog,
+      ...(hasMapUrl ? { hasMap: hasMapUrl } : {}),
+      ...(lat != null && lng != null
+        ? { geo: { '@type': 'GeoCoordinates', latitude: lat, longitude: lng } }
+        : {}),
       ...(b.coming_soon || hours.length ? { openingHoursSpecification: hours } : {}),
-      ...(b.address ? { address: { '@type': 'PostalAddress', addressLocality: publicName(b), streetAddress: b.address } } : {}),
+      ...(b.address
+        ? {
+            address: {
+              '@type': 'PostalAddress',
+              addressLocality: publicName(b),
+              addressCountry: 'PH',
+              streetAddress: b.address,
+            },
+          }
+        : {}),
       ...(b.phone ? { telephone: b.phone } : { telephone }),
+      sameAs: [...VERIFIED_SOCIAL_PROFILES, ...(hasMapUrl ? [hasMapUrl] : [])],
     }
   })
 
@@ -127,36 +183,64 @@ export function buildLocalBusinessJsonLd({
     '@context': 'https://schema.org',
     '@graph': nodes.length
       ? nodes
-      : [{ '@type': 'AutomotiveBusiness', name: SITE, areaServed, telephone }],
+      : [
+          {
+            '@type': 'AutomotiveBusiness',
+            additionalType: 'https://schema.org/AutoWash',
+            name: SITE,
+            areaServed,
+            serviceArea,
+            hasOfferCatalog: coreOfferCatalog,
+            telephone,
+          },
+        ],
   }
 }
 
 /** Site-level graph: what the org is, and what the domain represents. */
-export function buildSiteJsonLd({ areaServed = ['Bacoor', 'Batangas'] } = {}) {
+export function buildSiteJsonLd({
+  areaServed = ['Philippines', 'Cavite', 'Bacoor', 'Imus', 'Batangas'],
+  origin,
+} = {}) {
+  const baseUrl = absoluteUrl('/', origin)
   return {
     '@context': 'https://schema.org',
     '@graph': [
       {
         '@type': 'Organization',
-        '@id': `${absoluteUrl('/')}#organization`,
+        '@id': `${baseUrl}#organization`,
         name: SITE,
-        url: absoluteUrl('/'),
+        alternateName: 'Hakum Automotive Care',
+        description: DEFAULT_DESCRIPTION,
+        url: baseUrl,
+        telephone: '+639156296096',
         areaServed,
+        knowsAbout: [
+          'Car Wash',
+          'Auto Detailing',
+          'Paint Protection Film (PPF)',
+          'Ceramic Coating',
+          'Paint Correction',
+          'Window Tint',
+        ],
+        sameAs: VERIFIED_SOCIAL_PROFILES,
         logo: {
           '@type': 'ImageObject',
-          url: absoluteUrl('/icon-512.png'),
-          contentUrl: absoluteUrl('/icon-512.png'),
+          url: absoluteUrl('/icon-512.png', origin),
+          contentUrl: absoluteUrl('/icon-512.png', origin),
           width: 512,
           height: 512,
         },
-        image: absoluteUrl('/og-image.png'),
+        image: absoluteUrl('/og-image.png', origin),
       },
       {
         '@type': 'WebSite',
-        '@id': `${absoluteUrl('/')}#website`,
-        url: absoluteUrl('/'),
+        '@id': `${baseUrl}#website`,
+        url: baseUrl,
         name: SITE,
-        publisher: { '@id': `${absoluteUrl('/')}#organization` },
+        inLanguage: 'en-PH',
+        description: DEFAULT_DESCRIPTION,
+        publisher: { '@id': `${baseUrl}#organization` },
       },
     ],
   }

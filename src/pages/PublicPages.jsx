@@ -9,6 +9,8 @@ import { LoopArrows, LoopBar, LoopStage } from '../components/public/bredesign/L
 import { formatStartingPrice, useStartingPrices, WASH_CARD_SERVICE_SLUG } from '../lib/serviceStartingPrices'
 import { buildLocalBusinessJsonLd, usePageMeta } from '../lib/pageMeta'
 import BdPageHero from '../components/public/bredesign/BdPageHero'
+import NearestBranchFinder from '../components/public/NearestBranchFinder'
+import { LOCAL_BRANCH_PAGES } from '../lib/localBranchPages'
 import { ContactChannels, ContactCollab, ContactSocials } from './ContactPage'
 import useReveal from '../components/public/bredesign/useReveal'
 
@@ -166,9 +168,9 @@ export function BranchesPage() {
   )
 
   usePageMeta({
-    title: 'Branches',
+    title: 'Car Wash & Detailing Branches Near Me — Bacoor, Imus, Cavite & Batangas',
     description:
-      'Find Hakum Auto Care branches in Bacoor and Batangas. Get directions, call, or open the live queue.',
+      'Find the nearest Hakum Auto Care automotive detailing, paint protection, and car wash studio across Bacoor, Imus, Cavite, and Batangas City. Get directions, call, or check the live queue.',
     path: '/branches',
     jsonLd: branchJsonLd,
     jsonLdId: 'hakum-branches',
@@ -233,6 +235,18 @@ export function BranchesPage() {
           {!loading && !visibleBranches.length && !error ? (
             <p className="bd-state">No branches listed yet.</p>
           ) : null}
+
+          <NearestBranchFinder branches={visibleBranches} />
+
+          <div className="bd-city-directory bd-reveal">
+            {LOCAL_BRANCH_PAGES.map((city) => (
+              <Link key={city.slug} to={`/branches/${city.slug}`} className="bd-city-tile">
+                <strong>{city.cityName}</strong>
+                <p>{city.landmarkAddress}</p>
+                <span>Explore {city.shortName} services &amp; map →</span>
+              </Link>
+            ))}
+          </div>
         </div>
       </section>
 

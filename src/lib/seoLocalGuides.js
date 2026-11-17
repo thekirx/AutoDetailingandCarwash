@@ -679,14 +679,45 @@ export function buildBlogPostJsonLd(post, origin = 'https://www.hakumautocare.co
   if (!post?.title || !post?.slug) return null
   const base = String(origin || 'https://www.hakumautocare.com').replace(/\/$/, '')
   const url = `${base}/blog/${post.slug}`
+  const headline = String(post.seo_title || post.title).trim()
+  const description = String(post.seo_description || post.ai_summary || post.excerpt || '').trim()
+  const cover = post.cover_url
+    ? String(post.cover_url).startsWith('http')
+      ? post.cover_url
+      : `${base}${post.cover_url.startsWith('/') ? '' : '/'}${post.cover_url}`
+    : `${base}/og-image.png`
+  const blockText = Array.isArray(post.content_blocks)
+    ? post.content_blocks
+        .map((b) => [b?.text, b?.title, b?.caption, Array.isArray(b?.items) ? b.items.join(' ') : ''].filter(Boolean).join(' '))
+        .join(' ')
+    : ''
+  const wordCount = `${post.title} ${description} ${blockText}`.trim().split(/\s+/).filter(Boolean).length
+
   return {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
     '@id': `${url}#article`,
     mainEntityOfPage: url,
-    headline: post.title,
-    description: post.ai_summary || post.excerpt || '',
+    url,
+    inLanguage: 'en-PH',
+    headline,
+    description,
+    image: cover,
+    articleSection: post.category || 'Automotive Care & Detailing',
+    ...(wordCount > 0 ? { wordCount } : {}),
+    ...(post.seo_keywords ? { keywords: post.seo_keywords } : {}),
+    about: [
+      { '@type': 'Thing', name: 'Car Wash' },
+      { '@type': 'Thing', name: 'Auto Detailing' },
+      { '@type': 'Thing', name: 'Ceramic Coating' },
+      { '@type': 'Thing', name: 'Paint Protection Film (PPF)' },
+    ],
+    spatialCoverage: [
+      { '@type': 'Place', name: 'Philippines' },
+      { '@type': 'Place', name: post.regionLabel || 'Bacoor, Imus, Cavite, and Batangas' },
+    ],
     datePublished: post.published_at || '2026-10-15T08:00:00+08:00',
+    dateModified: post.updated_at || post.published_at || '2026-10-15T08:00:00+08:00',
     author: {
       '@type': 'Organization',
       name: post.author_label || 'Hakum Auto Care',
@@ -698,7 +729,7 @@ export function buildBlogPostJsonLd(post, origin = 'https://www.hakumautocare.co
       url: `${base}/`,
       logo: {
         '@type': 'ImageObject',
-        url: `${base}/og-image.png`,
+        url: `${base}/icon-512.png`,
       },
     },
   }

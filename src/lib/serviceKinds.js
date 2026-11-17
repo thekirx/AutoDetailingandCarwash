@@ -86,7 +86,17 @@ export function catalogLineKind({ itemType, payCategory, slug } = {}) {
   // Live PPF rows use pay_category detailing. Check the slug before that category
   // or film installs get the ceramic/detailing crew split.
   if (cat === 'ppf' || s === 'paint-protection-film' || s.includes('ppf')) return 'ppf'
-  if (s === 'ceramic-coating' || s === 'paint-maintenance' || s === 'nano-ceramic-tint' || cat === 'detailing') {
+  if (
+    s === 'ceramic-coating' ||
+    s === 'ultimate-ceramic-coating' ||
+    s === 'platinum-ceramic-coating' ||
+    s === 'paint-maintenance' ||
+    s === 'ceramic-paint-maintenance' ||
+    s === 'nano-ceramic-tint' ||
+    s === 'nano-ceramic-pro-tint' ||
+    s === 'nano-ceramic-pro-black-series-tint' ||
+    cat === 'detailing'
+  ) {
     return 'detailing'
   }
   if (cat === 'package') return 'package'

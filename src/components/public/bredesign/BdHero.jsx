@@ -280,9 +280,9 @@ export default function BdHero() {
           </a>
         </div>
         <p className="bd-hero-lede" aria-hidden={hideCopy || undefined}>
-          From ceramic coating to paint protection film, our team approaches every vehicle the same
-          way: like it matters. That means showroom-level attention to every panel, every time — not
-          just for the cars that look brand new, but for every vehicle that comes through our doors.
+          One of the fastest-growing and most trusted automotive detailing, paint protection (PPF
+          &amp; ceramic coating), and car wash studios in the Philippines — serving Bacoor, Imus,
+          Cavite, and Batangas with showroom-level attention to every panel, every time.
         </p>
       </div>
     </section>

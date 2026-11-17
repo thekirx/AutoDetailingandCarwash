@@ -2,28 +2,19 @@
 
 export const FORM_KINDS = [
   { value: 'complaint', label: 'Feedback' },
-  { value: 'event', label: 'Events RSVP' },
   { value: 'equipment_repair', label: 'Equipment repairs' },
   { value: 'cash_advance', label: 'Cash advance' },
   { value: 'detailing', label: 'Detailing services' },
   { value: 'custom', label: 'Custom forms' },
 ]
 
-/** Stable public slugs for the four templates (edit-only; never free-create). */
+/** Stable public slugs for the fixed templates (edit-only; never free-create). */
 export const FIXED_FORM_TEMPLATES = [
   {
     kind: 'complaint',
     slug: 'customer-complaints',
     name: 'Customer Complaints',
     description: 'Tell us what went wrong so we can make it right.',
-    public_enabled: true,
-    status: 'published',
-  },
-  {
-    kind: 'event',
-    slug: 'events-rsvp',
-    name: 'Events RSVP',
-    description: 'Confirm your spot for the next Hakum event.',
     public_enabled: true,
     status: 'published',
   },
@@ -181,16 +172,6 @@ export function templateFields(kind, { branchSlugs } = {}) {
       { key: 'reason', label: 'Reason', type: 'textarea', required: true },
     ])
   }
-  if (kind === 'event') {
-    return normalizeFields([
-      { key: 'name', label: 'Full name', type: 'text', required: true },
-      { key: 'phone', label: 'Phone', type: 'phone', required: true },
-      { key: 'email', label: 'Email', type: 'email', required: false },
-      { key: 'branch', label: 'Preferred branch', type: 'select', required: false, options: branches },
-      { key: 'guests', label: 'Guests', type: 'number', required: false },
-      { key: 'notes', label: 'Notes', type: 'textarea', required: false },
-    ])
-  }
   if (kind === 'detailing') {
     return normalizeFields([
       { key: 'customer_name', label: 'Full name', type: 'text', required: true },
@@ -270,7 +251,7 @@ export function formatBranchSlugLabel(slug, branches = []) {
 export function defaultFormSettings(kind = 'complaint') {
   return {
     push_to_planning: true,
-    show_on_calendar: kind === 'event' || isCreatableFormKind(kind),
+    show_on_calendar: isCreatableFormKind(kind),
     show_logo: true,
     logo_url: DEFAULT_FORM_LOGO,
     header_title: '',
@@ -368,7 +349,6 @@ export async function formQrDataUrl(url, size = 200) {
 export function submissionTitle(form, payload = {}) {
   const name = payload.customer_name || payload.name || payload.full_name || payload.employee_name || ''
   if (form?.kind === 'complaint') return `Complaint: ${name || 'Customer'}`
-  if (form?.kind === 'event') return `RSVP: ${name || 'Guest'}`
   if (form?.kind === 'equipment_repair') return `Equipment: ${payload.equipment || name || 'Report'}`
   if (form?.kind === 'cash_advance') return `Cash advance: ${name || 'Employee'}`
   if (form?.kind === 'detailing') {
@@ -515,4 +495,22 @@ export function draftFromTemplate(template, { branchSlugs = [] } = {}) {
     fields: withLiveBranchOptions(copy.fields || [], branchSlugs),
     settings: normalizeFormSettings({ ...copy.settings, slug_locked: false }, kind), slug: '',
   }
+}
+
+/** Move a fixed form field up/down or to another index within its step group without mutating input metadata. */
+export function moveFormField(fields, fromIndex, toIndex, steps = null) {
+  const rows = normalizeFields(fields)
+  if (fromIndex < 0 || fromIndex >= rows.length || toIndex < 0 || toIndex >= rows.length || fromIndex === toIndex) {
+    return rows
+  }
+  const groupFor = (field) => {
+    if (!Array.isArray(steps) || !steps.length) return 0
+    const idx = steps.findIndex((s) => s.id === field?.step)
+    return idx >= 0 ? idx : 0
+  }
+  if (groupFor(rows[fromIndex]) !== groupFor(rows[toIndex])) return rows
+  const next = [...rows]
+  const [moved] = next.splice(fromIndex, 1)
+  next.splice(toIndex, 0, moved)
+  return next
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import ContentBlockRenderer from '@/components/content/ContentBlockRenderer'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
@@ -26,19 +26,35 @@ export default function CustomerBlogPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    supabase
+  const loadPosts = useCallback(async () => {
+    const { data, error: e } = await supabase
       .from('blogs')
-      .select('id, title, slug, excerpt, cover_url, author_label, published_at, content_blocks')
+      .select('id, title, slug, excerpt, cover_url, author_label, published_at, status, is_published, content_blocks')
       .eq('is_published', true)
       .eq('status', 'published')
       .order('published_at', { ascending: false })
-      .then(({ data, error: e }) => {
-        if (e) setError('')
-        setPosts(mergeBlogPostsWithGuides(data || []))
-        setLoading(false)
-      })
+    if (e) setError('')
+    const merged = mergeBlogPostsWithGuides(data || [])
+    setPosts(merged)
+    setActive((prev) => {
+      if (!prev) return null
+      return merged.find((p) => (prev.id && p.id === prev.id) || (prev.slug && p.slug === prev.slug)) || prev
+    })
+    setLoading(false)
   }, [])
+
+  useEffect(() => {
+    loadPosts()
+    const channel = supabase
+      ?.channel?.('customer-blogs-live')
+      ?.on('postgres_changes', { event: '*', schema: 'public', table: 'blogs' }, () => {
+        loadPosts()
+      })
+      ?.subscribe?.()
+    return () => {
+      if (channel) supabase?.removeChannel?.(channel)
+    }
+  }, [loadPosts])
 
   if (active) {
     return (

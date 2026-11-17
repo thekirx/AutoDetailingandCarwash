@@ -5,6 +5,7 @@ export const PLANNER_TABS = [
   { id: 'board', label: 'Tasks', hint: 'Filter, create, and assign work', icon: 'tasks' },
   { id: 'calendar', label: 'Calendar', hint: 'Tasks, bookings, and events', icon: 'calendar' },
   { id: 'forms', label: 'Forms', hint: 'List, edit, and results', icon: 'forms' },
+  { id: 'results', label: 'Form Results', hint: 'Completed form & event responses', icon: 'results' },
   { id: 'events', label: 'Events', hint: 'Meets and RSVP links', icon: 'events' },
   { id: 'review', label: 'Review', hint: 'Accept or send back proof', icon: 'review' },
   { id: 'configure', label: 'Configure', hint: 'Lists, categories, and boards', icon: 'settings' },
@@ -71,6 +72,38 @@ export function boardVisibleToProfile(board, profile) {
   if (Array.isArray(roles) && roles.length > 0) return categoryVisibleToRole(board, profile?.role)
   if (hidesCashAdvancePlannerBoard(profile) && isCashAdvancePlannerBoard(board)) return false
   return true
+}
+
+/**
+ * Exact effective visibility descriptor for Configure UI so saved vs default rules are transparent.
+ */
+export function describeBoardVisibility(board, roleOptions = []) {
+  const savedRoles = Array.isArray(board?.visible_roles) ? board.visible_roles.filter(Boolean) : []
+  if (savedRoles.length > 0) {
+    return {
+      mode: 'custom',
+      isLegacyDefault: false,
+      effectiveRoleIds: savedRoles,
+      hiddenRoleIds: roleOptions.map((r) => r.id).filter((id) => !savedRoles.includes(id)),
+    }
+  }
+  if (isCashAdvancePlannerBoard(board)) {
+    const allowed = roleOptions
+      .map((r) => r.id)
+      .filter((id) => !CASH_ADVANCE_BOARD_HIDDEN_ROLES.has(id))
+    return {
+      mode: 'legacy_cash_advance',
+      isLegacyDefault: true,
+      effectiveRoleIds: allowed,
+      hiddenRoleIds: [...CASH_ADVANCE_BOARD_HIDDEN_ROLES],
+    }
+  }
+  return {
+    mode: 'all',
+    isLegacyDefault: false,
+    effectiveRoleIds: roleOptions.map((r) => r.id),
+    hiddenRoleIds: [],
+  }
 }
 
 export function visiblePlannerBoards(boards, profile) {

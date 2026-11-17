@@ -13,6 +13,7 @@ import { handleNotificationSettingsRequest } from '../server/notificationSetting
 import { handleNotificationBroadcastRequest } from '../server/notificationBroadcastApi.mjs'
 import { handleNotificationBroadcastKindsRequest } from '../server/notificationBroadcastKindsApi.mjs'
 import { handleNotificationTemplatesRequest } from '../server/notificationTemplatesApi.mjs'
+import { handleSmsTemplatesRequest } from '../server/smsTemplatesApi.mjs'
 import { handleBirthdayGreetingsRequest } from '../server/birthdayGreetingsApi.mjs'
 import { handleBookingRemindersRequest } from '../server/bookingRemindersApi.mjs'
 import { handleMaintenanceRemindersRequest } from '../server/maintenanceRemindersApi.mjs'
@@ -34,6 +35,7 @@ export const operations = Object.freeze({
   'notification-broadcast': handleNotificationBroadcastRequest,
   'notification-broadcast-kinds': handleNotificationBroadcastKindsRequest,
   'notification-templates': handleNotificationTemplatesRequest,
+  'sms-templates': handleSmsTemplatesRequest,
   'birthday-greetings': handleBirthdayGreetingsRequest,
   'booking-reminders': handleBookingRemindersRequest,
 })

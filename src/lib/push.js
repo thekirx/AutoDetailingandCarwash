@@ -26,12 +26,33 @@ export function pushUnsupportedReason() {
   return null
 }
 
+async function readyRegistrationWithTimeout(timeoutMs = 3500) {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return null
+  try {
+    const existing = await navigator.serviceWorker.getRegistration?.()
+    if (existing?.active) return existing
+  } catch {
+    /* ignore */
+  }
+  return Promise.race([
+    navigator.serviceWorker.ready.catch(() => null),
+    new Promise((resolve) => {
+      window.setTimeout(() => resolve(null), timeoutMs)
+    }),
+  ])
+}
+
 export async function getPushStatus() {
   if (!pushSupported()) return 'unsupported'
   if (Notification.permission === 'denied') return 'denied'
-  const reg = await navigator.serviceWorker.ready
-  const sub = await reg.pushManager.getSubscription()
-  return sub ? 'subscribed' : 'idle'
+  const reg = await readyRegistrationWithTimeout()
+  if (!reg?.pushManager) return 'idle'
+  try {
+    const sub = await reg.pushManager.getSubscription()
+    return sub ? 'subscribed' : 'idle'
+  } catch {
+    return 'idle'
+  }
 }
 
 async function waitForServiceWorker() {

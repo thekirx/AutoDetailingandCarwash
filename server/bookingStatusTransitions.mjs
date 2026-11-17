@@ -16,19 +16,10 @@
  * the POS handoff branch in bookingStatus.mjs, and only after Final checking.
  */
 
+import { BOOKING_STATUS_TRANSITIONS } from '../src/lib/detailingBoardStatuses.js'
+
 /** Cancelling is allowed from any live stage; terminal states are listed too so a same-state no-op is caught upstream. */
-export const BOOKING_STATUS_TRANSITIONS = {
-  pending: ['confirmed', 'waiting', 'cancelled'],
-  confirmed: ['waiting', 'in_progress', 'cancelled'],
-  waiting: ['in_progress', 'cancelled', 'no_show'],
-  in_progress: ['final_checking', 'redo', 'cancelled'],
-  final_checking: ['completed', 'cancelled'],
-  for_releasing: ['completed', 'cancelled'],
-  redo: ['in_progress', 'cancelled'],
-  completed: [],
-  cancelled: [],
-  no_show: [],
-}
+export { BOOKING_STATUS_TRANSITIONS }
 
 /** Statuses a booking can sit in before any work starts. */
 export const BOOKING_STATUS_LIVE = Object.entries(BOOKING_STATUS_TRANSITIONS)

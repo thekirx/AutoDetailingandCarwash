@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Pencil, Plus, Settings2, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Search, Settings2, Trash2 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canManageSiteContent } from '@/auth/permissions'
 import ContentStudioModal from '@/components/content/ContentStudioModal'
@@ -19,8 +19,10 @@ import {
   SEO_COMPARISON_ROWS,
   SEO_LOCAL_FAQS,
   SEO_REGIONAL_PILLARS,
+  buildEventsBlogSeoJsonLd,
   mergeBlogPostsWithGuides,
 } from '../lib/seoLocalGuides'
+import { usePageMeta } from '../lib/pageMeta'
 
 const REGION_FILTERS = [
   { id: 'all', label: 'All Guides & Stories' },
@@ -37,6 +39,7 @@ export function BlogListSection() {
   const [dbPosts, setDbPosts] = useState([])
   const [error, setError] = useState('')
   const [activeRegion, setActiveRegion] = useState('all')
+  const [searchQuery, setSearchQuery] = useState('')
   const [showDrafts, setShowDrafts] = useState(false)
   const [editorPost, setEditorPost] = useState(null)
 
@@ -73,9 +76,23 @@ export function BlogListSection() {
   )
 
   const visiblePosts = useMemo(() => {
-    if (activeRegion === 'all') return allPosts
-    return allPosts.filter((p) => (p.region || 'craft') === activeRegion)
-  }, [allPosts, activeRegion])
+    const q = searchQuery.trim().toLowerCase()
+    return allPosts.filter((p) => {
+      if (activeRegion !== 'all' && (p.region || 'craft') !== activeRegion) return false
+      if (!q) return true
+      const hay = `${p.title || ''} ${p.excerpt || ''} ${p.regionLabel || ''} ${p.category || ''}`.toLowerCase()
+      return hay.includes(q)
+    })
+  }, [allPosts, activeRegion, searchQuery])
+
+  const featuredPost =
+    activeRegion === 'all' && !searchQuery.trim() && visiblePosts.length > 1
+      ? visiblePosts.find((p) => p.is_featured || p.featured) || visiblePosts[0]
+      : null
+
+  const gridPosts = featuredPost
+    ? visiblePosts.filter((p) => (p.id || p.slug) !== (featuredPost.id || featuredPost.slug))
+    : visiblePosts
 
   async function handleQuickDelete(post) {
     if (!window.confirm(`Delete "${post.title}"?`)) return
@@ -150,23 +167,96 @@ export function BlogListSection() {
             </div>
           )}
 
-          <div className="bd-blog-filters bd-reveal" role="tablist" aria-label="Filter blog guides by location or topic">
-            {REGION_FILTERS.map((filter) => {
-              const active = activeRegion === filter.id
-              return (
-                <button
-                  key={filter.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  className={`bd-blog-filter-pill ${active ? 'is-active' : ''}`}
-                  onClick={() => setActiveRegion(filter.id)}
-                >
-                  {filter.label}
-                </button>
-              )
-            })}
+          <div className="bd-blog-controls bd-reveal">
+            <div className="bd-blog-filters" role="tablist" aria-label="Filter blog guides by location or topic">
+              {REGION_FILTERS.map((filter) => {
+                const active = activeRegion === filter.id
+                return (
+                  <button
+                    key={filter.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    className={`bd-blog-filter-pill ${active ? 'is-active' : ''}`}
+                    onClick={() => setActiveRegion(filter.id)}
+                  >
+                    {filter.label}
+                  </button>
+                )
+              })}
+            </div>
+            <div className="bd-blog-search-wrap">
+              <Search size={15} className="bd-blog-search-icon" aria-hidden="true" />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search ceramic, PPF, Bacoor, Batangas…"
+                aria-label="Search blog guides and stories"
+                className="bd-blog-search-input"
+              />
+            </div>
           </div>
+
+          {featuredPost ? (() => {
+            const fpPublished = featuredPost.status === 'published' && featuredPost.is_published !== false
+            return (
+              <article className={`bd-blog-featured bd-reveal ${!fpPublished ? 'is-draft' : ''}`.trim()}>
+                {featuredPost.cover_url ? (
+                  <Link to={`/blog/${featuredPost.slug}`} className="bd-blog-featured-media">
+                    <img src={featuredPost.cover_url} alt={featuredPost.title} loading="eager" />
+                  </Link>
+                ) : null}
+                <div className="bd-blog-featured-body">
+                  <div className="bd-post-meta-row">
+                    <span className="bd-post-badge">Lead Guide · {featuredPost.regionLabel || featuredPost.category || 'Journal'}</span>
+                    {!fpPublished && <span className="bd-post-badge is-draft">{featuredPost.status || 'Draft'}</span>}
+                    <p className="bd-event-date">
+                      {featuredPost.author_label || 'Hakum Auto Care'}
+                      {featuredPost.read_minutes ? ` · ${featuredPost.read_minutes} min read` : ''}
+                    </p>
+                  </div>
+                  <h2>
+                    <Link to={`/blog/${featuredPost.slug}`}>{featuredPost.title}</Link>
+                  </h2>
+                  {featuredPost.excerpt ? <p className="bd-post-excerpt">{featuredPost.excerpt}</p> : null}
+                  <div className="bd-post-actions">
+                    <Link className="bd-card-go" to={`/blog/${featuredPost.slug}`}>
+                      Read full guide
+                    </Link>
+                    <Link className="bd-post-book-link" to={featuredPost.branch_info?.bookHref || '/book'}>
+                      Book slot
+                    </Link>
+                  </div>
+                  {canEdit && (
+                    <div className="bd-cms-card-actions">
+                      <button
+                        type="button"
+                        className="bd-cms-inline-btn"
+                        onClick={() => setEditorPost(prepareBlogForEditor(featuredPost))}
+                      >
+                        <Pencil size={13} aria-hidden="true" /> Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="bd-cms-inline-btn"
+                        onClick={() => handleQuickTogglePublish(featuredPost)}
+                      >
+                        {fpPublished ? 'Unpublish' : 'Publish'}
+                      </button>
+                      <button
+                        type="button"
+                        className="bd-cms-inline-btn is-danger"
+                        onClick={() => handleQuickDelete(featuredPost)}
+                      >
+                        <Trash2 size={13} aria-hidden="true" /> Delete
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </article>
+            )
+          })() : null}
 
           <div className="bd-catalog">
             {error ? (
@@ -174,10 +264,15 @@ export function BlogListSection() {
                 {error}
               </p>
             ) : null}
-            {visiblePosts.map((post) => {
-              const isPublished = Boolean(post.is_published ?? true) && post.status !== 'archived'
+            {gridPosts.length === 0 && !featuredPost ? (
+              <p className="bd-state" style={{ gridColumn: '1 / -1' }}>
+                No articles match that filter. Try clearing your search or selecting All Guides &amp; Stories.
+              </p>
+            ) : null}
+            {gridPosts.map((post) => {
+              const isPublished = post.status === 'published' && post.is_published !== false
               return (
-                <article key={post.id || post.slug} className="bd-post bd-reveal">
+                <article key={post.id || post.slug} className={`bd-post bd-reveal ${!isPublished ? 'is-draft' : ''}`.trim()}>
                   {post.cover_url ? (
                     <Link to={`/blog/${post.slug}`} className="bd-post-media">
                       <img src={post.cover_url} alt={post.title} loading="lazy" />
@@ -386,6 +481,21 @@ export function BlogListSection() {
 
 export default function BlogPage() {
   useReveal()
+  const blogJsonLd = useMemo(
+    () =>
+      buildEventsBlogSeoJsonLd(
+        typeof window !== 'undefined' ? window.location.origin : 'https://www.hakumautocare.com',
+      ),
+    [],
+  )
+  usePageMeta({
+    title: 'Auto Detailing, PPF & Car Wash Blog Philippines',
+    description:
+      'Detailing craft, ceramic coating protection, PPF insights, and local studio guides for Bacoor, Imus, Cavite, and Batangas City by Hakum Auto Care.',
+    path: '/blog',
+    jsonLd: blogJsonLd,
+    jsonLdId: 'hakum-blog-hub-jsonld',
+  })
   return (
     <>
       <BdPageHero

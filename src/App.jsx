@@ -8,6 +8,8 @@ import PublicLayout from './layouts/PublicLayout'
 import LoginPage from './pages/LoginPage'
 import NotFoundPage from './pages/NotFoundPage'
 import OpsIndexRedirect from './pages/OpsIndexRedirect'
+import InAppNotificationListener from './components/InAppNotificationListener'
+import PwaUpdateBanner from './components/PwaUpdateBanner'
 
 const PublicLandingPage = lazy(() => import('./pages/PublicLandingPage'))
 const ServiceDetailPage = lazy(() => import('./pages/ServiceDetailPage'))
@@ -23,7 +25,9 @@ const ReferralLinkPage = lazy(() => import('./pages/ReferralLinkPage'))
 const ComplaintsPage = lazy(() => import('./pages/ComplaintsPage'))
 const EventsPage = lazy(() => import('./pages/EventsPage'))
 const EventSharePage = lazy(() => import('./pages/EventSharePage'))
+const BlogPage = lazy(() => import('./pages/BlogPage'))
 const BlogPostPage = lazy(() => import('./pages/BlogPostPage'))
+const BranchCityPage = lazy(() => import('./pages/BranchCityPage'))
 const CustomerBlogPage = lazy(() => import('./pages/CustomerBlogPage'))
 const CustomerEventsPage = lazy(() => import('./pages/CustomerEventsPage'))
 const PublicFormPage = lazy(() => import('./pages/PublicFormPage'))
@@ -56,6 +60,7 @@ const FinancePage = lazy(() => import('./pages/FinancePage'))
 const CrmPage = lazy(() => import('./pages/CrmPage'))
 const BookingBoardPage = lazy(() => import('./pages/BookingBoardPage'))
 const PlanningBoardPage = lazy(() => import('./pages/PlanningBoardPage'))
+const FormResultsBoardPage = lazy(() => import('./pages/FormResultsBoardPage'))
 const AccessDeniedPage = lazy(() => import('./pages/AccessDeniedPage'))
 const SettingsHubPage = lazy(() => import('./pages/SettingsHubPage'))
 const PosSettingsPage = lazy(() => import('./pages/settings/PosSettingsPage'))
@@ -130,6 +135,8 @@ function RouteFallback() {
 export default function App() {
   return (
     <Suspense fallback={<RouteFallback />}>
+      <InAppNotificationListener />
+      <PwaUpdateBanner />
       <Routes>
         <Route path="/" element={<RootEntry />} />
         <Route path="/app" element={<AppShellGate />} />
@@ -144,6 +151,7 @@ export default function App() {
           <Route path="/booking" element={<Navigate to="/book" replace />} />
           <Route path="/queue" element={<QueuePage />} />
           <Route path="/branches" element={<BranchesPage />} />
+          <Route path="/branches/:citySlug" element={<BranchCityPage />} />
           <Route path="/partnerships" element={<PartnershipsPage />} />
           <Route path="/refer" element={<ReferPage />} />
           <Route path="/r/:code" element={<ReferralLinkPage />} />
@@ -151,7 +159,7 @@ export default function App() {
           <Route path="/complaints" element={<ComplaintsPage />} />
           <Route path="/events" element={<EventsPage />} />
           <Route path="/events/:slug" element={<EventSharePage />} />
-          <Route path="/blog" element={<Navigate to="/events#blog" replace />} />
+          <Route path="/blog" element={<BlogPage />} />
           <Route path="/blog/:slug" element={<BlogPostPage />} />
           <Route path="/f/:slug" element={<PublicFormPage />} />
           <Route path="/terms" element={<TermsPage />} />
@@ -232,6 +240,8 @@ export default function App() {
             <Route path="sms" element={gate('crm', <Navigate to="/operations/crm?tab=sms" replace />)} />
             <Route path="bookings" element={gate('bookings', <BookingBoardPage />)} />
             <Route path="planning" element={gate('planning', <PlanningBoardPage />)} />
+            <Route path="forms/results" element={gate('planning', <FormResultsBoardPage />)} />
+            <Route path="forms/results/:formSlug" element={gate('planning', <FormResultsBoardPage />)} />
             <Route path="roadmap" element={<Navigate to="/operations" replace />} />
             <Route path="settings" element={gate('settings', <SettingsHubPage />)} />
             <Route path="settings/tint-finder" element={gate('settings', <TintFinderSettingsPage />)} />
@@ -245,7 +255,7 @@ export default function App() {
             <Route path="reports" element={gate('reports', <ReportsPage />)} />
             <Route path="memberships" element={gate('memberships', <MembershipsPage />)} />
             <Route path="vouchers" element={gate('vouchers', <VouchersPage />)} />
-            <Route path="reviews" element={gate('reviews', <Navigate to="/operations/planning?tab=forms" replace />)} />
+            <Route path="reviews" element={gate('reviews', <Navigate to="/operations/forms/results" replace />)} />
           </Route>
         </Route>
 

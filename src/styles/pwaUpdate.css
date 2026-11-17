@@ -1,0 +1,84 @@
+.hakum-update-banner {
+  position: fixed;
+  top: max(76px, env(safe-area-inset-top));
+  right: max(16px, env(safe-area-inset-right));
+  z-index: 9500;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  max-width: min(440px, calc(100vw - 32px));
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border, rgba(157, 180, 255, 0.35));
+  background: var(--popover, #08133f);
+  color: var(--popover-foreground, #f1f1ed);
+  box-shadow: 0 18px 44px rgba(2, 10, 49, 0.38);
+}
+
+.hakum-update-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.hakum-update-title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.hakum-update-desc {
+  margin: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  opacity: 0.84;
+}
+
+.hakum-update-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.hakum-update-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 9px;
+  border: 1px solid transparent;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hakum-update-btn.is-primary {
+  background: var(--primary, #204fd5);
+  color: var(--primary-foreground, #ffffff);
+}
+
+.hakum-update-btn.is-ghost {
+  background: transparent;
+  border-color: var(--border, rgba(241, 241, 237, 0.25));
+  color: inherit;
+}
+
+@media (max-width: 640px) {
+  .hakum-update-banner {
+    top: max(12px, env(safe-area-inset-top));
+    left: max(12px, env(safe-area-inset-left));
+    right: max(12px, env(safe-area-inset-right));
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .hakum-update-actions {
+    justify-content: flex-end;
+  }
+}

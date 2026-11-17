@@ -95,6 +95,29 @@ async function opsLogin(page, base, email, password) {
   return isOpsAuthedUrl(page.url())
 }
 
+async function waitRouteSettled(page) {
+  await page
+    .waitForFunction(
+      () => {
+        const text = (document.body?.innerText || '').trim()
+        return Boolean(text) && !document.querySelector('[data-loading="true"]') && !/verifying access|opening hakum|loading…/i.test(text)
+      },
+      { timeout: 25000 },
+    )
+    .catch(() => null)
+  await new Promise((r) => setTimeout(r, 500))
+}
+
+async function waitDeniedOrSettled(page) {
+  await page
+    .waitForFunction(
+      () => /access-denied|forbidden/i.test(window.location.pathname) || /lane closed/i.test(document.body?.innerText || ''),
+      { timeout: 15000 },
+    )
+    .catch(() => null)
+  await waitRouteSettled(page)
+}
+
 async function shot(page, name) {
   const file = join(outDir, `${name}.png`)
   await page.screenshot({ path: file, fullPage: true })
@@ -164,7 +187,7 @@ try {
       await shot(page, 'tl-login-FAIL')
     } else {
       await page.goto(`${base}/operations/pos`, { waitUntil: 'domcontentloaded', timeout: 60000 })
-      await new Promise((r) => setTimeout(r, 1200))
+      await waitDeniedOrSettled(page)
       const url = page.url()
       const denied = /access-denied|forbidden/i.test(url)
       if (denied || !isOpsAuthedUrl(url)) {
@@ -189,7 +212,7 @@ try {
     } else {
       await page.goto(`${base}/operations/queue/new`, { waitUntil: 'domcontentloaded', timeout: 60000 })
       await dismissCookieBanner(page)
-      await new Promise((r) => setTimeout(r, 1200))
+      await waitDeniedOrSettled(page)
       if (/access-denied/i.test(page.url()) || !page.url().includes('/operations/queue/new')) {
         pass('money.admin.queue_new_denied', page.url())
       } else {
@@ -199,7 +222,7 @@ try {
 
       await page.goto(`${base}/operations/pos`, { waitUntil: 'domcontentloaded', timeout: 60000 })
       await dismissCookieBanner(page)
-      await new Promise((r) => setTimeout(r, 1500))
+      await waitRouteSettled(page)
       if (isLoginWallUrl(page.url()) || !isOpsAuthedUrl(page.url())) {
         fail('money.admin.pos', page.url())
         await shot(page, 'admin-pos-FAIL')

@@ -1,10 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Pencil, Plus, Settings2, Trash2 } from 'lucide-react'
+import { ClipboardList, Pencil, Plus, Settings2, Trash2 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canManageSiteContent } from '@/auth/permissions'
 import ContentStudioModal from '@/components/content/ContentStudioModal'
-import FormLegalNotice from '@/components/FormLegalNotice'
 import { listBranches } from '@/lib/adminApi'
 import {
   createEmptyEventDraft,
@@ -13,8 +12,7 @@ import {
   prepareEventForEditor,
   saveCmsEvent,
 } from '@/lib/contentCmsApi'
-import { createPublicFormGuard, validatePublicFormGuard } from '@/lib/publicFormGuard'
-import { submitPublicInquiry } from '@/lib/publicInquiryApi'
+import { permanentFormResultsPath } from '@/lib/formResults'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
 import BdPageHero from '../components/public/bredesign/BdPageHero'
@@ -33,10 +31,6 @@ export default function EventsPage() {
   const [showDrafts, setShowDrafts] = useState(false)
   const [editorEvent, setEditorEvent] = useState(null)
   const [error, setError] = useState('')
-  const [registerFor, setRegisterFor] = useState(null)
-  const [form, setForm] = useState({ name: '', phone: '', email: '' })
-  const [status, setStatus] = useState('idle')
-  const [guard, setGuard] = useState(() => createPublicFormGuard())
   const eventsSeoJsonLd = useMemo(
     () => buildEventsBlogSeoJsonLd(typeof window !== 'undefined' ? window.location.origin : 'https://www.hakumautocare.com'),
     [],
@@ -121,36 +115,6 @@ export default function EventsPage() {
     }
   }
 
-  async function register(event) {
-    event.preventDefault()
-    setStatus('loading')
-    const blocked = validatePublicFormGuard(guard)
-    if (blocked) {
-      setError(blocked)
-      setStatus('idle')
-      return
-    }
-    const result = await submitPublicInquiry(
-      'event_registration',
-      {
-        event_id: registerFor,
-        name: form.name.trim(),
-        phone: form.phone.trim(),
-        email: form.email.trim() || '',
-      },
-      guard,
-    )
-    if (!result.ok) {
-      setError(result.error)
-      setStatus('idle')
-      return
-    }
-    setStatus('success')
-    setRegisterFor(null)
-    setForm({ name: '', phone: '', email: '' })
-    setGuard(createPublicFormGuard())
-  }
-
   useReveal()
   /* Old /blog links land on #blog. The live events above it load after the
      first paint and push the section down, so keep it pinned while the page
@@ -220,6 +184,9 @@ export default function EventsPage() {
                 >
                   {showDrafts ? 'Showing Drafts & Published' : 'Show Draft Events'}
                 </button>
+                <Link className="bd-btn bd-btn-quiet" to="/operations/forms/results">
+                  <ClipboardList size={15} aria-hidden="true" /> Form Results
+                </Link>
                 <Link className="bd-btn bd-btn-quiet" to="/operations/content?tab=events">
                   <Settings2 size={15} aria-hidden="true" /> Manage All
                 </Link>
@@ -231,11 +198,6 @@ export default function EventsPage() {
           {error ? (
             <p className="bd-state is-error" role="alert">
               {error}
-            </p>
-          ) : null}
-          {status === 'success' ? (
-            <p className="bd-state" role="status">
-              Registration confirmed.
             </p>
           ) : null}
           {!visibleEvents.length && !error ? (
@@ -274,14 +236,18 @@ export default function EventsPage() {
                       <Link className="bd-btn bd-btn-quiet" to={`/f/${attached.slug}`}>
                         {attached.name}
                       </Link>
-                    ) : (
-                      <button type="button" className="bd-btn bd-btn-quiet" onClick={() => setRegisterFor(item.id)}>
-                        Register
-                      </button>
-                    )}
+                    ) : null}
                   </div>
                   {canEdit && (
                     <div className="bd-cms-card-actions">
+                      {attached?.slug ? (
+                        <Link
+                          className="bd-cms-inline-btn"
+                          to={permanentFormResultsPath(attached.slug)}
+                        >
+                          <ClipboardList size={13} aria-hidden="true" /> Results
+                        </Link>
+                      ) : null}
                       <button
                         type="button"
                         className="bd-cms-inline-btn"
@@ -311,25 +277,6 @@ export default function EventsPage() {
           })}
           </div>
         </div>
-        {registerFor && (
-          <form onSubmit={register} className="public-shell booking-form" style={{ marginTop: 40, maxWidth: 480 }}>
-            <label>Name<input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></label>
-            <label>Phone<input required value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></label>
-            <label>Email<input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></label>
-            <label className="sr-only" aria-hidden="true" style={{ position: 'absolute', left: '-9999px' }}>
-              Company website
-              <input
-                tabIndex={-1}
-                autoComplete="off"
-                value={guard.honeypot}
-                onChange={(e) => setGuard((g) => ({ ...g, honeypot: e.target.value }))}
-              />
-            </label>
-            <FormLegalNotice id="events-legal" className="form-legal-notice booking-span-2" />
-            <button className="button button-blue" disabled={status === 'loading'}>Confirm registration</button>
-            <button type="button" className="dark-link" onClick={() => setRegisterFor(null)}>Cancel</button>
-          </form>
-        )}
       </section>
 
       {canEdit && (

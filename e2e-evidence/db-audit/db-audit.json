@@ -1,38 +1,391 @@
 {
   "ok": false,
   "url": "https://lybxhpzzqqyqswvuwpxv.supabase.co",
-  "at": "2026-10-16T15:31:24.538Z",
+  "at": "2026-11-16T14:54:17.205Z",
   "bySeverity": {
-    "Info": 2,
-    "High": 1
+    "Info": 54,
+    "High": 2,
+    "Low": 2
   },
   "findings": [
     {
       "severity": "Info",
+      "section": "connect",
+      "message": "connected with service role",
+      "url": "https://lybxhpzzqqyqswvuwpxv.supabase.co",
+      "sample": 1
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "staff_profiles",
+      "rows": 40
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "branches",
+      "rows": 5
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "customers",
+      "rows": 944
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "bookings",
+      "rows": 1362
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "vehicles",
+      "rows": 961
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "services",
+      "rows": 84
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "sales",
+      "rows": 1309
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "sale_line_items",
+      "rows": 1463
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "expenses",
+      "rows": 361
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "transactions",
+      "rows": 20
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "daily_sheets",
+      "rows": 63
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "daily_sheet_lines",
+      "rows": 385
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "staff_attendance",
+      "rows": 308
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "queue_assignments",
+      "rows": 1423
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "active_customer_queue",
+      "rows": 17
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "pos_handoffs",
+      "rows": 16
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "pos_ready_tickets",
+      "rows": 2
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "loyalty_ledger",
+      "rows": 15
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "ops_forms",
+      "rows": 6
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "ops_form_submissions",
+      "rows": 3
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "events",
+      "rows": 2
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "blogs",
+      "rows": 2
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "audit_logs",
+      "rows": 405
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "product_branch_stock",
+      "rows": 80
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "service_reviews",
+      "rows": 1
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "push_subscriptions",
+      "rows": 3
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "vendors",
+      "rows": 1
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "expense_reports",
+      "rows": 0
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "membership_tiers",
+      "rows": 4
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "notification_broadcasts",
+      "rows": 1
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "sms_events",
+      "rows": 261
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "plan_cards",
+      "rows": 2
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "vehicles",
+      "rows": 961
+    },
+    {
+      "severity": "Info",
+      "section": "tables",
+      "message": "vehicle_catalog",
+      "rows": 492
+    },
+    {
+      "severity": "Info",
+      "section": "money",
+      "message": "sales",
+      "total": 1309,
+      "paid": 1295,
+      "paidTotalMinor": 163382200,
+      "paidTotalPHP": "1633822.00"
+    },
+    {
+      "severity": "Info",
+      "section": "money",
+      "message": "every sale with line items reconciles",
+      "checked": 1309
+    },
+    {
+      "severity": "Info",
+      "section": "money",
+      "message": "transactions",
+      "total": 20,
+      "live": 16,
+      "liveTotalMinor": 4214850,
+      "liveTotalPHP": "42148.50"
+    },
+    {
+      "severity": "Info",
+      "section": "money",
+      "message": "POS handoffs",
+      "total": 16,
+      "completed": 14,
+      "withoutTransaction": 0
+    },
+    {
+      "severity": "Info",
+      "section": "money",
+      "message": "sales carrying a transaction_id",
+      "count": 0,
+      "hint": "if sales and transactions both hold the same money, confirm only one is summed in reports"
+    },
+    {
+      "severity": "Info",
+      "section": "money",
+      "message": "currency",
+      "currency": "PHP"
+    },
+    {
+      "severity": "High",
+      "section": "money",
+      "message": "POS handoffs that never completed (stranded at the counter)",
+      "count": 2,
+      "totalPHP": "5397.50",
+      "detail": [
+        {
+          "amountPHP": "297.50",
+          "created": "2026-09-29",
+          "bookingStatus": "for_payment",
+          "branch": "bacoor"
+        },
+        {
+          "amountPHP": "5100.00",
+          "created": "2026-09-29",
+          "bookingStatus": "for_payment",
+          "branch": "bacoor"
+        }
+      ],
+      "hint": "Do NOT ring these up. Investigate provenance first: 2026-09-29 is a manual POS test day and both rows trace to placeholder customers that never transacted (BUG-061). Ringing them up would post test data into the real books."
+    },
+    {
+      "severity": "Info",
+      "section": "money",
+      "message": "every settleable transaction agrees with its handoff",
+      "checked": 2
+    },
+    {
+      "severity": "Low",
+      "section": "money",
+      "message": "transactions in a status no code path can settle",
+      "count": 4,
+      "detail": [
+        {
+          "txn": "c22d6ddc",
+          "txnStatus": "pending",
+          "handoff": "5959bef6",
+          "amountPHP": "1200.00",
+          "created": "2026-07-07"
+        },
+        {
+          "txn": "f3d1cfed",
+          "txnStatus": "pending",
+          "handoff": "1490fa3e",
+          "amountPHP": "500.00",
+          "created": "2026-07-07"
+        },
+        {
+          "txn": "d1dedae0",
+          "txnStatus": "pending",
+          "handoff": "73646c27",
+          "amountPHP": "350.00",
+          "created": "2026-07-07"
+        },
+        {
+          "txn": "8b6b0091",
+          "txnStatus": "pending",
+          "handoff": "e4ffc7da",
+          "amountPHP": "350.00",
+          "created": "2026-07-10"
+        }
+      ],
+      "settleableStatuses": [
+        "pending_payment"
+      ],
+      "note": "complete_pos_sale settles only status=pending_payment. These rows sit in `pending` and can never transition. They were created by 20260707132730 (the only migration version that inserted `pending`), corrected by 20260715153235 — so this is historical residue and is NOT recurring. No money is at risk: `sales` is the money source of truth and no app report reads this table."
+    },
+    {
+      "severity": "Low",
+      "section": "money",
+      "message": "transactions with no payment method recorded",
+      "count": 20,
+      "of": 20,
+      "note": "Presentational only: nothing reports from this table, and the settled amount lives on `sales.payment_method`."
+    },
+    {
+      "severity": "Info",
+      "section": "bookings",
+      "message": "status distribution (paged, complete)",
+      "total": 1362,
+      "confirmed": 6,
+      "completed": 1190,
+      "waiting": 22,
+      "for_payment": 13,
+      "cancelled": 90,
+      "pending": 19,
+      "in_progress": 6,
+      "no_show": 16
+    },
+    {
+      "severity": "Info",
+      "section": "integrity",
+      "message": "open queue rows (paged)",
+      "count": 17
+    },
+    {
+      "severity": "Info",
       "section": "auth",
       "message": "staff roles (paged, complete)",
-      "total": 26,
+      "total": 40,
       "staff (inactive) archived": 6,
-      "sales": 1,
+      "admin": 6,
       "investor": 2,
-      "staff": 5,
-      "marketing": 1,
       "operations_lead": 1,
+      "assistant_super_admin": 3,
       "detailer": 2,
-      "video_editor": 1,
       "BossMich": 1,
-      "assistant_super_admin": 1,
-      "team_lead": 2,
-      "admin": 3
+      "marketing": 2,
+      "video_editor": 1,
+      "team_lead": 10,
+      "staff": 5,
+      "sales": 1
     },
     {
       "severity": "Info",
       "section": "auth",
       "message": "push enrollment (paged, keyed on user_id)",
-      "activeStaff": 20,
+      "activeStaff": 34,
       "subscriptionRows": 3,
       "enrolledActiveStaff": 0,
-      "notEnrolled": 20,
+      "notEnrolled": 34,
       "nonStaffSubscriptions": 3,
       "inactiveStaffSubscriptions": 0,
       "nonStaffRoles": [
@@ -43,9 +396,64 @@
       "severity": "High",
       "section": "auth",
       "message": "most active staff have no push subscription",
-      "activeStaff": 20,
+      "activeStaff": 34,
       "enrolled": 0,
       "note": "Ops blocker: no phone alert reaches the floor. The endpoint resolves on production and the subscribe handler keys the row on the auth uid, so this is an enrollment gap, not a broken path. Enabling it is a per-device browser action and is NOT automatable."
+    },
+    {
+      "severity": "Info",
+      "section": "dailysheet",
+      "message": "sheet status distribution",
+      "approved": 58,
+      "draft": 3,
+      "returned": 1,
+      "submitted": 1
+    },
+    {
+      "severity": "Info",
+      "section": "dailysheet",
+      "message": "sheets saved before the 21 Oct collection rules are left as they were approved",
+      "sheets": 61
+    },
+    {
+      "severity": "Info",
+      "section": "dailysheet",
+      "message": "every stored sheet matches the app's own totals for its sales and lines",
+      "sheetsCompared": 2,
+      "note": "Recomputed with computeSheetTotals() from src/lib/dailySheet.js, not a restatement of its rules."
+    },
+    {
+      "severity": "Info",
+      "section": "content",
+      "message": "services",
+      "total": 84,
+      "publishedOrActive": 33
+    },
+    {
+      "severity": "Info",
+      "section": "content",
+      "message": "blog posts",
+      "total": 2,
+      "publishedOrActive": 2
+    },
+    {
+      "severity": "Info",
+      "section": "content",
+      "message": "events",
+      "total": 2,
+      "publishedOrActive": 1
+    },
+    {
+      "severity": "Info",
+      "section": "content",
+      "message": "blogs sample checked",
+      "ok": true
+    },
+    {
+      "severity": "Info",
+      "section": "audit",
+      "message": "audit_logs rows",
+      "rows": 405
     }
   ]
 }

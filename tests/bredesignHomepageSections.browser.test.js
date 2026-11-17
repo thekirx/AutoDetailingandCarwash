@@ -32,7 +32,7 @@ describe('BreDESIGN homepage fallback sections', () => {
     assert.equal(sections.queue, 'Know the queue before you go.')
     assert.match(sections.queueSubtext, /live total/i)
     assert.match(sections.eventImage, /events-stay-tuned\.webp/)
-    assert.deepEqual(sections.branchCards, ['Bacoor', 'Batangas', 'Dasmariñas'])
+    assert.deepEqual(sections.branchCards, ['Bacoor', 'Batangas', 'Dasmariñas', 'Imus'])
   })
 
   it('shows the real stamp-card rewards model instead of obsolete membership points', async () => {
@@ -125,10 +125,22 @@ describe('BreDESIGN homepage fallback sections', () => {
     await page.waitForSelector('[data-gallery-player]', { hidden: true })
   })
 
-  it('keeps the mixed gallery usable from small phones through large desktops', async () => {
+  it('keeps the mixed gallery desktop-only on phones and multi-column from tablet landscape up', async () => {
+    for (const viewport of [
+      { width: 320, height: 568 },
+      { width: 768, height: 1024 },
+    ]) {
+      await page.setViewport({ width: viewport.width, height: viewport.height })
+      const hidden = await page.$eval('#photos [data-gallery-page]', (grid) => ({
+        display: getComputedStyle(grid.closest('.bd-home-desktop-only')).display,
+        hasHorizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
+      }))
+      assert.equal(hidden.display, 'none', `gallery should be desktop-only at ${viewport.width}x${viewport.height}`)
+      assert.equal(hidden.hasHorizontalOverflow, false)
+    }
+
     const viewports = [
-      { width: 320, height: 568, columns: 2 },
-      { width: 768, height: 1024, columns: 2 },
+      { width: 820, height: 600, columns: 2 },
       { width: 860, height: 720, columns: 4 },
       { width: 1920, height: 1080, columns: 4 },
     ]
@@ -137,7 +149,7 @@ describe('BreDESIGN homepage fallback sections', () => {
       await page.setViewport({ width: viewport.width, height: viewport.height })
 
       const layout = await page.$eval('#photos [data-gallery-page]', (grid) => ({
-        columns: getComputedStyle(grid).gridTemplateColumns.split(' ').length,
+        columns: new Set([...grid.children].map((tile) => Math.round(tile.getBoundingClientRect().left))).size,
         hasHorizontalOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth,
         hasCollapsedTile: [...grid.children].some((tile) => {
           const rect = tile.getBoundingClientRect()
@@ -145,7 +157,7 @@ describe('BreDESIGN homepage fallback sections', () => {
         }),
       }))
 
-      assert.equal(layout.columns, viewport.columns)
+      assert.equal(layout.columns, viewport.columns, `expected ${viewport.columns} gallery columns at ${viewport.width}x${viewport.height}`)
       assert.equal(layout.hasHorizontalOverflow, false)
       assert.equal(layout.hasCollapsedTile, false)
     }

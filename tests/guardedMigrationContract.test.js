@@ -45,6 +45,7 @@ const GUARDED = [
   '20261015090000_revoke_legacy_checkout_rpcs.sql',
   '20261018120000_refer_a_friend.sql',
   '20261019210000_daily_sheet_expected_cash_paid_from.sql',
+  '20261116190000_db_backend_rls_and_index_optimization.sql',
 ]
 
 /** Post-2026-10-10 migrations that do not narrow live RLS (schema/RPC/feature work). */
@@ -109,6 +110,10 @@ const EXEMPTED = [
   '20261115103500_referral_sale_fk_indexes.sql',
   '20261115104200_restore_sales_bookings_select.sql',
   '20261115213000_real_services_products_coffee_menu.sql',
+  '20261115223000_services_packages_detailing_backend_hardening.sql',
+  '20261115233000_blogs_events_realtime_grants_and_optimization.sql',
+  '20261116120000_retire_events_rsvp_and_detailing_form_sync.sql',
+  '20261116180000_notifications_sms_audience_and_limits.sql',
 ]
 
 const read = (name) => readFileSync(join(migrationsDir, name), 'utf8')

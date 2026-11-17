@@ -113,20 +113,15 @@ describe('Public inquiry API', () => {
     assert.match(res.body.error, /Unable to submit/)
   })
 
-  it('requires event registration fields and rejects invalid email', async () => {
-    const missing = await call({ kind: 'event_registration', name: 'Jo', ...ok })
-    assert.equal(missing.statusCode, 400)
-    assert.match(missing.body.error, /required/i)
-
-    const badEmail = await call({
+  it('returns 410 Gone for retired event_registration submissions', async () => {
+    const retired = await call({
       kind: 'event_registration',
       event_id: '11111111-1111-1111-1111-111111111111',
       name: 'Jo',
       phone: '09171234567',
-      email: 'not-an-email',
       ...ok,
     })
-    assert.equal(badEmail.statusCode, 400)
-    assert.match(badEmail.body.error, /valid email/i)
+    assert.equal(retired.statusCode, 410)
+    assert.match(retired.body.error, /retired/i)
   })
 })

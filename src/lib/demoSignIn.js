@@ -32,19 +32,25 @@ export function isTestOrVercelHost() {
 export function isDemoLoginVisible() {
   if (typeof window === 'undefined') return isDemoLoginEnabled()
   if (isTestOrVercelHost()) {
+    if (!storedQaKey() && DEFAULT_QA_KEY) {
+      try {
+        globalThis.localStorage?.setItem(QA_KEY_STORAGE, DEFAULT_QA_KEY)
+      } catch {
+        /* ignore storage access errors */
+      }
+    }
     return true
   }
-  // On custom/production domain (e.g. hakumautocare.com, www.hakumautocare.com):
-  const key = storedQaKey()
-  if (key === DEFAULT_QA_KEY) {
+  // Never expose easy login on the production custom domain (hakumautocare.com / www.hakumautocare.com)
+  // even if a stale or forged key sits in localStorage.
+  if (storedQaKey()) {
     try {
       globalThis.localStorage?.removeItem(QA_KEY_STORAGE)
     } catch {
       /* ignore storage access errors */
     }
-    return false
   }
-  return Boolean(key)
+  return false
 }
 
 export async function demoSignIn(accountId) {
@@ -61,6 +67,16 @@ let unlocking = Promise.resolve()
 /** Stores `?qa=<key>` if the server accepts it, strips it from the address bar, and reports whether chips are on. */
 export async function unlockDemoLoginFromUrl() {
   if (typeof window === 'undefined') return isDemoLoginEnabled()
+  if (!isTestOrVercelHost()) {
+    if (storedQaKey()) {
+      try {
+        localStorage.removeItem(QA_KEY_STORAGE)
+      } catch {
+        /* ignore storage access errors */
+      }
+    }
+    return false
+  }
   let url
   try {
     url = new URL(window.location.href)
@@ -85,23 +101,6 @@ export async function unlockDemoLoginFromUrl() {
       })
       .catch(() => {})
     await unlocking
-  } else if (isTestOrVercelHost()) {
-    if (!storedQaKey() && DEFAULT_QA_KEY) {
-      try {
-        localStorage.setItem(QA_KEY_STORAGE, DEFAULT_QA_KEY)
-      } catch {
-        /* ignore storage access errors */
-      }
-    }
-  } else {
-    // On the main domain, ensure default demo key is stripped
-    if (storedQaKey() === DEFAULT_QA_KEY) {
-      try {
-        localStorage.removeItem(QA_KEY_STORAGE)
-      } catch {
-        /* ignore storage access errors */
-      }
-    }
   }
   return isDemoLoginVisible()
 }

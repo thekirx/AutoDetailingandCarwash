@@ -54,6 +54,9 @@ export function createEmptyBlogDraft() {
     category: 'Regional Authority Guide',
     region: 'all',
     ai_summary: '',
+    seo_title: '',
+    seo_description: '',
+    seo_keywords: '',
     read_minutes: 4,
     is_featured: false,
     content_blocks: [emptyBlock('heading'), emptyBlock('paragraph')],
@@ -77,6 +80,9 @@ export function prepareBlogForEditor(post = {}) {
     category: meta.category || 'Regional Authority Guide',
     region: meta.region || 'all',
     ai_summary: meta.ai_summary || post.excerpt || '',
+    seo_title: meta.seo_title || '',
+    seo_description: meta.seo_description || '',
+    seo_keywords: meta.seo_keywords || '',
     read_minutes: meta.read_minutes || estimateReadingStats(blocks, post.title, post.excerpt).readMinutes,
     is_featured: Boolean(meta.is_featured),
     is_builtin_guide: Boolean(post.is_builtin_guide && !isValidUuid(post.id)),
@@ -178,24 +184,47 @@ export async function saveCmsBlog(editorState, profileOrOptions = null) {
     category: editorState.category || 'Regional Authority Guide',
     region: editorState.region || 'all',
     ai_summary: editorState.ai_summary || editorState.excerpt || '',
+    seo_title: editorState.seo_title || '',
+    seo_description: editorState.seo_description || '',
+    seo_keywords: editorState.seo_keywords || '',
     read_minutes: Number(editorState.read_minutes) || stats.readMinutes,
     is_featured: Boolean(editorState.is_featured),
   })
 
   let existingId = isValidUuid(editorState.id) ? editorState.id : null
   const rawSlug = String(editorState.slug || '').trim()
+  const normalizedRawSlug = rawSlug
+    ? rawSlug.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+    : ''
+  const id = existingId || crypto.randomUUID()
+  const slug = normalizedRawSlug || slugifyContentTitle(title, id)
 
-  if (!existingId && rawSlug) {
+  if (!existingId && slug) {
     const { data: existingBySlug } = await supabase
       .from('blogs')
       .select('id')
-      .eq('slug', rawSlug)
+      .eq('slug', slug)
       .maybeSingle()
-    if (existingBySlug?.id) existingId = existingBySlug.id
+    if (existingBySlug?.id) {
+      if (editorState.is_builtin_guide || editorState.id === slug) {
+        existingId = existingBySlug.id
+      } else {
+        throw new Error(`URL slug "${slug}" is already used by another blog post. Choose a different slug.`)
+      }
+    }
+  } else if (existingId && slug) {
+    const { data: slugConflict } = await supabase
+      .from('blogs')
+      .select('id')
+      .eq('slug', slug)
+      .neq('id', existingId)
+      .maybeSingle()
+    if (slugConflict?.id) {
+      throw new Error(`URL slug "${slug}" is already used by another blog post. Choose a different slug.`)
+    }
   }
 
-  const id = existingId || crypto.randomUUID()
-  const slug = rawSlug || slugifyContentTitle(title, id)
+  const finalId = existingId || id
   const status =
     editorState.status === 'archived'
       ? 'archived'
@@ -211,7 +240,7 @@ export async function saveCmsBlog(editorState, profileOrOptions = null) {
   const published = status === 'published'
 
   const row = {
-    id,
+    id: finalId,
     title,
     slug,
     excerpt: String(editorState.excerpt || '').trim() || null,
@@ -223,7 +252,7 @@ export async function saveCmsBlog(editorState, profileOrOptions = null) {
       ? editorState.published_at
         ? new Date(editorState.published_at).toISOString()
         : new Date().toISOString()
-      : null,
+      : editorState.published_at || null,
     content_blocks: blocksWithMeta,
     updated_at: new Date().toISOString(),
   }
@@ -232,7 +261,7 @@ export async function saveCmsBlog(editorState, profileOrOptions = null) {
     ? supabase.from('blogs').update(row).eq('id', existingId).select(BLOG_SELECT_COLS).maybeSingle()
     : supabase
         .from('blogs')
-        .upsert({ ...row, created_by: profile?.id || null }, { onConflict: 'slug' })
+        .insert({ ...row, created_by: profile?.id || null })
         .select(BLOG_SELECT_COLS)
         .maybeSingle()
 
@@ -245,7 +274,10 @@ export async function saveCmsBlog(editorState, profileOrOptions = null) {
   }
 
   // Fallback to authenticated server endpoint
-  const res = await callManageContentApi({ action: 'save-blog', row })
+  const res = await callManageContentApi({
+    action: 'save-blog',
+    row: { ...row, adoptBySlug: Boolean(editorState.is_builtin_guide) },
+  })
   const saved = res.data || row
   clearAutosaveDraft('blog', existingId || slug || 'new')
   clearAutosaveDraft('blog', 'new')
@@ -292,7 +324,28 @@ export async function saveCmsEvent(editorState, options = null) {
 
   const existingId = isValidUuid(editorState.id) ? editorState.id : null
   const id = existingId || crypto.randomUUID()
-  const slug = String(editorState.slug || '').trim() || slugifyEventTitle(title, id)
+  const rawSlug = String(editorState.slug || '').trim()
+  const normalizedRawSlug = rawSlug
+    ? rawSlug.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '')
+    : ''
+  const slug = normalizedRawSlug || slugifyEventTitle(title, id)
+
+  if (!existingId && slug) {
+    const { data: slugConflict } = await supabase.from('events').select('id').eq('slug', slug).maybeSingle()
+    if (slugConflict?.id) {
+      throw new Error(`URL slug "${slug}" is already used by another event. Choose a different slug.`)
+    }
+  } else if (existingId && slug) {
+    const { data: slugConflict } = await supabase
+      .from('events')
+      .select('id')
+      .eq('slug', slug)
+      .neq('id', existingId)
+      .maybeSingle()
+    if (slugConflict?.id) {
+      throw new Error(`URL slug "${slug}" is already used by another event. Choose a different slug.`)
+    }
+  }
   const startsIso = editorState.starts_at
     ? new Date(editorState.starts_at).toISOString()
     : new Date().toISOString()

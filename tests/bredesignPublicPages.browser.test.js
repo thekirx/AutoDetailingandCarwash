@@ -44,7 +44,7 @@ describe('BreDESIGN public page fallbacks', () => {
     }))
 
     assert.equal(result.error, '')
-    assert.deepEqual(result.cards, ['Bacoor', 'Batangas', 'Dasmariñas'])
+    assert.deepEqual(result.cards, ['Bacoor', 'Batangas', 'Dasmariñas', 'Imus'])
   })
 
   it('shows TikTok in Contact Us', async () => {
@@ -261,17 +261,22 @@ describe('BreDESIGN public page fallbacks', () => {
         ).querySelector('strong').textContent
       })
 
+      const expectedPrevious = width === 1440 ? 'Krisha May Aguila' : 'Ailyn De Leon'
       assert.equal(await leadingReview(), 'Marryel Joan Macaraig')
       await page.click('button[aria-label="Previous review"]')
-      await page.waitForFunction(() => {
-        const rail = document.querySelector('[data-wash-review-rail]')
-        const left = rail.getBoundingClientRect().left
-        const first = [...rail.children].reduce((closest, card) =>
-          Math.abs(card.getBoundingClientRect().left - left) < Math.abs(closest.getBoundingClientRect().left - left) ? card : closest,
-        )
-        return first.querySelector('strong').textContent === 'Ailyn De Leon'
-      })
-      assert.equal(await leadingReview(), 'Ailyn De Leon', `previous review does not wrap at ${width}px`)
+      await page.waitForFunction(
+        (target) => {
+          const rail = document.querySelector('[data-wash-review-rail]')
+          const left = rail.getBoundingClientRect().left
+          const first = [...rail.children].reduce((closest, card) =>
+            Math.abs(card.getBoundingClientRect().left - left) < Math.abs(closest.getBoundingClientRect().left - left) ? card : closest,
+          )
+          return first.querySelector('strong').textContent === target
+        },
+        {},
+        expectedPrevious,
+      )
+      assert.equal(await leadingReview(), expectedPrevious, `previous review does not wrap at ${width}px`)
       await page.click('button[aria-label="Next review"]')
       await page.waitForFunction(() => {
         const rail = document.querySelector('[data-wash-review-rail]')

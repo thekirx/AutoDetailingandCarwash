@@ -1,7 +1,12 @@
 import { Link, Navigate } from 'react-router-dom'
-import { ShoppingCart, Wallet, Sun } from 'lucide-react'
+import { Bell, ShoppingCart, Sun, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessPos, canManageServices, isSuperAdmin } from '@/auth/permissions'
+import {
+  canAccessNotifications,
+  canAccessPos,
+  canManageServices,
+  isSuperAdmin,
+} from '@/auth/permissions'
 import ReferralProgramCard from '@/components/ops/ReferralProgramCard'
 import { canReviewDailySheet } from '@/lib/dailySheet'
 import OpsPageShell from '@/components/ops/OpsPageShell'
@@ -26,6 +31,14 @@ const TILES = [
     to: '/operations/settings/daily-sheet',
     icon: Wallet,
     allow: canReviewDailySheet,
+  },
+  {
+    key: 'notifications',
+    title: 'Notifications & SMS',
+    description: 'System push & BusyBee SMS copy, employee announcements, and broadcast alerts.',
+    to: '/operations/notifications?tab=templates',
+    icon: Bell,
+    allow: canAccessNotifications,
   },
 ]
 

@@ -1,12 +1,12 @@
 {
   "ok": true,
-  "passed": 10,
+  "passed": 11,
   "failed": 0,
   "results": [
     {
       "ok": true,
       "name": "ops.login",
-      "detail": "http://127.0.0.1:4173/operations/console"
+      "detail": "http://127.0.0.1:4173/operations/dashboard"
     },
     {
       "ok": true,
@@ -41,7 +41,7 @@
     {
       "ok": true,
       "name": "public.form.branch_options",
-      "detail": "bacoor | batangas | hq"
+      "detail": "bacoor | batangas"
     },
     {
       "ok": true,
@@ -50,8 +50,13 @@
     },
     {
       "ok": true,
-      "name": "planner.forms.edit_dialog",
-      "detail": "edit UI opened"
+      "name": "planner.forms.fixed_preview",
+      "detail": "fixed sequence + real-time preview + Preview modal verified"
+    },
+    {
+      "ok": true,
+      "name": "planner.forms.results_board",
+      "detail": "submission QA Forms QA764097 synced to Booking Placeholder & Detailing Schedule"
     }
   ]
 }

@@ -1,9 +1,13 @@
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
+import { mkdir } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { test } from 'node:test'
 import { launchPuppeteer } from './puppeteerLaunch.js'
 
-const origin = process.env.PUBLIC_TEST_URL || 'http://127.0.0.1:5173'
+const origin = process.env.PUBLIC_TEST_URL || 'http://127.0.0.1:4173'
+const screenshotDir = join(tmpdir(), 'hakum-tint-qa')
 const defaults = JSON.parse(readFileSync(new URL('../src/data/tintFinderConfig.json', import.meta.url)))
 const expected = [
   { id: 'ceramic', codes: ['C70', 'C30', 'C20', 'C08'], shades: ['Clear Bluish', 'Light Black', 'Medium Black', 'Super Black'], specs: [['68%', '31%', '20%', '8%'], ['44%', '57%', '65%', '69%'], ['87%', '82%', '93%', '92%']], warranty: '7 years', prices: ['₱6,000', '₱8,000', '₱10,000'] },
@@ -53,7 +57,8 @@ for (const width of [1440, 393, 320]) {
       const cardHeight = await certification.evaluate(el => Math.ceil(el.getBoundingClientRect().height))
       await page.setViewport({ width, height: Math.max(900, cardHeight + 220) })
       await page.$eval('#tint-certification', el => el.scrollIntoView({ block: 'start' }))
-      await certification.screenshot({ path: `/tmp/hakum-tint-certification-${width}.png` })
+      await mkdir(screenshotDir, { recursive: true })
+      await certification.screenshot({ path: join(screenshotDir, `hakum-tint-certification-${width}.png`) })
       await page.setViewport({ width, height: 900 })
 
       for (const pkg of expected) {

@@ -1,10 +1,10 @@
 {
-  "overall": "PASS",
+  "overall": "FAIL",
   "cells": [
     {
       "page": "home",
       "viewport": "mobile-375",
-      "url": "http://localhost:5173/home",
+      "url": "http://127.0.0.1:4173/home",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -21,7 +21,7 @@
     {
       "page": "home",
       "viewport": "mobile-393",
-      "url": "http://localhost:5173/home",
+      "url": "http://127.0.0.1:4173/home",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -38,7 +38,7 @@
     {
       "page": "home",
       "viewport": "mobile-430",
-      "url": "http://localhost:5173/home",
+      "url": "http://127.0.0.1:4173/home",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -55,7 +55,7 @@
     {
       "page": "home",
       "viewport": "tablet-768",
-      "url": "http://localhost:5173/home",
+      "url": "http://127.0.0.1:4173/home",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -72,7 +72,7 @@
     {
       "page": "home",
       "viewport": "tablet-1024",
-      "url": "http://localhost:5173/home",
+      "url": "http://127.0.0.1:4173/home",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -89,7 +89,7 @@
     {
       "page": "home",
       "viewport": "laptop-1280",
-      "url": "http://localhost:5173/home",
+      "url": "http://127.0.0.1:4173/home",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -97,7 +97,7 @@
         "clientWidth": 1280,
         "canScrollX": false,
         "bleed": 0,
-        "smallTargets": 8,
+        "smallTargets": 5,
         "bodyFont": 16
       },
       "shot": "home--laptop-1280.png",
@@ -106,7 +106,7 @@
     {
       "page": "home",
       "viewport": "desktop-1440",
-      "url": "http://localhost:5173/home",
+      "url": "http://127.0.0.1:4173/home",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -114,7 +114,7 @@
         "clientWidth": 1440,
         "canScrollX": false,
         "bleed": 0,
-        "smallTargets": 8,
+        "smallTargets": 5,
         "bodyFont": 16
       },
       "shot": "home--desktop-1440.png",
@@ -123,7 +123,7 @@
     {
       "page": "home",
       "viewport": "wide-1920",
-      "url": "http://localhost:5173/home",
+      "url": "http://127.0.0.1:4173/home",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -131,7 +131,7 @@
         "clientWidth": 1920,
         "canScrollX": false,
         "bleed": 0,
-        "smallTargets": 8,
+        "smallTargets": 5,
         "bodyFont": 16
       },
       "shot": "home--wide-1920.png",
@@ -140,7 +140,7 @@
     {
       "page": "home",
       "viewport": "landscape-667x375",
-      "url": "http://localhost:5173/home",
+      "url": "http://127.0.0.1:4173/home",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -157,7 +157,7 @@
     {
       "page": "home-signed",
       "viewport": "mobile-375",
-      "url": "http://localhost:5173/home",
+      "url": "http://127.0.0.1:4173/home",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -174,7 +174,7 @@
     {
       "page": "home-signed",
       "viewport": "mobile-393",
-      "url": "http://localhost:5173/home",
+      "url": "http://127.0.0.1:4173/home",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -191,7 +191,7 @@
     {
       "page": "home-signed",
       "viewport": "mobile-430",
-      "url": "http://localhost:5173/home",
+      "url": "http://127.0.0.1:4173/home",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -208,8 +208,11 @@
     {
       "page": "home-signed",
       "viewport": "tablet-768",
-      "url": "http://localhost:5173/home",
-      "issues": [],
+      "url": "http://127.0.0.1:4173/home",
+      "issues": [
+        "hamburger_did_not_open",
+        "drawer_missing_account_actions"
+      ],
       "touchWarn": false,
       "metrics": {
         "scrollWidth": 768,
@@ -220,13 +223,16 @@
         "bodyFont": 16
       },
       "shot": "home-signed--tablet-768.png",
-      "verdict": "PASS"
+      "verdict": "FAIL"
     },
     {
       "page": "home-signed",
       "viewport": "tablet-1024",
-      "url": "http://localhost:5173/home",
-      "issues": [],
+      "url": "http://127.0.0.1:4173/home",
+      "issues": [
+        "hamburger_did_not_open",
+        "drawer_missing_account_actions"
+      ],
       "touchWarn": false,
       "metrics": {
         "scrollWidth": 1024,
@@ -237,12 +243,12 @@
         "bodyFont": 16
       },
       "shot": "home-signed--tablet-1024.png",
-      "verdict": "PASS"
+      "verdict": "FAIL"
     },
     {
       "page": "home-signed",
       "viewport": "laptop-1280",
-      "url": "http://localhost:5173/home",
+      "url": "http://127.0.0.1:4173/home",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -250,7 +256,7 @@
         "clientWidth": 1280,
         "canScrollX": false,
         "bleed": 0,
-        "smallTargets": 9,
+        "smallTargets": 6,
         "bodyFont": 16
       },
       "shot": "home-signed--laptop-1280.png",
@@ -259,7 +265,7 @@
     {
       "page": "home-signed",
       "viewport": "desktop-1440",
-      "url": "http://localhost:5173/home",
+      "url": "http://127.0.0.1:4173/home",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -267,7 +273,7 @@
         "clientWidth": 1440,
         "canScrollX": false,
         "bleed": 0,
-        "smallTargets": 9,
+        "smallTargets": 6,
         "bodyFont": 16
       },
       "shot": "home-signed--desktop-1440.png",
@@ -276,7 +282,7 @@
     {
       "page": "home-signed",
       "viewport": "wide-1920",
-      "url": "http://localhost:5173/home",
+      "url": "http://127.0.0.1:4173/home",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -284,7 +290,7 @@
         "clientWidth": 1920,
         "canScrollX": false,
         "bleed": 0,
-        "smallTargets": 9,
+        "smallTargets": 6,
         "bodyFont": 16
       },
       "shot": "home-signed--wide-1920.png",
@@ -293,7 +299,7 @@
     {
       "page": "home-signed",
       "viewport": "landscape-667x375",
-      "url": "http://localhost:5173/home",
+      "url": "http://127.0.0.1:4173/home",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -310,7 +316,7 @@
     {
       "page": "account",
       "viewport": "mobile-375",
-      "url": "http://localhost:5173/account",
+      "url": "http://127.0.0.1:4173/account",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -318,7 +324,7 @@
         "clientWidth": 375,
         "canScrollX": false,
         "bleed": 0,
-        "smallTargets": 1,
+        "smallTargets": 3,
         "bodyFont": 16
       },
       "shot": "account--mobile-375.png",
@@ -327,7 +333,7 @@
     {
       "page": "account",
       "viewport": "mobile-393",
-      "url": "http://localhost:5173/account",
+      "url": "http://127.0.0.1:4173/account",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -335,7 +341,7 @@
         "clientWidth": 393,
         "canScrollX": false,
         "bleed": 0,
-        "smallTargets": 1,
+        "smallTargets": 3,
         "bodyFont": 16
       },
       "shot": "account--mobile-393.png",
@@ -344,7 +350,7 @@
     {
       "page": "account",
       "viewport": "mobile-430",
-      "url": "http://localhost:5173/account",
+      "url": "http://127.0.0.1:4173/account",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -352,7 +358,7 @@
         "clientWidth": 430,
         "canScrollX": false,
         "bleed": 0,
-        "smallTargets": 1,
+        "smallTargets": 3,
         "bodyFont": 16
       },
       "shot": "account--mobile-430.png",
@@ -361,7 +367,7 @@
     {
       "page": "account",
       "viewport": "tablet-768",
-      "url": "http://localhost:5173/account",
+      "url": "http://127.0.0.1:4173/account",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -369,7 +375,7 @@
         "clientWidth": 768,
         "canScrollX": false,
         "bleed": 0,
-        "smallTargets": 1,
+        "smallTargets": 3,
         "bodyFont": 16
       },
       "shot": "account--tablet-768.png",
@@ -378,24 +384,27 @@
     {
       "page": "account",
       "viewport": "tablet-1024",
-      "url": "http://localhost:5173/account",
-      "issues": [],
+      "url": "http://127.0.0.1:4173/account",
+      "issues": [
+        "hamburger_did_not_open",
+        "drawer_missing_account_actions"
+      ],
       "touchWarn": false,
       "metrics": {
         "scrollWidth": 1024,
         "clientWidth": 1024,
         "canScrollX": false,
         "bleed": 0,
-        "smallTargets": 1,
+        "smallTargets": 3,
         "bodyFont": 16
       },
       "shot": "account--tablet-1024.png",
-      "verdict": "PASS"
+      "verdict": "FAIL"
     },
     {
       "page": "account",
       "viewport": "laptop-1280",
-      "url": "http://localhost:5173/account",
+      "url": "http://127.0.0.1:4173/account",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -403,7 +412,7 @@
         "clientWidth": 1280,
         "canScrollX": false,
         "bleed": 0,
-        "smallTargets": 10,
+        "smallTargets": 8,
         "bodyFont": 16
       },
       "shot": "account--laptop-1280.png",
@@ -412,7 +421,7 @@
     {
       "page": "account",
       "viewport": "desktop-1440",
-      "url": "http://localhost:5173/account",
+      "url": "http://127.0.0.1:4173/account",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -420,7 +429,7 @@
         "clientWidth": 1440,
         "canScrollX": false,
         "bleed": 0,
-        "smallTargets": 10,
+        "smallTargets": 8,
         "bodyFont": 16
       },
       "shot": "account--desktop-1440.png",
@@ -429,7 +438,7 @@
     {
       "page": "account",
       "viewport": "wide-1920",
-      "url": "http://localhost:5173/account",
+      "url": "http://127.0.0.1:4173/account",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -437,7 +446,7 @@
         "clientWidth": 1920,
         "canScrollX": false,
         "bleed": 0,
-        "smallTargets": 10,
+        "smallTargets": 8,
         "bodyFont": 16
       },
       "shot": "account--wide-1920.png",
@@ -446,7 +455,7 @@
     {
       "page": "account",
       "viewport": "landscape-667x375",
-      "url": "http://localhost:5173/account",
+      "url": "http://127.0.0.1:4173/account",
       "issues": [],
       "touchWarn": false,
       "metrics": {
@@ -454,7 +463,7 @@
         "clientWidth": 667,
         "canScrollX": false,
         "bleed": 0,
-        "smallTargets": 1,
+        "smallTargets": 3,
         "bodyFont": 16
       },
       "shot": "account--landscape-667x375.png",

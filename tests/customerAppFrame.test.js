@@ -113,6 +113,17 @@ describe('customer app frame', () => {
     assert.match(settings, /Session/)
   })
 
+  it('shows the signed-in user name instead of sign in/up links for customers and staff', () => {
+    const layout = read('src/layouts/PublicLayout.jsx')
+    const css = read('src/styles.css')
+    assert.match(layout, /isSignedIn\s*=\s*!loading && Boolean\(user\)/)
+    assert.match(layout, /const displayName =[\s\S]*?profile\?\.full_name/)
+    assert.match(layout, /<span className="header-auth-label">\{displayName\}<\/span>/)
+    assert.match(layout, /audience=\{isOps \? 'ops' : 'customer'\}/)
+    assert.match(css, /\.header-auth-label\s*\{[^}]*text-overflow:ellipsis/)
+    assert.doesNotMatch(css, /\.bd-cms-card-actions\s*\{[^}]*margin-left:\s*auto/)
+  })
+
   it('notification bell keeps navy ink on paper and a white glyph on the public header', () => {
     const css = read('src/styles-customer-app.css')
     const publicCss = read('src/styles.css')

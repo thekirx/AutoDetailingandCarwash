@@ -4,6 +4,7 @@ import {
   clampNotificationCopy,
   messageMaxForChannel,
   resolveNotificationScope,
+  titleMaxForChannel,
 } from '../src/lib/notificationCopy.js'
 import { adminClient as admin } from './supabaseAdmin.mjs'
 
@@ -79,6 +80,12 @@ export async function handleNotificationSettingsRequest(req, res) {
     }
 
     const channel = ['push', 'sms', 'both'].includes(body.channel) ? body.channel : 'push'
+    const tMax = titleMaxForChannel(channel)
+    if (body.title && String(body.title).trim().length > tMax) {
+      return json(res, 400, {
+        error: `Title must be ${tMax} characters or fewer.`,
+      })
+    }
     const copy = clampNotificationCopy({
       channel,
       title: body.title,

@@ -3,10 +3,10 @@ let bellChannel = null
 let bellUserId = null
 const bellListeners = new Set()
 
-function fanout() {
+function fanout(payload) {
   for (const fn of [...bellListeners]) {
     try {
-      fn()
+      fn(payload)
     } catch {
       /* never break the socket for one listener */
     }

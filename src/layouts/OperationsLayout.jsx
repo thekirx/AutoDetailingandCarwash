@@ -67,6 +67,7 @@ import { internalRoleLabel } from '../auth/internalRoles'
 import { resolvePostLoginPath } from '../auth/authRedirect'
 import { supabase } from '@/lib/supabase'
 import NotificationBell from '@/components/NotificationBell'
+import PushToggle from '@/components/PushToggle'
 import UserSettingsModal from '@/components/UserSettingsModal'
 import { OpsInstallPopup } from '@/components/InstallGuide'
 import CommandMenu from '@/components/ops/CommandMenu'
@@ -297,6 +298,7 @@ function FloorAppShell({
 
             </div>
             <div className="flex shrink-0 items-center gap-1">
+              <PushToggle audience="ops" compact allowUnsupportedInCompact surface="light" />
               <NotificationBell variant="floor" homeUrl={homeUrl} homeLabel={homeLabel} />
               <button type="button" className="floor-icon-btn" aria-label="Settings" onClick={() => setSettingsOpen(true)}>
                 <Settings size={18} />
@@ -648,6 +650,7 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
           >
             <Search className="size-4" />
           </Button>
+          <PushToggle audience="ops" compact allowUnsupportedInCompact surface="light" className="inline-flex" />
           <NotificationBell
             homeUrl={isBranchAdmin(profile) ? '/operations/pos' : resolvePostLoginPath(profile, null)}
             homeLabel={isBranchAdmin(profile) ? 'Open POS' : 'Home'}

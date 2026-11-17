@@ -8,6 +8,8 @@ import {
   Globe,
   Laptop,
   Loader2,
+  Maximize2,
+  Minimize2,
   PenLine,
   RotateCcw,
   Save,
@@ -18,6 +20,7 @@ import {
   Tablet,
   Trash2,
 } from 'lucide-react'
+import BlogArticlePreview from '@/components/content/BlogArticlePreview'
 import ContentBlockEditor, { MediaDropzoneField } from '@/components/content/ContentBlockEditor'
 import ContentBlockRenderer from '@/components/content/ContentBlockRenderer'
 import { Badge } from '@/components/ui/badge'
@@ -65,6 +68,8 @@ export default function ContentStudioModal({
   onOpenChange,
   kind = 'blog', // 'blog' | 'event'
   initialValue = null,
+  initialViewMode = 'write',
+  initialFullscreen = false,
   profile = null,
   forms = [],
   branchOptions = [],
@@ -72,8 +77,9 @@ export default function ContentStudioModal({
   onDeleted,
 }) {
   const [draft, setDraft] = useState(initialValue)
-  const [viewMode, setViewMode] = useState('write') // 'write' | 'split' | 'preview'
+  const [viewMode, setViewMode] = useState(initialViewMode) // 'write' | 'split' | 'preview'
   const [viewport, setViewport] = useState('desktop') // 'desktop' | 'tablet' | 'mobile'
+  const [isFullscreen, setIsFullscreen] = useState(Boolean(initialFullscreen))
   const [showSettings, setShowSettings] = useState(true)
   const [saving, setSaving] = useState(false)
   const [autosaveInfo, setAutosaveInfo] = useState({ status: 'idle', time: '' })
@@ -88,6 +94,8 @@ export default function ContentStudioModal({
   useEffect(() => {
     if (!open || !initialValue) return
     setDraft(initialValue)
+    setViewMode(initialViewMode || 'write')
+    setIsFullscreen(Boolean(initialFullscreen))
     dirtyRef.current = false
     setAutosaveInfo({ status: 'idle', time: '' })
     const saved = readAutosaveDraft(kind, initialValue.id || initialValue.slug || 'new')
@@ -98,7 +106,7 @@ export default function ContentStudioModal({
     } else {
       setRecoverableDraft(null)
     }
-  }, [open, initialValue, kind])
+  }, [open, initialValue, initialViewMode, initialFullscreen, kind])
 
   // Real-time debounced autosave
   useEffect(() => {
@@ -207,14 +215,20 @@ export default function ContentStudioModal({
 
   const previewWidthClass =
     viewport === 'mobile'
-      ? 'mx-auto max-w-[375px]'
+      ? 'mx-auto w-full max-w-[390px]'
       : viewport === 'tablet'
-        ? 'mx-auto max-w-[768px]'
+        ? 'mx-auto w-full max-w-[768px]'
         : 'w-full'
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[95vh] w-[96vw] overflow-y-auto p-0 sm:max-w-6xl">
+      <DialogContent
+        className={
+          isFullscreen
+            ? 'fixed inset-0 top-0 left-0 z-50 flex h-[100dvh] max-h-[100dvh] w-screen max-w-none translate-x-0 translate-y-0 flex-col overflow-hidden rounded-none border-0 p-0 sm:max-w-none'
+            : 'flex max-h-[95vh] w-[96vw] flex-col overflow-hidden p-0 sm:max-w-6xl'
+        }
+      >
         {/* Top WordPress Studio Command Bar */}
         <div className="sticky top-0 z-20 flex flex-wrap items-center justify-between gap-2 border-b border-border bg-background/95 px-4 py-3 backdrop-blur">
           <DialogHeader className="space-y-0.5 text-left">
@@ -333,6 +347,25 @@ export default function ContentStudioModal({
               <Settings2 className="mr-1 size-3.5" />
               Settings
             </Button>
+
+            <Button
+              type="button"
+              size="sm"
+              variant={isFullscreen ? 'default' : 'outline'}
+              className="h-8 cursor-pointer text-xs"
+              onClick={() => setIsFullscreen((f) => !f)}
+              title={isFullscreen ? 'Exit Full Screen Studio' : 'Expand Full Screen Studio'}
+            >
+              {isFullscreen ? (
+                <>
+                  <Minimize2 className="mr-1 size-3.5" /> Exit Full Screen
+                </>
+              ) : (
+                <>
+                  <Maximize2 className="mr-1 size-3.5" /> Full Screen
+                </>
+              )}
+            </Button>
           </div>
         </div>
 
@@ -375,13 +408,17 @@ export default function ContentStudioModal({
 
         {/* Main Studio Body */}
         <div
-          className={`grid gap-6 p-4 sm:p-6 ${
-            viewMode === 'split' ? 'lg:grid-cols-2' : 'grid-cols-1'
-          }`}
+          className={`grid min-h-0 flex-1 gap-6 overflow-y-auto ${
+            viewMode === 'preview' && isFullscreen ? 'p-0 sm:p-0' : 'p-4 sm:p-6'
+          } ${viewMode === 'split' ? 'lg:grid-cols-2 lg:overflow-hidden' : 'grid-cols-1'}`}
         >
           {/* Left / Write Column */}
           {viewMode !== 'preview' && (
-            <div className="flex flex-col gap-5">
+            <div
+              className={`flex flex-col gap-5 ${
+                viewMode === 'split' ? 'lg:min-h-0 lg:overflow-y-auto lg:pr-2' : ''
+              }`.trim()}
+            >
               {/* Primary Title & Slug */}
               <div className="grid gap-3 rounded-xl border border-border bg-muted/15 p-4">
                 <div className="flex flex-col gap-1.5">
@@ -463,7 +500,7 @@ export default function ContentStudioModal({
                   <div className="flex items-center justify-between border-b border-border/60 pb-2">
                     <span className="flex items-center gap-1.5 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                       <Settings2 className="size-3.5 text-primary" />
-                      {isBlog ? 'Post Settings, Regional SEO & AI Summary' : 'Event Schedule, Branch & RSVP Form'}
+                      {isBlog ? 'Post Settings, Regional SEO & AI Summary' : 'Event Schedule, Branch & Smart Form'}
                     </span>
                   </div>
 
@@ -525,6 +562,39 @@ export default function ContentStudioModal({
                         />
                       </div>
 
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor="cms-seo-title">
+                          Custom SEO Title ({String(draft.seo_title || draft.title || '').length}/60 chars)
+                        </Label>
+                        <Input
+                          id="cms-seo-title"
+                          value={draft.seo_title || ''}
+                          onChange={(e) => updateDraft({ seo_title: e.target.value })}
+                          placeholder={draft.title || 'Best Car Wash & Detailing in Bacoor'}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor="cms-seo-keywords">Focus Keywords (comma-separated)</Label>
+                        <Input
+                          id="cms-seo-keywords"
+                          value={draft.seo_keywords || ''}
+                          onChange={(e) => updateDraft({ seo_keywords: e.target.value })}
+                          placeholder="car wash near me, detailing Bacoor, ceramic coating Cavite"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5 sm:col-span-2">
+                        <Label htmlFor="cms-seo-desc">
+                          Meta Description ({String(draft.seo_description || draft.ai_summary || draft.excerpt || '').length}/160 chars)
+                        </Label>
+                        <Textarea
+                          id="cms-seo-desc"
+                          rows={2}
+                          value={draft.seo_description || ''}
+                          onChange={(e) => updateDraft({ seo_description: e.target.value })}
+                          placeholder="Concise summary shown in Google Search results (aim for 120–158 characters)…"
+                        />
+                      </div>
+
                       {/* Live Google SERP Preview */}
                       <div className="rounded-lg border border-border bg-background/80 p-3 sm:col-span-2">
                         <p className="mb-1 flex items-center gap-1 text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
@@ -534,10 +604,11 @@ export default function ContentStudioModal({
                           https://www.hakumautocare.com/blog/{previewSlug}
                         </p>
                         <p className="truncate text-sm font-semibold text-blue-400">
-                          {draft.title || 'Untitled Blog Post'} · Hakum Auto Care
+                          {draft.seo_title || draft.title || 'Untitled Blog Post'} · Hakum Auto Care
                         </p>
                         <p className="line-clamp-2 text-xs text-muted-foreground">
-                          {draft.ai_summary ||
+                          {draft.seo_description ||
+                            draft.ai_summary ||
                             draft.excerpt ||
                             'Explore car wash, auto detailing, ceramic coating, and PPF guides from Hakum Auto Care.'}
                         </p>
@@ -554,11 +625,11 @@ export default function ContentStudioModal({
                         />
                       </div>
                       <div className="flex flex-col gap-1.5">
-                        <Label>Attached RSVP / Registration Smart Form</Label>
+                        <Label>Attached Smart Form</Label>
                         <NamedSelect
                           value={draft.form_id || ''}
                           onChange={(form_id) => updateDraft({ form_id })}
-                          emptyLabel="Built-in Quick Registration Form"
+                          emptyLabel="None (no form attached)"
                           options={forms.map((f) => ({ value: f.id, label: f.name }))}
                         />
                       </div>
@@ -626,67 +697,132 @@ export default function ContentStudioModal({
 
           {/* Right / Live Interactive Preview Column */}
           {(viewMode === 'preview' || viewMode === 'split') && (
-            <div className="flex flex-col gap-3">
-              <div className="flex items-center justify-between rounded-lg border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-                <span className="font-medium text-foreground">
-                  Live Interactive Preview ({viewport.toUpperCase()})
-                </span>
-                <span>
-                  {isBlog ? `/blog/${previewSlug}` : `/events/${previewSlug}`}
-                </span>
+            <div
+              className={`flex flex-col gap-3 ${
+                viewMode === 'split' ? 'lg:min-h-0 lg:overflow-y-auto lg:pl-1' : ''
+              }`.trim()}
+            >
+              <div
+                className={`flex flex-wrap items-center justify-between gap-2 border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground ${
+                  viewMode === 'preview' && isFullscreen ? 'mx-4 mt-3 rounded-lg' : 'rounded-lg'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="inline-block size-2 rounded-full bg-emerald-400" aria-hidden="true" />
+                  <span className="font-medium text-foreground">
+                    Real-Time Live Preview ({viewport.toUpperCase()})
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="font-mono text-[11px]">
+                    {isBlog ? `/blog/${previewSlug}` : `/events/${previewSlug}`}
+                  </span>
+                  {!(viewMode === 'preview' && isFullscreen) ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 cursor-pointer text-[11px]"
+                      onClick={() => {
+                        setViewMode('preview')
+                        setIsFullscreen(true)
+                      }}
+                    >
+                      <Maximize2 className="mr-1 size-3" /> Full-Screen Preview
+                    </Button>
+                  ) : (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 cursor-pointer text-[11px]"
+                      onClick={() => {
+                        setViewMode('split')
+                      }}
+                    >
+                      <Columns2 className="mr-1 size-3" /> Split Edit
+                    </Button>
+                  )}
+                </div>
               </div>
 
               <div
-                className={`overflow-hidden rounded-2xl border border-border bg-[#070b16] p-5 text-[#f0f4fa] shadow-xl transition-all sm:p-7 ${previewWidthClass}`}
+                className={`bredesign bd-article-preview-canvas overflow-hidden border border-white/15 shadow-2xl transition-all ${
+                  viewMode === 'preview' && isFullscreen && viewport === 'desktop'
+                    ? 'rounded-none border-x-0'
+                    : 'rounded-2xl'
+                } ${previewWidthClass}`}
               >
-                <p className="mb-2 text-[11px] font-semibold tracking-widest text-blue-400 uppercase">
-                  {isBlog
-                    ? `${draft.category || 'Regional Authority Guide'}${
-                        draft.region && draft.region !== 'all' ? ` · ${draft.region.toUpperCase()}` : ''
-                      }`
-                    : `Event${draft.branch ? ` · ${draft.branch}` : ''}`}
-                </p>
-                <h2 className="mb-2 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-                  {draft.title || (isBlog ? 'Untitled Blog Post' : 'Untitled Event')}
-                </h2>
-                <p className="mb-4 text-xs text-slate-400">
-                  {isBlog
-                    ? `${draft.author_label || 'Hakum Auto Care'} · ${stats.readMinutes} min read`
-                    : draft.is_date_tba
-                      ? 'Date To Be Announced'
-                      : draft.starts_at
-                        ? new Date(draft.starts_at).toLocaleString()
-                        : 'Date not set'}
-                </p>
-
-                {(isBlog ? draft.cover_url : draft.banner_url) ? (
-                  <div className="mb-5 overflow-hidden rounded-xl border border-white/10">
-                    <img
-                      src={isBlog ? draft.cover_url : draft.banner_url}
-                      alt={draft.title || ''}
-                      className="max-h-64 w-full object-cover"
-                    />
+                {isBlog ? (
+                  <BlogArticlePreview
+                    post={{
+                      ...draft,
+                      slug: previewSlug,
+                      read_minutes: stats.readMinutes,
+                    }}
+                    formsById={formsById}
+                    isPreview
+                    mobile={viewport === 'mobile'}
+                  />
+                ) : (
+                  <div className="bredesign bd-article-shell is-studio-preview">
+                    <section className="bd-page-hero bd-article-hero is-preview">
+                      <div
+                        className="bd-page-hero-media"
+                        style={
+                          draft.banner_url ? { backgroundImage: `url("${draft.banner_url}")` } : undefined
+                        }
+                        aria-hidden="true"
+                      />
+                      <div className="bd-page-hero-scrim" aria-hidden="true" />
+                      <div className="bd-wrap bd-page-hero-in">
+                        <div className="bd-article-topbar">
+                          <span className="bd-article-crumb">
+                            <Sparkles className="size-3.5" aria-hidden="true" />
+                            Live Event Preview
+                          </span>
+                          {!draft.is_published && (
+                            <span className="bd-post-badge is-draft">Draft Preview</span>
+                          )}
+                        </div>
+                        <span className="bd-eyebrow">
+                          Event{draft.branch ? ` · ${draft.branch}` : ' · Hakum Auto Care'}
+                        </span>
+                        <h1>{draft.title || 'Untitled Event'}</h1>
+                        <p className="bd-page-hero-copy">
+                          {draft.is_date_tba
+                            ? 'Date To Be Announced'
+                            : draft.starts_at
+                              ? new Date(draft.starts_at).toLocaleString()
+                              : 'Date not set'}
+                        </p>
+                      </div>
+                    </section>
+                    <section className="bd-sec bd-article-body-sec">
+                      <div className="bd-wrap">
+                        <article className="bd-article-prose">
+                          {draft.banner_url ? (
+                            <figure className="bd-article-cover-frame">
+                              <img src={draft.banner_url} alt={draft.title || ''} />
+                            </figure>
+                          ) : null}
+                          {draft.description ? (
+                            <aside className="bd-article-summary-box">
+                              <span className="bd-eyebrow">Event Overview</span>
+                              <p className="bd-article-summary-text">{draft.description}</p>
+                            </aside>
+                          ) : null}
+                          <ContentBlockRenderer
+                            blocks={draft.content_blocks}
+                            formsById={formsById}
+                            className="is-editorial-dark"
+                            mobile={viewport === 'mobile'}
+                          />
+                        </article>
+                      </div>
+                    </section>
                   </div>
-                ) : null}
-
-                {isBlog && draft.ai_summary ? (
-                  <div className="mb-5 rounded-xl border border-blue-500/30 bg-blue-500/10 p-4">
-                    <p className="mb-1 text-[11px] font-bold tracking-wider text-blue-400 uppercase">
-                      Executive Summary
-                    </p>
-                    <p className="text-sm leading-relaxed text-slate-200">{draft.ai_summary}</p>
-                  </div>
-                ) : null}
-
-                {!isBlog && draft.description ? (
-                  <p className="mb-5 text-sm leading-relaxed text-slate-200">{draft.description}</p>
-                ) : null}
-
-                <ContentBlockRenderer
-                  blocks={draft.content_blocks}
-                  formsById={formsById}
-                  mobile={viewport === 'mobile'}
-                />
+                )}
               </div>
             </div>
           )}

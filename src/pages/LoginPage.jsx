@@ -4,7 +4,7 @@ import { Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
 import { OPS_LOGIN_ROLES } from '../auth/permissions'
-import { resolvePostLoginPath, safeAuthReturnPath } from '../auth/authRedirect'
+import { resolvePostLoginPath, safeAuthReturnUrl } from '../auth/authRedirect'
 import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell, { TEAM_AUTH_BULLETS } from '../components/HakumAuthShell'
 import DemoAccountChips from '../components/DemoAccountChips'
@@ -24,7 +24,7 @@ export default function LoginPage() {
   const { user, profile, loading, signOut, refreshProfile } = useAuth()
   const location = useLocation()
   const navigate = useNavigate()
-  const returnPath = safeAuthReturnPath(location.state?.from?.pathname)
+  const returnPath = safeAuthReturnUrl(location.state?.from)
   const missingProfileTries = useRef(0)
 
   useEffect(() => {

@@ -15,6 +15,7 @@ import {
   isDetailingFormKind,
   isFixedFormKind,
   isFormSlugLocked,
+  moveFormField,
   normalizeFields,
   shareFormUrl,
   slugifyFormName,
@@ -28,10 +29,11 @@ import { buildComplaintNotifyCopy } from '../server/notifyOpsForm.mjs'
 import { NOTIFY_EVENTS, planStaffRecipients } from '../src/lib/notifyRouting.js'
 
 describe('opsForms smart builder', () => {
-  it('lists fixed company kinds plus detailing CRUD kind', () => {
-    assert.equal(FORM_KINDS.length, 6)
+  it('lists fixed company kinds plus detailing & custom CRUD kinds without Events RSVP', () => {
+    assert.equal(FORM_KINDS.length, 5)
+    assert.equal(FORM_KINDS.some((k) => k.value === 'event'), false)
     assert.ok(FORM_KINDS.some((k) => k.value === 'detailing'))
-    assert.equal(FIXED_FORM_TEMPLATES.length, 4)
+    assert.equal(FIXED_FORM_TEMPLATES.length, 3)
     assert.equal(isFixedFormKind('complaint'), true)
     assert.equal(isFixedFormKind('detailing'), false)
     assert.equal(isDetailingFormKind('detailing'), true)
@@ -114,12 +116,12 @@ describe('opsForms smart builder', () => {
     assert.equal(branchField.type, 'select')
     assert.deepEqual(branchField.options, ['bacoor', 'batangas'])
 
-    const eventFields = templateFields('event', { branchSlugs: slugs })
-    const eventBranch = eventFields.find((f) => f.key === 'branch')
-    assert.ok(eventBranch)
-    assert.equal(eventBranch.type, 'select')
-    assert.equal(eventBranch.required, false)
-    assert.deepEqual(eventBranch.options, ['bacoor', 'batangas'])
+    const detailingFields = templateFields('detailing', { branchSlugs: slugs })
+    const detailingBranch = detailingFields.find((f) => f.key === 'branch')
+    assert.ok(detailingBranch)
+    assert.equal(detailingBranch.type, 'select')
+    assert.equal(detailingBranch.required, true)
+    assert.deepEqual(detailingBranch.options, ['bacoor', 'batangas'])
   })
 
   it('extracts and filters form submissions by branch filter and admin branch scope list', () => {
@@ -189,7 +191,8 @@ describe('thumbs down complaint', () => {
     assert.match(portal, /customer-complaints/)
     assert.match(home, /Send complaint/)
     assert.match(home, /COMPLAINT_CATEGORIES/)
-    assert.equal(NOTIFY_EVENTS.review.urls[0], '/operations/planning?tab=forms')
+    assert.equal(NOTIFY_EVENTS.review.urls[0], '/operations/forms/results')
+    assert.equal(NOTIFY_EVENTS.complaint.urls[0], '/operations/forms/results')
   })
 })
 
@@ -205,10 +208,34 @@ describe('complaint notify targets', () => {
     const got = planStaffRecipients(people, { ...NOTIFY_EVENTS.complaint, branch: 'bacoor' }).map((r) => r.id)
     assert.deepEqual(got, ['sa', 'asa', 'ba-bacoor'])
     const copy = buildComplaintNotifyCopy({
+      formSlug: 'customer-complaints',
       payload: { customer_name: 'Ana', branch: 'bacoor', category: 'Damage' },
       submissionId: 'sub-1',
     })
     assert.equal(copy.kind, 'ops_complaint')
+    assert.equal(copy.url, '/operations/forms/results/customer-complaints')
     assert.match(copy.body, /Ana @ bacoor/)
+  })
+})
+
+describe('moveFormField', () => {
+  it('reorders fixed fields immutably and blocks cross-step moves on wizard forms', () => {
+    const flat = [
+      { key: 'a', label: 'A', type: 'text', required: true },
+      { key: 'b', label: 'B', type: 'phone', required: false },
+      { key: 'c', label: 'C', type: 'email', required: false },
+    ]
+    const moved = moveFormField(flat, 0, 2)
+    assert.deepEqual(moved.map((f) => f.key), ['b', 'c', 'a'])
+    assert.deepEqual(flat.map((f) => f.key), ['a', 'b', 'c'])
+
+    const steps = [{ id: 's1', title: 'Step 1' }, { id: 's2', title: 'Step 2' }]
+    const wizard = [
+      { key: 'a', label: 'A', type: 'text', step: 's1' },
+      { key: 'b', label: 'B', type: 'text', step: 's1' },
+      { key: 'c', label: 'C', type: 'text', step: 's2' },
+    ]
+    assert.deepEqual(moveFormField(wizard, 0, 1, steps).map((f) => f.key), ['b', 'a', 'c'])
+    assert.deepEqual(moveFormField(wizard, 0, 2, steps).map((f) => f.key), ['a', 'b', 'c'])
   })
 })
