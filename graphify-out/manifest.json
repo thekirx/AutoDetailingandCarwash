@@ -4944,9 +4944,9 @@
     "semantic_hash": "b2fd8c1a303fa745eeb26b3fac07046c"
   },
   "CHANGELOG.md": {
-    "mtime": 1794927331.6485848,
-    "seen": 1794927431.9555333,
-    "ast_hash": "69b4f339055e9b7d96374af97c2d73a7",
+    "mtime": 1794928975.6485991,
+    "seen": 1794929075.97607,
+    "ast_hash": "ca69eb38fa61bb45812ae20084a027c4",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
@@ -4974,9 +4974,9 @@
     "semantic_hash": "983fbeb6e7617283c5643ec1912d89f8"
   },
   "PROJECT_STATUS.md": {
-    "mtime": 1794927335.227471,
-    "seen": 1794927431.9555683,
-    "ast_hash": "7b9b405d1ea8d33773bb83ce52992913",
+    "mtime": 1794928978.0076547,
+    "seen": 1794929075.9761019,
+    "ast_hash": "007a26d2356c2efb8cb8f5a46e36ae87",
     "semantic_hash": ""
   },
   "SECURITY_AUDIT.md": {
@@ -9414,16 +9414,16 @@
     "semantic_hash": "3108f25027a072b179cf4008c046df3d"
   },
   "src/lib/promoVoucher.js": {
-    "mtime": 1793527628.7041264,
-    "seen": 1794750478.5159922,
-    "ast_hash": "676b506ad9e60f4ddaf2648e031a4a26",
-    "semantic_hash": "676b506ad9e60f4ddaf2648e031a4a26"
+    "mtime": 1794928350.153223,
+    "seen": 1794929075.973001,
+    "ast_hash": "46cde1489a0ef3ca8230a5d31f9529ee",
+    "semantic_hash": ""
   },
   "src/pages/VouchersPage.jsx": {
-    "mtime": 1793527686.6342182,
-    "seen": 1794750478.5164905,
-    "ast_hash": "4292105f41a65ba56ca668eb78c2f69b",
-    "semantic_hash": "4292105f41a65ba56ca668eb78c2f69b"
+    "mtime": 1794928534.698686,
+    "seen": 1794929075.9734488,
+    "ast_hash": "dc32d5642a848dcd9bc4559f6694be4c",
+    "semantic_hash": ""
   },
   "supabase/migrations/20261019110000_promo_vouchers.sql": {
     "mtime": 1792590007.0651543,
@@ -9432,10 +9432,10 @@
     "semantic_hash": "dd5047bb526bfe38b1cd4a1b79084c52"
   },
   "tests/promoVoucher.test.js": {
-    "mtime": 1793527978.3175437,
-    "seen": 1794750478.5187488,
-    "ast_hash": "312880a35e5187a8932eeef7fd827f86",
-    "semantic_hash": "312880a35e5187a8932eeef7fd827f86"
+    "mtime": 1794928297.0454965,
+    "seen": 1794929075.975641,
+    "ast_hash": "67082876ac14d3ab812d173d6149998c",
+    "semantic_hash": ""
   },
   "docs/architecture/promo-voucher.workflow.html": {
     "mtime": 1792590006.2133873,
@@ -10650,9 +10650,9 @@
     "semantic_hash": "e39ebdc343e36488738cb6898262aa63"
   },
   "HANDOFF.md": {
-    "mtime": 1794927366.3479428,
-    "seen": 1794927431.9555528,
-    "ast_hash": "41f1185c1f931d8adadde9996c23ecaf",
+    "mtime": 1794928980.6030693,
+    "seen": 1794929075.976088,
+    "ast_hash": "c48c9e4f1b6d7c6daa2280d5ea2ce51b",
     "semantic_hash": ""
   },
   "docs/seo-ai-visibility.md": {

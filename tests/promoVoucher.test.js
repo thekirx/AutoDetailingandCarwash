@@ -5,12 +5,15 @@ import { fileURLToPath } from 'node:url'
 import { describe, it } from 'node:test'
 import {
   customerVoucherRulesLine,
+  formatPromoDiscount,
+  formatPromoScope,
   mintPromoCode,
   normalizePromoCode,
   promoAppliesToService,
   promoCodeShapeError,
   promoDiscountedPriceMinor,
   promoVoucherRemaining,
+  promoVoucherStatus,
   promoVoucherWindowError,
   voucherScopeLabel,
 } from '../src/lib/promoVoucher.js'
@@ -123,5 +126,23 @@ describe('promo vouchers', () => {
     assert.match(publicBook, /rawVoucherCode/)
     assert.match(publicBook, /promo_voucher_redemptions/)
     assert.match(publicBook, /promo_discount_minor/)
+  })
+
+  it('derives accurate operational status, formatted labels, and accessible VouchersPage controls', async () => {
+    assert.equal(promoVoucherStatus({ is_active: false, max_uses: 10, uses_count: 0 }, '2026-11-17').id, 'paused')
+    assert.equal(promoVoucherStatus({ is_active: true, max_uses: 5, uses_count: 5 }, '2026-11-17').id, 'exhausted')
+    assert.equal(promoVoucherStatus({ is_active: true, max_uses: 5, uses_count: 1, ends_on: '2026-11-16' }, '2026-11-17').id, 'expired')
+    assert.equal(promoVoucherStatus({ is_active: true, max_uses: 5, uses_count: 0, starts_on: '2026-11-20' }, '2026-11-17').id, 'scheduled')
+    assert.equal(promoVoucherStatus({ is_active: true, max_uses: 5, uses_count: 1, starts_on: '2026-11-01', ends_on: '2026-11-30' }, '2026-11-17').id, 'active')
+    assert.equal(formatPromoDiscount({ discount_kind: 'fixed', discount_amount_minor: 50000 }), '₱500 off')
+    assert.equal(formatPromoScope({ applies_to: 'detailing' }), 'Detailing only')
+
+    const page = await readFile(resolve(root, 'src/pages/VouchersPage.jsx'), 'utf8')
+    assert.doesNotMatch(page, /<label[^>]*>\s*<Label\b/)
+    assert.match(page, /items=\{DISCOUNT_KIND_OPTIONS\}/)
+    assert.match(page, /items=\{APPLIES_TO_OPTIONS\}/)
+    assert.match(page, /promoVoucherStatus\(row/)
+    assert.match(page, /voucher-preview-ticket/)
+    assert.match(page, /voucher-mobile-card/)
   })
 })
