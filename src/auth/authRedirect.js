@@ -50,6 +50,7 @@ export function opsRouteKeyFromPath(pathname) {
   if (path.startsWith('/operations/vehicle-transfer')) return 'vehicle-transfer'
   if (path.startsWith('/operations/audit')) return 'audit'
   if (path.startsWith('/operations/data-center')) return 'data-center'
+  if (path.startsWith('/operations/system')) return 'system'
   if (path.startsWith('/operations/inquiries')) return 'inquiries'
   if (path.startsWith('/operations/crew')) return 'crew'
   if (path.startsWith('/operations/kpi')) return 'kpi'

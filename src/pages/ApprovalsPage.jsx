@@ -10,7 +10,7 @@ import OpsPageShell from '@/components/ops/OpsPageShell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 
-export default function ApprovalsPage() {
+export default function ApprovalsPage({ embedded = false } = {}) {
   const { profile } = useAuth()
   const [rows, setRows] = useState([])
   const [expenseRows, setExpenseRows] = useState([])
@@ -72,42 +72,40 @@ export default function ApprovalsPage() {
     }
   }
 
-  return (
-    <OpsPageShell
-      className="hakum-approvals"
-      title="Approvals"
-      description="Restock adds to the count after Super Admin accepts it. It is not a bill. Bills waiting for approval stay in Finance."
-      actions={
-        <Button type="button" variant="outline" className="min-h-11" asChild>
-          <Link to="/operations/finance?tab=purchases">Open bills</Link>
-        </Button>
-      }
-    >
+  const inner = (
+    <div className="flex flex-col gap-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">{bills} bill{bills === 1 ? '' : 's'} waiting for approval</p>
-        {branches.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter approvals by branch">
-            <Button
-              type="button"
-              size="sm"
-              variant={branchFilter === 'all' ? 'default' : 'outline'}
-              onClick={() => setBranchFilter('all')}
-            >
-              All Branches
-            </Button>
-            {branches.map((b) => (
+        <div className="flex flex-wrap items-center gap-2">
+          {branches.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter approvals by branch">
               <Button
-                key={b.slug}
                 type="button"
                 size="sm"
-                variant={branchFilter === b.slug ? 'default' : 'outline'}
-                onClick={() => setBranchFilter(b.slug)}
+                variant={branchFilter === 'all' ? 'default' : 'outline'}
+                onClick={() => setBranchFilter('all')}
               >
-                {b.name}
+                All Branches
               </Button>
-            ))}
-          </div>
-        ) : null}
+              {branches.map((b) => (
+                <Button
+                  key={b.slug}
+                  type="button"
+                  size="sm"
+                  variant={branchFilter === b.slug ? 'default' : 'outline'}
+                  onClick={() => setBranchFilter(b.slug)}
+                >
+                  {b.name}
+                </Button>
+              ))}
+            </div>
+          ) : null}
+          {embedded ? (
+            <Button type="button" variant="outline" size="sm" className="min-h-10" asChild>
+              <Link to="/operations/finance?tab=purchases">Open bills</Link>
+            </Button>
+          ) : null}
+        </div>
       </div>
       {visibleRows.length ? (
         <ul className="flex flex-col gap-3" aria-label="Restock waiting">
@@ -142,6 +140,23 @@ export default function ApprovalsPage() {
       ) : (
         <p className="text-sm text-muted-foreground">No restock is waiting.</p>
       )}
+    </div>
+  )
+
+  if (embedded) return inner
+
+  return (
+    <OpsPageShell
+      className="hakum-approvals"
+      title="Approvals"
+      description="Restock adds to the count after Super Admin accepts it. It is not a bill. Bills waiting for approval stay in Finance."
+      actions={
+        <Button type="button" variant="outline" className="min-h-11" asChild>
+          <Link to="/operations/finance?tab=purchases">Open bills</Link>
+        </Button>
+      }
+    >
+      {inner}
     </OpsPageShell>
   )
 }

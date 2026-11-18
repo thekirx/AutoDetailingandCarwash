@@ -69,7 +69,7 @@ function formatPesos(minor) {
   return `₱${(Number(minor) / 100).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-export default function MonthlyPayrollPage() {
+export default function MonthlyPayrollPage({ embedded = false } = {}) {
   const { profile } = useAuth()
   const canWrite = canEditFinanceBooks(profile)
   const isManager = isSuperAdmin(profile) || isAssistantSuperAdmin(profile)
@@ -531,20 +531,8 @@ export default function MonthlyPayrollPage() {
 
   if (!canWrite) return <Navigate to="/operations/access-denied" replace />
 
-  return (
-    <OpsPageShell
-      className="hakum-monthly-payroll"
-      eyebrow="Finance"
-      title="Payroll"
-      description="Office and admin pay, semi-monthly (1st–15th and 16th–end of month). Lucy, Robert, or Owner types salary and incentive. Crew stay on the Daily Sheet."
-      actions={
-        <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" variant="outline" className="min-h-11" asChild>
-            <Link to="/operations/payslips">My payslips</Link>
-          </Button>
-        </div>
-      }
-    >
+  const inner = (
+    <>
       <div className="flex flex-col gap-5">
         {/* View Mode Switcher */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-3">
@@ -1166,6 +1154,26 @@ export default function MonthlyPayrollPage() {
           </form>
         </DialogContent>
       </Dialog>
+    </>
+  )
+
+  if (embedded) return inner
+
+  return (
+    <OpsPageShell
+      className="hakum-monthly-payroll"
+      eyebrow="Finance"
+      title="Payroll"
+      description="Office and admin pay, semi-monthly (1st–15th and 16th–end of month). Lucy, Robert, or Owner types salary and incentive. Crew stay on the Daily Sheet."
+      actions={
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" variant="outline" className="min-h-11" asChild>
+            <Link to="/operations/payslips">My payslips</Link>
+          </Button>
+        </div>
+      }
+    >
+      {inner}
     </OpsPageShell>
   )
 }

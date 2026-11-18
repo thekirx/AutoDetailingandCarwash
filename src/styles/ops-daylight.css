@@ -372,8 +372,99 @@
 .command-daylight .command-rail-rule { background: var(--rule); }
 .command-daylight .command-nav-group [data-slot="sidebar-group-label"] { color: #8D98C9; }
 .command-daylight .command-nav-group [data-slot="sidebar-menu"] { gap: 4px; }
-.command-daylight .command-nav-btn { color: #CDD5F5; border-radius: 999px; font-weight: 600; font-size: 14px; }
-.command-daylight .command-nav-btn:hover { background: rgb(157 180 255 / .12); color: #fff; }
+.command-daylight .command-nav-btn { color: #CDD5F5; border-radius: 999px; font-weight: 600; font-size: 14px; transition: background-color 150ms cubic-bezier(0.23, 1, 0.32, 1), color 150ms cubic-bezier(0.23, 1, 0.32, 1), transform 140ms cubic-bezier(0.23, 1, 0.32, 1); }
+.command-daylight .command-nav-btn:active,
+.command-daylight .command-nav-sub-btn:active { transform: scale(0.97); }
+@media (hover: hover) and (pointer: fine) {
+  .command-daylight .command-nav-btn:hover { background: rgb(157 180 255 / .12); color: #fff; }
+  .command-daylight .command-nav-sub-btn:hover { background: rgb(157 180 255 / .12); color: #fff; }
+}
+.command-daylight .command-nav-parent-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.command-daylight .command-nav-parent-row .command-nav-btn { flex: 1; min-width: 0; }
+.command-daylight .command-nav-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  flex-shrink: 0;
+  border-radius: 999px;
+  color: #AAB4DC;
+  cursor: pointer;
+  transition: background-color 140ms cubic-bezier(0.23, 1, 0.32, 1), color 140ms cubic-bezier(0.23, 1, 0.32, 1), transform 180ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+@media (hover: hover) and (pointer: fine) {
+  .command-daylight .command-nav-chevron:hover { background: rgb(157 180 255 / .14); color: #fff; }
+}
+.command-daylight .command-nav-chevron[data-open="true"] svg { transform: rotate(180deg); }
+.command-daylight .command-nav-chevron svg { transition: transform 180ms cubic-bezier(0.23, 1, 0.32, 1); }
+
+/* Accordion sub-menu reveal (--ease-out, zero layout jitter) */
+.command-daylight .command-nav-accordion {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 200ms cubic-bezier(0.23, 1, 0.32, 1), opacity 180ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.command-daylight .command-nav-accordion[data-open="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.command-daylight [data-collapsible="icon"] .command-nav-accordion,
+.command-daylight [data-collapsible="icon"] .command-nav-chevron {
+  display: none;
+}
+.command-daylight .command-nav-accordion > div { overflow: hidden; }
+.command-daylight .command-nav-sub {
+  margin: 2px 0 4px 0.95rem;
+  border-left: 1px solid rgb(157 180 255 / .22);
+  padding: 2px 0 2px 0.65rem;
+}
+.command-daylight .command-nav-sub-btn {
+  min-height: 2.25rem;
+  border-radius: 999px;
+  color: #B9C4EE;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background-color 150ms cubic-bezier(0.23, 1, 0.32, 1), color 150ms cubic-bezier(0.23, 1, 0.32, 1), transform 140ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.command-daylight .command-nav-sub-btn[aria-current="page"],
+.command-daylight .command-nav-sub-btn[data-active] {
+  background: #fff;
+  color: var(--blue);
+  font-weight: 700;
+}
+
+/* Subtle tab panel arrival on tab switch (160ms --ease-out) */
+@keyframes hakum-tab-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.command-daylight [data-slot="tabs-content"][data-state="active"] {
+  animation: hakum-tab-enter 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .command-daylight .command-nav-btn,
+  .command-daylight .command-nav-sub-btn,
+  .command-daylight .command-nav-chevron,
+  .command-daylight .command-nav-chevron svg,
+  .command-daylight .command-nav-accordion {
+    transition-duration: 0.01ms !important;
+  }
+  .command-daylight .command-nav-btn:active,
+  .command-daylight .command-nav-sub-btn:active { transform: none; }
+  .command-daylight [data-slot="tabs-content"][data-state="active"] {
+    animation-duration: 90ms;
+    animation-name: hakum-tab-fade;
+  }
+  @keyframes hakum-tab-fade { from { opacity: 0; } to { opacity: 1; } }
+}
 .command-daylight .command-nav-btn.command-rail-search {
   border: 1px solid var(--rule);
   background: rgb(157 180 255 / .10);

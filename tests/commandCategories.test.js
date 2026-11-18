@@ -115,10 +115,8 @@ describe('command category IA', () => {
       'Detailing Schedule',
       'Team Planner',
       'Point of Sales',
-      'Inventory',
+      'Catalog & Inventory',
       'Financials',
-      'Monthly salaries',
-      'Approvals',
     ])
     assert.deepEqual(
       groups.find((g) => g.id === 'hr').items.map((item) => item.label),
@@ -128,8 +126,6 @@ describe('command category IA', () => {
       groups.find((g) => g.id === 'config').items.map((item) => item.label),
       [
         'Branches',
-        'Services and Packages',
-        'Detailing Packages',
         'Vehicle List',
         'Content',
         'Settings',
@@ -141,7 +137,7 @@ describe('command category IA', () => {
     )
     assert.deepEqual(
       groups.find((g) => g.id === 'ops-insight').items.map((item) => item.label),
-      ['History', 'Notifications', 'Audit', 'Data Center'],
+      ['History', 'Notifications', 'System & Data'],
     )
     assert.ok(!sa.some((i) => i.label === 'Console' || i.label === 'KPI' || i.label === 'Reviews' || i.label === 'Month KPI'))
     assert.ok(sa.some((i) => i.to === '/operations/rewards' && i.label === 'Rewards'))

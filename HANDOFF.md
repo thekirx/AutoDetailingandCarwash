@@ -1,9 +1,9 @@
 # Hakum Auto Care — Engineering & Operations Handoff Guide
 
-**Date:** 2026-11-17 (Asia/Manila)  
+**Date:** 2026-11-18 (Asia/Manila)  
 **Repository:** `https://github.com/thekirx/AutoDetailingandCarwash.git` (Branch: `main`)  
 **Production Domain:** `https://www.hakumautocare.com` (Vercel + Supabase `lybxhpzzqqyqswvuwpxv`)  
-**Current Baseline:** `bff71854` + Unified Employees & Attendance Hub (`/operations/employees` via `EmployeesHubPage.jsx`, `PeopleManagePage.jsx`, `CrewAttendancePanels.jsx`, `attendanceApi.js`, `adminApi.js`, `permissions.js`, `App.jsx`)  
+**Current Baseline:** `3f5dc0d7` + Sidebar Consolidation, Expandable Dropdowns (`Catalog & Inventory`, `Financials`), `System & Data` Hub (`/operations/system`), Unified `Services & detailing` scope filter, and Restrained Motion (`ops-daylight.css`)  
 
 This document is the primary onboarding brief for the next AI engineer or technical lead picking up Hakum Auto Care. Read this together with the persistent Graphify knowledge graph before modifying code.
 
@@ -93,10 +93,10 @@ This document is the primary onboarding brief for the next AI engineer or techni
 
 ---
 
-## 4. Verification Baseline (Current as of 2026-11-16 Latest Pass)
+## 4. Verification Baseline (Current as of 2026-11-18 Latest Pass)
 
-All code/test/DB checks ran against the current working tree after the final code/test edit:
-- `npm run lint` (`0`), `npm test` (`2674+`), `npm run check` (`ok`), `npm run audit:api-auth` (`37` handlers ok), `npm run build` (`dist/sw.js` + 23 static SEO HTML shells), and `npm run test:browser` (`41/41`).
+All code/test checks ran against the current working tree after the final code/test edit:
+- `npm run lint` (`0`), `npm test` (`2711/2711` across `608` suites), `npm run check` (`ok`), `npm run audit:api-auth` (`ok`), `npm run build` (`485` precache entries + `23` static SEO HTML shells), and live headless Chromium verification (`42/42` checks across `BossMich`, `Branch Admin`, `Investor`, plus `41/41` `npm run test:browser` prior to final CSS icon-collapse refinement — see `npm run test:browser` to re-run against `vite preview`).
 - Live Supabase (`lybxhpzzqqyqswvuwpxv`) already has all migrations through `20261116190000` applied cleanly (`20261116120000`, `20261116180000`, `20261116190000`), with `0` unindexed FKs and `0` redundant prefix indexes.
 
 > **Note on Production & Vercel:** Commit/push `main` to deploy to `www.hakumautocare.com` / `hakumauto.vercel.app`.

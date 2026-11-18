@@ -40,6 +40,10 @@ import {
   canOverrideAttendance,
   canViewVouchers,
   canManageBranches,
+  canEditFinanceBooks,
+  canAccessApprovals,
+  canAccessAudit,
+  canAccessDataCenter,
 } from '../auth/permissions.js'
 import { canTransferVehicle } from '../lib/vehicleTransfer.js'
 
@@ -257,19 +261,67 @@ const SUB_DESTINATIONS = [
   },
   {
     routeKey: 'inventory',
-    label: 'Inventory · Services & Wash Packages',
-    to: '/operations/inventory?tab=bay',
+    label: 'Catalog & Inventory · Services & Wash Packages',
+    to: '/operations/inventory?tab=services&scope=bay',
     group: 'Catalog & Stock',
-    keywords: 'wash wax price small medium large xl',
+    keywords: 'wash wax price small medium large xl services packages',
     allow: (p) => canManageServices(p),
   },
   {
     routeKey: 'inventory',
-    label: 'Inventory · Detailing Packages',
-    to: '/operations/inventory?tab=detailing',
+    label: 'Catalog & Inventory · Detailing Packages',
+    to: '/operations/inventory?tab=services&scope=detailing',
     group: 'Catalog & Stock',
-    keywords: 'ceramic coating ppf tint paint maintenance',
+    keywords: 'ceramic coating ppf tint paint maintenance detailing',
     allow: (p) => canManageServices(p),
+  },
+  {
+    routeKey: 'inventory',
+    label: 'Catalog & Inventory · Merch & Sellables Stock',
+    to: '/operations/inventory?tab=merch',
+    group: 'Catalog & Stock',
+    keywords: 'merch sellables stock on hand restock accessories',
+    allow: (p) => canManageServices(p) || canAccessInventory(p),
+  },
+  {
+    routeKey: 'monthly-payroll',
+    label: 'Financials · Monthly Salaries & Office Payroll',
+    to: '/operations/finance?tab=salaries',
+    group: 'Money & Shift',
+    keywords: 'monthly salaries payroll office staff payslip base salary',
+    allow: (p) => canEditFinanceBooks(p),
+  },
+  {
+    routeKey: 'approvals',
+    label: 'Financials · Restock & Expense Approvals',
+    to: '/operations/finance?tab=approvals',
+    group: 'Money & Shift',
+    keywords: 'approvals pending restock branch request review',
+    allow: (p) => canAccessApprovals(p) && canOpenFinanceHub(p),
+  },
+  {
+    routeKey: 'approvals',
+    label: 'Approvals · Restock & Pending Queue',
+    to: '/operations/approvals',
+    group: 'Money & Shift',
+    keywords: 'approvals pending restock branch request review',
+    allow: (p) => canAccessApprovals(p) && !canOpenFinanceHub(p),
+  },
+  {
+    routeKey: 'audit',
+    label: 'System & Data · Audit Log',
+    to: '/operations/system?tab=audit',
+    group: 'Reports & Controls',
+    keywords: 'audit trail admin action log history',
+    allow: (p) => canAccessAudit(p),
+  },
+  {
+    routeKey: 'data-center',
+    label: 'System & Data · Data Center Export & Purge',
+    to: '/operations/system?tab=data-center',
+    group: 'Reports & Controls',
+    keywords: 'data center export import json pitr backup purge',
+    allow: (p) => canAccessDataCenter(p),
   },
 ]
 
@@ -303,6 +355,14 @@ export function buildSmartSearchDestinations(profile) {
       group: GROUP_LABELS[item.group] || 'Pages',
       keywords: `${item.label} ${item.to}`,
     })
+    for (const child of item.children || []) {
+      add({
+        label: `${item.label} · ${child.label}`,
+        to: child.to,
+        group: GROUP_LABELS[item.group] || 'Pages',
+        keywords: `${item.label} ${child.label} ${child.to}`,
+      })
+    }
   }
 
   for (const item of roleFloorItems(profile)) {

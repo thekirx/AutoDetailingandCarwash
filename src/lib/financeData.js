@@ -16,6 +16,8 @@ export const FINANCE_TABS = [
   { id: 'quotes', label: 'Quotations', hint: 'Email quotations to CRM customers', group: 'Settings' },
   { id: 'corporate', label: 'Corporate', hint: 'HQ books, EOM roll-up, manual cash balance', group: 'Settings' },
   { id: 'categories', label: 'Accounts', hint: 'Chart of accounts used by Daily Sheets and Bills', group: 'Settings' },
+  { id: 'salaries', label: 'Monthly salaries', hint: 'Office and admin semi-monthly payroll & base rates', group: 'Accounting' },
+  { id: 'approvals', label: 'Approvals', hint: 'Pending branch restock requests and approval queue', group: 'Books' },
   { id: 'reports', label: 'Reports', hint: 'Sales, operations, and retention exports', group: 'Reports' },
 ]
 

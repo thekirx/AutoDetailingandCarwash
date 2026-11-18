@@ -4,6 +4,7 @@ import {
   Building2,
   Car,
   CarFront,
+  ChevronDown,
   ClipboardList,
   Clock,
   Columns3,
@@ -27,6 +28,7 @@ import {
   Plus,
   ScrollText,
   Settings,
+  ShieldCheck,
   ShoppingCart,
   Sparkles,
   Bell,
@@ -85,6 +87,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarProvider,
   SidebarSeparator,
   SidebarTrigger,
@@ -132,6 +137,7 @@ const iconMap = {
   Inbox,
   Layers,
   Settings,
+  ShieldCheck,
   Bell,
   History,
   Clock,
@@ -529,27 +535,35 @@ function DetailerFloorShell({ profile, signOut }) {
   )
 }
 
+function normalizeNavSearch(path, search) {
+  const params = new URLSearchParams(search)
+  if (path === '/operations/inventory') {
+    const tab = params.get('tab')
+    if (tab === 'bay' || tab === 'detailing') {
+      params.set('tab', 'services')
+      if (!params.get('scope')) params.set('scope', tab)
+    }
+  }
+  return params
+}
+
 function commandNavIsActive(pathname, search, to) {
   const [path, query] = String(to || '').split('?')
   if (!path) return false
+  const have = normalizeNavSearch(pathname, search)
   if (query) {
     const want = new URLSearchParams(query)
-    const have = new URLSearchParams(search)
     for (const [key, value] of want) {
       if (have.get(key) !== value) return false
     }
     return pathname === path
   }
-  if (path === '/operations/inventory') {
-    const tab = new URLSearchParams(search).get('tab')
-    if (tab === 'bay' || tab === 'detailing') return false
-  }
   if (path === '/operations/finance') {
-    const tab = new URLSearchParams(search).get('tab')
-    if (tab === 'reports') return false
+    const tab = have.get('tab')
+    if (tab === 'reports' || tab === 'salaries' || tab === 'approvals') return false
   }
   if (path === '/operations/planning') {
-    const tab = new URLSearchParams(search).get('tab')
+    const tab = have.get('tab')
     if (tab === 'calendar') return false
   }
   if (path.endsWith('/console') || path.endsWith('/dashboard')) return pathname === path
@@ -560,32 +574,107 @@ function CommandNavList({ items }) {
   const location = useLocation()
   const { setOpenMobile } = useSidebar()
   const groups = groupOperationsNav(items)
+  const [openMenus, setOpenMenus] = useState({})
 
   return groups.map((group) => (
     <SidebarGroup key={group.id} className="command-nav-group">
       <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu className="gap-1">
-          {group.items.map(({ label: itemLabel, to, icon }) => {
+          {group.items.map(({ label: itemLabel, to, icon, children }) => {
             const Icon = iconMap[icon] || ClipboardList
-            const isActive = commandNavIsActive(location.pathname, location.search, to)
+            const hasChildren = Array.isArray(children) && children.length > 0
+            const activeChild = hasChildren
+              ? children.find((child) => commandNavIsActive(location.pathname, location.search, child.to))
+              : null
+            const parentRouteMatch = commandNavIsActive(location.pathname, location.search, to)
+            const isActive = hasChildren ? parentRouteMatch && !activeChild : parentRouteMatch
+            const routeExpanded = Boolean(activeChild || parentRouteMatch)
+            const isOpen = hasChildren ? (openMenus[to] ?? routeExpanded) : false
+
+            if (!hasChildren) {
+              return (
+                <SidebarMenuItem key={to}>
+                  <SidebarMenuButton
+                    className="command-nav-btn"
+                    isActive={isActive}
+                    tooltip={itemLabel}
+                    render={
+                      <Link
+                        to={to}
+                        aria-current={isActive ? 'page' : undefined}
+                        onClick={() => setOpenMobile(false)}
+                      />
+                    }
+                  >
+                    <Icon />
+                    <span>{itemLabel}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )
+            }
+
             return (
               <SidebarMenuItem key={to}>
-                <SidebarMenuButton
-                  className="command-nav-btn"
-                  isActive={isActive}
-                  tooltip={itemLabel}
-                  render={
-                    <Link
-                      to={to}
-                      aria-current={isActive ? 'page' : undefined}
-                      onClick={() => setOpenMobile(false)}
-                    />
-                  }
-                >
-                  <Icon />
-                  <span>{itemLabel}</span>
-                </SidebarMenuButton>
+                <div className="command-nav-parent-row">
+                  <SidebarMenuButton
+                    className="command-nav-btn flex-1 min-w-0"
+                    isActive={isActive}
+                    tooltip={itemLabel}
+                    render={
+                      <Link
+                        to={to}
+                        aria-current={isActive ? 'page' : undefined}
+                        onClick={() => {
+                          setOpenMenus((prev) => ({ ...prev, [to]: true }))
+                          setOpenMobile(false)
+                        }}
+                      />
+                    }
+                  >
+                    <Icon />
+                    <span>{itemLabel}</span>
+                  </SidebarMenuButton>
+                  <button
+                    type="button"
+                    className="command-nav-chevron group-data-[collapsible=icon]:hidden"
+                    data-open={String(isOpen)}
+                    aria-expanded={isOpen}
+                    aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${itemLabel}`}
+                    onClick={() => setOpenMenus((prev) => ({ ...prev, [to]: !isOpen }))}
+                  >
+                    <ChevronDown size={15} aria-hidden />
+                  </button>
+                </div>
+                <div className="command-nav-accordion group-data-[collapsible=icon]:hidden" data-open={String(isOpen)}>
+                  <div>
+                    <SidebarMenuSub className="command-nav-sub">
+                      {children.map((child) => {
+                        const childActive = commandNavIsActive(location.pathname, location.search, child.to)
+                        return (
+                          <SidebarMenuSubItem key={child.to}>
+                            <SidebarMenuSubButton
+                              className="command-nav-sub-btn"
+                              isActive={childActive}
+                              render={
+                                <Link
+                                  to={child.to}
+                                  aria-current={childActive ? 'page' : undefined}
+                                  onClick={() => {
+                                    setOpenMenus((prev) => ({ ...prev, [to]: true }))
+                                    setOpenMobile(false)
+                                  }}
+                                />
+                              }
+                            >
+                              <span>{child.label}</span>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        )
+                      })}
+                    </SidebarMenuSub>
+                  </div>
+                </div>
               </SidebarMenuItem>
             )
           })}
@@ -611,8 +700,14 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
           : 'Command'
 
   const crumb = useMemo(() => {
-    const match = navigation.find((item) => commandNavIsActive(location.pathname, location.search, item.to))
-    return match?.label || label
+    for (const item of navigation) {
+      if (Array.isArray(item.children)) {
+        const childMatch = item.children.find((child) => commandNavIsActive(location.pathname, location.search, child.to))
+        if (childMatch) return `${item.label} / ${childMatch.label}`
+      }
+      if (commandNavIsActive(location.pathname, location.search, item.to)) return item.label
+    }
+    return label
   }, [navigation, location.pathname, location.search, label])
 
   return (

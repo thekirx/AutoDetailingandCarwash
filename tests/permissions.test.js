@@ -41,22 +41,17 @@ describe('RBAC Part 1 matrix', () => {
         '/operations/pos',
         '/operations/inventory',
         '/operations/finance',
-        '/operations/monthly-payroll',
-        '/operations/approvals',
         '/operations/payslips',
         '/operations/employees',
         '/operations/crm',
         '/operations/rewards',
         '/operations/branches',
-        '/operations/inventory?tab=bay',
-        '/operations/inventory?tab=detailing',
         '/operations/cars',
         '/operations/content',
         '/operations/settings',
         '/operations/history',
         '/operations/notifications',
-        '/operations/audit',
-        '/operations/data-center',
+        '/operations/system',
       ],
     )
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/my-pay' || i.to === '/operations/payroll'))
@@ -136,7 +131,7 @@ describe('RBAC Part 1 matrix', () => {
         '/operations/my-advances',
         '/operations/payslips',
         '/operations/history',
-        '/operations/audit',
+        '/operations/system',
       ],
     )
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/reports'))

@@ -1,9 +1,10 @@
 /** Finance module shell — Xero-like books hub for Hakum Auto Care.
  * Tabs: Dashboard · Sales · Bills · P&L · Shift · Expense reports · Categories · Reports.
  * Real POS income + real expenses, scoped per branch or all branches. */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import {
+  Banknote,
   LayoutDashboard,
   ShoppingCart,
   Receipt,
@@ -19,7 +20,14 @@ import {
   ChevronDown,
 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessFinance, canEditFinanceBooks, canOpenFinanceHub, canSeeAllBranches, ROLES } from '@/auth/permissions'
+import {
+  canAccessApprovals,
+  canAccessFinance,
+  canEditFinanceBooks,
+  canOpenFinanceHub,
+  canSeeAllBranches,
+  ROLES,
+} from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
 import { supabase } from '@/lib/supabase'
 import { Badge } from '@/components/ui/badge'
@@ -80,6 +88,9 @@ import OpsGuideCard from '@/components/ops/OpsGuideCard'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import { FINANCE_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
 
+const MonthlyPayrollPage = lazy(() => import('@/pages/MonthlyPayrollPage'))
+const ApprovalsPage = lazy(() => import('@/pages/ApprovalsPage'))
+
 const TAB_ICONS = {
   overview: LayoutDashboard,
   sheets: ClipboardList,
@@ -92,6 +103,8 @@ const TAB_ICONS = {
   quotes: Mail,
   corporate: Building2,
   categories: Tags,
+  salaries: Banknote,
+  approvals: ClipboardCheck,
   reports: BookOpen,
 }
 
@@ -102,6 +115,8 @@ export default function FinancePage() {
   const canManageVendors = canManageFinanceVendors(profile)
   const showCorporate = canAccessCorporateFinance(profile)
   const showSheets = canReviewDailySheet(profile)
+  const showSalaries = canEditFinanceBooks(profile)
+  const showApprovals = canAccessApprovals(profile)
   const reportsOnly = !booksAccess && canOpenFinanceHub(profile)
   const [searchParams, setSearchParams] = useSearchParams()
   const scope = branchScopeList(profile)
@@ -122,11 +137,13 @@ export default function FinancePage() {
     return FINANCE_TABS.filter((t) => {
       if (t.id === 'corporate') return showCorporate
       if (t.id === 'sheets') return showSheets
+      if (t.id === 'salaries') return showSalaries
+      if (t.id === 'approvals') return showApprovals
       // Quotes write is SA/ASA/admin; investor has no SELECT on finance_quotes
       if (t.id === 'quotes' && profile?.role === ROLES.INVESTOR) return false
       return true
     })
-  }, [reportsOnly, showCorporate, showSheets, profile?.role])
+  }, [reportsOnly, showCorporate, showSheets, showSalaries, showApprovals, profile?.role])
   const primaryTabs = useMemo(
     () => visibleTabs.filter((t) => FINANCE_PRIMARY_TAB_IDS.includes(t.id)),
     [visibleTabs],
@@ -722,6 +739,22 @@ export default function FinancePage() {
         <TabsContent value="categories" className="finance-tab-panel">
           <FinanceCategoriesTab categories={categories} canWrite={canWrite} onReload={load} />
         </TabsContent>
+
+        {showSalaries ? (
+          <TabsContent value="salaries" className="finance-tab-panel">
+            <Suspense fallback={<p className="py-6 text-sm text-muted-foreground">Loading monthly salaries…</p>}>
+              <MonthlyPayrollPage embedded />
+            </Suspense>
+          </TabsContent>
+        ) : null}
+
+        {showApprovals ? (
+          <TabsContent value="approvals" className="finance-tab-panel">
+            <Suspense fallback={<p className="py-6 text-sm text-muted-foreground">Loading approvals…</p>}>
+              <ApprovalsPage embedded />
+            </Suspense>
+          </TabsContent>
+        ) : null}
 
         <TabsContent value="reports" className="finance-tab-panel">
           <FinanceReportsTab

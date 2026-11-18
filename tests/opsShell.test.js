@@ -82,13 +82,13 @@ describe('ops shell adoption — inventory', () => {
     assert.match(page, /OpsTabList/)
     assert.match(page, /const INVENTORY_SHELL_TABS = \[/)
 
-    for (const id of ['bay', 'detailing', 'merch', 'recon']) {
+    for (const id of ['services', 'merch', 'recon']) {
       assert.match(page, new RegExp(`id: '${id}'`))
     }
     assert.doesNotMatch(page, /id: 'stock'/)
 
-    assert.match(page, /catalogScope="bay"/)
-    assert.match(page, /catalogScope="detailing"/)
+    assert.match(page, /catalogScope=\{serviceScope\}/)
+    assert.match(page, /onScopeChange=\{setScope\}/)
     assert.match(page, /BranchInventoryPage embedded/)
     assert.doesNotMatch(page, /planner-v2/)
   })

@@ -54,6 +54,7 @@ const CarsCatalogPage = lazy(() => import('./pages/CarsCatalogPage'))
 const VehicleTransferPage = lazy(() => import('./pages/VehicleTransferPage'))
 const AuditLogPage = lazy(() => import('./pages/AuditLogPage'))
 const DataCenterPage = lazy(() => import('./pages/DataCenterPage'))
+const SystemHubPage = lazy(() => import('./pages/SystemHubPage'))
 const InquiriesPage = lazy(() => import('./pages/InquiriesPage'))
 const PosPage = lazy(() => import('./pages/PosPage'))
 const MerchShopPage = lazy(() => import('./pages/MerchShopPage'))
@@ -169,6 +170,24 @@ function EmployeesHubRedirect({ defaultTab = 'employees', preserveTabParam = fal
   return <Navigate to={`/operations/employees?${params.toString()}`} replace />
 }
 
+function FinanceHubRedirect({ tab, fallback }) {
+  const { profile } = useAuth()
+  const [searchParams] = useSearchParams()
+  if (!allowRoute(profile, 'finance')) return fallback
+  const params = new URLSearchParams(searchParams)
+  params.set('tab', tab)
+  return <Navigate to={`/operations/finance?${params.toString()}`} replace />
+}
+
+function SystemHubRedirect({ tab, fallback }) {
+  const { profile } = useAuth()
+  const [searchParams] = useSearchParams()
+  if (!allowRoute(profile, 'system')) return fallback
+  const params = new URLSearchParams(searchParams)
+  params.set('tab', tab)
+  return <Navigate to={`/operations/system?${params.toString()}`} replace />
+}
+
 function RouteFallback() {
   return (
     <div data-loading="true" className="flex min-h-[40vh] items-center justify-center p-8 text-sm text-muted-foreground">
@@ -259,8 +278,9 @@ export default function App() {
             <Route path="branches" element={gate('branches', <BranchesManagePage />)} />
             <Route path="cars" element={gate('cars', <CarsCatalogPage />)} />
             <Route path="vehicle-transfer" element={gate('vehicle-transfer', <CustomerHubRedirect tab="transfer" fallback={<VehicleTransferPage />} />)} />
-            <Route path="audit" element={gate('audit', <AuditLogPage />)} />
-            <Route path="data-center" element={gate('data-center', <DataCenterPage />)} />
+            <Route path="system" element={gate('system', <SystemHubPage />)} />
+            <Route path="audit" element={gate('audit', <SystemHubRedirect tab="audit" fallback={<AuditLogPage />} />)} />
+            <Route path="data-center" element={gate('data-center', <SystemHubRedirect tab="data-center" fallback={<DataCenterPage />} />)} />
             <Route path="inquiries" element={gate('inquiries', <CustomerHubRedirect tab="inquiries" fallback={<InquiriesPage />} />)} />
             <Route path="dashboard" element={gate('dashboard', <OperationsDashboardPage />)} />
             <Route path="queue" element={gate('queue', <OperationsQueuePage />)} />
@@ -274,14 +294,14 @@ export default function App() {
             <Route path="pos" element={gate('pos', <PosPage />)} />
             <Route path="merch-shop" element={gate('merch-shop', <RewardsHubRedirect tab="points-shop" fallback={<MerchShopPage />} />)} />
             <Route path="inventory" element={gate('inventory', <InventoryPage />)} />
-            <Route path="approvals" element={gate('approvals', <ApprovalsPage />)} />
+            <Route path="approvals" element={gate('approvals', <FinanceHubRedirect tab="approvals" fallback={<ApprovalsPage />} />)} />
             <Route path="finance" element={gate('finance', <FinancePage />)} />
-            <Route path="monthly-payroll" element={gate('monthly-payroll', <MonthlyPayrollPage />)} />
+            <Route path="monthly-payroll" element={gate('monthly-payroll', <FinanceHubRedirect tab="salaries" fallback={<MonthlyPayrollPage />} />)} />
             <Route path="my-pay" element={<Navigate to="/operations" replace />} />
             <Route path="payslips" element={gate('payslips', <MyPayslipsPage />)} />
             <Route path="payroll" element={<Navigate to="/operations/monthly-payroll" replace />} />
             <Route path="crm" element={gate('crm', <CrmPage />)} />
-            <Route path="services" element={gate('inventory', <Navigate to="/operations/inventory" replace />)} />
+            <Route path="services" element={gate('inventory', <Navigate to="/operations/inventory?tab=services&scope=bay" replace />)} />
             <Route path="products" element={gate('inventory', <Navigate to="/operations/inventory?tab=merch" replace />)} />
             <Route path="sms" element={gate('crm', <Navigate to="/operations/crm?tab=sms" replace />)} />
             <Route path="bookings" element={gate('bookings', <BookingBoardPage />)} />

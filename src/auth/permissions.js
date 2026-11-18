@@ -835,8 +835,8 @@ export const COMMAND_NAV_GROUP_LABELS = Object.freeze({
   'ops-insight': 'Operations Insight',
 })
 
-function nav(label, to, icon, group) {
-  return { label, to, icon, group }
+function nav(label, to, icon, group, children) {
+  return children?.length ? { label, to, icon, group, children } : { label, to, icon, group }
 }
 
 /** Group the nav in list order, coalescing items sharing a group id. */
@@ -919,13 +919,16 @@ export function getOperationsNav(profile) {
       nav('Team Planner', '/operations/planning', 'Columns3', 'insight'),
       nav('Point of Sales', '/operations/pos', 'ShoppingCart', 'insight'),
       nav('Financials', '/operations/finance', 'Wallet', 'insight'),
-      nav('Inventory', '/operations/inventory', 'Package', 'insight'),
+      nav('Catalog & Inventory', '/operations/inventory', 'Package', 'insight', [
+        nav('Restock Merch', '/operations/inventory?tab=restock'),
+        nav('Sunday Recon', '/operations/inventory?tab=recon'),
+      ]),
       nav('Employees', '/operations/employees', 'Users', 'hr'),
       nav('Customers', '/operations/crm', 'Contact', 'customers'),
       nav('My advances', '/operations/my-advances', 'Wallet', 'hr'),
       nav('Payslips', '/operations/payslips', 'Banknote', 'hr'),
       nav('History', '/operations/history', 'History', 'ops-insight'),
-      nav('Audit', '/operations/audit', 'ScrollText', 'ops-insight'),
+      nav('System & Data', '/operations/system', 'ShieldCheck', 'ops-insight'),
     ]
   }
 
@@ -980,18 +983,55 @@ export function getOperationsNav(profile) {
     items.push(nav('Point of Sales', '/operations/pos', 'ShoppingCart', 'insight'))
   }
   if (canAccessInventory(profile)) {
-    items.push(nav('Inventory', '/operations/inventory', 'Package', 'insight'))
+    const catalogChildren = []
+    if (canManageServices(profile)) {
+      catalogChildren.push(
+        nav('Services & Packages', '/operations/inventory?tab=services&scope=bay'),
+        nav('Detailing Packages', '/operations/inventory?tab=services&scope=detailing'),
+        nav('Merch & Sellables', '/operations/inventory?tab=merch'),
+      )
+      if (canRestockInventory(profile)) {
+        catalogChildren.push(nav('Sunday Recon', '/operations/inventory?tab=recon'))
+      }
+    } else if (canRestockInventory(profile)) {
+      catalogChildren.push(
+        nav('Restock Merch', '/operations/inventory?tab=restock'),
+        nav('Sunday Recon', '/operations/inventory?tab=recon'),
+      )
+    }
+    items.push(
+      nav(
+        'Catalog & Inventory',
+        '/operations/inventory',
+        'Package',
+        'insight',
+        catalogChildren.length > 1 ? catalogChildren : undefined,
+      ),
+    )
   }
-  if (canAccessFinance(profile)) {
-    items.push(nav('Financials', '/operations/finance', 'Wallet', 'insight'))
-  } else if (canAccessReports(profile)) {
-    items.push(nav('Financials', '/operations/finance?tab=reports', 'Wallet', 'insight'))
-  }
-  if (canEditFinanceBooks(profile)) {
-    items.push(nav('Monthly salaries', '/operations/monthly-payroll', 'Banknote', 'insight'))
-  }
-  if (canAccessApprovals(profile)) {
-    items.push(nav('Approvals', '/operations/approvals', 'ClipboardCheck', 'insight'))
+  if (canOpenFinanceHub(profile)) {
+    const financeChildren = []
+    if (canAccessFinance(profile)) {
+      financeChildren.push(nav('Overview & Books', '/operations/finance'))
+    }
+    if (canEditFinanceBooks(profile)) {
+      financeChildren.push(nav('Monthly salaries', '/operations/finance?tab=salaries'))
+    }
+    if (canAccessApprovals(profile)) {
+      financeChildren.push(nav('Approvals', '/operations/finance?tab=approvals'))
+    }
+    if (canAccessReports(profile)) {
+      financeChildren.push(nav('Reports', '/operations/finance?tab=reports'))
+    }
+    items.push(
+      nav(
+        'Financials',
+        canAccessFinance(profile) ? '/operations/finance' : '/operations/finance?tab=reports',
+        'Wallet',
+        'insight',
+        financeChildren.length > 1 ? financeChildren : undefined,
+      ),
+    )
   }
   if (canAccessMyPayslips(profile) && profile?.role !== ROLES.STAFF) {
     items.push(nav('Payslips', '/operations/payslips', 'Banknote', 'hr'))
@@ -1019,12 +1059,6 @@ export function getOperationsNav(profile) {
   if (canManageBranches(profile)) {
     items.push(nav('Branches', '/operations/branches', 'Building2', 'config'))
   }
-  if (canManageServices(profile)) {
-    items.push(
-      nav('Services and Packages', '/operations/inventory?tab=bay', 'Car', 'config'),
-      nav('Detailing Packages', '/operations/inventory?tab=detailing', 'Sparkles', 'config'),
-    )
-  }
   if (canManageVehicleCatalog(profile)) {
     items.push(nav('Vehicle List', '/operations/cars', 'CarFront', 'config'))
   }
@@ -1044,11 +1078,8 @@ export function getOperationsNav(profile) {
   if (canAccessNotifications(profile)) {
     items.push(nav('Notifications', '/operations/notifications', 'Bell', 'ops-insight'))
   }
-  if (canAccessAudit(profile)) {
-    items.push(nav('Audit', '/operations/audit', 'ScrollText', 'ops-insight'))
-  }
-  if (canAccessDataCenter(profile)) {
-    items.push(nav('Data Center', '/operations/data-center', 'Database', 'ops-insight'))
+  if (canAccessAudit(profile) || canAccessDataCenter(profile)) {
+    items.push(nav('System & Data', '/operations/system', 'ShieldCheck', 'ops-insight'))
   }
   return items
 }
@@ -1203,6 +1234,7 @@ export const BRANCH_ADMIN_ROUTE_KEYS = Object.freeze([
   'planning',
   'history',
   'audit',
+  'system',
 ])
 
 /** Investor chrome: read-only queue, detailing, POS, rewards/vouchers, finance. No Floor Board. */
@@ -1221,6 +1253,7 @@ export function allowRoute(profile, key) {
     'vehicle-transfer': canTransferVehicle,
     audit: canAccessAudit,
     'data-center': canAccessDataCenter,
+    system: (p) => canAccessAudit(p) || canAccessDataCenter(p),
     inquiries: canAccessInquiries,
     dashboard: canAccessFloorBoard,
     queue: canViewQueueBoard,

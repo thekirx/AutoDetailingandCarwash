@@ -58,12 +58,12 @@ function CountList({ tables, counts }) {
   )
 }
 
-export default function DataCenterPage() {
+export default function DataCenterPage({ embedded = false } = {}) {
   const { profile } = useAuth()
   usePageMeta({
-    title: 'Data Center',
+    title: embedded ? 'System & Data' : 'Data Center',
     description: 'Super Admin export, import, and standard purge for Hakum business data.',
-    path: '/operations/data-center',
+    path: embedded ? '/operations/system' : '/operations/data-center',
   })
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -199,19 +199,18 @@ export default function DataCenterPage() {
     }
   }
 
-  return (
-    <OpsPageShell
-      className="hakum-data-center"
-      eyebrow="Data permanence"
-      title="Data Center"
-      icon={Database}
-      description="Super Admin only. Catalog and CRM can be exported and re-imported. Floor, sales, and finance restore from Supabase PITR. Purge is retention-based and skips rows blocked by live tickets or transactions."
-      actions={
-        <Button variant="outline" className="min-h-11" onClick={load} disabled={loading}>
-          {loading ? 'Refreshing…' : 'Refresh'}
-        </Button>
-      }
-    >
+  const inner = (
+    <div className="flex flex-col gap-6">
+      {embedded ? (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-muted-foreground">
+            Catalog &amp; CRM JSON export/import and retention purge. Floor, sales, and finance restore from Supabase PITR.
+          </p>
+          <Button variant="outline" className="min-h-11 shrink-0" onClick={load} disabled={loading}>
+            {loading ? 'Refreshing…' : 'Refresh'}
+          </Button>
+        </div>
+      ) : null}
 
       {overdue ? (
         <Card className="border-amber-500/40 bg-amber-500/10">
@@ -431,6 +430,25 @@ export default function DataCenterPage() {
           )}
         </CardContent>
       </Card>
+    </div>
+  )
+
+  if (embedded) return inner
+
+  return (
+    <OpsPageShell
+      className="hakum-data-center"
+      eyebrow="Data permanence"
+      title="Data Center"
+      icon={Database}
+      description="Super Admin only. Catalog and CRM can be exported and re-imported. Floor, sales, and finance restore from Supabase PITR. Purge is retention-based and skips rows blocked by live tickets or transactions."
+      actions={
+        <Button variant="outline" className="min-h-11" onClick={load} disabled={loading}>
+          {loading ? 'Refreshing…' : 'Refresh'}
+        </Button>
+      }
+    >
+      {inner}
     </OpsPageShell>
   )
 }

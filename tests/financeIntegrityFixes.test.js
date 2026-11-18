@@ -96,8 +96,8 @@ describe('empty window + unposted pay cues', () => {
 })
 
 describe('finance URL + primary tabs', () => {
-  it('keeps 12 tab ids and the Xero-style primary rail', () => {
-    assert.equal(FINANCE_TABS.length, 12)
+  it('keeps 14 tab ids and the Xero-style primary rail', () => {
+    assert.equal(FINANCE_TABS.length, 14)
     assert.deepEqual(FINANCE_PRIMARY_TAB_IDS, ['overview', 'sheets', 'sales', 'purchases', 'pl', 'reports'])
   })
 

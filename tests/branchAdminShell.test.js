@@ -40,7 +40,7 @@ describe('Branch Admin simplified shell', () => {
         '/operations/my-advances',
         '/operations/payslips',
         '/operations/history',
-        '/operations/audit',
+        '/operations/system',
       ],
     )
     assert.equal(getOperationsNav(p).some((i) => i.label === 'Floor Board'), false)

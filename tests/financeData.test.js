@@ -43,6 +43,8 @@ describe('financeData tabs + presets', () => {
         'quotes',
         'corporate',
         'categories',
+        'salaries',
+        'approvals',
         'reports',
       ],
     )
