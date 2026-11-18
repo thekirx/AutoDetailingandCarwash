@@ -911,6 +911,58 @@ export function getOperationsNav(profile) {
     ]
   }
 
+function buildEmployeesNavChildren(profile) {
+  const canClock = canUseAttendanceClock(profile)
+  const canRegister =
+    canOverrideAttendance(profile) ||
+    profile?.role === ROLES.TEAM_LEAD ||
+    isSuperAdmin(profile) ||
+    isAssistantSuperAdmin(profile)
+  const canPeople = allowRoute(profile, 'people') && canManagePeople(profile)
+  const showSettings = canEditAttendanceSettings(profile) || canEditAttendanceRoles(profile)
+  const kids = []
+  let firstAssigned = false
+  const addTab = (label, tab) => {
+    const to = firstAssigned ? `/operations/employees?tab=${tab}` : '/operations/employees'
+    firstAssigned = true
+    kids.push(nav(label, to))
+  }
+  if (canClock) addTab('Time clock', 'clock')
+  if (canRegister) {
+    addTab('Attendance', 'attendance')
+    addTab('Register', 'register')
+  }
+  if (canPeople) {
+    addTab('Employee list', 'employees')
+    addTab('RBAC & roles', 'access')
+  }
+  if (showSettings) addTab('Settings', 'settings')
+  return kids.length > 1 ? kids : undefined
+}
+
+function buildCustomersNavChildren(profile) {
+  const kids = [nav('Directory', '/operations/crm')]
+  if (canTransferVehicle(profile)) kids.push(nav('Transfer car', '/operations/crm?tab=transfer'))
+  if (canAccessInquiries(profile)) kids.push(nav('Inquiries', '/operations/crm?tab=inquiries'))
+  if (canEditCrm(profile) && canSendCustomerSms(profile)) kids.push(nav('SMS', '/operations/crm?tab=sms'))
+  return kids.length > 1 ? kids : undefined
+}
+
+function buildRewardsNavChildren(profile) {
+  const kids = []
+  if (canAccessMemberships(profile)) kids.push(nav('Memberships', '/operations/rewards'))
+  if (canViewVouchers(profile)) {
+    kids.push(nav('Vouchers', kids.length ? '/operations/rewards?tab=vouchers' : '/operations/rewards'))
+  }
+  if (canManageMerchShop(profile)) {
+    kids.push(nav('Points shop', kids.length ? '/operations/rewards?tab=points-shop' : '/operations/rewards'))
+  }
+  if (isSuperAdmin(profile) || canManageServices(profile)) {
+    kids.push(nav('Referrals', kids.length ? '/operations/rewards?tab=referrals' : '/operations/rewards'))
+  }
+  return kids.length > 1 ? kids : undefined
+}
+
   // Branch Admin: no Floor Board. Queue + detailing are read-only. POS + finance + HR are full.
   if (isBranchAdmin(profile)) {
     return [
@@ -923,8 +975,8 @@ export function getOperationsNav(profile) {
         nav('Restock Merch', '/operations/inventory?tab=restock'),
         nav('Sunday Recon', '/operations/inventory?tab=recon'),
       ]),
-      nav('Employees', '/operations/employees', 'Users', 'hr'),
-      nav('Customers', '/operations/crm', 'Contact', 'customers'),
+      nav('Employees', '/operations/employees', 'Users', 'hr', buildEmployeesNavChildren(profile)),
+      nav('Customers', '/operations/crm', 'Contact', 'customers', buildCustomersNavChildren(profile)),
       nav('My advances', '/operations/my-advances', 'Wallet', 'hr'),
       nav('Payslips', '/operations/payslips', 'Banknote', 'hr'),
       nav('History', '/operations/history', 'History', 'ops-insight'),
@@ -939,12 +991,12 @@ export function getOperationsNav(profile) {
       nav('Team Planner', '/operations/planning', 'Columns3', 'insight'),
       nav('Point of Sales', '/operations/pos', 'ShoppingCart', 'insight'),
       nav('Financials', '/operations/finance', 'Wallet', 'insight'),
-      nav('Customers', '/operations/crm', 'Contact', 'customers'),
+      nav('Customers', '/operations/crm', 'Contact', 'customers', buildCustomersNavChildren(profile)),
       nav('My advances', '/operations/my-advances', 'Wallet', 'hr'),
       nav('Payslips', '/operations/payslips', 'Banknote', 'hr'),
       nav('Month KPI', '/operations/kpi', 'Gauge', 'ops-insight'),
       nav('History', '/operations/history', 'History', 'ops-insight'),
-      nav('Audit', '/operations/audit', 'ScrollText', 'ops-insight'),
+      nav('System & Data', '/operations/system', 'ShieldCheck', 'ops-insight'),
     ]
   }
 
@@ -990,6 +1042,9 @@ export function getOperationsNav(profile) {
         nav('Detailing Packages', '/operations/inventory?tab=services&scope=detailing'),
         nav('Merch & Sellables', '/operations/inventory?tab=merch'),
       )
+      if (canManageVehicleCatalog(profile)) {
+        catalogChildren.push(nav('Vehicle List', '/operations/inventory?tab=cars'))
+      }
       if (canRestockInventory(profile)) {
         catalogChildren.push(nav('Sunday Recon', '/operations/inventory?tab=recon'))
       }
@@ -1038,7 +1093,7 @@ export function getOperationsNav(profile) {
   }
 
   if (canManagePeople(profile) || canViewQueueOperations(profile) || (canAccessAttendance(profile) && profile?.role !== ROLES.STAFF)) {
-    items.push(nav('Employees', '/operations/employees', 'Users', 'hr'))
+    items.push(nav('Employees', '/operations/employees', 'Users', 'hr', buildEmployeesNavChildren(profile)))
   }
   if (canAccessMyAdvances(profile) && profile?.role !== ROLES.STAFF) {
     items.push(nav('My advances', '/operations/my-advances', 'Wallet', 'hr'))
@@ -1048,19 +1103,16 @@ export function getOperationsNav(profile) {
   }
 
   if (canAccessCrm(profile)) {
-    items.push(nav('Customers', '/operations/crm', 'Contact', 'customers'))
+    items.push(nav('Customers', '/operations/crm', 'Contact', 'customers', buildCustomersNavChildren(profile)))
   } else if (canAccessInquiries(profile)) {
     items.push(nav('Inquiries', '/operations/inquiries', 'Inbox', 'customers'))
   }
   if (canAccessRewardsHub(profile)) {
-    items.push(nav('Rewards', '/operations/rewards', 'Gift', 'customers'))
+    items.push(nav('Rewards', '/operations/rewards', 'Gift', 'customers', buildRewardsNavChildren(profile)))
   }
 
   if (canManageBranches(profile)) {
     items.push(nav('Branches', '/operations/branches', 'Building2', 'config'))
-  }
-  if (canManageVehicleCatalog(profile)) {
-    items.push(nav('Vehicle List', '/operations/cars', 'CarFront', 'config'))
   }
   if (canTransferVehicle(profile) && !canAccessCrm(profile)) {
     items.push(nav('Transfer car', '/operations/vehicle-transfer', 'ArrowLeftRight', 'config'))

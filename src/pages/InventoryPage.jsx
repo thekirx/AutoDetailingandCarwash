@@ -1,10 +1,16 @@
 /** Inventory — SA/ASA catalog tabs; BA restock/recon; merch owns branch on-hand (C7); SA CRUD lock (C8). */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
-import { ClipboardCheck, Layers, Lock, LockOpen, ShoppingBag } from 'lucide-react'
+import { CarFront, ClipboardCheck, Layers, Lock, LockOpen, ShoppingBag } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessInventory, canManageServices, canRestockInventory, isSuperAdmin } from '@/auth/permissions'
+import {
+  canAccessInventory,
+  canManageServices,
+  canManageVehicleCatalog,
+  canRestockInventory,
+  isSuperAdmin,
+} from '@/auth/permissions'
 import OpsGuideCard from '@/components/ops/OpsGuideCard'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import OpsTabList from '@/components/ops/OpsTabBar'
@@ -15,6 +21,7 @@ import { opsTabSearchParams } from '@/lib/opsShell'
 import ServicesManagePage from '@/pages/ServicesManagePage'
 import ProductsManagePage from '@/pages/ProductsManagePage'
 import BranchInventoryPage from '@/pages/BranchInventoryPage'
+import CarsCatalogPage from '@/pages/CarsCatalogPage'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 
@@ -24,10 +31,12 @@ const BA_TABS = ['restock', 'recon']
 const INVENTORY_SHELL_TABS = [
   { id: 'services', label: 'Services & detailing', icon: Layers },
   { id: 'merch', label: 'Merch / sellables', icon: ShoppingBag },
+  { id: 'cars', label: 'Vehicle list', icon: CarFront },
   { id: 'recon', label: 'Sunday recon', icon: ClipboardCheck },
 ]
 
-function resolveInventoryTab(raw) {
+function resolveInventoryTab(raw, canCars = false) {
+  if (raw === 'cars' && canCars) return 'cars'
   if (raw === 'services' || raw === 'bay' || raw === 'detailing') return 'services'
   if (raw === 'merch' || raw === 'stock' || raw === 'restock') return 'merch'
   if (BA_TABS.includes(raw)) return raw
@@ -45,9 +54,10 @@ export default function InventoryPage() {
   const { profile } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const canCatalog = canManageServices(profile)
+  const canCars = canManageVehicleCatalog(profile)
   const canStock = canRestockInventory(profile)
   const rawTab = searchParams.get('tab')
-  const tab = resolveInventoryTab(rawTab)
+  const tab = resolveInventoryTab(rawTab, canCars)
   const serviceScope = resolveCatalogScope(rawTab, searchParams.get('scope'))
   const [crudLocked, setCrudLocked] = useState(false)
   const [lockBusy, setLockBusy] = useState(false)
@@ -68,8 +78,13 @@ export default function InventoryPage() {
   const saLockToggle = isSuperAdmin(profile)
 
   const visibleTabs = useMemo(
-    () => INVENTORY_SHELL_TABS.filter((t) => t.id !== 'recon' || canStock),
-    [canStock],
+    () =>
+      INVENTORY_SHELL_TABS.filter((t) => {
+        if (t.id === 'cars') return canCars
+        if (t.id === 'recon') return canStock
+        return true
+      }),
+    [canCars, canStock],
   )
 
   if (!canAccessInventory(profile)) {
@@ -165,6 +180,11 @@ export default function InventoryPage() {
         <TabsContent value="merch" className="mt-0 outline-none">
           <ProductsManagePage embedded crudLocked={crudLocked} canMutate={canMutate} />
         </TabsContent>
+        {canCars ? (
+          <TabsContent value="cars" className="mt-0 outline-none">
+            <CarsCatalogPage embedded />
+          </TabsContent>
+        ) : null}
         {canStock ? (
           <TabsContent value="recon" className="mt-0 outline-none">
             <BranchInventoryPage embedded defaultTab="recon" crudLocked={crudLocked} canMutate={canMutate} />

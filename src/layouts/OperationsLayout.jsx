@@ -68,6 +68,7 @@ import {
 } from '../auth/permissions'
 import { internalRoleLabel } from '../auth/internalRoles'
 import { resolvePostLoginPath } from '../auth/authRedirect'
+import { opsNavIsActive, resolveOpsBreadcrumb } from '@/lib/opsNavigationRegistry'
 import { supabase } from '@/lib/supabase'
 import NotificationBell from '@/components/NotificationBell'
 import PushToggle from '@/components/PushToggle'
@@ -535,46 +536,26 @@ function DetailerFloorShell({ profile, signOut }) {
   )
 }
 
-function normalizeNavSearch(path, search) {
-  const params = new URLSearchParams(search)
-  if (path === '/operations/inventory') {
-    const tab = params.get('tab')
-    if (tab === 'bay' || tab === 'detailing') {
-      params.set('tab', 'services')
-      if (!params.get('scope')) params.set('scope', tab)
-    }
-  }
-  return params
-}
-
-function commandNavIsActive(pathname, search, to) {
-  const [path, query] = String(to || '').split('?')
-  if (!path) return false
-  const have = normalizeNavSearch(pathname, search)
-  if (query) {
-    const want = new URLSearchParams(query)
-    for (const [key, value] of want) {
-      if (have.get(key) !== value) return false
-    }
-    return pathname === path
-  }
-  if (path === '/operations/finance') {
-    const tab = have.get('tab')
-    if (tab === 'reports' || tab === 'salaries' || tab === 'approvals') return false
-  }
-  if (path === '/operations/planning') {
-    const tab = have.get('tab')
-    if (tab === 'calendar') return false
-  }
-  if (path.endsWith('/console') || path.endsWith('/dashboard')) return pathname === path
-  return pathname === path || pathname.startsWith(`${path}/`)
-}
-
 function CommandNavList({ items }) {
   const location = useLocation()
   const { setOpenMobile } = useSidebar()
   const groups = groupOperationsNav(items)
-  const [openMenus, setOpenMenus] = useState({})
+
+  const routeParentKey = useMemo(() => {
+    for (const item of items) {
+      if (!Array.isArray(item.children) || !item.children.length) continue
+      const hasActiveChild = item.children.some((child) => opsNavIsActive(location.pathname, location.search, child.to))
+      const parentRouteMatch = opsNavIsActive(location.pathname, location.search, item.to)
+      if (hasActiveChild || parentRouteMatch) return item.to
+    }
+    return null
+  }, [items, location.pathname, location.search])
+
+  const [accordionState, setAccordionState] = useState(() => ({
+    routeKey: routeParentKey,
+    openKey: routeParentKey,
+  }))
+  const openKey = accordionState.routeKey === routeParentKey ? accordionState.openKey : routeParentKey
 
   return groups.map((group) => (
     <SidebarGroup key={group.id} className="command-nav-group">
@@ -585,12 +566,11 @@ function CommandNavList({ items }) {
             const Icon = iconMap[icon] || ClipboardList
             const hasChildren = Array.isArray(children) && children.length > 0
             const activeChild = hasChildren
-              ? children.find((child) => commandNavIsActive(location.pathname, location.search, child.to))
+              ? children.find((child) => opsNavIsActive(location.pathname, location.search, child.to))
               : null
-            const parentRouteMatch = commandNavIsActive(location.pathname, location.search, to)
+            const parentRouteMatch = opsNavIsActive(location.pathname, location.search, to)
             const isActive = hasChildren ? parentRouteMatch && !activeChild : parentRouteMatch
-            const routeExpanded = Boolean(activeChild || parentRouteMatch)
-            const isOpen = hasChildren ? (openMenus[to] ?? routeExpanded) : false
+            const isOpen = hasChildren && openKey === to
 
             if (!hasChildren) {
               return (
@@ -626,7 +606,7 @@ function CommandNavList({ items }) {
                         to={to}
                         aria-current={isActive ? 'page' : undefined}
                         onClick={() => {
-                          setOpenMenus((prev) => ({ ...prev, [to]: true }))
+                          setAccordionState({ routeKey: routeParentKey, openKey: to })
                           setOpenMobile(false)
                         }}
                       />
@@ -641,7 +621,12 @@ function CommandNavList({ items }) {
                     data-open={String(isOpen)}
                     aria-expanded={isOpen}
                     aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${itemLabel}`}
-                    onClick={() => setOpenMenus((prev) => ({ ...prev, [to]: !isOpen }))}
+                    onClick={() =>
+                      setAccordionState({
+                        routeKey: routeParentKey,
+                        openKey: isOpen ? null : to,
+                      })
+                    }
                   >
                     <ChevronDown size={15} aria-hidden />
                   </button>
@@ -650,7 +635,7 @@ function CommandNavList({ items }) {
                   <div>
                     <SidebarMenuSub className="command-nav-sub">
                       {children.map((child) => {
-                        const childActive = commandNavIsActive(location.pathname, location.search, child.to)
+                        const childActive = opsNavIsActive(location.pathname, location.search, child.to)
                         return (
                           <SidebarMenuSubItem key={child.to}>
                             <SidebarMenuSubButton
@@ -661,7 +646,7 @@ function CommandNavList({ items }) {
                                   to={child.to}
                                   aria-current={childActive ? 'page' : undefined}
                                   onClick={() => {
-                                    setOpenMenus((prev) => ({ ...prev, [to]: true }))
+                                    setAccordionState({ routeKey: routeParentKey, openKey: to })
                                     setOpenMobile(false)
                                   }}
                                 />
@@ -699,16 +684,10 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
           ? 'Admin console'
           : 'Command'
 
-  const crumb = useMemo(() => {
-    for (const item of navigation) {
-      if (Array.isArray(item.children)) {
-        const childMatch = item.children.find((child) => commandNavIsActive(location.pathname, location.search, child.to))
-        if (childMatch) return `${item.label} / ${childMatch.label}`
-      }
-      if (commandNavIsActive(location.pathname, location.search, item.to)) return item.label
-    }
-    return label
-  }, [navigation, location.pathname, location.search, label])
+  const crumb = useMemo(
+    () => resolveOpsBreadcrumb(navigation, location.pathname, location.search, label),
+    [navigation, location.pathname, location.search, label],
+  )
 
   return (
     <SidebarProvider

@@ -2,6 +2,14 @@ import { bearer, json, setCors } from './httpUtil.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
 import { filterSubmissionsByBranchScope } from '../src/lib/opsForms.js'
 import {
+  opsCustomerSearchUrl,
+  opsProductSearchUrl,
+  opsServiceSearchUrl,
+  opsStaffSearchUrl,
+  opsVehicleSearchUrl,
+  opsVoucherSearchUrl,
+} from '../src/lib/opsNavigationRegistry.js'
+import {
   ROLES,
   allowRoute,
   canAccessBookingBoard,
@@ -26,6 +34,7 @@ import {
   isOperationsLead,
   isSalesRole,
   isSuperAdmin,
+  usesCommandShell,
 } from '../src/auth/permissions.js'
 
 const STAFF_SELECT = 'id, full_name, role, branch_slug, permission_grants, is_active'
@@ -104,20 +113,6 @@ function bookingRoute(profile, row) {
   if (allowRoute(profile, 'bookings')) return '/operations/bookings'
   if (allowRoute(profile, 'dashboard')) return '/operations/dashboard'
   return allowRoute(profile, 'history') ? '/operations/history' : null
-}
-
-function catalogServiceRoute(profile) {
-  if (allowRoute(profile, 'inventory')) return '/operations/inventory?tab=bay'
-  if (allowRoute(profile, 'pos')) return '/operations/pos'
-  if (allowRoute(profile, 'queue-new')) return '/operations/queue/new'
-  if (allowRoute(profile, 'bookings')) return '/operations/bookings'
-  return null
-}
-
-function catalogProductRoute(profile) {
-  if (allowRoute(profile, 'inventory')) return '/operations/inventory'
-  if (allowRoute(profile, 'pos')) return '/operations/pos'
-  return null
 }
 
 function unwrapRows(label, result) {
@@ -205,7 +200,7 @@ export async function runScopedQueries(db, scope, term) {
             label: c.full_name || c.phone || 'Customer',
             subtitle: [c.phone, c.email].filter(Boolean).join(' · ') || 'Customer profile',
             badge: 'Customer',
-            to: allowRoute(profile, 'crm') ? '/operations/crm' : '/operations/history',
+            to: opsCustomerSearchUrl(c.full_name || c.phone || term, allowRoute(profile, 'crm')),
           })),
         ),
     )
@@ -213,7 +208,7 @@ export async function runScopedQueries(db, scope, term) {
 
   // 3. Vehicles / Plates
   if (scope.canVehicles && (safeBranches === null || safeBranches.length > 0)) {
-    const dest = allowRoute(profile, 'history') ? '/operations/history' : '/operations/crm'
+    const canHist = allowRoute(profile, 'history')
     let q = db
       .from('vehicles')
       .select('id, plate_number, vehicle_make, vehicle_model, vehicle_type, last_branch')
@@ -229,7 +224,7 @@ export async function runScopedQueries(db, scope, term) {
           label: v.plate_number || 'Vehicle',
           subtitle: [v.vehicle_make, v.vehicle_model, v.vehicle_type, v.last_branch].filter(Boolean).join(' · ') || 'Registered vehicle',
           badge: 'Plate',
-          to: dest,
+          to: opsVehicleSearchUrl(v.plate_number || v.vehicle_model || term, canHist),
         })),
       ),
     )
@@ -317,9 +312,14 @@ export async function runScopedQueries(db, scope, term) {
 
   // 6. Services & Products
   if (scope.canCatalog && (safeBranches === null || safeBranches.length > 0)) {
-    const svcTo = catalogServiceRoute(profile)
-    const prodTo = catalogProductRoute(profile)
-    if (svcTo) {
+    const navFlags = {
+      canInventory: allowRoute(profile, 'inventory'),
+      canManageCatalog: canManageServices(profile),
+      canPos: allowRoute(profile, 'pos'),
+      canQueueNew: allowRoute(profile, 'queue-new'),
+      canBookings: allowRoute(profile, 'bookings'),
+    }
+    if (navFlags.canInventory || navFlags.canPos || navFlags.canQueueNew || navFlags.canBookings) {
       jobs.push(
         db
           .from('services')
@@ -329,20 +329,24 @@ export async function runScopedQueries(db, scope, term) {
           .or(`name.ilike.${pattern},slug.ilike.${pattern},pay_category.ilike.${pattern}`)
           .limit(5)
           .then((res) =>
-            unwrapRows('services', res).map((s) => ({
-              id: `svc-${s.id}`,
-              category: 'catalog',
-              label: s.name,
-              subtitle: [s.pay_category, s.slug].filter(Boolean).join(' · ') || 'Service',
-              badge: 'Service',
-              to: s.pay_category === 'detailing' && allowRoute(profile, 'inventory')
-                ? '/operations/inventory?tab=detailing'
-                : svcTo,
-            })),
+            unwrapRows('services', res)
+              .map((s) => {
+                const to = opsServiceSearchUrl(s, navFlags)
+                if (!to) return null
+                return {
+                  id: `svc-${s.id}`,
+                  category: 'catalog',
+                  label: s.name,
+                  subtitle: [s.pay_category, s.slug].filter(Boolean).join(' · ') || 'Service',
+                  badge: 'Service',
+                  to,
+                }
+              })
+              .filter(Boolean),
           ),
       )
     }
-    if (prodTo) {
+    if (navFlags.canInventory || navFlags.canPos) {
       let pq = db
         .from('products')
         .select('id, name, sku, category, branch_slug')
@@ -353,14 +357,20 @@ export async function runScopedQueries(db, scope, term) {
       if (safeBranches) pq = pq.or(`branch_slug.is.null,branch_slug.in.(${safeBranches.join(',')})`)
       jobs.push(
         pq.then((res) =>
-          unwrapRows('products', res).map((p) => ({
-            id: `prod-${p.id}`,
-            category: 'catalog',
-            label: p.name,
-            subtitle: [p.sku, p.category, p.branch_slug].filter(Boolean).join(' · ') || 'Product',
-            badge: 'Product',
-            to: prodTo,
-          })),
+          unwrapRows('products', res)
+            .map((p) => {
+              const to = opsProductSearchUrl(p, navFlags)
+              if (!to) return null
+              return {
+                id: `prod-${p.id}`,
+                category: 'catalog',
+                label: p.name,
+                subtitle: [p.sku, p.category, p.branch_slug].filter(Boolean).join(' · ') || 'Product',
+                badge: 'Product',
+                to,
+              }
+            })
+            .filter(Boolean),
         ),
       )
     }
@@ -368,7 +378,10 @@ export async function runScopedQueries(db, scope, term) {
 
   // 7. Staff directory (People managers & Attendance overrides only)
   if (scope.canStaff && (safeBranches === null || safeBranches.length > 0)) {
-    const staffDest = allowRoute(profile, 'people') ? '/operations/people' : '/operations/attendance'
+    const staffOpts = {
+      canPeople: allowRoute(profile, 'people'),
+      isCommandShell: usesCommandShell(profile),
+    }
     let q = db
       .from('staff_profiles')
       .select('id, full_name, role, branch_slug')
@@ -385,7 +398,7 @@ export async function runScopedQueries(db, scope, term) {
           label: st.full_name || 'Staff member',
           subtitle: `${st.role}${st.branch_slug ? ` · ${st.branch_slug}` : ''}`,
           badge: 'Staff',
-          to: staffDest,
+          to: opsStaffSearchUrl(st.full_name || term, staffOpts),
         })),
       ),
     )
@@ -406,7 +419,7 @@ export async function runScopedQueries(db, scope, term) {
             label: `${v.code}${v.title ? ` · ${v.title}` : ''}`,
             subtitle: v.is_active === false ? 'Inactive voucher' : 'Active voucher',
             badge: 'Voucher',
-            to: '/operations/vouchers',
+            to: opsVoucherSearchUrl(v.code || v.title || term),
           })),
         ),
     )

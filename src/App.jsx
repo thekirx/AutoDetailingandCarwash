@@ -188,6 +188,15 @@ function SystemHubRedirect({ tab, fallback }) {
   return <Navigate to={`/operations/system?${params.toString()}`} replace />
 }
 
+function CatalogCarsRedirect({ fallback }) {
+  const { profile } = useAuth()
+  const [searchParams] = useSearchParams()
+  if (!allowRoute(profile, 'inventory') || !allowRoute(profile, 'cars')) return fallback
+  const params = new URLSearchParams(searchParams)
+  params.set('tab', 'cars')
+  return <Navigate to={`/operations/inventory?${params.toString()}`} replace />
+}
+
 function RouteFallback() {
   return (
     <div data-loading="true" className="flex min-h-[40vh] items-center justify-center p-8 text-sm text-muted-foreground">
@@ -276,7 +285,7 @@ export default function App() {
             <Route path="employees" element={gate('employees', <EmployeesHubPage />)} />
             <Route path="people" element={gate('people', <EmployeesHubRedirect defaultTab="employees" preserveTabParam fallback={<PeopleManagePage />} />)} />
             <Route path="branches" element={gate('branches', <BranchesManagePage />)} />
-            <Route path="cars" element={gate('cars', <CarsCatalogPage />)} />
+            <Route path="cars" element={gate('cars', <CatalogCarsRedirect fallback={<CarsCatalogPage />} />)} />
             <Route path="vehicle-transfer" element={gate('vehicle-transfer', <CustomerHubRedirect tab="transfer" fallback={<VehicleTransferPage />} />)} />
             <Route path="system" element={gate('system', <SystemHubPage />)} />
             <Route path="audit" element={gate('audit', <SystemHubRedirect tab="audit" fallback={<AuditLogPage />} />)} />

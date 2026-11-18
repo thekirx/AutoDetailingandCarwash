@@ -46,7 +46,6 @@ describe('RBAC Part 1 matrix', () => {
         '/operations/crm',
         '/operations/rewards',
         '/operations/branches',
-        '/operations/cars',
         '/operations/content',
         '/operations/settings',
         '/operations/history',

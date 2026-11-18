@@ -10,6 +10,7 @@ import {
   canEditPlanning,
   canManageMerchShop,
   canManageServices,
+  canManageVehicleCatalog,
   canOpenFinanceHub,
   canSendCustomerSms,
   canViewAssignedTasks,
@@ -284,6 +285,14 @@ const SUB_DESTINATIONS = [
     allow: (p) => canManageServices(p) || canAccessInventory(p),
   },
   {
+    routeKey: 'cars',
+    label: 'Catalog & Inventory · Vehicle Make / Model List',
+    to: '/operations/inventory?tab=cars',
+    group: 'Catalog & Stock',
+    keywords: 'cars make model size small medium large xl picker catalog',
+    allow: (p) => canManageVehicleCatalog(p),
+  },
+  {
     routeKey: 'monthly-payroll',
     label: 'Financials · Monthly Salaries & Office Payroll',
     to: '/operations/finance?tab=salaries',
@@ -340,12 +349,18 @@ const GROUP_LABELS = {
 export function buildSmartSearchDestinations(profile) {
   if (!profile?.role) return []
   const out = []
-  const seen = new Set()
+  const byTo = new Map()
 
   const add = (item) => {
-    if (!item?.to || seen.has(item.to)) return
-    seen.add(item.to)
-    out.push(item)
+    if (!item?.to) return
+    const existing = byTo.get(item.to)
+    if (existing) {
+      existing.keywords = `${existing.keywords || ''} ${item.keywords || ''} ${item.label || ''}`.trim()
+      return
+    }
+    const copy = { ...item }
+    byTo.set(item.to, copy)
+    out.push(copy)
   }
 
   for (const item of getOperationsNav(profile)) {
@@ -385,6 +400,40 @@ export function buildSmartSearchDestinations(profile) {
     })
   }
 
+  return out
+}
+
+/**
+ * Curated Quick Jump destinations for empty Command Menu state: top-level primary
+ * workspaces without dumping every tab/setting row in an overwhelming initial scroll.
+ */
+export function buildQuickJumpDestinations(profile, limit = 8) {
+  if (!profile?.role) return []
+  const out = []
+  const seen = new Set()
+  const add = (item) => {
+    if (!item?.to || seen.has(item.to)) return
+    seen.add(item.to)
+    out.push(item)
+  }
+  for (const item of getOperationsNav(profile)) {
+    add({
+      label: item.label,
+      to: item.to,
+      group: 'Quick Jump',
+      keywords: item.label,
+    })
+    if (out.length >= limit) return out
+  }
+  for (const item of roleFloorItems(profile)) {
+    add({
+      label: item.label,
+      to: item.to,
+      group: 'Quick Jump',
+      keywords: item.label,
+    })
+    if (out.length >= limit) return out
+  }
   return out
 }
 

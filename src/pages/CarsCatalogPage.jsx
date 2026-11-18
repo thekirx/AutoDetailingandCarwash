@@ -47,7 +47,7 @@ function SizeSelect({ id, value, onChange }) {
   )
 }
 
-export default function CarsCatalogPage() {
+export default function CarsCatalogPage({ embedded = false } = {}) {
   const { profile } = useAuth()
   const [rows, setRows] = useState([])
   const [addForm, setAddForm] = useState(emptyForm)
@@ -84,7 +84,9 @@ export default function CarsCatalogPage() {
     })
   }, [rows, search, activeFilter, sizeFilter])
 
-  if (!isSuperAdmin(profile)) return <Navigate to="/operations/access-denied" replace />
+  if (!isSuperAdmin(profile)) {
+    return embedded ? null : <Navigate to="/operations/access-denied" replace />
+  }
 
   function openEdit(row) {
     setEditing(row)
@@ -203,19 +205,19 @@ export default function CarsCatalogPage() {
     }
   }
 
-  return (
-    <OpsPageShell
-      className="hakum-cars"
-      eyebrow="Masterlist"
-      title="Cars catalog"
-      description="Super Admin CRUD for the TL queue picker. Each make/model has a bay size (Small–XL) so bookings and packages auto-price; staff can override on the ticket."
-      actions={
-        <Button type="button" className="min-h-11" onClick={() => setAddOpen(true)}>
-          <Plus size={16} className="mr-1.5" aria-hidden />
-          Add make / model
-        </Button>
-      }
-    >
+  const inner = (
+    <div className="flex flex-col gap-4">
+      {embedded ? (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-muted-foreground">
+            Master vehicle makes &amp; models for the Team Lead queue picker and auto-pricing (Small–XL).
+          </p>
+          <Button type="button" className="min-h-11" onClick={() => setAddOpen(true)}>
+            <Plus size={16} className="mr-1.5" aria-hidden />
+            Add make / model
+          </Button>
+        </div>
+      ) : null}
 
       <Dialog open={addOpen} onOpenChange={setAddOpen}>
         <DialogContent className="sm:max-w-md">
@@ -411,6 +413,25 @@ export default function CarsCatalogPage() {
           </form>
         </DialogContent>
       </Dialog>
+    </div>
+  )
+
+  if (embedded) return inner
+
+  return (
+    <OpsPageShell
+      className="hakum-cars"
+      eyebrow="Masterlist"
+      title="Cars catalog"
+      description="Super Admin CRUD for the TL queue picker. Each make/model has a bay size (Small–XL) so bookings and packages auto-price; staff can override on the ticket."
+      actions={
+        <Button type="button" className="min-h-11" onClick={() => setAddOpen(true)}>
+          <Plus size={16} className="mr-1.5" aria-hidden />
+          Add make / model
+        </Button>
+      }
+    >
+      {inner}
     </OpsPageShell>
   )
 }

@@ -9,13 +9,23 @@ import {
   allowRoute,
 } from '../src/auth/permissions.js'
 import { opsRouteKeyFromPath } from '../src/auth/authRedirect.js'
-import { buildSmartSearchDestinations } from '../src/lib/smartSearchCatalog.js'
+import {
+  opsNavIsActive,
+  opsServiceSearchUrl,
+  opsProductSearchUrl,
+  opsStaffSearchUrl,
+  opsVoucherSearchUrl,
+  opsCustomerSearchUrl,
+  opsVehicleSearchUrl,
+  resolveOpsBreadcrumb,
+} from '../src/lib/opsNavigationRegistry.js'
+import { buildQuickJumpDestinations, buildSmartSearchDestinations } from '../src/lib/smartSearchCatalog.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const read = (rel) => readFileSync(join(root, rel), 'utf8')
 
 describe('sidebar consolidation, dropdown accordions, and hub RBAC', () => {
-  it('consolidates Catalog & Inventory with expandable children for SA/ASA and removes Config duplicates', () => {
+  it('consolidates Catalog & Inventory (including Vehicle List) for SA/ASA and removes Config duplicates', () => {
     const bossNav = getOperationsNav({ role: ROLES.SUPER_ADMIN })
     const catalog = bossNav.find((item) => item.to === '/operations/inventory')
     assert.ok(catalog)
@@ -26,11 +36,78 @@ describe('sidebar consolidation, dropdown accordions, and hub RBAC', () => {
         '/operations/inventory?tab=services&scope=bay',
         '/operations/inventory?tab=services&scope=detailing',
         '/operations/inventory?tab=merch',
+        '/operations/inventory?tab=cars',
         '/operations/inventory?tab=recon',
       ],
     )
     assert.ok(!bossNav.some((item) => item.group === 'config' && item.to.includes('tab=bay')))
     assert.ok(!bossNav.some((item) => item.group === 'config' && item.to.includes('tab=detailing')))
+    assert.ok(!bossNav.some((item) => item.group === 'config' && item.to === '/operations/cars'))
+  })
+
+  it('gives expandable hub accordions for Employees, Customers, and Rewards with strict RBAC filtering', () => {
+    const bossNav = getOperationsNav({ role: ROLES.SUPER_ADMIN })
+    const emp = bossNav.find((i) => i.to === '/operations/employees')
+    const crm = bossNav.find((i) => i.to === '/operations/crm')
+    const rew = bossNav.find((i) => i.to === '/operations/rewards')
+
+    assert.deepEqual(
+      emp.children.map((c) => c.to),
+      [
+        '/operations/employees',
+        '/operations/employees?tab=register',
+        '/operations/employees?tab=employees',
+        '/operations/employees?tab=access',
+        '/operations/employees?tab=settings',
+      ],
+    )
+    assert.deepEqual(
+      crm.children.map((c) => c.to),
+      [
+        '/operations/crm',
+        '/operations/crm?tab=transfer',
+        '/operations/crm?tab=inquiries',
+        '/operations/crm?tab=sms',
+      ],
+    )
+    assert.deepEqual(
+      rew.children.map((c) => c.to),
+      [
+        '/operations/rewards',
+        '/operations/rewards?tab=vouchers',
+        '/operations/rewards?tab=points-shop',
+        '/operations/rewards?tab=referrals',
+      ],
+    )
+
+    const baNav = getOperationsNav({ role: ROLES.ADMIN, branch_slug: 'bacoor' })
+    const baEmp = baNav.find((i) => i.to === '/operations/employees')
+    const baCrm = baNav.find((i) => i.to === '/operations/crm')
+    assert.deepEqual(
+      baEmp.children.map((c) => c.to),
+      [
+        '/operations/employees',
+        '/operations/employees?tab=attendance',
+        '/operations/employees?tab=register',
+      ],
+    )
+    assert.deepEqual(
+      baCrm.children.map((c) => c.to),
+      ['/operations/crm', '/operations/crm?tab=transfer', '/operations/crm?tab=sms'],
+    )
+
+    const investorRew = getOperationsNav({ role: ROLES.INVESTOR }).find((i) => i.to === '/operations/rewards?tab=vouchers')
+    assert.ok(investorRew)
+    assert.ok(!investorRew.children, 'Investor single-tab Rewards link remains flat')
+  })
+
+  it('aligns Operations Lead to System & Data (Audit log only)', () => {
+    const opsLead = { role: ROLES.OPERATIONS_LEAD }
+    const opsNav = getOperationsNav(opsLead)
+    assert.ok(opsNav.some((i) => i.to === '/operations/system' && i.label === 'System & Data'))
+    assert.ok(!opsNav.some((i) => i.to === '/operations/audit'))
+    assert.equal(allowRoute(opsLead, 'system'), true)
+    assert.equal(allowRoute(opsLead, 'data-center'), false)
   })
 
   it('gives Branch Admin scoped Catalog & Inventory children (Restock Merch + Sunday Recon)', () => {
@@ -85,37 +162,81 @@ describe('sidebar consolidation, dropdown accordions, and hub RBAC', () => {
     assert.equal(opsRouteKeyFromPath('/operations/system'), 'system')
   })
 
-  it('flattens sidebar accordion children and hub tabs in smart search destinations', () => {
-    const bossResults = buildSmartSearchDestinations({ role: ROLES.SUPER_ADMIN })
+  it('canonical navigation registry resolves active state, breadcrumbs, and Smart Search URLs cleanly', () => {
+    const bossNav = getOperationsNav({ role: ROLES.SUPER_ADMIN })
+    assert.equal(
+      resolveOpsBreadcrumb(bossNav, '/operations/inventory', '?tab=cars', 'Command'),
+      'Catalog & Inventory / Vehicle List',
+    )
+    assert.equal(
+      resolveOpsBreadcrumb(bossNav, '/operations/finance', '?tab=salaries', 'Command'),
+      'Financials / Monthly salaries',
+    )
+    assert.equal(opsNavIsActive('/operations/inventory', '?tab=cars', '/operations/inventory'), false)
+    assert.equal(opsNavIsActive('/operations/inventory', '?tab=cars', '/operations/inventory?tab=cars'), true)
+
+    assert.equal(
+      opsServiceSearchUrl({ name: 'Ceramic Coating', pay_category: 'detailing' }, { canInventory: true, canManageCatalog: true }),
+      '/operations/inventory?tab=services&scope=detailing&q=Ceramic+Coating',
+    )
+    assert.equal(
+      opsProductSearchUrl({ name: 'Car Scent' }, { canInventory: true, canManageCatalog: false }),
+      '/operations/inventory?tab=restock&q=Car+Scent',
+    )
+    assert.equal(
+      opsStaffSearchUrl('Lucy', { canPeople: true, isCommandShell: true }),
+      '/operations/employees?tab=employees&q=Lucy',
+    )
+    assert.equal(opsVoucherSearchUrl('TINT10'), '/operations/rewards?tab=vouchers&q=TINT10')
+    assert.equal(opsCustomerSearchUrl('Juan', true), '/operations/crm?q=Juan')
+    assert.equal(opsVehicleSearchUrl('ABC1234', true), '/operations/history?q=ABC1234')
+  })
+
+  it('flattens sidebar accordion children, Quick Jumps, and hub tabs in smart search destinations', () => {
+    const boss = { role: ROLES.SUPER_ADMIN }
+    const bossResults = buildSmartSearchDestinations(boss)
     assert.ok(bossResults.some((d) => d.to === '/operations/inventory?tab=services&scope=bay'))
+    assert.ok(bossResults.some((d) => d.to === '/operations/inventory?tab=cars'))
     assert.ok(bossResults.some((d) => d.to === '/operations/finance?tab=salaries'))
     assert.ok(bossResults.some((d) => d.to === '/operations/finance?tab=approvals'))
     assert.ok(bossResults.some((d) => d.to === '/operations/system?tab=audit'))
     assert.ok(bossResults.some((d) => d.to === '/operations/system?tab=data-center'))
+
+    const quick = buildQuickJumpDestinations(boss, 8)
+    assert.equal(quick.length, 8)
 
     const baResults = buildSmartSearchDestinations({ role: ROLES.ADMIN, branch_slug: 'bacoor' })
     assert.ok(!baResults.some((d) => d.to.includes('data-center')))
     assert.ok(!baResults.some((d) => d.to.includes('salaries')))
   })
 
-  it('combines Services & detailing inside InventoryPage without ReferralProgramCard duplicate', () => {
+  it('keeps SettingsHubPage free of duplicate ReferralProgramCard and embeds CarsCatalogPage inside InventoryPage', () => {
     const inv = read('src/pages/InventoryPage.jsx')
     const manage = read('src/pages/ServicesManagePage.jsx')
+    const settings = read('src/pages/SettingsHubPage.jsx')
+    const cars = read('src/pages/CarsCatalogPage.jsx')
     assert.match(inv, /id: 'services'/)
+    assert.match(inv, /id: 'cars'/)
+    assert.match(inv, /CarsCatalogPage embedded/)
     assert.match(inv, /Services & detailing/)
     assert.doesNotMatch(inv, /ReferralProgramCard/)
+    assert.doesNotMatch(settings, /ReferralProgramCard/)
+    assert.match(cars, /export default function CarsCatalogPage\(\{ embedded = false \} = \{\}\)/)
     assert.match(manage, /onScopeChange/)
     assert.match(manage, /scopeCounts/)
   })
 
-  it('wires redirects, SystemHubPage, FinancePage tabs, accordion layout, and reduced motion CSS', () => {
+  it('wires redirects, Smart Search deep-linking, auto-single accordion, CommandMenu cache/highlight, and reduced motion CSS', () => {
     const app = read('src/App.jsx')
     const sys = read('src/pages/SystemHubPage.jsx')
     const fin = read('src/pages/FinancePage.jsx')
     const layout = read('src/layouts/OperationsLayout.jsx')
     const css = read('src/styles/ops-daylight.css')
+    const cmd = read('src/components/ops/CommandMenu.jsx')
+    const api = read('server/smartSearchApi.mjs')
 
     assert.match(app, /path="system" element=\{gate\('system', <SystemHubPage \/>\)\}/)
+    assert.match(app, /CatalogCarsRedirect/)
     assert.match(app, /FinanceHubRedirect tab="salaries"/)
     assert.match(app, /FinanceHubRedirect tab="approvals"/)
     assert.match(app, /SystemHubRedirect tab="audit"/)
@@ -130,6 +251,18 @@ describe('sidebar consolidation, dropdown accordions, and hub RBAC', () => {
     assert.match(layout, /SidebarMenuSub/)
     assert.match(layout, /command-nav-accordion/)
     assert.match(layout, /aria-expanded=\{isOpen\}/)
+    assert.match(layout, /opsNavIsActive/)
+    assert.match(layout, /resolveOpsBreadcrumb/)
+
+    assert.match(cmd, /buildQuickJumpDestinations/)
+    assert.match(cmd, /queryCacheRef/)
+    assert.match(cmd, /HighlightMatch/)
+    assert.match(api, /opsServiceSearchUrl/)
+    assert.match(api, /opsStaffSearchUrl/)
+    assert.match(api, /opsVoucherSearchUrl/)
+    assert.doesNotMatch(api, /\/operations\/people/)
+    assert.doesNotMatch(api, /\/operations\/vouchers/)
+    assert.doesNotMatch(api, /\/operations\/inventory\?tab=bay/)
 
     assert.match(css, /\.command-nav-accordion\[data-open="true"\]/)
     assert.match(css, /@media \(prefers-reduced-motion: reduce\)/)

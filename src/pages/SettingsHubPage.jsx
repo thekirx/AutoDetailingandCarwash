@@ -4,10 +4,8 @@ import { useAuth } from '@/auth/AuthProvider'
 import {
   canAccessNotifications,
   canAccessPos,
-  canManageServices,
   isSuperAdmin,
 } from '@/auth/permissions'
-import ReferralProgramCard from '@/components/ops/ReferralProgramCard'
 import { canReviewDailySheet } from '@/lib/dailySheet'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import { SETTINGS_HUB_COPY } from '@/components/ops/opsGuideCopy'
@@ -46,9 +44,8 @@ const TILES = [
 export default function SettingsHubPage() {
   const { profile } = useAuth()
   const tiles = TILES.filter((t) => t.allow(profile))
-  const canReferral = canManageServices(profile)
 
-  if (!tiles.length && !canReferral) {
+  if (!tiles.length) {
     return <Navigate to="/operations/access-denied" replace />
   }
 
@@ -85,11 +82,6 @@ export default function SettingsHubPage() {
           )
         })}
       </div>
-      {canReferral ? (
-        <div className="mt-6 max-w-3xl">
-          <ReferralProgramCard />
-        </div>
-      ) : null}
     </OpsPageShell>
   )
 }

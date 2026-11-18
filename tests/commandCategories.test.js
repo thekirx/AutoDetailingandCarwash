@@ -126,7 +126,6 @@ describe('command category IA', () => {
       groups.find((g) => g.id === 'config').items.map((item) => item.label),
       [
         'Branches',
-        'Vehicle List',
         'Content',
         'Settings',
       ],

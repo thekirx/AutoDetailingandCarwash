@@ -1,7 +1,7 @@
 import MerchItemFields from '@/components/merch/MerchItemFields'
 import { merchPhoto } from '@/lib/pointsShop'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, Navigate } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthProvider'
 import { canManageMerchShop, canManageServices, canModifyStock } from '@/auth/permissions'
 import { archiveProduct, createProduct, listBranches, listProducts, updateProduct } from '@/lib/adminApi'
@@ -139,7 +139,13 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [availabilityFilter, setAvailabilityFilter] = useState('all')
   const [familyFilter, setFamilyFilter] = useState('all')
-  const [query, setQuery] = useState('')
+  const [searchParams] = useSearchParams()
+  const urlQ = searchParams.get('q') || ''
+  const [query, setQuery] = useState(urlQ)
+
+  useEffect(() => {
+    if (urlQ) setQuery(urlQ)
+  }, [urlQ])
   const [branchQtyDraft, setBranchQtyDraft] = useState({})
   const [restockDraft, setRestockDraft] = useState({})
   const [inlineQuickDraft, setInlineQuickDraft] = useState({})

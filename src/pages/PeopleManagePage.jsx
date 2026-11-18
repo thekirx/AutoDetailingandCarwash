@@ -178,7 +178,12 @@ export default function PeopleManagePage({ embedded = false, view = 'all', openC
   const [createOpen, setCreateOpen] = useState(false)
   const [roleOpen, setRoleOpen] = useState(false)
   const [tempTlOpen, setTempTlOpen] = useState(false)
-  const [dirQuery, setDirQuery] = useState('')
+  const urlQ = searchParams.get('q') || ''
+  const [dirQuery, setDirQuery] = useState(urlQ)
+
+  useEffect(() => {
+    if (urlQ) setDirQuery(urlQ)
+  }, [urlQ])
   const [dirBranch, setDirBranch] = useState('')
   const [dirStatus, setDirStatus] = useState('active')
   const [localRoleFilter, setLocalRoleFilter] = useState(() => {
@@ -258,11 +263,11 @@ export default function PeopleManagePage({ embedded = false, view = 'all', openC
           : Promise.resolve({ data: null, error: null }),
         needRbacData && canCreateStaffRoleOverride(profile)
           ? supabase
-              .from('staff_role_overrides')
-              .select('id, staff_id, role, branch_slug, on_date, created_at')
-              .gte('on_date', getLocalCalendarDate())
-              .order('on_date', { ascending: true })
-              .limit(40)
+            .from('staff_role_overrides')
+            .select('id, staff_id, role, branch_slug, on_date, created_at')
+            .gte('on_date', getLocalCalendarDate())
+            .order('on_date', { ascending: true })
+            .limit(40)
           : Promise.resolve({ data: null, error: null }),
       ])
       const scopedBranches = filterBranchesForProfile(b, profile)

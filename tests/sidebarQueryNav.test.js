@@ -3,75 +3,40 @@ import { describe, it } from 'node:test'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { opsNavIsActive } from '../src/lib/opsNavigationRegistry.js'
 
 const root = join(fileURLToPath(import.meta.url), '../..')
 
-// Mirror of commandNavIsActive from OperationsLayout.jsx
-function commandNavIsActive(pathname, search, to) {
-  const [path, query] = String(to || '').split('?')
-  if (!path) return false
-  if (query) {
-    const want = new URLSearchParams(query)
-    const have = new URLSearchParams(search)
-    for (const [key, value] of want) {
-      if (have.get(key) !== value) return false
-    }
-    return pathname === path
-  }
-  if (path === '/operations/inventory') {
-    const tab = new URLSearchParams(search).get('tab')
-    if (tab === 'bay' || tab === 'detailing') return false
-  }
-  if (path === '/operations/finance') {
-    const tab = new URLSearchParams(search).get('tab')
-    if (tab === 'reports') return false
-  }
-  if (path === '/operations/planning') {
-    const tab = new URLSearchParams(search).get('tab')
-    if (tab === 'calendar') return false
-  }
-  if (path.endsWith('/console') || path.endsWith('/dashboard')) return pathname === path
-  return pathname === path || pathname.startsWith(`${path}/`)
-}
-
 describe('Sidebar query-aware navigation contracts', () => {
-  it('activates ONLY Detailing Packages when on /operations/inventory?tab=detailing', () => {
-    const pathname = '/operations/inventory'
-    const search = '?tab=detailing'
+  it('activates ONLY Detailing Packages when on /operations/inventory?tab=detailing or ?tab=services&scope=detailing', () => {
+    for (const search of ['?tab=detailing', '?tab=services&scope=detailing']) {
+      const detailingActive = opsNavIsActive('/operations/inventory', search, '/operations/inventory?tab=services&scope=detailing')
+      const bayActive = opsNavIsActive('/operations/inventory', search, '/operations/inventory?tab=services&scope=bay')
+      const inventoryActive = opsNavIsActive('/operations/inventory', search, '/operations/inventory')
 
-    const detailingActive = commandNavIsActive(pathname, search, '/operations/inventory?tab=detailing')
-    const bayActive = commandNavIsActive(pathname, search, '/operations/inventory?tab=bay')
-    const inventoryActive = commandNavIsActive(pathname, search, '/operations/inventory')
-
-    assert.equal(detailingActive, true, 'Detailing Packages must be active')
-    assert.equal(bayActive, false, 'Services and Packages must NOT be active')
-    assert.equal(inventoryActive, false, 'Inventory must NOT be active')
+      assert.equal(detailingActive, true, `Detailing Packages must be active for ${search}`)
+      assert.equal(bayActive, false, `Services and Packages must NOT be active for ${search}`)
+      assert.equal(inventoryActive, true, `Catalog & Inventory parent matches base route for ${search}`)
+    }
   })
 
-  it('activates ONLY Services and Packages when on /operations/inventory?tab=bay', () => {
-    const pathname = '/operations/inventory'
-    const search = '?tab=bay'
+  it('activates ONLY Services & Packages when on /operations/inventory?tab=bay or ?tab=services&scope=bay', () => {
+    for (const search of ['?tab=bay', '?tab=services&scope=bay']) {
+      const detailingActive = opsNavIsActive('/operations/inventory', search, '/operations/inventory?tab=services&scope=detailing')
+      const bayActive = opsNavIsActive('/operations/inventory', search, '/operations/inventory?tab=services&scope=bay')
 
-    const detailingActive = commandNavIsActive(pathname, search, '/operations/inventory?tab=detailing')
-    const bayActive = commandNavIsActive(pathname, search, '/operations/inventory?tab=bay')
-    const inventoryActive = commandNavIsActive(pathname, search, '/operations/inventory')
-
-    assert.equal(bayActive, true, 'Services and Packages must be active')
-    assert.equal(detailingActive, false, 'Detailing Packages must NOT be active')
-    assert.equal(inventoryActive, false, 'Inventory must NOT be active')
+      assert.equal(bayActive, true, `Services and Packages must be active for ${search}`)
+      assert.equal(detailingActive, false, `Detailing Packages must NOT be active for ${search}`)
+    }
   })
 
-  it('activates ONLY Inventory when on /operations/inventory (or merch)', () => {
+  it('activates ONLY Inventory base when on /operations/inventory cleanly', () => {
     const pathname = '/operations/inventory'
     const search = ''
 
-    const detailingActive = commandNavIsActive(pathname, search, '/operations/inventory?tab=detailing')
-    const bayActive = commandNavIsActive(pathname, search, '/operations/inventory?tab=bay')
-    const inventoryActive = commandNavIsActive(pathname, search, '/operations/inventory')
-
-    assert.equal(inventoryActive, true, 'Inventory must be active')
-    assert.equal(bayActive, false, 'Services and Packages must NOT be active')
-    assert.equal(detailingActive, false, 'Detailing Packages must NOT be active')
+    assert.equal(opsNavIsActive(pathname, search, '/operations/inventory'), true)
+    assert.equal(opsNavIsActive(pathname, search, '/operations/inventory?tab=services&scope=bay'), false)
+    assert.equal(opsNavIsActive(pathname, search, '/operations/inventory?tab=cars'), false)
   })
 
   it('OperationsLayout uses Link with controlled aria-current instead of NavLink in CommandNavList', () => {
@@ -85,4 +50,3 @@ describe('Sidebar query-aware navigation contracts', () => {
     assert.match(daylight, /\.command-daylight \.command-nav-group \[data-slot="sidebar-menu"\]\s*\{\s*gap:\s*4px;/)
   })
 })
-

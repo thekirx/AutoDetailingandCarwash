@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthProvider'
 import { canManageServices } from '@/auth/permissions'
 import { archiveService, createService, listServiceReferralEligibility, listServices, setServiceReferralEligible, updateService } from '@/lib/adminApi'
@@ -194,7 +194,13 @@ export default function ServicesManagePage({
   const [referralEligible, setReferralEligible] = useState(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [query, setQuery] = useState('')
+  const [searchParams] = useSearchParams()
+  const urlQ = searchParams.get('q') || ''
+  const [query, setQuery] = useState(urlQ)
+
+  useEffect(() => {
+    if (urlQ) setQuery(urlQ)
+  }, [urlQ])
 
   const categoryOptions = useMemo(
     () => payCategoryOptionsForCatalogScope(catalogScope),

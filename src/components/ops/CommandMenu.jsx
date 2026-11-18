@@ -28,6 +28,7 @@ import { Badge } from '@/components/ui/badge'
 import { useAuth } from '@/auth/AuthProvider'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import {
+  buildQuickJumpDestinations,
   buildSmartSearchDestinations,
   describeSearchCapabilities,
   filterSmartSearchDestinations,
@@ -35,6 +36,8 @@ import {
 
 const RECENT_KEY_PREFIX = 'hakum.smartSearchRecent.'
 const MAX_RECENTS = 5
+const SEARCH_CACHE_TTL_MS = 30_000
+const SEARCH_CACHE_MAX = 30
 
 const CATEGORY_META = {
   bookings: { heading: 'Bookings & Queue', Icon: CalendarCheck },
@@ -48,13 +51,44 @@ const CATEGORY_META = {
   branches: { heading: 'Branches', Icon: Building2 },
 }
 
+function stripTransientSearchQuery(to) {
+  const [path, query = ''] = String(to || '').split('?')
+  if (!query) return path
+  const p = new URLSearchParams(query)
+  p.delete('q')
+  const qs = p.toString()
+  return qs ? `${path}?${qs}` : path
+}
+
+function isEditableElement(target) {
+  if (!target || typeof target.tagName !== 'string') return false
+  const tag = target.tagName.toUpperCase()
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || Boolean(target.isContentEditable)
+}
+
+function HighlightMatch({ text, query }) {
+  const str = String(text || '')
+  const term = String(query || '').trim().split(/\s+/)[0] || ''
+  if (!term || term.length < 2) return str
+  const idx = str.toLowerCase().indexOf(term.toLowerCase())
+  if (idx < 0) return str
+  return (
+    <>
+      {str.slice(0, idx)}
+      <mark className="rounded-sm bg-primary/15 px-0.5 text-primary font-semibold">{str.slice(idx, idx + term.length)}</mark>
+      {str.slice(idx + term.length)}
+    </>
+  )
+}
+
 function isRecentAllowed(to, validPaths) {
   if (!to) return false
-  if (validPaths.has(to)) return true
-  if (to.startsWith('/operations/planning?') && [...validPaths].some((p) => p === '/operations/planning' || p.startsWith('/operations/planning?'))) {
+  const baseTo = stripTransientSearchQuery(to)
+  if (validPaths.has(to) || validPaths.has(baseTo)) return true
+  if (baseTo.startsWith('/operations/planning?') && [...validPaths].some((p) => p === '/operations/planning' || p.startsWith('/operations/planning?'))) {
     return true
   }
-  if (to.startsWith('/operations/forms/results/') && validPaths.has('/operations/forms/results')) {
+  if (baseTo.startsWith('/operations/forms/results/') && validPaths.has('/operations/forms/results')) {
     return true
   }
   return false
@@ -104,8 +138,10 @@ export default function CommandMenu({ open: openProp, onOpenChange }) {
   const [searchError, setSearchError] = useState('')
   const [recents, setRecents] = useState([])
   const abortRef = useRef(null)
+  const queryCacheRef = useRef(new Map())
 
   const destinations = useMemo(() => buildSmartSearchDestinations(profile), [profile])
+  const quickJumps = useMemo(() => buildQuickJumpDestinations(profile, 8), [profile])
   const scopes = useMemo(() => describeSearchCapabilities(profile), [profile])
   const validPaths = useMemo(() => new Set(destinations.map((d) => d.to)), [destinations])
 
@@ -114,11 +150,20 @@ export default function CommandMenu({ open: openProp, onOpenChange }) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
         e.preventDefault()
         setOpen((v) => !v)
+        return
+      }
+      if (!open && e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey && !isEditableElement(e.target)) {
+        e.preventDefault()
+        setOpen(true)
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [setOpen])
+  }, [open, setOpen])
+
+  useEffect(() => {
+    queryCacheRef.current.clear()
+  }, [user?.id, profile?.role])
 
   useEffect(() => {
     if (open) {
@@ -139,6 +184,15 @@ export default function CommandMenu({ open: openProp, onOpenChange }) {
     if (trimmed.length < 2) {
       abortRef.current?.abort()
       setLiveResults([])
+      setSearching(false)
+      setSearchError('')
+      return undefined
+    }
+
+    const cacheKey = trimmed.toLowerCase()
+    const cached = queryCacheRef.current.get(cacheKey)
+    if (cached && Date.now() - cached.at < SEARCH_CACHE_TTL_MS) {
+      setLiveResults(cached.results)
       setSearching(false)
       setSearchError('')
       return undefined
@@ -174,7 +228,13 @@ export default function CommandMenu({ open: openProp, onOpenChange }) {
           setLiveResults([])
           return
         }
-        setLiveResults(Array.isArray(data.results) ? data.results : [])
+        const nextResults = Array.isArray(data.results) ? data.results : []
+        if (queryCacheRef.current.size >= SEARCH_CACHE_MAX) {
+          const oldest = queryCacheRef.current.keys().next().value
+          if (oldest !== undefined) queryCacheRef.current.delete(oldest)
+        }
+        queryCacheRef.current.set(cacheKey, { at: Date.now(), results: nextResults })
+        setLiveResults(nextResults)
       } catch (err) {
         if (!controller.signal.aborted) {
           setSearchError(err?.message || 'Search failed')
@@ -191,9 +251,10 @@ export default function CommandMenu({ open: openProp, onOpenChange }) {
     }
   }, [open, query])
 
+  const trimmedQuery = query.trim()
   const filteredPages = useMemo(
-    () => filterSmartSearchDestinations(destinations, query),
-    [destinations, query],
+    () => (trimmedQuery ? filterSmartSearchDestinations(destinations, trimmedQuery) : quickJumps),
+    [destinations, quickJumps, trimmedQuery],
   )
 
   const groupedPages = useMemo(() => {
@@ -226,7 +287,6 @@ export default function CommandMenu({ open: openProp, onOpenChange }) {
     [navigate, setOpen, user?.id],
   )
 
-  const trimmedQuery = query.trim()
   const hasAnyMatches = filteredPages.length > 0 || liveResults.length > 0
 
   return (
@@ -298,9 +358,13 @@ export default function CommandMenu({ open: openProp, onOpenChange }) {
                       >
                         <Icon className="size-4 shrink-0 text-primary" aria-hidden />
                         <div className="flex min-w-0 flex-1 flex-col">
-                          <span className="truncate font-medium">{row.label}</span>
+                          <span className="truncate font-medium">
+                            <HighlightMatch text={row.label} query={trimmedQuery} />
+                          </span>
                           {row.subtitle ? (
-                            <span className="truncate text-xs text-muted-foreground">{row.subtitle}</span>
+                            <span className="truncate text-xs text-muted-foreground">
+                              <HighlightMatch text={row.subtitle} query={trimmedQuery} />
+                            </span>
                           ) : null}
                         </div>
                         {row.badge ? (
@@ -328,7 +392,9 @@ export default function CommandMenu({ open: openProp, onOpenChange }) {
                   onSelect={() => selectDestination(item)}
                 >
                   <Compass className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-                  <span className="truncate font-medium">{item.label}</span>
+                  <span className="truncate font-medium">
+                    <HighlightMatch text={item.label} query={trimmedQuery} />
+                  </span>
                   <span className="ml-auto hidden truncate text-xs text-muted-foreground sm:inline">
                     {item.to.replace('/operations/', '/')}
                   </span>
@@ -336,6 +402,12 @@ export default function CommandMenu({ open: openProp, onOpenChange }) {
               ))}
             </CommandGroup>
           ))}
+
+          {!trimmedQuery && destinations.length > quickJumps.length ? (
+            <p className="px-3 pb-2 pt-1 text-[11px] text-muted-foreground">
+              Type to search all {destinations.length} destinations, sub-tabs, settings &amp; live records — or press <kbd className="rounded border border-border bg-muted px-1 font-mono text-[10px]">/</kbd> anytime.
+            </p>
+          ) : null}
 
           {!searching && !hasAnyMatches ? (
             <div className="py-6 text-center text-sm text-muted-foreground">

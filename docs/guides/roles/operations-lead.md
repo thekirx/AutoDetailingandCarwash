@@ -1,4 +1,4 @@
-﻿# Operations Lead
+# Operations Lead
 
 **Home:** `/operations/queue` (Queue, all branches)  
 **Shell:** CommandShell  
@@ -6,7 +6,7 @@
 
 ## Nav
 
-Carwash Queue · Team Planner · Point of Sales · Financials (view) · Customers (view only) · My advances · History · Audit
+Carwash Queue · Team Planner · Point of Sales · Financials (view) · Customers (view only) · My advances · Payslips · Month KPI · History · System & Data (Audit log)
 
 ## Daily flow
 
@@ -15,7 +15,7 @@ Carwash Queue · Team Planner · Point of Sales · Financials (view) · Customer
 3. CRM lookups: Directory, Smart groups, Insights. Open **View** on a customer to read visits, purchases and **Notes** (Team Lead ticket notes from the New ticket form, plus guest notes)  
 4. Planner (Board, Calendar, Forms, Events, Review)  
 5. Finance view  
-6. Audit as needed
+6. System & Data → Audit log as needed
 
 ## Must never see
 

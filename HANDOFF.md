@@ -3,7 +3,7 @@
 **Date:** 2026-11-18 (Asia/Manila)  
 **Repository:** `https://github.com/thekirx/AutoDetailingandCarwash.git` (Branch: `main`)  
 **Production Domain:** `https://www.hakumautocare.com` (Vercel + Supabase `lybxhpzzqqyqswvuwpxv`)  
-**Current Baseline:** `3f5dc0d7` + Sidebar Consolidation, Expandable Dropdowns (`Catalog & Inventory`, `Financials`), `System & Data` Hub (`/operations/system`), Unified `Services & detailing` scope filter, and Restrained Motion (`ops-daylight.css`)  
+**Current Baseline:** `df07ae2e` + Canonical Operations Navigation Registry (`src/lib/opsNavigationRegistry.js`), Smart Search deep-linking & UX overhaul (`CommandMenu.jsx`, `smartSearchCatalog.js`, `server/smartSearchApi.mjs`), auto-single hub accordions (`Catalog & Inventory` incl. `Vehicle List`, `Financials`, `Employees`, `Customers`, `Rewards`), and `Operations Lead -> System & Data`  
 
 This document is the primary onboarding brief for the next AI engineer or technical lead picking up Hakum Auto Care. Read this together with the persistent Graphify knowledge graph before modifying code.
 
@@ -96,7 +96,7 @@ This document is the primary onboarding brief for the next AI engineer or techni
 ## 4. Verification Baseline (Current as of 2026-11-18 Latest Pass)
 
 All code/test checks ran against the current working tree after the final code/test edit:
-- `npm run lint` (`0`), `npm test` (`2711/2711` across `608` suites), `npm run check` (`ok`), `npm run audit:api-auth` (`ok`), `npm run build` (`485` precache entries + `23` static SEO HTML shells), and live headless Chromium verification (`42/42` checks across `BossMich`, `Branch Admin`, `Investor`, plus `41/41` `npm run test:browser` prior to final CSS icon-collapse refinement — see `npm run test:browser` to re-run against `vite preview`).
+- `npm run lint` (`0`), `npm test` (`2714/2714` across `608` suites), `npm run check` (`ok`), `npm run audit:api-auth` (`ok`), `npm run build` (`484` SW precache entries + `23` static SEO HTML shells), `npm run test:browser` (`41/41`), and live headless Chromium verification (`51/51` checks across `boss`, `admin`, `investor`, `opslead`, `0` console/page/HTTP `>=400` errors).
 - Live Supabase (`lybxhpzzqqyqswvuwpxv`) already has all migrations through `20261116190000` applied cleanly (`20261116120000`, `20261116180000`, `20261116190000`), with `0` unindexed FKs and `0` redundant prefix indexes.
 
 > **Note on Production & Vercel:** Commit/push `main` to deploy to `www.hakumautocare.com` / `hakumauto.vercel.app`.

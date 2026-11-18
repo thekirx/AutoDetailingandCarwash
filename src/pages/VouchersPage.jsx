@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import { Check, Copy, CopyPlus, Dices, Pencil, Plus, RotateCcw, Search, TicketPercent, Trash2, X } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canManageVouchers, canViewVouchers } from '@/auth/permissions'
@@ -95,7 +95,13 @@ export default function VouchersPage({ embedded = false } = {}) {
   const [loading, setLoading] = useState(true)
   const [statusFilter, setStatusFilter] = useState('all')
   const [scopeFilter, setScopeFilter] = useState('all')
-  const [q, setQ] = useState('')
+  const [searchParams] = useSearchParams()
+  const urlQ = searchParams.get('q') || ''
+  const [q, setQ] = useState(urlQ)
+
+  useEffect(() => {
+    if (urlQ) setQ(urlQ)
+  }, [urlQ])
   const [copiedId, setCopiedId] = useState('')
   const [confirmDeleteId, setConfirmDeleteId] = useState('')
   const titleInputRef = useRef(null)

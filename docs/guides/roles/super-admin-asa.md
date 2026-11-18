@@ -7,7 +7,7 @@
 
 ## Nav
 
-Floor Insight · Carwash Queue · Detailing Schedule · Team Planner · Point of Sales · Catalog & Inventory · Financials · Payslips · Employees · Customers · Rewards · Branches · Vehicle List · Content · Settings · History · Notifications · System & Data
+Floor Insight · Carwash Queue · Detailing Schedule · Team Planner · Point of Sales · Catalog & Inventory · Financials · Payslips · Employees · Customers · Rewards · Branches · Content · Settings · History · Notifications · System & Data
 
 Retired from this nav: **Console** (off since the Floor Board became the landing surface) and **Payroll / Crew** (`canAccessConsole()` returns `false`; `crew` is denied).
 
@@ -15,12 +15,13 @@ Retired from this nav: **Console** (off since the Floor Board became the landing
 
 1. Floor Board / Queue as needed  
 2. Financials (`/operations/finance`: Overview & Books → Daily sheets approve/return; **Monthly salaries** `?tab=salaries`; **Approvals** `?tab=approvals`; **Reports** `?tab=reports`). Daily Sheet expenses choose Cash vs GCash.  
-3. Rewards (`/operations/rewards`) — unified hub for **Memberships & Loyalty**, **Vouchers** (create promo codes with use limit, date window, wash/detailing/service scope, percent/fixed/free; Team Lead applies them on the queue and POS consumes a use on sale), **Sellables for Points**, and **Referrals & Bonuses**.  
-4. Catalog & Inventory (`/operations/inventory`) — expandable dropdown for **Services & Packages**, **Detailing Packages**, **Merch & Sellables** (with branch on-hand per row), and **Sunday Recon** for chemicals. SA can Lock / Unlock catalog + restock (audit + inbox).  
+3. Rewards (`/operations/rewards`) — expandable dropdown for **Memberships & Loyalty**, **Vouchers** (create promo codes with use limit, date window, wash/detailing/service scope, percent/fixed/free; Team Lead applies them on the queue and POS consumes a use on sale), **Sellables for Points**, and **Referrals & Bonuses**.  
+4. Catalog & Inventory (`/operations/inventory`) — expandable dropdown for **Services & Packages**, **Detailing Packages**, **Merch & Sellables** (with branch on-hand per row), **Vehicle List** (master make/model sizes), and **Sunday Recon** for chemicals. SA can Lock / Unlock catalog + restock (audit + inbox).  
 5. System & Data (`/operations/system`) — **Audit log** and **Data Center** (SA).  
-6. Employees + grants (SA)  
-7. Settings → Account — save your own birthday (required; locks after first save). Attendance shows the month birthday board.  
-8. Settings / Notifications
+6. Employees (`/operations/employees`) — expandable dropdown for **Attendance**, **Register**, **Employee list**, **RBAC & roles**, and **Settings**.  
+7. Customers (`/operations/crm`) — expandable dropdown for **Directory**, **Transfer car**, **Inquiries**, and **SMS**.  
+8. Settings → Account — save your own birthday (required; locks after first save). Attendance shows the month birthday board.  
+9. Notifications (`/operations/notifications`)
 
 ## ASA
 

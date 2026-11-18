@@ -156,7 +156,12 @@ export default function CrmPage() {
   const [vehiclesByCustomer, setVehiclesByCustomer] = useState(() => new Map())
   const [tierByCustomer, setTierByCustomer] = useState(() => new Map())
   const [dirFilter, setDirFilter] = useState('all')
-  const [query, setQuery] = useState('')
+  const urlQ = searchParams.get('q') || ''
+  const [query, setQuery] = useState(urlQ)
+
+  useEffect(() => {
+    if (urlQ) setQuery(urlQ)
+  }, [urlQ])
   const [loadingList, setLoadingList] = useState(true)
   const [selected, setSelected] = useState(null)
   const [profileReload, setProfileReload] = useState(0)
