@@ -7876,6 +7876,62 @@ button.bk-ticket-compact {
     min-width: 48rem;
   }
 }
+/* Carwash Board mirrors Detailing Board (.booking-lane-board.bk-board-grid) pixel-for-pixel */
+.queue-board .queue-lane {
+  border: 1px solid var(--border);
+  border-top-width: 1px;
+  border-top-color: var(--border);
+  background: var(--muted);
+}
+.queue-board .queue-lane[data-status='redo'] {
+  border-color: color-mix(in oklab, #e11d48 40%, var(--border));
+  background: color-mix(in oklab, #e11d48 5%, var(--muted));
+}
+.queue-board .queue-lane-focused {
+  border-color: color-mix(in oklab, var(--primary) 45%, var(--border));
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--primary) 35%, transparent);
+}
+.queue-board .queue-lane-board-fit.bk-board-grid {
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  height: auto;
+  min-height: 0;
+  gap: 0.75rem;
+}
+.queue-board .queue-lane-board-fit.bk-board-grid .floor-lane {
+  min-width: 0;
+  max-width: none;
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  padding: 0.7rem;
+  border-radius: 0.85rem;
+}
+.queue-board .queue-lane-board-fit.bk-board-grid .queue-lane-title {
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+.queue-board .queue-lane-board-fit.bk-board-grid .queue-lane-hint {
+  display: block;
+}
+.queue-board .queue-lane-board-fit.bk-board-grid .floor-lane-body {
+  gap: 0.6rem;
+}
+.queue-board .queue-lane-board-fit.bk-board-grid .queue-ticket-compact {
+  padding: 0.85rem;
+  border-radius: 0.9rem;
+}
+@container q-board (min-width: 44rem) {
+  .queue-board .queue-lane-board-fit.bk-board-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+    gap: 0.9rem;
+  }
+  .queue-board .queue-lane-board-fit.bk-board-grid .floor-lane {
+    max-height: min(38rem, 72svh);
+  }
+}
 @media (prefers-reduced-motion: reduce) {
   .queue-seg button {
     transition: none;
