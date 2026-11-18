@@ -13,6 +13,7 @@ import {
   Users,
 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
+import { useUrlQueryState } from '@/hooks/useUrlQueryState'
 import {
   ROLES,
   ASSISTANT_GRANT_KEYS,
@@ -178,12 +179,7 @@ export default function PeopleManagePage({ embedded = false, view = 'all', openC
   const [createOpen, setCreateOpen] = useState(false)
   const [roleOpen, setRoleOpen] = useState(false)
   const [tempTlOpen, setTempTlOpen] = useState(false)
-  const urlQ = searchParams.get('q') || ''
-  const [dirQuery, setDirQuery] = useState(urlQ)
-
-  useEffect(() => {
-    if (urlQ) setDirQuery(urlQ)
-  }, [urlQ])
+  const [dirQuery, setDirQuery] = useUrlQueryState()
   const [dirBranch, setDirBranch] = useState('')
   const [dirStatus, setDirStatus] = useState('active')
   const [localRoleFilter, setLocalRoleFilter] = useState(() => {

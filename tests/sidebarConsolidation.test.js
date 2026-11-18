@@ -268,4 +268,22 @@ describe('sidebar consolidation, dropdown accordions, and hub RBAC', () => {
     assert.match(css, /@media \(prefers-reduced-motion: reduce\)/)
     assert.match(css, /@media \(hover: hover\) and \(pointer: fine\)/)
   })
+
+  it('syncs BranchInventoryPage URL tabs, useUrlQueryState clearing, SA attendance highlight, and direct internal links', () => {
+    const branchInv = read('src/pages/BranchInventoryPage.jsx')
+    const app = read('src/App.jsx')
+    const branches = read('src/pages/BranchesManagePage.jsx')
+    const products = read('src/pages/ProductsManagePage.jsx')
+    const floor = read('src/pages/SuperAdminFloorBoard.jsx')
+    const hook = read('src/hooks/useUrlQueryState.js')
+
+    assert.match(branchInv, /useSearchParams/)
+    assert.match(branchInv, /const tab = embedded \? localTab : urlTab/)
+    assert.match(app, /canUseAttendanceClock\(profile\)/)
+    assert.match(hook, /state\.urlQ === urlQ \? state\.value : urlQ/)
+    assert.match(branches, /to="\/operations\/employees\?tab=employees"/)
+    assert.match(products, /to="\/operations\/finance\?tab=approvals"/)
+    assert.match(floor, /to="\/operations\/finance\?tab=approvals"/)
+    assert.match(floor, /usesFloorAppShell\(profile\) \? '\/operations\/attendance' : '\/operations\/employees'/)
+  })
 })

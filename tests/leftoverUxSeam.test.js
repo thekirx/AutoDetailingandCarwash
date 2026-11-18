@@ -309,11 +309,11 @@ describe('Finance Reports is the books reports surface', () => {
     assert.match(page, /setLoadError/)
   })
 
-  it('Crew pool defers hire to People when canManagePeople', () => {
+  it('Crew pool defers hire to Employees when canManagePeople', () => {
     const page = read('src/pages/OperationsPages.jsx')
     assert.match(page, /canManageCrew && canManagePeople\(profile\)/)
     assert.match(page, /canManageCrew && !canManagePeople\(profile\)/)
-    assert.match(page, /\/operations\/people/)
+    assert.match(page, /\/operations\/employees\?tab=employees/)
   })
 
   it('My Tasks empty state links planners to Planner', () => {

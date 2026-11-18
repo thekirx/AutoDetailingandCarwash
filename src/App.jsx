@@ -3,7 +3,7 @@ import { Navigate, Route, Routes, useSearchParams } from 'react-router-dom'
 import ProtectedRoute from './auth/ProtectedRoute'
 import OpsRoleGate from './auth/OpsRoleGate'
 import { useAuth } from './auth/AuthProvider'
-import { allowRoute, canAccessCrm, canAccessRewardsHub, OPS_LOGIN_ROLES, usesFloorAppShell } from './auth/permissions'
+import { allowRoute, canAccessCrm, canAccessRewardsHub, canUseAttendanceClock, OPS_LOGIN_ROLES, usesFloorAppShell } from './auth/permissions'
 import OperationsLayout from './layouts/OperationsLayout'
 import PublicLayout from './layouts/PublicLayout'
 import LoginPage from './pages/LoginPage'
@@ -159,15 +159,18 @@ function EmployeesHubRedirect({ defaultTab = 'employees', preserveTabParam = fal
   const params = new URLSearchParams(searchParams)
   const incomingTab = params.get('tab')
   const hubTabs = new Set(['clock', 'attendance', 'register', 'employees', 'access', 'settings'])
+  let resolvedTab = defaultTab
   if (preserveTabParam && incomingTab && hubTabs.has(incomingTab)) {
-    params.set('tab', incomingTab)
-  } else {
-    if (incomingTab && ['crew', 'tl', 'admins', 'office'].includes(incomingTab)) {
-      params.set('dtab', incomingTab)
-    }
-    params.set('tab', defaultTab)
+    resolvedTab = incomingTab
+  } else if (incomingTab && ['crew', 'tl', 'admins', 'office'].includes(incomingTab)) {
+    params.set('dtab', incomingTab)
   }
-  return <Navigate to={`/operations/employees?${params.toString()}`} replace />
+  const hasClock = canUseAttendanceClock(profile)
+  const isHubDefault = hasClock ? resolvedTab === 'clock' : resolvedTab === 'attendance'
+  if (isHubDefault) params.delete('tab')
+  else params.set('tab', resolvedTab)
+  const qs = params.toString()
+  return <Navigate to={qs ? `/operations/employees?${qs}` : '/operations/employees'} replace />
 }
 
 function FinanceHubRedirect({ tab, fallback }) {

@@ -76,9 +76,9 @@ export function branchLaunchGuide({ slug, name, status } = {}) {
         id: 'people',
         ready: false,
         title: 'Assign a Team Lead and crew',
-        body: 'People → set branch scope. Until then tickets have no crew names on TV.',
-        href: '/operations/people',
-        linkLabel: 'Open People',
+        body: 'Employees → set branch scope. Until then tickets have no crew names on TV.',
+        href: '/operations/employees?tab=employees',
+        linkLabel: 'Open Employees',
       },
       {
         id: 'hours',

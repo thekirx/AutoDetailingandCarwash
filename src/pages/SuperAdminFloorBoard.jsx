@@ -5,7 +5,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canSeeAllBranches, isAssistantSuperAdmin, isSuperAdmin, ROLES } from '@/auth/permissions'
+import { canSeeAllBranches, isAssistantSuperAdmin, isSuperAdmin, ROLES, usesFloorAppShell } from '@/auth/permissions'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { canReviewDailySheet } from '@/lib/dailySheet'
 import { formatAttendanceHeadcountStrings, isFloorCrew } from '@/lib/attendanceInsights'
@@ -534,7 +534,10 @@ export default function SuperAdminFloorBoard() {
         eyebrow="Roster"
         title="Carwash crew on shift"
         action={
-          <Link to="/operations/attendance" className="text-sm font-medium text-primary no-underline hover:underline">
+          <Link
+            to={usesFloorAppShell(profile) ? '/operations/attendance' : '/operations/employees'}
+            className="text-sm font-medium text-primary no-underline hover:underline"
+          >
             Open attendance
           </Link>
         }
@@ -549,7 +552,7 @@ export default function SuperAdminFloorBoard() {
             </p>
           </div>
           <Link
-            to="/operations/attendance"
+            to={usesFloorAppShell(profile) ? '/operations/attendance' : '/operations/employees'}
             className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
           >
             Open attendance register →
@@ -561,7 +564,7 @@ export default function SuperAdminFloorBoard() {
             value={available.length}
             tone="green"
             hint="Present or late · free"
-            onNavigate={() => navigate('/operations/attendance')}
+            onNavigate={() => navigate(usesFloorAppShell(profile) ? '/operations/attendance' : '/operations/employees')}
             breakdown={
               available.length
                 ? `Free carwash crew on site (present or late, not on a bay):\n${available
@@ -575,7 +578,7 @@ export default function SuperAdminFloorBoard() {
             label="On a bay"
             value={busy.length}
             hint="Assigned now"
-            onNavigate={() => navigate('/operations/attendance')}
+            onNavigate={() => navigate(usesFloorAppShell(profile) ? '/operations/attendance' : '/operations/employees')}
             breakdown={
               busy.length
                 ? `Crew currently assigned to a live bay:\n${busy
@@ -590,7 +593,7 @@ export default function SuperAdminFloorBoard() {
             value={absent.length}
             tone="rose"
             hint="Not on site today"
-            onNavigate={() => navigate('/operations/attendance')}
+            onNavigate={() => navigate(usesFloorAppShell(profile) ? '/operations/attendance' : '/operations/employees')}
             breakdown={
               absent.length
                 ? `Rostered carwash crew not checked in today:\n${absent
@@ -604,7 +607,7 @@ export default function SuperAdminFloorBoard() {
             label="Crew total"
             value={floorStaffPool.length || available.length + absent.length}
             hint={branchLabel}
-            onNavigate={() => navigate('/operations/attendance')}
+            onNavigate={() => navigate(usesFloorAppShell(profile) ? '/operations/attendance' : '/operations/employees')}
             breakdown={`Total carwash staff in the pool for ${branchLabel} (available + on bay + absent).`}
           />
         </div>
@@ -618,7 +621,7 @@ export default function SuperAdminFloorBoard() {
 
       {isSuperAdmin(profile) || isAssistantSuperAdmin(profile) ? (
         <Section title="Waiting for approval">
-          <Link to="/operations/approvals" className="inline-flex min-h-11 items-center text-sm font-medium">
+          <Link to="/operations/finance?tab=approvals" className="inline-flex min-h-11 items-center text-sm font-medium">
             {pendingApprovals} waiting
           </Link>
         </Section>

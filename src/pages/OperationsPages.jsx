@@ -1882,8 +1882,8 @@ export function CrewPage() {
               {canManageCrew && canManagePeople(profile) ? (
                 <p className="mb-5 rounded-2xl border border-border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
                   New accounts are created in{' '}
-                  <Link to="/operations/people" className="font-semibold text-primary underline-offset-4 hover:underline">
-                    People
+                  <Link to="/operations/employees?tab=employees" className="font-semibold text-primary underline-offset-4 hover:underline">
+                    Employees
                   </Link>
                   . Use this tab to mark present and deploy crew on the floor.
                 </p>
