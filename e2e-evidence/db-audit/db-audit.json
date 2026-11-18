@@ -1,7 +1,7 @@
 {
   "ok": false,
   "url": "https://lybxhpzzqqyqswvuwpxv.supabase.co",
-  "at": "2026-11-16T14:54:17.205Z",
+  "at": "2026-11-18T08:57:02.646Z",
   "bySeverity": {
     "Info": 54,
     "High": 2,
@@ -31,7 +31,7 @@
       "severity": "Info",
       "section": "tables",
       "message": "customers",
-      "rows": 944
+      "rows": 947
     },
     {
       "severity": "Info",
@@ -169,7 +169,7 @@
       "severity": "Info",
       "section": "tables",
       "message": "push_subscriptions",
-      "rows": 3
+      "rows": 6
     },
     {
       "severity": "Info",
@@ -199,7 +199,7 @@
       "severity": "Info",
       "section": "tables",
       "message": "sms_events",
-      "rows": 261
+      "rows": 264
     },
     {
       "severity": "Info",
@@ -383,9 +383,9 @@
       "section": "auth",
       "message": "push enrollment (paged, keyed on user_id)",
       "activeStaff": 34,
-      "subscriptionRows": 3,
-      "enrolledActiveStaff": 0,
-      "notEnrolled": 34,
+      "subscriptionRows": 6,
+      "enrolledActiveStaff": 3,
+      "notEnrolled": 31,
       "nonStaffSubscriptions": 3,
       "inactiveStaffSubscriptions": 0,
       "nonStaffRoles": [
@@ -397,7 +397,7 @@
       "section": "auth",
       "message": "most active staff have no push subscription",
       "activeStaff": 34,
-      "enrolled": 0,
+      "enrolled": 3,
       "note": "Ops blocker: no phone alert reaches the floor. The endpoint resolves on production and the subscribe handler keys the row on the auth uid, so this is an enrollment gap, not a broken path. Enabling it is a per-device browser action and is NOT automatable."
     },
     {

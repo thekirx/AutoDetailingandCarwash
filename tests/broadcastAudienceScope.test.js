@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { readFileSync } from 'node:fs'
 import { resolveBroadcastAudience } from '../server/broadcastAudience.mjs'
+import { collectPagedRows } from '../server/notificationBroadcastApi.mjs'
 
 /**
  * A broadcast composer offering "One branch" must never fall through to
@@ -77,5 +78,22 @@ describe('resolveBroadcastAudience refuses an unscoped branch send', () => {
       /form\.target_audience === 'branch' && !form\.branch_slug[\s\S]{0,160}?return/,
       'the broadcast composer must not post a branch send with no branch picked',
     )
+  })
+})
+
+describe('collectPagedRows paginates past 1,000 rows without truncation', () => {
+  it('collects every page via .range(from, to) when rows exceed 1,000', async () => {
+    const all = Array.from({ length: 2350 }, (_, i) => ({ customer_id: `cust-${i}` }))
+    const { data, error } = await collectPagedRows(() => ({
+      order() {
+        return this
+      },
+      async range(from, to) {
+        return { data: all.slice(from, to + 1), error: null }
+      },
+    }))
+    assert.equal(error, null)
+    assert.equal(data.length, 2350)
+    assert.equal(data[2349].customer_id, 'cust-2349')
   })
 })

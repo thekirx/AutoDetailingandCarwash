@@ -202,14 +202,20 @@ export async function resolvePushTargets(targets = []) {
         }
       }
       if (t.roles.includes('customer')) {
-        const { data: custRows } = await db
-          .from('customers')
-          .select('id')
-          .eq('is_disabled', false)
-          .eq('is_archived', false)
-          .neq('notify_push', false)
-          .limit(5000)
-        for (const c of custRows || []) userIds.add(c.id)
+        for (let from = 0; from < 10000; from += 1000) {
+          let q = db
+            .from('customers')
+            .select('id')
+            .eq('is_disabled', false)
+            .eq('is_archived', false)
+            .neq('notify_push', false)
+          if (typeof q.order === 'function') q = q.order('id', { ascending: true })
+          const { data: custRows } =
+            typeof q.range === 'function' ? await q.range(from, from + 999) : await q.limit(1000)
+          const batch = custRows || []
+          for (const c of batch) userIds.add(c.id)
+          if (batch.length < 1000 || typeof q.range !== 'function') break
+        }
       }
     }
   }

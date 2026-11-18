@@ -279,13 +279,16 @@ export default function CrmPage() {
               return data || []
             }, 500)
 
-        const tierPromise = supabase
-          .from('customer_memberships')
-          .select('customer_id, membership_tiers(name)')
-          .eq('is_active', true)
-          .limit(1000)
-          .then((res) => res.data || [])
-          .catch(() => [])
+        const tierPromise = collectPaged(async (from, to) => {
+          const { data, error } = await supabase
+            .from('customer_memberships')
+            .select('customer_id, membership_tiers(name)')
+            .eq('is_active', true)
+            .order('customer_id', { ascending: true })
+            .range(from, to)
+          if (error) throw error
+          return data || []
+        }, 1000).catch(() => [])
 
         const archivedPromise = canLifecycle
           ? manageCustomerApi({ action: 'list-archived' }).then((res) => res.customers || []).catch(() => [])

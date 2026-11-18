@@ -261,48 +261,62 @@ export default function FinancePage() {
       const startIso = `${queryRange.start}T00:00:00+08:00`
       const endIso = `${queryRange.end}T23:59:59.999+08:00`
 
-      let salesQ = supabase
-        .from('daily_sales_summary')
-        .select('*')
-        .gte('sale_date', queryRange.start)
-        .lte('sale_date', queryRange.end)
-        .order('sale_date', { ascending: false })
-      salesQ = scopeBranch(salesQ, profile, branchFilter)
+      const fetchSalesSummaryRows = (fromYmd, toYmd) =>
+        collectPaged(async (from, to) => {
+          let q = supabase
+            .from('daily_sales_summary')
+            .select('*')
+            .gte('sale_date', fromYmd)
+            .lte('sale_date', toYmd)
+            .order('sale_date', { ascending: false })
+            .order('branch', { ascending: true })
+            .range(from, to)
+          q = scopeBranch(q, profile, branchFilter)
+          const { data, error } = await q
+          if (error) throw error
+          return data || []
+        }, 1000)
 
-      let plQ = supabase
-        .from('finance_daily_pl')
-        .select('*')
-        .gte('period_date', queryRange.start)
-        .lte('period_date', queryRange.end)
-      plQ = scopeBranch(plQ, profile, branchFilter)
+      const fetchPlRows = (fromYmd, toYmd) =>
+        collectPaged(async (from, to) => {
+          let q = supabase
+            .from('finance_daily_pl')
+            .select('*')
+            .gte('period_date', fromYmd)
+            .lte('period_date', toYmd)
+            .order('period_date', { ascending: false })
+            .order('branch', { ascending: true })
+            .order('kind', { ascending: true })
+            .order('category', { ascending: true })
+            .range(from, to)
+          q = scopeBranch(q, profile, branchFilter)
+          const { data, error } = await q
+          if (error) throw error
+          return data || []
+        }, 1000)
 
-      let kindQ = supabase
-        .from('finance_daily_line_kind')
-        .select('branch, period_date, line_kind, amount_minor')
-        .gte('period_date', queryRange.start)
-        .lte('period_date', queryRange.end)
-      kindQ = scopeBranch(kindQ, profile, branchFilter)
+      const fetchKindRows = (fromYmd, toYmd) =>
+        collectPaged(async (from, to) => {
+          let q = supabase
+            .from('finance_daily_line_kind')
+            .select('branch, period_date, line_kind, amount_minor')
+            .gte('period_date', fromYmd)
+            .lte('period_date', toYmd)
+            .order('period_date', { ascending: false })
+            .order('branch', { ascending: true })
+            .order('line_kind', { ascending: true })
+            .range(from, to)
+          q = scopeBranch(q, profile, branchFilter)
+          const { data, error } = await q
+          if (error) return []
+          return data || []
+        }, 1000)
 
-      let priorQ = null
-      if (compareRange) {
-        priorQ = supabase
-          .from('finance_daily_pl')
-          .select('*')
-          .gte('period_date', compareRange.start)
-          .lte('period_date', compareRange.end)
-        priorQ = scopeBranch(priorQ, profile, branchFilter)
-      }
-      const priorKindQ = compareRange
-        ? scopeBranch(
-            supabase
-              .from('finance_daily_line_kind')
-              .select('branch, period_date, line_kind, amount_minor')
-              .gte('period_date', compareRange.start)
-              .lte('period_date', compareRange.end),
-            profile,
-            branchFilter,
-          )
-        : Promise.resolve({ data: [], error: null })
+      const salesQ = fetchSalesSummaryRows(queryRange.start, queryRange.end)
+      const plQ = fetchPlRows(queryRange.start, queryRange.end)
+      const kindQ = fetchKindRows(queryRange.start, queryRange.end)
+      const priorQ = compareRange ? fetchPlRows(compareRange.start, compareRange.end) : Promise.resolve([])
+      const priorKindQ = compareRange ? fetchKindRows(compareRange.start, compareRange.end) : Promise.resolve([])
 
       let lastPaidQ = supabase
         .from('daily_sales_summary')
@@ -332,6 +346,7 @@ export default function FinancePage() {
             .gte('occurred_at', fromIso)
             .lte('occurred_at', toIso)
             .order('occurred_at', { ascending: false })
+            .order('id', { ascending: false })
             .range(from, to)
           q = scopeBranch(q, profile, branchFilter)
           const { data, error } = await q
@@ -352,13 +367,14 @@ export default function FinancePage() {
             .gte('created_at', startIso)
             .lte('created_at', endIso)
             .order('created_at', { ascending: false })
+            .order('id', { ascending: false })
             .range(from, to)
           q = scopeBranch(q, profile, branchFilter)
           const { data, error } = await q
           if (error) throw error
           return data || []
         }, 1000),
-        priorQ || Promise.resolve({ data: [], error: null }),
+        priorQ,
         supabase.from('vendors').select('id, name, is_active').eq('is_active', true).order('name'),
         lastPaidQ,
         sheetCountQ,
@@ -367,19 +383,16 @@ export default function FinancePage() {
         priorKindQ,
       ])
       if (cats.error) throw cats.error
-      if (sales.error) throw sales.error
-      if (pl.error) throw pl.error
-      if (prior.error) throw prior.error
       // ponytail: vendors table may be missing until P5 migration — soft-fail empty list
       if (vendorRes.error) console.warn('vendors load:', vendorRes.error.message)
       setBranches(branchRows || [])
       setCategories(cats.data || [])
       setVendors(vendorRes.error ? [] : vendorRes.data || [])
-      setSalesRows(sales.data || [])
-      setKindRows(kindRes.error ? [] : kindRes.data || [])
-      setPriorKindRows(priorKindRes.error ? [] : priorKindRes.data || [])
-      setPlRows(pl.data || [])
-      setPriorPlRows(prior.data || [])
+      setSalesRows(sales || [])
+      setKindRows(kindRes || [])
+      setPriorKindRows(priorKindRes || [])
+      setPlRows(pl || [])
+      setPriorPlRows(prior || [])
       setExpenses(expRows)
       setSaleRows(curSales)
       setPriorSaleRows(prevSales)

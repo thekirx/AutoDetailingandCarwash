@@ -392,7 +392,7 @@ export default function SuperAdminFloorBoard() {
           </div>
           <h1 className="sa-floor-title text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Floor Insight</h1>
           <p className="mt-1 max-w-xl text-sm text-muted-foreground">
-            Services & Packages and Detailing Services stay separate across {branchLabel.toLowerCase()}. Money and tempo follow the timeline below.
+            {'Services & Packages'} and Detailing Services stay separate across {branchLabel.toLowerCase()}. Money and tempo follow the timeline below.
           </p>
         </div>
         <button
@@ -717,7 +717,7 @@ export default function SuperAdminFloorBoard() {
               tone="amber"
               hint="Paid · posted in timeline"
               onNavigate={() => navigate('/operations/finance')}
-              breakdown="Sum of expense total_minor for paid/posted rows created in this timeline (same statuses as Finance P&L). Approved-but-unpaid bills are excluded."
+              breakdown={'Sum of expense total_minor for paid/posted rows created in this timeline (same statuses as Finance P&L). Approved-but-unpaid bills are excluded.'}
             />
           </div>
         </Section>

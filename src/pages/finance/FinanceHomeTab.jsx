@@ -40,7 +40,15 @@ export default function FinanceHomeTab({ profile, branchFilter = 'all', branchNa
     try {
       const plPromise = collectPaged(async (from, to) => {
         const q = scopeBranch(
-          supabase.from('finance_daily_pl').select('branch, period_date, kind, category, amount_minor').gte('period_date', `${year - 1}-01-01`).lte('period_date', today),
+          supabase
+            .from('finance_daily_pl')
+            .select('branch, period_date, kind, category, amount_minor')
+            .gte('period_date', `${year - 1}-01-01`)
+            .lte('period_date', today)
+            .order('period_date', { ascending: false })
+            .order('branch', { ascending: true })
+            .order('kind', { ascending: true })
+            .order('category', { ascending: true }),
           profile,
           branchFilter,
         )

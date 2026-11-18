@@ -46,6 +46,7 @@ const GUARDED = [
   '20261018120000_refer_a_friend.sql',
   '20261019210000_daily_sheet_expected_cash_paid_from.sql',
   '20261116190000_db_backend_rls_and_index_optimization.sql',
+  '20261118170000_multi_month_scale_indexes.sql',
 ]
 
 /** Post-2026-10-10 migrations that do not narrow live RLS (schema/RPC/feature work). */

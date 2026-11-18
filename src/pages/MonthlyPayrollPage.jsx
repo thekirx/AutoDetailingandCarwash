@@ -25,6 +25,7 @@ import { canEditFinanceBooks, getBranchScopeList, isSuperAdmin, isAssistantSuper
 import { listStaffPeople, setStaffMonthlySalary } from '@/lib/adminApi'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { formatAccounting } from '@/lib/dailySheet'
+import { collectPaged } from '@/lib/crmInsights'
 import { downloadCsv, downloadExcel, printAsPdf } from '@/lib/financeData'
 import {
   isDayCrewRole,
@@ -153,34 +154,45 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
   const loadHistory = useCallback(async () => {
     setLoadingHistory(true)
     try {
-      let q = supabase
-        .from('payslips')
-        .select('id, staff_id, branch, period_start, period_end, salary_minor, incentive_minor, paid_from, note, status, signed_name, signed_at, created_at')
-        .order('period_start', { ascending: false })
-        .order('created_at', { ascending: false })
+      const mm = historyMonth && historyMonth !== 'all' ? String(historyMonth).padStart(2, '0') : null
+      const rows = await collectPaged(async (from, to) => {
+        let q = supabase
+          .from('payslips')
+          .select('id, staff_id, branch, period_start, period_end, salary_minor, incentive_minor, paid_from, note, status, signed_name, signed_at, created_at')
+          .order('period_start', { ascending: false })
+          .order('created_at', { ascending: false })
+          .order('id', { ascending: false })
+          .range(from, to)
 
-      if (branch && branch !== 'all') {
-        q = q.eq('branch', branch)
-      } else if (Array.isArray(scope) && scope.length) {
-        q = q.in('branch', scope)
-      }
+        if (branch && branch !== 'all') {
+          q = q.eq('branch', branch)
+        } else if (Array.isArray(scope) && scope.length) {
+          q = q.in('branch', scope)
+        }
 
-      if (historyYear && historyYear !== 'all') {
-        q = q.gte('period_start', `${historyYear}-01-01`).lte('period_end', `${historyYear}-12-31`)
-      }
+        if (historyYear && historyYear !== 'all') {
+          if (mm) {
+            const lastDay = String(new Date(Date.UTC(Number(historyYear), Number(mm), 0)).getUTCDate()).padStart(2, '0')
+            q = q.gte('period_start', `${historyYear}-${mm}-01`).lte('period_start', `${historyYear}-${mm}-${lastDay}`)
+          } else {
+            q = q.gte('period_start', `${historyYear}-01-01`).lte('period_end', `${historyYear}-12-31`)
+          }
+        }
 
-      if (historyMonth && historyMonth !== 'all') {
-        const mm = String(historyMonth).padStart(2, '0')
-        q = q.gte('period_start', `${historyYear}-${mm}-01`).lte('period_start', `${historyYear}-${mm}-16`)
-      }
+        if (historyStatus && historyStatus !== 'all') {
+          q = q.eq('status', historyStatus)
+        }
 
-      if (historyStatus && historyStatus !== 'all') {
-        q = q.eq('status', historyStatus)
-      }
+        const { data, error } = await q
+        if (error) throw error
+        return data || []
+      }, 1000)
 
-      const { data, error } = await q
-      if (error) throw error
-      setHistorySlips(data || [])
+      const filtered =
+        mm && (!historyYear || historyYear === 'all')
+          ? rows.filter((r) => String(r.period_start || '').slice(5, 7) === mm)
+          : rows
+      setHistorySlips(filtered)
     } catch (err) {
       toast.error(err.message || 'Could not load payroll history')
     } finally {
@@ -951,6 +963,7 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
                     onChange={(e) => setHistoryYear(e.target.value)}
                     className="bg-background text-sm rounded-xl border border-input px-3 py-2 min-h-11"
                   >
+                    <option value="all">All years</option>
                     <option value="2026">2026</option>
                     <option value="2025">2025</option>
                     <option value="2024">2024</option>

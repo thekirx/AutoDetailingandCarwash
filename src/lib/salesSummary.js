@@ -244,6 +244,9 @@ export function salesPeriodLabel(preset, range) {
   if (preset === 'month') return `This month, ${fmt(start, { month: 'short', year: 'numeric' })}`
   if (preset === 'quarter') return `This quarter, Q${Math.floor(utc(start).getUTCMonth() / 3) + 1} ${start.slice(0, 4)}`
   if (preset === 'year') return `This year, ${start.slice(0, 4)}`
+  if (preset === 'last_year') return `Last year, ${start.slice(0, 4)}`
+  if (preset === 'all') return `All time, ${formatSpan(start, end)}`
+  if (preset === '12mo') return `Last 12 months, ${formatSpan(start, end)}`
   return formatSpan(start, end)
 }
 
