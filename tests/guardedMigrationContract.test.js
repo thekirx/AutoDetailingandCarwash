@@ -50,6 +50,7 @@ const GUARDED = [
 
 /** Post-2026-10-10 migrations that do not narrow live RLS (schema/RPC/feature work). */
 const EXEMPTED = [
+  '20261117120000_client_rewards_points_merch.sql',
   '20261017100000_pos_announce_clips_bucket.sql',
   '20261017120000_booking_reschedule_requested.sql',
   '20261017130000_booking_referral_source.sql',

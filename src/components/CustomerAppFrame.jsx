@@ -90,6 +90,7 @@ export default function CustomerAppFrame({
   onBack,
   actions,
   hero,
+  banner,
   onRefresh,
   cols = false,
   className = '',
@@ -100,7 +101,7 @@ export default function CustomerAppFrame({
   const navType = useNavigationType()
   const depth = customerScreenDepth(location.pathname, location.search)
   const [enter, setEnter] = useState(() => enterKind(depth, navType))
-  const solid = useScrolledPast(hero ? 220 : 64)
+  const solid = useScrolledPast(hero || banner ? 220 : 64)
   const { pull, busy } = usePullToRefresh(onRefresh)
   const showTop = Boolean(title || backTo || onBack || actions)
   const hasBack = Boolean(onBack || backTo)
@@ -136,7 +137,7 @@ export default function CustomerAppFrame({
   return (
     <div className={`capp ${className}`.trim()} data-app-theme={theme}>
       <div className={`capp-stage capp-enter-${enter}`}>
-        <div className={`capp-navbar${solid ? ' is-solid' : ''}${hero ? ' is-over-photo' : ''}`} aria-hidden={!solid}>
+        <div className={`capp-navbar${solid ? ' is-solid' : ''}${hero || banner ? ' is-over-photo' : ''}`} aria-hidden={!solid}>
           <span className="capp-navbar-side">
             {onBack ? (
               <button type="button" className="capp-navbar-back" onClick={onBack} tabIndex={solid ? 0 : -1}>
@@ -160,7 +161,10 @@ export default function CustomerAppFrame({
         ) : null}
         {hero || null}
         {showTop ? (
-          <header className={`capp-top${hasBack ? ' has-back' : ' is-root'}`}>
+          <header
+            className={`capp-top${hasBack ? ' has-back' : ' is-root'}${banner ? ' has-banner' : ''}`}
+            style={banner ? { '--capp-top-photo': `url(${banner.src})`, '--capp-top-pos': banner.position || '50% 50%' } : undefined}
+          >
             {back}
             <div className={`capp-top-copy${hasBack ? '' : ' is-plain'}`}>
               {title ? <h1>{title}</h1> : null}

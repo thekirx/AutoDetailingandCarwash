@@ -7,7 +7,7 @@ export const VISIT_REWARDS = Object.freeze([
   { visit: 6, label: 'Free car freshener' },
   { visit: 12, label: 'Free coffee' },
   { visit: 18, label: 'Free premium car wash' },
-  { visit: 24, label: 'Free back-to-zero add-on' },
+  { visit: 24, label: 'Free Bac-to-zero add-on' },
   { visit: 30, label: '15% off tint, ceramic coating, or PPF (choose one)' },
 ])
 

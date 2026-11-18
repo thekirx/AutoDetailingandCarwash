@@ -1,13 +1,14 @@
 import PointsShop from '@/components/customer/PointsShop'
 import { useEffect, useState } from 'react'
-import { Car, Check, Gift } from 'lucide-react'
+import { Car, Check, Gift, Info } from 'lucide-react'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
 import StampTrack from '@/components/customer/StampTrack'
 import { BirthdayPass } from '@/components/customer/BirthdayGreeting'
 import Sheet from '@/components/customer/Sheet'
 import ReferralCard from '@/components/customer/ReferralCard'
 import { memberTier } from '@/lib/rewardsCatalog'
-import { Row, SectionHead, Skeleton, Stat } from '@/components/customer/CustomerUi'
+import rewardsPhoto from '@/assets/services/ceramic-tesla-finish.jpg'
+import { Row, Skeleton, Stat } from '@/components/customer/CustomerUi'
 import { fetchPortal } from '@/lib/customerPortalClient'
 import { CUSTOMER_LOYALTY_PATH } from '@/lib/customerAccountNav'
 import { usePageMeta } from '@/lib/pageMeta'
@@ -18,6 +19,7 @@ export default function CustomerLoyaltyPage() {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [giftAt, setGiftAt] = useState(null)
+  const [howOpen, setHowOpen] = useState(false)
 
   useEffect(() => {
     fetchPortal().then(setData).catch((err) => setError(err.message))
@@ -41,10 +43,14 @@ export default function CustomerLoyaltyPage() {
   const visits = Number(loyalty?.visitCount) || 0
   const tier = memberTier(visits)
   const rewardStamps = milestones.map((m) => Number(m.threshold_points)).filter(Boolean)
-  const rewardNames = [...new Set(milestones.map((m) => m.reward_label).filter(Boolean))]
 
   return (
-    <CustomerAppFrame title="Rewards" subtitle="A stamp for every paid visit." cols>
+    <CustomerAppFrame
+      title="Rewards"
+      subtitle="A stamp for every paid visit."
+      banner={{ src: rewardsPhoto, position: '50% 30%' }}
+      cols
+    >
       {error ? (
         <div className="capp-empty capp-span" role="alert">
           <strong>{error}</strong>
@@ -96,20 +102,6 @@ export default function CustomerLoyaltyPage() {
               ) : null}
             </div>
           </section>
-          <section className="capp-section" aria-label="How stamps work">
-            <SectionHead title="How stamps work" />
-            <div className="capp-group">
-              <Row icon={Check} title="1 paid visit = 1 stamp" sub="Stamped at the counter when you pay" />
-              <Row icon={Car} title="Any car on your account" sub="All your cars fill the same card" />
-              {rewardStamps.length ? (
-                <Row
-                  icon={Gift}
-                  title={`${rewardNames.join(' / ') || 'A reward'} at ${rewardStamps.join(' and ')}`}
-                  sub="Tap a gift on the card to see it"
-                />
-              ) : null}
-            </div>
-          </section>
           <Sheet open={Boolean(giftMilestone)} onClose={() => setGiftAt(null)} title={giftMilestone ? `Stamp ${giftMilestone.threshold_points}` : ''}>
             {giftMilestone ? (
               <div className="capp-gift-sheet">
@@ -147,6 +139,37 @@ export default function CustomerLoyaltyPage() {
       ) : null}
 
       {data?.referral ? <ReferralCard referral={data.referral} /> : null}
+
+      {loyalty && loyalty.stampsEnabled !== false ? (
+        <section className="capp-section capp-span" aria-label="How stamps work">
+          <div className="capp-group">
+            <Row icon={Info} title="How stamps work" sub="Stamps, rewards and the rules" chevron onClick={() => setHowOpen(true)} />
+          </div>
+          <Sheet open={howOpen} onClose={() => setHowOpen(false)} title="How stamps work" label="How stamps work">
+            <div className="capp-group">
+              <Row icon={Check} title="1 paid visit = 1 stamp" sub="Stamped at the counter when you pay" />
+              <Row icon={Car} title="Any car on your account" sub="All your cars fill the same card" />
+            </div>
+            {milestones.length ? (
+              <>
+                <div className="capp-sect">
+                  <h2>Rewards</h2>
+                </div>
+                <div className="capp-group">
+                  {milestones.map((m) => (
+                    <Row
+                      key={m.id || m.threshold_points}
+                      icon={Gift}
+                      title={m.reward_label}
+                      sub={`Visit ${m.threshold_points}${completed >= Number(m.threshold_points) ? ' · Earned' : ''}`}
+                    />
+                  ))}
+                </div>
+              </>
+            ) : null}
+          </Sheet>
+        </section>
+      ) : null}
 
     </CustomerAppFrame>
   )

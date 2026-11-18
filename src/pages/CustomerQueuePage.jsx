@@ -1,8 +1,9 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { MapPin } from 'lucide-react'
+import { Check, ChevronDown, Clock, MapPin } from 'lucide-react'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
-import { QueueStats, Skeleton } from '@/components/customer/CustomerUi'
+import { QueueStats, Row, Skeleton } from '@/components/customer/CustomerUi'
+import Sheet from '@/components/customer/Sheet'
 import { usePublicBranches } from '@/lib/branches'
 import { branchDistanceKm } from '@/lib/branchGeo'
 import { formatDistanceKm } from '@/lib/customerLocation'
@@ -17,16 +18,26 @@ function branchShortName(name) {
 }
 
 /**
- * /account/queue — live bay counts for one branch. The closest branch is picked from the
- * customer's location; a dropdown changes it. Walk-ins (wash & detailing) just drive in.
+ * /account/queue — banner, the closest branch, a "Not your branch? Change" sheet, then the live
+ * queue. Coming-soon branches are listed with a tag; picking one shows when its queue starts.
+ * Car wash is walk-in: drive in and join the queue.
  */
 export default function CustomerQueuePage() {
   const [params, setParams] = useSearchParams()
   const wanted = String(params.get('branch') || '').trim()
-  const { branches: rawBranches, loading: branchesLoading, error: branchesError } = usePublicBranches()
+  const { branches: allBranches, loading: branchesLoading, error: branchesError } = usePublicBranches({ mode: 'visible' })
+  const openBranches = useMemo(() => allBranches.filter((b) => !b.coming_soon), [allBranches])
+  const soonBranches = useMemo(() => allBranches.filter((b) => b.coming_soon), [allBranches])
   const { countsBySlug, loading, error, updatedAt, reload } = usePublicQueueCounts()
   const { branches, selectedBranch: selectedSlug, nearestSlug, nearestDistanceKm, pin, locating, locationError, selectBranch, locateNearest } =
-    useCustomerBranch(rawBranches, { wanted })
+    useCustomerBranch(openBranches, { wanted })
+  const [sheetOpen, setSheetOpen] = useState(false)
+  const [soonSlug, setSoonSlug] = useState('')
+
+  // A link to a coming-soon branch (?branch=imus) opens on its "opens soon" state.
+  useEffect(() => {
+    if (wanted && soonBranches.some((b) => b.slug === wanted)) setSoonSlug(wanted)
+  }, [wanted, soonBranches])
 
   // Find the closest branch once, as soon as the Queue opens (asks for location the first time).
   const asked = useRef(false)
@@ -36,58 +47,73 @@ export default function CustomerQueuePage() {
     locateNearest({ autoSelectNearest: true }).catch(() => {})
   }, [pin, wanted, branches.length, locateNearest])
 
+  const soonBranch = soonBranches.find((b) => b.slug === soonSlug) || null
   const selectedBranch = branches.find((b) => b.slug === selectedSlug) || null
+  const shown = soonBranch || selectedBranch
+  const nearestBranch = branches.find((b) => b.slug === nearestSlug) || null
 
   usePageMeta({
-    title: selectedBranch ? `Queue · ${branchShortName(selectedBranch.name)}` : 'Live queue',
+    title: shown ? `Queue · ${branchShortName(shown.name)}` : 'Live queue',
     description: 'Live Hakum bay counts at your closest branch.',
     path: CUSTOMER_QUEUE_PATH,
   })
 
   const selectedCounts = countsBySlug[selectedSlug] || queueCountsFromRow(null)
   const clock = updatedAt ? updatedAt.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' }) : ''
-  const isClosest = Boolean(selectedSlug) && selectedSlug === nearestSlug
+  const isClosest = !soonBranch && Boolean(selectedSlug) && selectedSlug === nearestSlug
+  const kmTo = (b) => (pin && b ? branchDistanceKm(pin, b) : null)
+  const shownKm = kmTo(shown)
 
-  function choose(slug) {
-    if (!slug || slug === selectedSlug) return
-    selectBranch(slug)
-    setParams({ branch: slug }, { replace: true })
+  function choose(b) {
+    setSheetOpen(false)
+    if (b.coming_soon) {
+      setSoonSlug(b.slug)
+      setParams({ branch: b.slug }, { replace: true })
+      return
+    }
+    setSoonSlug('')
+    if (b.slug !== selectedSlug) selectBranch(b.slug)
+    setParams({ branch: b.slug }, { replace: true })
   }
 
+  const sheetRows = [...branches, ...soonBranches]
+
   return (
-    <CustomerAppFrame title="Live queue" subtitle="Cars on the floor right now." onRefresh={reload} cols>
+    <CustomerAppFrame
+      title="Live queue"
+      subtitle="Car wash is walk-in. Drive in and join the queue."
+      banner={{ src: carwashPhoto, position: '50% 45%' }}
+      onRefresh={reload}
+      cols
+    >
       <div className="capp-branch-card capp-branch-card--closest capp-span">
         <div className="capp-branch-card-top">
           <span className="capp-row-icon" aria-hidden>
             <MapPin size={18} strokeWidth={1.75} />
           </span>
           <div className="capp-row-body">
-            <p className="capp-eyebrow">{isClosest ? 'Closest branch' : 'Your branch'}</p>
-            <strong>{selectedBranch ? branchShortName(selectedBranch.name) : locating ? 'Finding your branch…' : 'Branch'}</strong>
+            <p className="capp-eyebrow">{soonBranch ? 'Your pick' : isClosest ? 'Closest branch' : 'Your branch'}</p>
+            <strong>{shown ? branchShortName(shown.name) : locating ? 'Finding your branch…' : 'Branch'}</strong>
             <em>
               {isClosest && nearestDistanceKm != null
                 ? `About ${formatDistanceKm(nearestDistanceKm)} away · from your location`
-                : selectedBranch?.address || locationError || 'Pick the branch you are going to.'}
+                : [shownKm != null ? `${formatDistanceKm(shownKm)} away` : '', shown?.address].filter(Boolean).join(' · ') ||
+                  locationError ||
+                  'Pick the branch you are going to.'}
             </em>
+            {soonBranch ? <span className="capp-soon-tag capp-soon-tag--block">Coming soon</span> : null}
           </div>
         </div>
-        {branches.length > 1 || (!branchesLoading && branches.length) ? (
-          <label className="capp-field">
-            <span>Not right? Pick your branch</span>
-            <select className="capp-select" aria-label="Branch" value={selectedSlug} onChange={(e) => choose(e.target.value)}>
-              {branches.map((b) => {
-                const km = pin ? branchDistanceKm(pin, b) : null
-                return (
-                  <option key={b.slug} value={b.slug}>
-                    {branchShortName(b.name)}
-                    {km == null ? '' : ` · ${formatDistanceKm(km)}`}
-                  </option>
-                )
-              })}
-            </select>
-          </label>
-        ) : null}
       </div>
+
+      {sheetRows.length > 1 || (!branchesLoading && sheetRows.length) ? (
+        <div className="capp-span">
+          <button type="button" className="capp-btn capp-btn-ghost capp-btn-block capp-branch-change" onClick={() => setSheetOpen(true)}>
+            <span>Not your branch? Change</span>
+            <ChevronDown size={18} strokeWidth={1.75} aria-hidden />
+          </button>
+        </div>
+      ) : null}
 
       {branchesError || error ? (
         <div className="capp-empty capp-span" role="alert">
@@ -98,33 +124,61 @@ export default function CustomerQueuePage() {
         </div>
       ) : null}
 
-      <section className="capp-section capp-queue-counts capp-span" aria-label="Bay counts">
-        <div className="capp-livebar" aria-live="polite">
-          <span className="capp-live">
-            <span className="capp-live-dot" aria-hidden />
-            Live
-          </span>
-          <span>{clock ? `Updated ${clock}` : 'Updating counts'}</span>
+      <section className="capp-section capp-queue-counts capp-span" aria-label="Live queue">
+        <div className="capp-sect">
+          <h2>Live queue</h2>
         </div>
-        {loading && !Object.keys(countsBySlug).length ? <Skeleton /> : <QueueStats counts={selectedCounts} />}
-        {!loading && selectedCounts.total === 0 ? <p className="capp-meta">Bay is clear at this branch right now.</p> : null}
+        {soonBranch ? (
+          <div className="capp-soon-box">
+            <Clock size={22} strokeWidth={1.75} aria-hidden />
+            <strong>{branchShortName(soonBranch.name)} opens soon</strong>
+            <p>
+              The live queue starts here the day {branchShortName(soonBranch.name)} opens.
+              {nearestBranch
+                ? ` For now, ${branchShortName(nearestBranch.name)} is ${nearestDistanceKm != null ? `${formatDistanceKm(nearestDistanceKm)} away` : 'open'}.`
+                : ''}
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="capp-livebar" aria-live="polite">
+              <span className="capp-live">
+                <span className="capp-live-dot" aria-hidden />
+                Live
+              </span>
+              <span>{clock ? `Updated ${clock}` : 'Updating counts'}</span>
+            </div>
+            {loading && !Object.keys(countsBySlug).length ? <Skeleton /> : <QueueStats counts={selectedCounts} />}
+            {!loading && selectedCounts.total === 0 ? <p className="capp-meta">Bay is clear at this branch right now.</p> : null}
+          </>
+        )}
       </section>
 
-      <div className="capp-svc-list capp-span">
-        <div className="capp-svc capp-svc--walkin" role="note">
-          <img className="capp-svc-bg" src={carwashPhoto} alt="" loading="lazy" />
-          <span className="capp-svc-in">
-            <span className="min-w-0">
-              <strong>Car wash</strong>
-              <em>Walk-in only. No booking needed.</em>
-            </span>
-            <span className="capp-svc-from">
-              Drive in
-              <b>Join the queue</b>
-            </span>
-          </span>
+      <Sheet open={sheetOpen} onClose={() => setSheetOpen(false)} title="Pick your branch" label="Pick your branch">
+        <div className="capp-group">
+          {sheetRows.map((b) => {
+            const km = kmTo(b)
+            const on = b.slug === (soonBranch ? soonSlug : selectedSlug)
+            return (
+              <Row
+                key={b.slug}
+                icon={MapPin}
+                className={on ? 'is-on' : ''}
+                title={branchShortName(b.name)}
+                sub={[km != null ? formatDistanceKm(km) : '', b.slug === nearestSlug ? 'Closest to you' : b.address].filter(Boolean).join(' · ')}
+                end={
+                  b.coming_soon ? (
+                    <span className="capp-soon-tag">Coming soon</span>
+                  ) : on ? (
+                    <Check size={18} strokeWidth={2.2} aria-label="Selected" />
+                  ) : null
+                }
+                onClick={() => choose(b)}
+              />
+            )
+          })}
         </div>
-      </div>
+      </Sheet>
     </CustomerAppFrame>
   )
 }

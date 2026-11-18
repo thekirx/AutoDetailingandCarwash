@@ -1303,6 +1303,25 @@ html.capp-sheet-open {
     padding-top: calc(max(0.85rem, env(safe-area-inset-top, 0px)) + 1.6rem);
   }
 
+  /* Photo banner (Queue, Rewards, Cars): same gradient as Home's hero still, white type. */
+  .capp[data-app-theme] .capp-top.has-banner {
+    min-height: 15rem;
+    align-content: end;
+    padding-top: calc(max(0.85rem, env(safe-area-inset-top, 0px)) + 7.5rem);
+    padding-bottom: 1rem;
+    background:
+      linear-gradient(180deg, rgba(2, 10, 49, 0.3), rgba(2, 10, 49, 0.62) 55%, rgba(2, 10, 49, 0.97)),
+      var(--capp-top-photo) var(--capp-top-pos, 50% 50%) / cover no-repeat,
+      #020a31;
+    color: #fff;
+  }
+
+  .capp[data-app-theme] .capp-top.has-banner h1,
+  .capp[data-app-theme] .capp-top.has-banner p {
+    color: #fff;
+    text-shadow: 0 2px 18px rgba(2, 10, 49, 0.9);
+  }
+
   .capp[data-app-theme] .capp-top .capp-back {
     grid-area: back;
     margin-left: -0.6rem;

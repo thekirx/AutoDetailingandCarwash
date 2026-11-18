@@ -1,15 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
-import { CalendarDays, CalendarPlus, Check, ChevronDown, Clock, Droplets, MapPin, Radio, Receipt, Settings, ThumbsDown, ThumbsUp, Wrench } from 'lucide-react'
+import { CalendarDays, CalendarPlus, ChevronDown, Radio, Receipt, Settings, ThumbsDown, ThumbsUp, Wrench } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { formatMoney } from '@/queue/queueApi'
-import { customerQueuePath, queueCountsFromRow } from '@/lib/liveQueuePath'
-import { usePublicQueueCounts } from '@/lib/usePublicQueueCounts'
+import { customerQueuePath } from '@/lib/liveQueuePath'
 import { supabase } from '@/lib/supabase'
 import { CUSTOMER_BOOK_PATH, CUSTOMER_CARS_PATH, CUSTOMER_MORE_PATH, CUSTOMER_SETTINGS_PATH, customerVisitPath } from '@/lib/customerAccountNav'
 import { DAY_MS, activityInRange, isoDay } from '@/lib/customerActivity'
 import { branchLabel, fetchPortal, greeting, portalAction } from '@/lib/customerPortalClient'
-import { formatDistanceKm } from '@/lib/customerLocation'
 import { useCustomerBranch } from '@/lib/useCustomerBranch'
 import { buildThumbReview } from '@/lib/serviceReviews'
 import { COMPLAINT_CATEGORIES, thumbDownComplaintPayload } from '@/lib/opsForms'
@@ -21,7 +19,7 @@ import ActiveVisitCard from '@/components/customer/ActiveVisitCard'
 import BranchWeather from '@/components/customer/BranchWeather'
 import { BirthdayGreetingSheet, BirthdayHomeCard } from '@/components/customer/BirthdayGreeting'
 import { ProfileProgressCard } from '@/components/customer/ProfileProgress'
-import { Badge, Pills, Row, SectionHead, Skeleton } from '@/components/customer/CustomerUi'
+import { Badge, Pills, Row, Skeleton } from '@/components/customer/CustomerUi'
 import {
   Dialog,
   DialogContent,
@@ -38,11 +36,6 @@ import {
 } from '@/lib/vehicleTransfer'
 
 const EMPTY_LIST = []
-
-function carsLabel(n) {
-  const count = Number(n) || 0
-  return count === 1 ? '1 car' : `${count} cars`
-}
 
 function formatWhen(iso) {
   if (!iso) return '-'
@@ -113,9 +106,8 @@ export default function CustomerAccountPage() {
   const [ratingSaving, setRatingSaving] = useState(false)
   const [ratingDone, setRatingDone] = useState(false)
   const [reviewNow, setReviewNow] = useState(() => Date.now())
-  const { countsBySlug } = usePublicQueueCounts()
 
-  const { branches, selectedBranch, nearestSlug, nearestDistanceKm, pin, locating, locateNearest } = useCustomerBranch(
+  const { branches, selectedBranch, pin, locating, locateNearest } = useCustomerBranch(
     data?.branches || EMPTY_LIST,
   )
   const bookings = data?.bookings || EMPTY_LIST
@@ -151,7 +143,6 @@ export default function CustomerAccountPage() {
     if (authProfile?.role === 'customer') load()
   }, [load, authProfile, session?.access_token, authLoading])
 
-  const selectedCounts = countsBySlug[selectedBranch] || queueCountsFromRow(null)
   const queueHref = customerQueuePath(selectedBranch)
   const fullName = data?.profile?.full_name || authProfile?.full_name || ''
   const firstName = fullName.split(' ')[0] || ''
@@ -455,26 +446,6 @@ export default function CustomerAccountPage() {
         ) : (
           <p className="capp-meta">Save a plate in My cars so booking and queue tracking are one tap.</p>
         )}
-      </section>
-
-      <section className="capp-section capp-span capp-home-queue" aria-label="Live queue">
-        <SectionHead title="Live queue" to={queueHref} linkLabel="Open" />
-        <div className="capp-group">
-          <Row
-            icon={MapPin}
-            title={branchLabel(branches, selectedBranch) || 'Choose a branch'}
-            sub={
-              selectedBranch && nearestSlug === selectedBranch
-                ? `Closest branch to you${nearestDistanceKm != null ? ` · ${formatDistanceKm(nearestDistanceKm)}` : ''}`
-                : 'Change it on the Queue tab'
-            }
-            to={queueHref}
-            chevron
-          />
-          <Row icon={Clock} title="Waiting" end={<b>{carsLabel(selectedCounts.waiting)}</b>} />
-          <Row icon={Droplets} title="In wash" end={<b>{carsLabel(selectedCounts.in_progress)}</b>} />
-          <Row icon={Check} title="Final check" end={<b>{carsLabel(selectedCounts.final_checking)}</b>} />
-        </div>
       </section>
 
       {!loading && !ratingDone && reviewVisit ? (
