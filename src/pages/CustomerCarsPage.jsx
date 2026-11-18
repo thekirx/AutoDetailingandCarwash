@@ -8,6 +8,7 @@ import { fetchPortal } from '@/lib/customerPortalClient'
 import { CUSTOMER_CARS_PATH, CUSTOMER_MORE_PATH } from '@/lib/customerAccountNav'
 import { usePageMeta } from '@/lib/pageMeta'
 import { GarageSection } from './CustomerMorePage'
+import fleetPhoto from '@/assets/services/wash-detailing/fleet-collage.webp'
 
 /** /account/cars — the Cars tab (took Me's place in the dock). `?add=1` opens the add form, `?vehicle=<id>` edits a car. */
 export default function CustomerCarsPage() {
@@ -22,9 +23,10 @@ export default function CustomerCarsPage() {
 
   return (
     <CustomerAppFrame
-      title="My cars"
+      title="Your fleet"
       subtitle="Tap a photo to change it, or a plate to book or edit."
-      navTitle="My cars"
+      navTitle="Your fleet"
+      banner={{ src: fleetPhoto, position: '50% 50%' }}
       actions={
         <>
           <button type="button" className="capp-icon-btn" aria-label="Add a car" onClick={() => setParams({ add: '1' }, { replace: true })}>
