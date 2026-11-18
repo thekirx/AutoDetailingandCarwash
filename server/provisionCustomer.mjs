@@ -3,7 +3,8 @@
  * Used by Vite middleware (dev) and Vercel /api/provision-customer (prod).
  */
 import { authCreateUserIdForCrm, buildProvisionInviteMessage } from './provisionSms.mjs'
-import { canonicalPhMobile, phoneLoginEmail, phoneLoginEmailAliases, plateValidationError } from '../src/lib/customerAuth.js'
+import { canonicalPhMobile, normalizePlate, phoneLoginEmail, phoneLoginEmailAliases, plateValidationError } from '../src/lib/customerAuth.js'
+import { normalizePricingSize } from '../src/lib/servicePricing.js'
 import {
   mergeCustomerDisplayName,
   resolveQueueCustomerDisplayName,
@@ -346,6 +347,8 @@ export async function provisionCustomerAccount({ accessToken, body, siteOrigin }
     await admin.from('customers').update(returning.patch).eq('id', customerId)
   } else {
     customerId = authUser.id
+    const dobRaw = String(body.date_of_birth || '').trim()
+    const dateOfBirth = /^\d{4}-\d{2}-\d{2}$/.test(dobRaw) ? dobRaw : null
     const { error: upsertError } = await admin.from('customers').upsert(
       {
         id: authUser.id,
@@ -355,11 +358,37 @@ export async function provisionCustomerAccount({ accessToken, body, siteOrigin }
         full_name: fullName,
         phone,
         email: email || loginEmail,
+        date_of_birth: dateOfBirth,
         is_archived: false,
       },
       { onConflict: 'id' },
     )
     if (upsertError) throw Object.assign(new Error(upsertError.message), { status: 400 })
+  }
+
+  if (plate && customerId) {
+    const normalized = normalizePlate(plate)
+    if (normalized) {
+      const { data: existingVehicle } = await admin
+        .from('vehicles')
+        .select('id')
+        .eq('customer_id', customerId)
+        .eq('normalized_plate_number', normalized)
+        .eq('is_archived', false)
+        .limit(1)
+        .maybeSingle()
+      if (!existingVehicle) {
+        await admin.from('vehicles').insert({
+          customer_id: customerId,
+          plate_number: plate,
+          normalized_plate_number: normalized,
+          vehicle_make: String(body.vehicle_make || '').trim() || null,
+          vehicle_model: String(body.vehicle_model || '').trim() || null,
+          vehicle_type: normalizePricingSize(body.vehicle_type),
+          is_archived: false,
+        })
+      }
+    }
   }
 
   const message = buildProvisionInviteMessage({

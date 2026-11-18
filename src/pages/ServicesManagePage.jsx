@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { useAuth } from '@/auth/AuthProvider'
+import { useUrlQueryState } from '@/hooks/useUrlQueryState'
 import { canManageServices } from '@/auth/permissions'
 import { archiveService, createService, listServiceReferralEligibility, listServices, setServiceReferralEligible, updateService } from '@/lib/adminApi'
 import {
@@ -182,6 +183,7 @@ const LOCKED_MSG = 'Inventory is locked. Ask Super Admin to unlock.'
 export default function ServicesManagePage({
   embedded = false,
   catalogScope = 'all',
+  onScopeChange = null,
   crudLocked = false,
   canMutate = true,
 } = {}) {
@@ -193,6 +195,7 @@ export default function ServicesManagePage({
   const [referralEligible, setReferralEligible] = useState(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [query, setQuery] = useUrlQueryState()
 
   const categoryOptions = useMemo(
     () => payCategoryOptionsForCatalogScope(catalogScope),
@@ -217,11 +220,28 @@ export default function ServicesManagePage({
     setEditing(null)
   }, [catalogScope])
 
+  const scopeCounts = useMemo(() => {
+    const allRows = services || []
+    return {
+      all: allRows.length,
+      bay: filterPosBayCatalog(allRows).length,
+      detailing: filterPosDetailingCatalog(allRows).length,
+    }
+  }, [services])
+
   const scopedRows = useMemo(() => {
-    if (catalogScope === 'bay') return filterPosBayCatalog(services)
-    if (catalogScope === 'detailing') return filterPosDetailingCatalog(services)
-    return services || []
-  }, [services, catalogScope])
+    const base =
+      catalogScope === 'bay'
+        ? filterPosBayCatalog(services)
+        : catalogScope === 'detailing'
+          ? filterPosDetailingCatalog(services)
+          : services || []
+    const needle = query.trim().toLowerCase()
+    if (!needle) return base
+    return base.filter((s) =>
+      `${s.name || ''} ${s.slug || ''} ${s.pay_category || ''}`.toLowerCase().includes(needle),
+    )
+  }, [services, catalogScope, query])
 
   const nameById = useMemo(() => Object.fromEntries((services || []).map((s) => [s.id, s.name])), [services])
 
@@ -336,10 +356,10 @@ export default function ServicesManagePage({
   const editingIsPackage = editing && serviceKindFromPayCategory(editing.pay_category) === 'package'
   const scopeTitle =
     catalogScope === 'detailing'
-      ? 'Detailing'
+      ? 'Detailing packages'
       : catalogScope === 'bay'
         ? 'Services & packages'
-        : 'Catalog'
+        : 'Services & detailing'
   const createLabel =
     catalogScope === 'detailing'
       ? 'Add detailing service'
@@ -348,7 +368,7 @@ export default function ServicesManagePage({
         : 'Add catalog item'
 
   return (
-    <section className={`flex flex-col gap-8 ${embedded ? '' : ''}`}>
+    <section className="flex flex-col gap-6">
       {crudLocked && !canMutate ? (
         <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-muted-foreground" role="status">
           {LOCKED_MSG}
@@ -368,7 +388,9 @@ export default function ServicesManagePage({
         <p className="text-sm text-muted-foreground">
           {catalogScope === 'detailing'
             ? 'Multi-day jobs (Ceramic, Tint, PPF, Paint Maintenance). Optional size pricing when rates differ by car size.'
-            : 'Same-day bay work. Packages can bundle services or use a custom price. Flat price by default; size pricing optional.'}
+            : catalogScope === 'bay'
+              ? 'Same-day bay work. Packages can bundle services or use a custom price. Flat price by default; size pricing optional.'
+              : 'All same-day wash services, packages, and multi-day detailing tiers in one place.'}
         </p>
       )}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -544,17 +566,57 @@ export default function ServicesManagePage({
         </DialogContent>
       </Dialog>
       <Card>
-        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <CardTitle>{scopeTitle}</CardTitle>
-            <CardDescription>
-              {scopedRows.length} active item{scopedRows.length === 1 ? '' : 's'} in this tab
-            </CardDescription>
+        <CardHeader className="gap-4">
+          <div className="flex flex-row flex-wrap items-start justify-between gap-3">
+            <div className="flex min-w-0 flex-col gap-1.5">
+              <CardTitle>{scopeTitle}</CardTitle>
+              <CardDescription>
+                {scopedRows.length} active item{scopedRows.length === 1 ? '' : 's'}
+                {query.trim() ? ` matching “${query.trim()}”` : ' in this view'}
+              </CardDescription>
+            </div>
+            <Button type="button" className="min-h-11 shrink-0" onClick={() => setCreateOpen(true)} disabled={!canMutate}>
+              <Plus size={16} className="mr-1.5" aria-hidden />
+              {createLabel}
+            </Button>
           </div>
-          <Button type="button" className="min-h-11" onClick={() => setCreateOpen(true)} disabled={!canMutate}>
-            <Plus size={16} className="mr-1.5" aria-hidden />
-            {createLabel}
-          </Button>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            {onScopeChange ? (
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="Filter catalog scope">
+                {[
+                  { id: 'all', label: 'All services', count: scopeCounts.all },
+                  { id: 'bay', label: 'Services & packages', count: scopeCounts.bay },
+                  { id: 'detailing', label: 'Detailing', count: scopeCounts.detailing },
+                ].map((opt) => {
+                  const selected = catalogScope === opt.id
+                  return (
+                    <Button
+                      key={opt.id}
+                      type="button"
+                      size="sm"
+                      variant={selected ? 'default' : 'outline'}
+                      aria-pressed={selected}
+                      className="min-h-11 rounded-full px-3.5 transition-transform duration-150 active:scale-[0.97]"
+                      onClick={() => onScopeChange(opt.id)}
+                    >
+                      {opt.label}{' '}
+                      <span className="ml-1 font-mono text-xs tabular-nums opacity-80">({opt.count})</span>
+                    </Button>
+                  )
+                })}
+              </div>
+            ) : <div />}
+
+            <Input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Search service, package, slug…"
+              aria-label="Search services and detailing"
+              className="min-h-11 sm:max-w-xs"
+            />
+          </div>
         </CardHeader>
         <CardContent>
           <Table>

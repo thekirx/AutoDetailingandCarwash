@@ -136,9 +136,8 @@ describe('client ops fixes batch', () => {
     assert.match(readFileSync(join(root, 'src/lib/dailySheetApi.js'), 'utf8'), /products\(name, tags, category\)/)
     assert.match(products, /MERCH_FAMILIES/)
     assert.match(inventory, /OpsPageShell/)
-    assert.match(inventory, /catalogScope="bay"/)
-    assert.match(inventory, /catalogScope="detailing"/)
-    assert.match(inventory, /Services & packages/)
+    assert.match(inventory, /catalogScope=\{serviceScope\}/)
+    assert.match(inventory, /Services & detailing/)
   })
 
   it('POS family tiles wrap on a phone instead of a single horizontal row', () => {

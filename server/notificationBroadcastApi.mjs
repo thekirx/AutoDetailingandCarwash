@@ -100,6 +100,21 @@ async function resolveEmployeeIds(db, { employeeScope, employeeRoles, branchSlug
  * PATCH  /api/notification-broadcast        — update saved broadcast metadata (SA / ASA)
  * DELETE /api/notification-broadcast?id=... — delete broadcast record (SA / ASA)
  */
+export async function collectPagedRows(buildQuery, maxRows = 50000) {
+  const rows = []
+  for (let from = 0; from < maxRows; from += 1000) {
+    let q = buildQuery()
+    if (typeof q.order === 'function') q = q.order('id', { ascending: true })
+    const { data, error } =
+      typeof q.range === 'function' ? await q.range(from, from + 999) : await q.limit(1000)
+    if (error) return { data: rows, error }
+    const batch = data || []
+    rows.push(...batch)
+    if (batch.length < 1000 || typeof q.range !== 'function') break
+  }
+  return { data: rows, error: null }
+}
+
 export async function handleNotificationBroadcastRequest(req, res) {
   setCors(res, 'GET, POST, PATCH, DELETE, OPTIONS')
   if (req.method === 'OPTIONS') {
@@ -262,23 +277,16 @@ export async function handleNotificationBroadcastRequest(req, res) {
         .filter((d) => d.length >= 10),
     )
 
-    let custQuery = db
-      .from('customers')
-      .select('id, phone, full_name, notify_sms, notify_push, is_disabled')
-      .eq('role', 'customer')
-      .eq('is_archived', false)
-      .eq('is_disabled', false)
-
     let custEmpty = false
+    let custFilterIds = null
     if (targetAudience === 'branch') {
-      const { data: bookingCusts } = await db
-        .from('bookings')
-        .select('customer_id')
-        .eq('branch', branchSlug)
-        .not('customer_id', 'is', null)
-      const ids = (bookingCusts || []).map((b) => b.customer_id).filter(Boolean)
+      const { data: bookingCusts, error: bkErr } = await collectPagedRows(() =>
+        db.from('bookings').select('customer_id').eq('branch', branchSlug).not('customer_id', 'is', null),
+      )
+      if (bkErr) return json(res, 400, { error: bkErr.message })
+      const ids = [...new Set((bookingCusts || []).map((b) => b.customer_id).filter(Boolean))]
       if (!ids.length) custEmpty = true
-      else custQuery = custQuery.in('id', ids)
+      else custFilterIds = new Set(ids)
     } else if (targetAudience === 'detailing' || targetAudience === 'wash') {
       const { data: svcRows } = await db
         .from('services')
@@ -288,22 +296,31 @@ export async function handleNotificationBroadcastRequest(req, res) {
       if (!svcIds.length) {
         custEmpty = true
       } else {
-        const { data: bookingCusts } = await db
-          .from('bookings')
-          .select('customer_id')
-          .in('service_id', svcIds)
-          .not('customer_id', 'is', null)
+        const { data: bookingCusts, error: bkErr } = await collectPagedRows(() =>
+          db.from('bookings').select('customer_id').in('service_id', svcIds).not('customer_id', 'is', null),
+        )
+        if (bkErr) return json(res, 400, { error: bkErr.message })
         const ids = [...new Set((bookingCusts || []).map((b) => b.customer_id).filter(Boolean))]
         if (!ids.length) custEmpty = true
-        else custQuery = custQuery.in('id', ids)
+        else custFilterIds = new Set(ids)
       }
     }
 
     let audience = []
     if (!custEmpty) {
-      const { data: customers, error: custErr } = await custQuery.limit(5000)
+      const { data: customers, error: custErr } = await collectPagedRows(() =>
+        db
+          .from('customers')
+          .select('id, phone, full_name, notify_sms, notify_push, is_disabled, is_archived')
+          .eq('role', 'customer')
+          .eq('is_disabled', false)
+          .eq('is_archived', false),
+      )
       if (custErr) return json(res, 400, { error: custErr.message })
       audience = customers || []
+      if (custFilterIds) {
+        audience = audience.filter((c) => custFilterIds.has(c.id))
+      }
       if (phoneAllow.size) {
         audience = audience.filter((c) => phoneAllow.has(String(c.phone || '').replace(/\D/g, '')))
       }
@@ -333,14 +350,15 @@ export async function handleNotificationBroadcastRequest(req, res) {
     if (audience.length && wantsSms) {
       const plateByCustomer = new Map()
       const audienceIds = audience.map((c) => c.id).filter(Boolean)
-      if (audienceIds.length) {
+      for (let i = 0; i < audienceIds.length; i += 200) {
+        const chunk = audienceIds.slice(i, i + 200)
         const { data: vehicles } = await db
           .from('vehicles')
           .select('customer_id, plate_number, updated_at')
-          .in('customer_id', audienceIds)
+          .in('customer_id', chunk)
           .eq('is_archived', false)
           .order('updated_at', { ascending: false })
-          .limit(5000)
+          .limit(1000)
         for (const v of vehicles || []) {
           if (!plateByCustomer.has(v.customer_id) && v.plate_number) {
             plateByCustomer.set(v.customer_id, v.plate_number)

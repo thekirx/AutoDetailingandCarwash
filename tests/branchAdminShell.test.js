@@ -35,13 +35,12 @@ describe('Branch Admin simplified shell', () => {
         '/operations/pos',
         '/operations/finance',
         '/operations/inventory',
-        '/operations/attendance',
+        '/operations/employees',
         '/operations/crm',
         '/operations/my-advances',
         '/operations/payslips',
         '/operations/history',
-        '/operations/audit',
-        '/operations/vehicle-transfer',
+        '/operations/system',
       ],
     )
     assert.equal(getOperationsNav(p).some((i) => i.label === 'Floor Board'), false)
@@ -57,7 +56,7 @@ describe('Branch Admin simplified shell', () => {
     const navPaths = nav.map((i) => i.to)
     assert.equal(navPaths.includes('/operations/dashboard'), false)
     assert.ok(navPaths.includes('/operations/queue'))
-    assert.ok(navPaths.includes('/operations/attendance'))
+    assert.ok(navPaths.includes('/operations/employees'))
     assert.ok(navPaths.includes('/operations/pos'))
   })
 

@@ -1,7 +1,7 @@
 /** CRM › customer profile modal - full visit + purchase history and marketing signals for one customer. */
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { BellOff, Mail, MessageSquare, Pencil, Phone, Plus } from 'lucide-react'
+import { ArrowLeftRight, BellOff, Mail, MessageSquare, Pencil, Phone, Plus, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { canAccessQueuePage, canEditCrm } from '@/auth/permissions'
 import CustomerNotesPanel from '@/components/CustomerNotesPanel'
@@ -112,9 +112,25 @@ function Kpi({ label, value, hint }) {
 
 /**
  * @param {{ customer: object|null, onOpenChange: (open: boolean) => void, profile: object, branchName: (slug: string) => string,
- *   reloadKey?: number, onMessage?: () => void, onEdit?: () => void, onAddVehicle?: () => void, children?: any }} props
+ *   reloadKey?: number, onMessage?: () => void, onEdit?: () => void, onDelete?: () => void,
+ *   onAddVehicle?: () => void, onEditVehicle?: (v: object) => void, onArchiveVehicle?: (v: object) => void,
+ *   onTransferVehicle?: (v: object) => void, children?: any }} props
  */
-export default function CustomerProfileDialog({ customer, onOpenChange, profile, branchName, reloadKey = 0, onMessage, onEdit, onAddVehicle, children }) {
+export default function CustomerProfileDialog({
+  customer,
+  onOpenChange,
+  profile,
+  branchName,
+  reloadKey = 0,
+  onMessage,
+  onEdit,
+  onDelete,
+  onAddVehicle,
+  onEditVehicle,
+  onArchiveVehicle,
+  onTransferVehicle,
+  children,
+}) {
   const [data, setData] = useState(EMPTY)
   const [loading, setLoading] = useState(false)
   const customerId = customer?.id
@@ -176,6 +192,11 @@ export default function CustomerProfileDialog({ customer, onOpenChange, profile,
               {onEdit ? (
                 <Button type="button" size="sm" variant="outline" className="min-h-11 xl:min-h-9" onClick={onEdit}>
                   <Pencil data-icon="inline-start" aria-hidden /> Edit profile
+                </Button>
+              ) : null}
+              {onDelete ? (
+                <Button type="button" size="sm" variant="ghost" className="min-h-11 text-destructive hover:text-destructive xl:min-h-9" onClick={onDelete}>
+                  <Trash2 data-icon="inline-start" aria-hidden /> Archive / Delete
                 </Button>
               ) : null}
             </div>
@@ -292,18 +313,39 @@ export default function CustomerProfileDialog({ customer, onOpenChange, profile,
                   </div>
                 ) : null}
                 {data.vehicles.map((v) => (
-                  <div key={v.id} className="flex items-start gap-3 rounded-xl border border-border p-3 text-sm">
-                    <span className="mt-0.5 text-lg" aria-hidden>{vehicleIconGlyph(v.icon)}</span>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium">{v.plate_number}</p>
-                      <p className="text-muted-foreground">
-                        {[v.vehicle_make, v.vehicle_model, v.vehicle_year, PRICING_SIZES.find((s) => s.slug === normalizePricingSize(v.vehicle_type))?.label, v.color].filter(Boolean).join(' · ')}
-                      </p>
+                  <div key={v.id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border p-3 text-sm">
+                    <div className="flex min-w-0 flex-1 items-start gap-3">
+                      <span className="mt-0.5 text-lg" aria-hidden>{vehicleIconGlyph(v.icon)}</span>
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">{v.plate_number}</p>
+                        <p className="text-muted-foreground">
+                          {[v.vehicle_make, v.vehicle_model, v.vehicle_year, PRICING_SIZES.find((s) => s.slug === normalizePricingSize(v.vehicle_type))?.label, v.color].filter(Boolean).join(' · ')}
+                        </p>
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          {v.total_visits ?? 0} visits
+                          {v.last_visit_at ? ` · Last ${fmtDate(v.last_visit_at)}` : ''}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-right text-xs text-muted-foreground">
-                      {v.total_visits ?? 0} visits
-                      {v.last_visit_at ? <span className="block">Last {fmtDate(v.last_visit_at)}</span> : null}
-                    </p>
+                    {(onEditVehicle || onTransferVehicle || onArchiveVehicle) ? (
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {onEditVehicle ? (
+                          <Button type="button" size="sm" variant="outline" className="min-h-11 xl:min-h-9" onClick={() => onEditVehicle(v)}>
+                            <Pencil className="size-3.5" aria-hidden /> Edit
+                          </Button>
+                        ) : null}
+                        {onTransferVehicle ? (
+                          <Button type="button" size="sm" variant="outline" className="min-h-11 xl:min-h-9" onClick={() => onTransferVehicle(v)}>
+                            <ArrowLeftRight className="size-3.5" aria-hidden /> Transfer
+                          </Button>
+                        ) : null}
+                        {onArchiveVehicle ? (
+                          <Button type="button" size="sm" variant="ghost" className="min-h-11 text-destructive hover:text-destructive xl:min-h-9" onClick={() => onArchiveVehicle(v)} aria-label={`Remove ${v.plate_number}`}>
+                            <Trash2 className="size-3.5" aria-hidden />
+                          </Button>
+                        ) : null}
+                      </div>
+                    ) : null}
                   </div>
                 ))}
                 {!data.vehicles.length ? <p className="text-sm text-muted-foreground">No vehicles on file.</p> : null}

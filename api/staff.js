@@ -5,8 +5,10 @@ import {
   handleProvisionStaffRequest,
   handleUpdateStaffRequest,
 } from '../server/provisionStaff.mjs'
+import { handleSmartSearchRequest } from '../server/smartSearchApi.mjs'
 
 export const operations = Object.freeze({
+  'smart-search': handleSmartSearchRequest,
   'provision-staff': (req, res) => {
     setCors(res, 'POST, OPTIONS')
     const proto = req.headers['x-forwarded-proto'] || 'https'

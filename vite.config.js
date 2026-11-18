@@ -93,6 +93,10 @@ function attachHakumApis(server) {
     const { default: staffGateway } = await import('./api/staff.js')
     return staffGateway(req, res)
   })
+  mount('/api/customer', async (req, res) => {
+    const { default: customerGateway } = await import('./api/customer.js')
+    return customerGateway(req, res)
+  })
   mount('/api/customer-portal', handleCustomerPortalRequest)
   mount('/api/vehicle-transfer', async (req, res) => {
     const { handleVehicleTransferRequest } = await import('./server/vehicleTransferApi.mjs')

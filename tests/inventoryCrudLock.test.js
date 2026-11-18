@@ -53,6 +53,7 @@ describe('inventory C7/C8 source seams', () => {
     const inv = read('src/pages/InventoryPage.jsx')
     assert.match(inv, /const INVENTORY_SHELL_TABS = \[/)
     assert.doesNotMatch(inv, /id: 'stock'/)
+    assert.match(inv, /id: 'services'/)
     assert.match(inv, /id: 'merch'/)
     assert.match(inv, /id: 'recon'/)
     assert.match(inv, /inventory_crud_lock|InventoryCrudLock|useInventoryCrudLock|getInventoryCrudLocked/)

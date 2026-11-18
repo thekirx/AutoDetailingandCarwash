@@ -144,9 +144,28 @@ export async function applyNetworkAttendanceSettings(patch, profile) {
 export async function fetchAttendanceMatrix({ branchSlug, period, anchor }) {
   const range = attendanceDateRange(period, anchor)
   const personSelect = 'id, full_name, username, branch_slug, role, is_active'
-  const roles = await fetchAttendanceRoleSettings()
 
-  const [{ data: primary, error: primaryErr }, { data: assigns, error: assignErr }] = await Promise.all([
+  // Hop 1: roles config, branch assignments, and scoped attendance rows are independent — fetch together.
+  const [roles, { data: assigns, error: assignErr }, { data: rows, error: attErr }] = await Promise.all([
+    fetchAttendanceRoleSettings(),
+    supabase
+      .from('staff_branch_assignments')
+      .select('staff_id')
+      .eq('branch_slug', branchSlug),
+    supabase
+      .from('staff_attendance')
+      .select('id, staff_id, branch_slug, attendance_date, status, checked_in_at, checked_out_at, source, notes, check_in_lat, check_in_lng')
+      .eq('branch_slug', branchSlug)
+      .gte('attendance_date', range.start)
+      .lte('attendance_date', range.end),
+  ])
+  if (assignErr) throw formatQueueActionError(assignErr)
+  if (attErr) throw formatQueueActionError(attErr)
+
+  const assignedIds = [...new Set((assigns || []).map((a) => a.staff_id).filter(Boolean))]
+
+  // Hop 2: resolve primary branch + secondary assigned profiles matching attendance roles.
+  const [{ data: primary, error: primaryErr }, assignedRes] = await Promise.all([
     supabase
       .from('staff_profiles')
       .select(personSelect)
@@ -154,38 +173,21 @@ export async function fetchAttendanceMatrix({ branchSlug, period, anchor }) {
       .eq('branch_slug', branchSlug)
       .in('role', roles)
       .order('full_name'),
-    supabase
-      .from('staff_branch_assignments')
-      .select('staff_id')
-      .eq('branch_slug', branchSlug),
+    assignedIds.length
+      ? supabase
+          .from('staff_profiles')
+          .select(personSelect)
+          .eq('is_active', true)
+          .in('id', assignedIds)
+          .in('role', roles)
+          .order('full_name')
+      : Promise.resolve({ data: [], error: null }),
   ])
   if (primaryErr) throw formatQueueActionError(primaryErr)
-  if (assignErr) throw formatQueueActionError(assignErr)
-
-  const assignedIds = [...new Set((assigns || []).map((a) => a.staff_id).filter(Boolean))]
-  let assignedPeople = []
-  if (assignedIds.length) {
-    const { data, error } = await supabase
-      .from('staff_profiles')
-      .select(personSelect)
-      .eq('is_active', true)
-      .in('id', assignedIds)
-      .in('role', roles)
-      .order('full_name')
-    if (error) throw formatQueueActionError(error)
-    assignedPeople = data || []
-  }
+  if (assignedRes.error) throw formatQueueActionError(assignedRes.error)
 
   // Defense in depth: re-filter after merge if roles config raced
-  const staff = peopleInAttendanceRoles(mergeAttendancePeople(primary || [], assignedPeople), roles)
-
-  const { data: rows, error } = await supabase
-    .from('staff_attendance')
-    .select('id, staff_id, branch_slug, attendance_date, status, checked_in_at, checked_out_at, source, notes, check_in_lat, check_in_lng')
-    .eq('branch_slug', branchSlug)
-    .gte('attendance_date', range.start)
-    .lte('attendance_date', range.end)
-  if (error) throw formatQueueActionError(error)
+  const staff = peopleInAttendanceRoles(mergeAttendancePeople(primary || [], assignedRes.data || []), roles)
 
   return { staff, attendance: rows || [], range, roles }
 }

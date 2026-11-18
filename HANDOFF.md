@@ -1,9 +1,9 @@
 # Hakum Auto Care — Engineering & Operations Handoff Guide
 
-**Date:** 2026-11-16 (Asia/Manila)  
+**Date:** 2026-11-18 (Asia/Manila)  
 **Repository:** `https://github.com/thekirx/AutoDetailingandCarwash.git` (Branch: `main`)  
 **Production Domain:** `https://www.hakumautocare.com` (Vercel + Supabase `lybxhpzzqqyqswvuwpxv`)  
-**Current Baseline:** `5487e35` + uncommitted push/redirect/dev-shell/docs fixes ready for final commit & deploy  
+**Current Baseline:** `main` with sidebar/routing consolidation + server staff auth & customer CRUD hardening (`server/staffAuth.mjs`, `server/customerAdminApi.mjs`, `server/vehicleTransferApi.mjs`, `server/smartSearchApi.mjs`, `tests/customerAdminCrud.test.js`)  
 
 This document is the primary onboarding brief for the next AI engineer or technical lead picking up Hakum Auto Care. Read this together with the persistent Graphify knowledge graph before modifying code.
 
@@ -93,10 +93,10 @@ This document is the primary onboarding brief for the next AI engineer or techni
 
 ---
 
-## 4. Verification Baseline (Current as of 2026-11-16 Latest Pass)
+## 4. Verification Baseline (Current as of 2026-11-18 Latest Pass)
 
-All code/test/DB checks ran against the current working tree after the final code/test edit:
-- `npm run lint` (`0`), `npm test` (`2674+`), `npm run check` (`ok`), `npm run audit:api-auth` (`37` handlers ok), `npm run build` (`dist/sw.js` + 23 static SEO HTML shells), and `npm run test:browser` (`41/41`).
+All code/test checks ran against the current working tree after the final code/test edit:
+- `npm run lint` (`0`), `npm test` (`2715/2715` across `608` suites), `npm run check` (`ok`), `npm run audit:api-auth` (`ok`), `npm run build` (`485` SW precache entries + `23` static SEO HTML shells), `npm run test:browser` (`41/41`), and live headless Chromium verification (`72/72` checks across all 17 BossMich sidebar routes, redirects, `?tab=recon` sync, `?q=` pre-fill & clearing, `boss`, `admin`, `investor`, `opslead`, `0` console/page/HTTP `>=400` errors).
 - Live Supabase (`lybxhpzzqqyqswvuwpxv`) already has all migrations through `20261116190000` applied cleanly (`20261116120000`, `20261116180000`, `20261116190000`), with `0` unindexed FKs and `0` redundant prefix indexes.
 
 > **Note on Production & Vercel:** Commit/push `main` to deploy to `www.hakumautocare.com` / `hakumauto.vercel.app`.

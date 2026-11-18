@@ -1,4 +1,5 @@
 import { allowRoute, getOperationsNav, redirectForRole } from './permissions.js'
+import { resolveOpsRouteKeyFromPath } from '../lib/opsNavigationRegistry.js'
 
 const AUTH_LOOP_PATHS = new Set([
   '/operations/access-denied',
@@ -33,51 +34,9 @@ export function safeAuthReturnUrl(from, { fallback = null } = {}) {
   return raw
 }
 
-/** Map ops pathname → allowRoute key (longest match wins). */
+/** Map ops pathname → allowRoute key (longest match wins via canonical registry). */
 export function opsRouteKeyFromPath(pathname) {
-  const path = safeAuthReturnPath(pathname)
-  if (!path || !path.startsWith('/operations')) return null
-  if (path === '/operations' || path === '/operations/') return null
-  if (path.startsWith('/operations/queue/new')) return 'queue-new'
-  if (path.startsWith('/operations/queue/')) return 'queue'
-  if (path.startsWith('/operations/queue')) return 'queue'
-  if (path.startsWith('/operations/dashboard')) return 'dashboard'
-  if (path.startsWith('/operations/console')) return 'console'
-  if (path.startsWith('/operations/people')) return 'people'
-  if (path.startsWith('/operations/branches')) return 'branches'
-  if (path.startsWith('/operations/cars')) return 'cars'
-  if (path.startsWith('/operations/vehicle-transfer')) return 'vehicle-transfer'
-  if (path.startsWith('/operations/audit')) return 'audit'
-  if (path.startsWith('/operations/data-center')) return 'data-center'
-  if (path.startsWith('/operations/inquiries')) return 'inquiries'
-  if (path.startsWith('/operations/crew')) return 'crew'
-  if (path.startsWith('/operations/kpi')) return 'kpi'
-  if (path.startsWith('/operations/my-tasks')) return 'my-tasks'
-  if (path.startsWith('/operations/my-advances')) return 'my-advances'
-  if (path.startsWith('/operations/payslips')) return 'payslips'
-  if (path.startsWith('/operations/approvals')) return 'approvals'
-  if (path.startsWith('/operations/monthly-payroll')) return 'monthly-payroll'
-  if (path.startsWith('/operations/pos')) return 'pos'
-  if (path.startsWith('/operations/merch-shop')) return 'merch-shop'
-  if (path.startsWith('/operations/inventory')) return 'inventory'
-  if (path.startsWith('/operations/finance')) return 'finance'
-  if (path.startsWith('/operations/crm')) return 'crm'
-  if (path.startsWith('/operations/bookings')) return 'bookings'
-  if (path.startsWith('/operations/planning')) return 'planning'
-  if (path.startsWith('/operations/forms')) return 'planning'
-  if (path.startsWith('/operations/settings')) return 'settings'
-  if (path.startsWith('/operations/reports')) return 'reports'
-  if (path.startsWith('/operations/memberships')) return 'memberships'
-  if (path.startsWith('/operations/vouchers')) return 'vouchers'
-  if (path.startsWith('/operations/reviews')) return 'reviews'
-  if (path.startsWith('/operations/content')) return 'content'
-  if (path.startsWith('/operations/notifications')) return 'notifications'
-  if (path.startsWith('/operations/broadcast')) return 'notifications'
-  if (path.startsWith('/operations/history')) return 'history'
-  if (path.startsWith('/operations/attendance')) return 'attendance'
-  if (path.startsWith('/operations/services')) return 'inventory'
-  if (path.startsWith('/operations/products')) return 'inventory'
-  return null
+  return resolveOpsRouteKeyFromPath(safeAuthReturnPath(pathname))
 }
 
 /**

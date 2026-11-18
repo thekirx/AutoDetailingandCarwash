@@ -1,10 +1,16 @@
 /** Inventory — SA/ASA catalog tabs; BA restock/recon; merch owns branch on-hand (C7); SA CRUD lock (C8). */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
-import { Car, ClipboardCheck, Lock, LockOpen, ShoppingBag, Sparkles } from 'lucide-react'
+import { CarFront, ClipboardCheck, Layers, Lock, LockOpen, ShoppingBag } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessInventory, canManageServices, canRestockInventory, isSuperAdmin } from '@/auth/permissions'
+import {
+  canAccessInventory,
+  canManageServices,
+  canManageVehicleCatalog,
+  canRestockInventory,
+  isSuperAdmin,
+} from '@/auth/permissions'
 import OpsGuideCard from '@/components/ops/OpsGuideCard'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import OpsTabList from '@/components/ops/OpsTabBar'
@@ -15,36 +21,44 @@ import { opsTabSearchParams } from '@/lib/opsShell'
 import ServicesManagePage from '@/pages/ServicesManagePage'
 import ProductsManagePage from '@/pages/ProductsManagePage'
 import BranchInventoryPage from '@/pages/BranchInventoryPage'
-import ReferralProgramCard from '@/components/ops/ReferralProgramCard'
+import CarsCatalogPage from '@/pages/CarsCatalogPage'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 
-const CATALOG_TABS = ['bay', 'detailing', 'merch', 'recon']
 const BA_TABS = ['restock', 'recon']
 
 /** Source-scan contract — keep literal ids for ops shell tests. */
 const INVENTORY_SHELL_TABS = [
-  { id: 'bay', label: 'Services & packages', icon: Car },
-  { id: 'detailing', label: 'Detailing', icon: Sparkles },
+  { id: 'services', label: 'Services & detailing', icon: Layers },
   { id: 'merch', label: 'Merch / sellables', icon: ShoppingBag },
+  { id: 'cars', label: 'Vehicle list', icon: CarFront },
   { id: 'recon', label: 'Sunday recon', icon: ClipboardCheck },
 ]
 
-function resolveInventoryTab(raw) {
-  if (CATALOG_TABS.includes(raw)) return raw
-  if (raw === 'services') return 'bay'
-  if (raw === 'stock' || raw === 'restock') return 'merch'
+function resolveInventoryTab(raw, canCars = false) {
+  if (raw === 'cars' && canCars) return 'cars'
+  if (raw === 'services' || raw === 'bay' || raw === 'detailing') return 'services'
+  if (raw === 'merch' || raw === 'stock' || raw === 'restock') return 'merch'
   if (BA_TABS.includes(raw)) return raw
-  return 'bay'
+  return 'services'
+}
+
+function resolveCatalogScope(tabParam, scopeParam) {
+  if (tabParam === 'bay') return 'bay'
+  if (tabParam === 'detailing') return 'detailing'
+  if (scopeParam === 'bay' || scopeParam === 'detailing' || scopeParam === 'all') return scopeParam
+  return 'all'
 }
 
 export default function InventoryPage() {
   const { profile } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
   const canCatalog = canManageServices(profile)
+  const canCars = canManageVehicleCatalog(profile)
   const canStock = canRestockInventory(profile)
-  const raw = searchParams.get('tab')
-  const tab = resolveInventoryTab(raw)
+  const rawTab = searchParams.get('tab')
+  const tab = resolveInventoryTab(rawTab, canCars)
+  const serviceScope = resolveCatalogScope(rawTab, searchParams.get('scope'))
   const [crudLocked, setCrudLocked] = useState(false)
   const [lockBusy, setLockBusy] = useState(false)
 
@@ -64,8 +78,13 @@ export default function InventoryPage() {
   const saLockToggle = isSuperAdmin(profile)
 
   const visibleTabs = useMemo(
-    () => INVENTORY_SHELL_TABS.filter((t) => t.id !== 'recon' || canStock),
-    [canStock],
+    () =>
+      INVENTORY_SHELL_TABS.filter((t) => {
+        if (t.id === 'cars') return canCars
+        if (t.id === 'recon') return canStock
+        return true
+      }),
+    [canCars, canStock],
   )
 
   if (!canAccessInventory(profile)) {
@@ -78,7 +97,14 @@ export default function InventoryPage() {
   }
 
   function setTab(next) {
-    setSearchParams(opsTabSearchParams(next, 'bay'), { replace: true })
+    setSearchParams(opsTabSearchParams(next, 'services'), { replace: true })
+  }
+
+  function setScope(nextScope) {
+    const next = new URLSearchParams()
+    next.set('tab', 'services')
+    if (nextScope && nextScope !== 'all') next.set('scope', nextScope)
+    setSearchParams(next, { replace: true })
   }
 
   async function toggleLock() {
@@ -96,8 +122,8 @@ export default function InventoryPage() {
   }
 
   const inventoryStepIcons = {
-    bay: Car,
-    detailing: Sparkles,
+    bay: Layers,
+    detailing: Layers,
     merch: ShoppingBag,
     recon: ClipboardCheck,
   }
@@ -106,8 +132,8 @@ export default function InventoryPage() {
     <OpsPageShell
       className="hakum-inventory"
       eyebrow="Catalog"
-      title="Inventory"
-      description="The catalog is shared. Branch on-hand on each merch row decides what POS can sell. Sunday recon covers internal chemicals."
+      title="Catalog & Inventory"
+      description="Wash services, detailing tiers, sellable merch stock, and Sunday chemical recon in one place."
       actions={
         saLockToggle ? (
           <Button
@@ -132,27 +158,33 @@ export default function InventoryPage() {
       ) : null}
 
       <OpsGuideCard
-        title="How inventory works"
-        description="Catalog tabs feed POS and Bookings. Merch rows carry branch on-hand. Sunday recon is chemicals only."
+        title="How catalog & inventory works"
+        description="Services & detailing feed POS and Bookings. Merch rows carry branch on-hand. Sunday recon covers internal chemicals."
         steps={INVENTORY_WORKFLOW_STEPS.filter((s) => s.id !== 'recon' || canStock)}
         stepIcons={inventoryStepIcons}
-        defaultOpen={tab === 'bay'}
+        defaultOpen={tab === 'services' && serviceScope === 'all'}
       />
-
-      {canCatalog ? <ReferralProgramCard /> : null}
 
       <Tabs value={tab} onValueChange={setTab} className="flex flex-col gap-5">
         <OpsTabList tabs={visibleTabs} aria-label="Inventory catalog" />
 
-        <TabsContent value="bay" className="mt-0 outline-none">
-          <ServicesManagePage embedded catalogScope="bay" crudLocked={crudLocked} canMutate={canMutate} />
-        </TabsContent>
-        <TabsContent value="detailing" className="mt-0 outline-none">
-          <ServicesManagePage embedded catalogScope="detailing" crudLocked={crudLocked} canMutate={canMutate} />
+        <TabsContent value="services" className="mt-0 outline-none">
+          <ServicesManagePage
+            embedded
+            catalogScope={serviceScope}
+            onScopeChange={setScope}
+            crudLocked={crudLocked}
+            canMutate={canMutate}
+          />
         </TabsContent>
         <TabsContent value="merch" className="mt-0 outline-none">
           <ProductsManagePage embedded crudLocked={crudLocked} canMutate={canMutate} />
         </TabsContent>
+        {canCars ? (
+          <TabsContent value="cars" className="mt-0 outline-none">
+            <CarsCatalogPage embedded />
+          </TabsContent>
+        ) : null}
         {canStock ? (
           <TabsContent value="recon" className="mt-0 outline-none">
             <BranchInventoryPage embedded defaultTab="recon" crudLocked={crudLocked} canMutate={canMutate} />

@@ -8,11 +8,16 @@ import {
   ChevronRight,
   ClipboardList,
   Clock3,
+  Columns3,
+  ExternalLink,
+  LayoutGrid,
   LoaderCircle,
+  MapPin,
   Plus,
   RefreshCw,
   Send,
   ShieldAlert,
+  UserCheck,
   UserPlus,
   Users,
   Wallet,
@@ -20,7 +25,8 @@ import {
 import { useAuth } from '../auth/AuthProvider'
 import { supabase } from '../lib/supabase'
 import { listVehicleSizes } from '../lib/adminApi'
-import { resolveServicePriceMinor } from '../lib/servicePricing'
+import { normalizePricingSize, resolveServicePriceMinor } from '../lib/servicePricing'
+import { useUrlQueryState } from '../hooks/useUrlQueryState'
 import VehicleMakeModelFields from '../components/VehicleMakeModelFields'
 import ServiceKindPicker from '../components/ServiceKindPicker'
 import './NewTicketWizard.css'
@@ -56,12 +62,14 @@ import {
   getQueueCounts,
   groupVisitTickets,
   isSuspiciousTiming,
+  matchesTicketSearch,
   normalizeVehicleType,
   operationsQueueHref,
   parseQueueLaneParam,
   queueByBranchCounts,
   requiresTeamLeadBranchSetup,
   canOverrideQueueBranches,
+  ticketElapsedMinutes,
   DASHBOARD_DATE_PRESETS,
   STATUS_LABELS,
   statusShortLabel,
@@ -94,8 +102,12 @@ import {
   paginateRows,
 } from '../lib/bookingTable'
 import { Button } from '../components/ui/button'
-import { Tabs } from '../components/ui/tabs'
+import { Input } from '../components/ui/input'
+import { Label } from '../components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select'
+import { Tabs, TabsContent } from '../components/ui/tabs'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table'
+import { cn } from '../lib/utils'
 import OpsGuideCard from '@/components/ops/OpsGuideCard'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import OpsTabList from '@/components/ops/OpsTabBar'
@@ -111,12 +123,74 @@ const QUEUE_SHELL_TABS = Object.freeze([
 ])
 
 const LANE_META = {
-  confirmed: { icon: ClipboardList, hint: 'Assigned from Bookings' },
-  waiting: { icon: Clock3, hint: 'Ready to start' },
-  in_progress: { icon: CarFront, hint: 'On the bay' },
-  final_checking: { icon: BadgeCheck, hint: 'QC before payment' },
-  for_payment: { icon: Send, hint: 'Collect at POS' },
-  redo: { icon: ShieldAlert, hint: 'Services failed QA' },
+  confirmed: { icon: ClipboardList, hint: 'Assigned from Bookings', tone: 'is-assign' },
+  waiting: { icon: Clock3, hint: 'Ready to start', tone: 'is-intake' },
+  in_progress: { icon: CarFront, hint: 'On the bay', tone: 'is-progress' },
+  final_checking: { icon: BadgeCheck, hint: 'QC before payment', tone: 'is-check' },
+  for_payment: { icon: Send, hint: 'Collect at POS', tone: 'is-pay' },
+  redo: { icon: ShieldAlert, hint: 'Services failed QA', tone: 'is-cancelled' },
+}
+
+function selectQueueItems(options = []) {
+  return Object.fromEntries(options.map((o) => [o.slug, o.name]))
+}
+
+function formatQueueTimeChip(ticket) {
+  const iso = ticket?.in_progress_at || ticket?.waiting_at || ticket?.created_at
+  const elapsed = ticketElapsedMinutes(ticket)
+  const elapsedText = elapsed != null && elapsed > 0
+    ? (elapsed >= 60 ? `${Math.floor(elapsed / 60)}h ${elapsed % 60}m` : `${elapsed}m`)
+    : ''
+  if (!iso) return elapsedText || 'Today'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return elapsedText || 'Today'
+  const timeText = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+  return elapsedText ? `${timeText} · ${elapsedText}` : timeText
+}
+
+function matchesQueueBoardSearch(ticket, query, branchName = '') {
+  const q = String(query || '').trim().toLowerCase()
+  if (!q) return true
+  if (matchesTicketSearch(ticket, q)) return true
+  const qNum = formatQueueNumber(ticket?.queue_number, ticket?.service_pay_category)
+  const extra = [qNum, ticket?.branch, branchName, ticket?.assigned_staff_name, ticket?.notes]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+  return extra.includes(q)
+}
+
+function QueueStatusStrip({ statuses, grouped, total, focusLane, onSelect, label }) {
+  return (
+    <div className="bk-status-strip" role="toolbar" aria-label={label}>
+      <button
+        type="button"
+        className={cn('bk-status-chip cursor-pointer', !focusLane && 'bk-status-chip-active')}
+        aria-pressed={!focusLane}
+        onClick={() => onSelect(null, total)}
+      >
+        <span>All</span>
+        <span className="bk-status-chip-count">{total}</span>
+      </button>
+      {statuses.map((status) => {
+        const active = focusLane === status
+        const count = grouped[status]?.length || 0
+        return (
+          <button
+            key={status}
+            type="button"
+            className={cn('bk-status-chip cursor-pointer', active && 'bk-status-chip-active')}
+            aria-pressed={active}
+            aria-controls={`queue-lane-${status}`}
+            onClick={() => onSelect(active ? null : status, count)}
+          >
+            <span>{statusShortLabel(status)}</span>
+            <span className="bk-status-chip-count">{count}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
 }
 
 const FALLBACK_VEHICLE_TYPES = [
@@ -189,46 +263,116 @@ function MetricCard({ label, value, icon: Icon, tone = 'blue', to, hint }) {
   )
 }
 
-function TicketCard({ ticket, timingWarnings, onOpen, compact = false, viewOnly = false }) {
+function TicketCard({
+  ticket,
+  timingWarnings,
+  onOpen,
+  branchName = '',
+  showPrice = true,
+  compact = false,
+  viewOnly = false,
+}) {
   const warn = isSuspiciousTiming(ticket, timingWarnings)
-  const linked = (ticket.linked_booking_ids?.length || 1) > 1
-  const plate = String(ticket.vehicle_plate || '').trim().toUpperCase() || 'No plate'
+  const linkedCount = ticket.linked_booking_ids?.length || 1
+  const linked = linkedCount > 1
+  const rawPlate = String(ticket.vehicle_plate || '').trim().toUpperCase()
+  const plate = rawPlate || 'PLATE TBD'
   const car = [ticket.vehicle_make, ticket.vehicle_model].filter(Boolean).join(' ') || 'Vehicle TBD'
   const service = ticket.service_name || 'Service TBD'
   const qNum = formatQueueNumber(ticket.queue_number, ticket.service_pay_category)
+  const branchLabel = branchName || ticket.branch || ''
+  const sizeLabel = ticket.vehicle_type ? normalizePricingSize(ticket.vehicle_type) : ''
+  const timeLabel = formatQueueTimeChip(ticket)
+  const staffName = String(ticket.assigned_staff_name || '').trim()
+  const needsCrewChip = ['confirmed', 'waiting', 'in_progress', 'final_checking'].includes(ticket.status)
+  const priceMinor = Number(ticket.final_price_minor ?? ticket.base_price_minor ?? 0)
+  const tone = LANE_META[ticket.status]?.tone || 'is-intake'
   const notes = String(ticket.notes || '').trim()
-  const label = `${qNum} · ${plate}, ${car}, ${service}${notes ? ` · Note: ${notes}` : ''}`
+  const canInteractiveOpen = Boolean(onOpen) || !viewOnly
+  const label = `${qNum} · ${plate}, ${car}, ${service}${branchLabel ? `, ${branchLabel}` : ''}${notes ? ` · Note: ${notes}` : ''}`
+  const cardClasses = cn(
+    'floor-ticket queue-ticket-card bk-ticket-compact planner-ticket w-full text-left',
+    tone,
+    compact && 'queue-ticket-compact',
+    canInteractiveOpen && 'bk-ticket-openable',
+  )
+
   const body = (
     <>
-      <p className="bk-ticket-status tabular-nums">{qNum}</p>
-      <p className="bk-ticket-plate">{plate}</p>
-      <p className="bk-ticket-car">{car}</p>
-      <p className="bk-ticket-service">{service}</p>
-      {linked ? (
-        <p className="bk-ticket-status">{ticket.linked_booking_ids.length} services</p>
-      ) : null}
-      {warn ? (
-        <p className="bk-ticket-status flex items-center gap-1 text-amber-700 dark:text-amber-200">
-          <ShieldAlert size={12} aria-hidden />
-          Fast in-progress
-        </p>
-      ) : null}
+      <div className="bk-card-top">
+        <span className={cn('bk-card-plate-tag', !rawPlate && 'is-tbd')}>
+          {plate}
+        </span>
+        <div className="bk-card-badges">
+          <span className="bk-card-chip tabular-nums">{qNum}</span>
+          {branchLabel ? (
+            <span className="bk-card-chip capitalize">
+              <MapPin className="size-3 shrink-0" aria-hidden="true" />
+              <span className="truncate">{branchLabel}</span>
+            </span>
+          ) : null}
+          {linked ? (
+            <span className="bk-card-chip tabular-nums">{linkedCount} services</span>
+          ) : null}
+          {warn ? (
+            <span className="bk-card-chip bk-card-chip-warn">
+              <ShieldAlert className="size-3 shrink-0" aria-hidden="true" />
+              <span>Fast in-progress</span>
+            </span>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="bk-ticket-header flex flex-col gap-0.5">
+        <p className="bk-ticket-service">{service}</p>
+        <p className="bk-ticket-car-plate">{car}</p>
+      </div>
+
+      <div className="bk-card-meta-row">
+        <span className="bk-card-meta-item tabular-nums">
+          <Clock3 className="size-3.5 shrink-0" aria-hidden="true" />
+          <span>{timeLabel}</span>
+        </span>
+        {sizeLabel ? (
+          <span className="bk-card-meta-item uppercase">{sizeLabel}</span>
+        ) : null}
+        {staffName ? (
+          <span className="bk-card-meta-item">
+            <UserCheck className="size-3.5 shrink-0" aria-hidden="true" />
+            <span className="truncate">{staffName}</span>
+          </span>
+        ) : needsCrewChip ? (
+          <span className="bk-card-meta-item">Unassigned</span>
+        ) : null}
+      </div>
+
       {notes ? (
         <div className="bk-ticket-notes" title={notes}>
           <span className="bk-ticket-notes-tag">Note</span>
           <span className="bk-ticket-notes-text">{notes}</span>
         </div>
-      ) : (
+      ) : null}
+
+      {(showPrice && priceMinor > 0) || canInteractiveOpen ? (
+        <div className="bk-card-foot">
+          {showPrice && priceMinor > 0 ? (
+            <span className="bk-card-price">{formatMoney(priceMinor)}</span>
+          ) : (
+            <span className="bk-ticket-notes-empty mt-0">{notes ? 'Open visit' : 'No notes'}</span>
+          )}
+          {canInteractiveOpen ? <span className="bk-card-open-cue">Open →</span> : null}
+        </div>
+      ) : !notes ? (
         <p className="bk-ticket-notes-empty">No notes</p>
-      )}
+      ) : null}
     </>
   )
   if (onOpen) {
-  return (
+    return (
       <button
         type="button"
         onClick={() => onOpen(ticket.booking_id)}
-        className={`floor-ticket queue-ticket-card bk-ticket-compact bk-ticket-openable w-full text-left ${compact ? 'queue-ticket-compact' : ''}`}
+        className={cardClasses}
         aria-label={`Open ticket · ${label}`}
       >
         {body}
@@ -237,15 +381,15 @@ function TicketCard({ ticket, timingWarnings, onOpen, compact = false, viewOnly 
   }
   if (viewOnly) {
     return (
-      <div className={`floor-ticket queue-ticket-card bk-ticket-compact ${compact ? 'queue-ticket-compact' : ''}`} aria-label={`View only · ${label}`}>
+      <article className={cardClasses} aria-label={`View only · ${label}`}>
         {body}
-        </div>
+      </article>
     )
   }
   return (
     <Link
       to={`/operations/queue/${ticket.booking_id}`}
-      className={`floor-ticket queue-ticket-card bk-ticket-compact bk-ticket-openable ${compact ? 'queue-ticket-compact' : ''}`}
+      className={cardClasses}
       aria-label={`Open ticket · ${label}`}
     >
       {body}
@@ -484,9 +628,9 @@ function ScopedFloorDashboard() {
       }
       meta={
         live ? (
-          <span className="floor-live-pill" aria-live="polite">
+          <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-700 dark:text-emerald-300" aria-live="polite">
             <span className="floor-live-dot" aria-hidden />
-            Live
+            <span>Live board</span>
           </span>
         ) : null
       }
@@ -825,8 +969,15 @@ function OperationsQueueBoardPage() {
   const [lanePage, setLanePage] = useState({})
   const [tablePage, setTablePage] = useState(1)
   const [tablePageSize, setTablePageSize] = useState(BOOKING_TABLE_DEFAULT_PAGE_SIZE)
+  const [searchQuery, setSearchQuery] = useUrlQueryState()
+  const [boardLayout, setBoardLayout] = useState('grid')
+  const [showEmptyLanes, setShowEmptyLanes] = useState(false)
   const { activeQueue, timingWarnings, loading, error, live, reload } = useOperationsSnapshot(branchFilter, queueFamily)
   const boardStatuses = useMemo(() => getOpsBoardStatuses(profile, { family: queueFamily }), [profile, queueFamily])
+  const branchNameBySlug = useMemo(
+    () => Object.fromEntries((branches || []).map((b) => [b.slug, b.name || b.slug])),
+    [branches],
+  )
   const familyQueue = useMemo(
     () =>
       salesView
@@ -846,7 +997,14 @@ function OperationsQueueBoardPage() {
     () => familyQueue.filter((ticket) => boardStatuses.includes(ticket.status)),
     [familyQueue, boardStatuses],
   )
-  const boardTickets = useMemo(() => groupVisitTickets(visibleQueue), [visibleQueue])
+  const visitTickets = useMemo(() => groupVisitTickets(visibleQueue), [visibleQueue])
+  const boardTickets = useMemo(
+    () =>
+      visitTickets.filter((ticket) =>
+        matchesQueueBoardSearch(ticket, searchQuery, branchNameBySlug[ticket.branch] || ticket.branch),
+      ),
+    [visitTickets, searchQuery, branchNameBySlug],
+  )
   const grouped = useMemo(
     () => Object.fromEntries(boardStatuses.map((status) => [status, boardTickets.filter((ticket) => ticket.status === status)])),
     [boardTickets, boardStatuses],
@@ -862,15 +1020,15 @@ function OperationsQueueBoardPage() {
     })
   }, [boardTickets, boardStatuses, focusLane, grouped])
   const tableSlice = paginateBookingTableRows(tableSource, { page: tablePage, pageSize: tablePageSize })
-  const branchNameBySlug = useMemo(
-    () => Object.fromEntries((branches || []).map((b) => [b.slug, b.name || b.slug])),
-    [branches],
-  )
 
   useEffect(() => {
     setLanePage({})
     setTablePage(1)
-  }, [queueFamily, focusLane, branchFilter])
+  }, [queueFamily, focusLane, branchFilter, searchQuery])
+
+  useEffect(() => {
+    if (tableSlice.page !== tablePage) setTablePage(tableSlice.page)
+  }, [tableSlice.page, tablePage])
 
   useEffect(() => {
     if (!branchFromUrl || branchFromUrl === branchFilter) return
@@ -928,9 +1086,18 @@ function OperationsQueueBoardPage() {
   }, [searchParams, setSearchParams])
 
   useEffect(() => {
-    if (!seeAll && !(Array.isArray(scopeList) && scopeList.length > 1)) return
-    fetchBranches().then(setBranches).catch(() => setBranches([]))
-  }, [seeAll, scopeList])
+    let active = true
+    fetchBranches()
+      .then((rows) => {
+        if (active) setBranches(rows)
+      })
+      .catch(() => {
+        if (active) setBranches([])
+      })
+    return () => {
+      active = false
+    }
+  }, [])
 
   if (!canViewQueueBoard(profile)) return <Navigate to="/operations/access-denied" replace />
   if (requiresTeamLeadBranchSetup(profile)) return <BranchSetupError />
@@ -948,7 +1115,24 @@ function OperationsQueueBoardPage() {
             ? scopedBranchRows
             : scopeList.map((slug) => ({ slug, name: slug }))),
         ]
-      : (Array.isArray(scopeList) ? scopeList : []).map((slug) => ({ slug, name: slug }))
+      : (Array.isArray(scopeList) ? scopeList : []).map((slug) => ({
+          slug,
+          name: branches.find((b) => b.slug === slug)?.name || slug,
+        }))
+  const filterBranchItems = selectQueueItems(branchOptions)
+  const hideCardPrice = isInvestor(profile)
+
+  const anyPopulated = boardStatuses.some((status) => (grouped[status]?.length || 0) > 0)
+  const emptyLaneCount = boardStatuses.filter((status) => !(grouped[status]?.length || 0)).length
+  const lanesToRender = boardStatuses.filter((status) => {
+    const count = grouped[status]?.length || 0
+    if (focusLane) {
+      return boardLayout === 'columns'
+        ? (showEmptyLanes || !anyPopulated || count > 0 || status === focusLane)
+        : status === focusLane
+    }
+    return showEmptyLanes || !anyPopulated || count > 0
+  })
 
   const queueStepIcons = {
     'stay-until-pos': Send,
@@ -960,32 +1144,81 @@ function OperationsQueueBoardPage() {
   return (
     <OpsPageShell
       className="hakum-queue queue-board queue-board--fill"
-      eyebrow="Floor"
+      eyebrow="Hakum Auto Care"
       title="Carwash Board"
       description={
         salesView
           ? 'All branches, wash and detailing. Wash tickets are view only. Tap a detailing ticket to work it in Bookings.'
-          : 'Same-day floor until Point Of Sales. Tap a lane header to focus.'
+          : 'Same-day floor until Point Of Sales. Tap a stage chip or lane header to focus.'
       }
       icon={CarFront}
       meta={
         live ? (
-          <span className="floor-live-pill" aria-live="polite">
+          <span className="inline-flex items-center gap-1.5 font-semibold text-emerald-700 dark:text-emerald-300" aria-live="polite">
             <span className="floor-live-dot" aria-hidden />
-            Live
+            <span>Live board</span>
           </span>
         ) : null
       }
       actions={
-        canManageQueue ? (
-          <Link
-            to="/operations/queue/new"
-            className="floor-touch-btn inline-flex min-h-11 items-center gap-2 rounded-2xl bg-primary px-4 py-2.5 font-semibold text-primary-foreground no-underline transition hover:opacity-90 sm:px-5"
-          >
-            <Plus size={18} aria-hidden />
-            New ticket
-          </Link>
-        ) : null
+        <>
+          <div className="bk-search-wrap w-full sm:w-64">
+            <Label htmlFor="q-smart-search" className="sr-only">Search queue tickets</Label>
+            <Input
+              id="q-smart-search"
+              type="search"
+              className="bk-smart-search min-h-11 w-full"
+              placeholder="Search plate, car, customer, queue #…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
+          {(seeAll || branchOptions.length > 1) ? (
+            <Select value={branchFilter} onValueChange={onBranchChange} items={filterBranchItems}>
+              <SelectTrigger className="min-h-11 w-full cursor-pointer sm:w-48" aria-label="Filter by branch">
+                <SelectValue placeholder="Branch" />
+              </SelectTrigger>
+              <SelectContent>
+                {branchOptions.map((b) => <SelectItem key={b.slug} value={b.slug}>{b.name}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          ) : (
+            <span className="inline-flex min-h-11 items-center rounded-xl border border-border bg-muted px-3 text-sm font-medium text-foreground">
+              {branchOptions[0]?.name || getBranchScope(profile) || 'Branch'}
+            </span>
+          )}
+          {branchFilter && branchFilter !== 'all' ? (
+            <>
+              <Link
+                to={`/queue/${branchFilter}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-border bg-background px-3 text-sm font-semibold text-foreground no-underline transition hover:bg-muted"
+              >
+                <span>Kiosk</span>
+                <ExternalLink size={14} aria-hidden />
+              </Link>
+              <Link
+                to={`/queue/${branchFilter}/tv`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-border bg-background px-3 text-sm font-semibold text-foreground no-underline transition hover:bg-muted"
+              >
+                <span>Shop TV</span>
+                <ExternalLink size={14} aria-hidden />
+              </Link>
+            </>
+          ) : null}
+          {canManageQueue ? (
+            <Button asChild className="min-h-11 w-full cursor-pointer sm:w-auto">
+              <Link to="/operations/queue/new" className="no-underline">
+                <Plus size={18} aria-hidden />
+                <span>New ticket</span>
+              </Link>
+            </Button>
+          ) : null}
+        </>
       }
     >
       <OpsGuideCard
@@ -995,287 +1228,319 @@ function OperationsQueueBoardPage() {
         stepIcons={queueStepIcons}
       />
 
-      <div className="queue-board-toolbar flex flex-col gap-3">
-        <Tabs value={view} onValueChange={setQueueView} className="min-w-0">
-          <div className="queue-board-controls flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <OpsTabList tabs={QUEUE_SHELL_TABS} aria-label="Queue layout" />
-            <RefreshButton loading={loading} onClick={reload} />
-            </div>
-        </Tabs>
-        <div className="flex flex-wrap items-end gap-3">
-          {(seeAll || branchOptions.length > 1) ? (
-            <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
-              Branch
-              <select
-                value={branchFilter}
-                onChange={(e) => onBranchChange(e.target.value)}
-                className="mt-2 block min-h-11 rounded-xl border border-border bg-background px-3 text-sm font-medium text-foreground sm:w-52"
+      <Tabs value={view} onValueChange={setQueueView} className="min-w-0 flex flex-col gap-4">
+        <OpsTabList tabs={QUEUE_SHELL_TABS} aria-label="Queue layout" />
+
+        <TabsContent value="board" className="mt-4 min-w-0">
+          {view !== 'table' ? (
+            <div className="bk-board">
+              <div className="bk-board-toolbar">
+                <p className="bk-board-hint">Tap a ticket to open it. Tap a stage chip to focus or jump.</p>
+                <div className="bk-board-controls">
+                  {focusLane ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="min-h-10 cursor-pointer rounded-full px-3 text-xs font-semibold"
+                      onClick={() => setLaneFilter(null)}
+                    >
+                      Show all lanes
+                    </Button>
+                  ) : null}
+                  <button
+                    type="button"
+                    className={cn('bk-status-chip cursor-pointer', showEmptyLanes && 'bk-status-chip-active')}
+                    aria-pressed={showEmptyLanes}
+                    onClick={() => setShowEmptyLanes((v) => !v)}
+                  >
+                    <span>{showEmptyLanes ? 'Hide empty' : `Show empty (${emptyLaneCount})`}</span>
+                  </button>
+                  <div className="bk-seg-group" role="group" aria-label="Board layout">
+                    <button
+                      type="button"
+                      className={cn('bk-seg-btn', boardLayout === 'grid' && 'is-active')}
+                      aria-pressed={boardLayout === 'grid'}
+                      onClick={() => setBoardLayout('grid')}
+                    >
+                      <LayoutGrid className="size-3.5" aria-hidden="true" />
+                      <span>Grid</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={cn('bk-seg-btn', boardLayout === 'columns' && 'is-active')}
+                      aria-pressed={boardLayout === 'columns'}
+                      onClick={() => setBoardLayout('columns')}
+                    >
+                      <Columns3 className="size-3.5" aria-hidden="true" />
+                      <span>Columns</span>
+                    </button>
+                  </div>
+                  <RefreshButton variant="chip" loading={loading} onClick={reload} />
+                </div>
+              </div>
+
+              <QueueStatusStrip
+                statuses={boardStatuses}
+                grouped={grouped}
+                total={boardTickets.length}
+                focusLane={focusLane}
+                label="Filter queue by status"
+                onSelect={(next, count) => {
+                  setLaneFilter(next)
+                  if (count === 0 && next) setShowEmptyLanes(true)
+                }}
+              />
+
+              <div
+                className={cn('queue-lane-board-fit', boardLayout === 'grid' && 'bk-board-grid')}
+                style={{ '--queue-lane-count': Math.max(lanesToRender.length, 1) }}
+                role="region"
+                aria-label="Active queue lanes"
               >
-                {branchOptions.map((b) => <option key={b.slug} value={b.slug}>{b.name}</option>)}
-              </select>
-            </label>
-          ) : (
-            <p className="rounded-xl border border-border bg-muted px-3 py-2 text-sm font-medium text-foreground">
-              Branch · {branchOptions.find((b) => b.slug === getBranchScope(profile))?.name || getBranchScope(profile) || 'unassigned'}
-            </p>
-          )}
-          {branchFilter && branchFilter !== 'all' ? (
-            <div className="flex flex-wrap gap-2">
-              <Link
-                to={`/queue/${branchFilter}`}
-                target="_blank"
-                rel="noreferrer"
-                className="floor-touch-btn inline-flex min-h-11 items-center rounded-xl border border-border px-3 text-sm font-semibold text-foreground no-underline"
-              >
-                Customer kiosk
-              </Link>
-              <Link
-                to={`/queue/${branchFilter}/tv`}
-                target="_blank"
-                rel="noreferrer"
-                className="floor-touch-btn inline-flex min-h-11 items-center rounded-xl border border-border px-3 text-sm font-semibold text-foreground no-underline"
-              >
-                Shop TV
-              </Link>
+                {lanesToRender.map((status) => {
+                  const meta = LANE_META[status] || LANE_META.waiting
+                  const Icon = meta.icon
+                  const tickets = grouped[status] || []
+                  const slice = paginateRows(tickets, {
+                    page: lanePage[status] || 1,
+                    pageSize: QUEUE_LANE_PAGE_SIZE,
+                  })
+                  const laneFocused = focusLane === status
+                  const laneDimmed = Boolean(focusLane) && !laneFocused
+                  return (
+                    <section
+                      key={status}
+                      id={`queue-lane-${status}`}
+                      className={cn('floor-lane queue-lane', laneFocused && 'queue-lane-focused', laneDimmed && 'queue-lane-dimmed')}
+                      data-status={status}
+                      aria-label={STATUS_LABELS[status]}
+                      aria-current={laneFocused ? 'true' : undefined}
+                    >
+                      <div className="queue-lane-head mb-2 flex items-start justify-between gap-2">
+                        <button
+                          type="button"
+                          className="min-w-0 flex-1 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                          onClick={() => setLaneFilter(laneFocused ? null : status)}
+                          aria-pressed={laneFocused}
+                        >
+                          <div className="flex items-center gap-1.5">
+                            <span className="queue-lane-icon text-muted-foreground" aria-hidden>
+                              <Icon size={12} />
+                            </span>
+                            <h2 className="floor-lane-title queue-lane-title font-bold text-muted-foreground uppercase">
+                              {statusShortLabel(status)}
+                            </h2>
+                          </div>
+                          <p className="queue-lane-hint mt-0.5 text-[11px] leading-snug text-muted-foreground">{meta.hint}</p>
+                        </button>
+                        <button
+                          type="button"
+                          className="queue-lane-count floor-touch-btn inline-flex min-h-7 min-w-7 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border bg-secondary px-2 text-[11px] font-bold tabular-nums text-secondary-foreground"
+                          onClick={() => setLaneFilter(laneFocused ? null : status)}
+                          aria-label={`${STATUS_LABELS[status]}: ${tickets.length} tickets`}
+                          aria-pressed={laneFocused}
+                        >
+                          {tickets.length}
+                        </button>
+                      </div>
+                      <div className="floor-lane-body">
+                        {loading
+                          ? Array.from({ length: 2 }, (_, index) => (
+                              <div key={index} className="h-24 animate-pulse rounded-xl bg-muted" />
+                            ))
+                          : slice.rows.length
+                            ? slice.rows.map((ticket) => (
+                                <TicketCard
+                                  key={ticket.booking_id}
+                                  ticket={ticket}
+                                  timingWarnings={timingWarnings}
+                                  onOpen={canOpenTicket(ticket) ? () => openTicket(ticket) : undefined}
+                                  branchName={branchNameBySlug[ticket.branch]}
+                                  showPrice={!hideCardPrice}
+                                  viewOnly={salesView}
+                                  compact
+                                />
+                              ))
+                            : (
+                              <p className="rounded-xl border border-dashed border-border bg-background/50 p-3 text-center text-sm text-muted-foreground">
+                                Empty
+                              </p>
+                            )}
+                      </div>
+                      <QueueLanePager
+                        slice={slice}
+                        label={statusShortLabel(status)}
+                        onPage={(page) => setLanePage((cur) => ({ ...cur, [status]: page }))}
+                      />
+                    </section>
+                  )
+                })}
+              </div>
             </div>
           ) : null}
-        </div>
-        {/* Counts live on lane headers — no redundant status card strip */}
-        {focusLane ? (
-          <div className="queue-lane-focus-bar flex items-center justify-between gap-2">
-            <p className="m-0 text-xs font-semibold text-muted-foreground">
-              Focused · {statusShortLabel(focusLane)}
-            </p>
-            <Button type="button" variant="outline" className="min-h-11 cursor-pointer" onClick={() => setLaneFilter(null)}>
-              Show all lanes
-            </Button>
-          </div>
-        ) : null}
-      </div>
+        </TabsContent>
 
-      {view === 'table' ? (
-        <div className="mt-3">
-        <div className="bk-table">
-          <div className="bk-table-toolbar">
-          <div>
-              <p className="bk-table-count">{salesView ? 'Floor' : familyMeta.shortLabel} ledger</p>
-              <p className="bk-table-range">
-                {tableSlice.total
-                  ? `${tableSlice.from}–${tableSlice.to} of ${tableSlice.total} cars`
-                  : 'No cars in this family and lane.'}
-              </p>
-            </div>
-          </div>
-          <Table className="bk-data-grid">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Plate</TableHead>
-                <TableHead>Vehicle</TableHead>
-                <TableHead className="q-col-service">Service</TableHead>
-                <TableHead>Lane</TableHead>
-                <TableHead className="q-col-queue">Queue</TableHead>
-                <TableHead className="q-col-branch">Branch</TableHead>
-                <TableHead className="q-col-crew">Crew</TableHead>
-                <TableHead className="q-col-open">Open</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {loading ? (
-                Array.from({ length: 5 }, (_, index) => (
-                  <TableRow key={index}>
-                    <TableCell colSpan={8}>
-                      <div className="h-10 animate-pulse rounded-lg bg-muted" />
-                    </TableCell>
+        <TabsContent value="table" className="mt-4 min-w-0">
+          {view === 'table' ? (
+            <div className="bk-table">
+              <div className="bk-table-toolbar">
+                <div className="min-w-0">
+                  <p className="bk-table-count">
+                    {tableSlice.total} {tableSlice.total === 1 ? 'car' : 'cars'} · {salesView ? 'Floor' : familyMeta.shortLabel}
+                  </p>
+                  <p className="bk-table-range">
+                    {branchNameBySlug[branchFilter] || (branchFilter === 'all' ? 'All branches' : branchFilter)}
+                    {focusLane ? ` · ${statusShortLabel(focusLane)}` : ''}
+                    {searchQuery.trim() ? ` · “${searchQuery.trim()}”` : ''}
+                  </p>
+                </div>
+                <div className="bk-table-toolbar-filters">
+                  <QueueStatusStrip
+                    statuses={boardStatuses}
+                    grouped={grouped}
+                    total={boardTickets.length}
+                    focusLane={focusLane}
+                    label="Filter queue table by status"
+                    onSelect={(next) => setLaneFilter(next)}
+                  />
+                  <RefreshButton variant="chip" loading={loading} onClick={reload} />
+                </div>
+              </div>
+              <Table className="bk-data-grid">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Plate</TableHead>
+                    <TableHead>Vehicle</TableHead>
+                    <TableHead className="q-col-service">Service</TableHead>
+                    <TableHead>Lane</TableHead>
+                    <TableHead className="q-col-queue">Queue</TableHead>
+                    <TableHead className="q-col-branch">Branch</TableHead>
+                    <TableHead className="q-col-crew">Crew</TableHead>
+                    <TableHead className="q-col-open">Open</TableHead>
                   </TableRow>
-                ))
-              ) : tableSlice.rows.length ? (
-                tableSlice.rows.map((ticket) => (
-                  <TableRow
-                    key={ticket.booking_id}
-                    className={canOpenTicket(ticket) ? 'cursor-pointer' : undefined}
-                    onClick={() => openTicket(ticket)}
-                  >
-                    <TableCell>
-                      <div className="font-semibold uppercase tabular-nums text-foreground">{ticket.vehicle_plate || 'No plate'}</div>
-                      <div className="text-xs text-muted-foreground">{ticket.customer_phone || 'No phone'}</div>
-                    </TableCell>
-                    <TableCell className="text-foreground">{bookingCarText(ticket) || '—'}</TableCell>
-                    <TableCell className="q-col-service font-medium text-primary">
-                      <div>{ticket.service_name || '—'}</div>
-                      {ticket.notes?.trim() ? (
-                        <div className="mt-1 flex items-start gap-1 text-xs font-normal text-amber-800 dark:text-amber-300" title={ticket.notes}>
-                          <span className="shrink-0 rounded bg-amber-500/15 px-1 py-0.5 text-[10px] font-bold uppercase text-amber-900 dark:bg-amber-400/20 dark:text-amber-200">Note</span>
-                          <span className="line-clamp-1 break-words">{ticket.notes}</span>
-                        </div>
-                      ) : (
-                        <div className="text-[11px] font-normal text-muted-foreground/60">No notes</div>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <StatusBadge status={ticket.status} label={statusShortLabel(ticket.status)} />
-                    </TableCell>
-                    <TableCell className="q-col-queue tabular-nums font-semibold text-foreground">
-                      {formatQueueNumber(ticket.queue_number, ticket.service_pay_category)}
-                    </TableCell>
-                    <TableCell className="q-col-branch capitalize text-foreground">
-                      {branchNameBySlug[ticket.branch] || ticket.branch || '—'}
-                    </TableCell>
-                    <TableCell className="q-col-crew text-muted-foreground">
-                      {ticket.assigned_staff_name || 'Unassigned'}
-                    </TableCell>
-                    <TableCell className="q-col-open">
-                      {canOpenTicket(ticket) ? (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="min-h-11 cursor-pointer"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            openTicket(ticket)
-                          }}
-                        >
-                          {canManageQueue ? 'Open ticket' : 'Open booking'}
-                        </Button>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">View only</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
-                    No tickets in this family. Switch lane chips or create a ticket.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-          <div className="bk-table-pager">
-            <label className="bk-table-page-size">
-              Rows per page
-              <select
-                value={tablePageSize}
-                onChange={(e) => {
-                  setTablePageSize(Number(e.target.value))
-                  setTablePage(1)
-                }}
-                aria-label="Rows per page"
-              >
-                {BOOKING_TABLE_PAGE_SIZES.map((n) => (
-                  <option key={n} value={n}>{n}</option>
-                ))}
-              </select>
-                </label>
-            <p className="bk-table-page-range tabular-nums">
-              {tableSlice.from}-{tableSlice.to} of {tableSlice.total}
-            </p>
-            <div className="bk-table-page-nav">
-              <Button
-                type="button"
-                variant="outline"
-                className="min-h-11 min-w-11 cursor-pointer px-0"
-                disabled={tableSlice.page <= 1}
-                aria-label="Previous page"
-                onClick={() => setTablePage((p) => Math.max(1, p - 1))}
-              >
-                <ChevronLeft size={16} strokeWidth={2} />
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                className="min-h-11 min-w-11 cursor-pointer px-0"
-                disabled={tableSlice.page >= tableSlice.totalPages}
-                aria-label="Next page"
-                onClick={() => setTablePage((p) => p + 1)}
-              >
-                <ChevronRight size={16} strokeWidth={2} />
-              </Button>
-          </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-      <div
-        className="queue-lane-board-fit"
-        style={{ '--queue-lane-count': boardStatuses.length }}
-        role="region"
-        aria-label="Active queue lanes"
-      >
-        {boardStatuses.map((status) => {
-          const meta = LANE_META[status] || LANE_META.waiting
-          const Icon = meta.icon
-          const tickets = grouped[status] || []
-          const slice = paginateRows(tickets, {
-            page: lanePage[status] || 1,
-            pageSize: QUEUE_LANE_PAGE_SIZE,
-          })
-          const laneFocused = focusLane === status
-          const laneDimmed = Boolean(focusLane) && !laneFocused
-              return (
-            <section
-              key={status}
-              id={`queue-lane-${status}`}
-              className={`floor-lane queue-lane ${laneFocused ? 'queue-lane-focused' : ''} ${laneDimmed ? 'queue-lane-dimmed' : ''}`}
-              data-status={status}
-              aria-label={STATUS_LABELS[status]}
-              aria-current={laneFocused ? 'true' : undefined}
-            >
-              <div className="queue-lane-head mb-2 flex items-start justify-between gap-1">
-                <button
-                  type="button"
-                  className="min-w-0 flex-1 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                  onClick={() => setLaneFilter(laneFocused ? null : status)}
-                  aria-pressed={laneFocused}
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span className="queue-lane-icon" aria-hidden>
-                      <Icon size={12} />
-                    </span>
-                    <h2 className="queue-lane-title text-[10px] font-bold tracking-[0.08em] uppercase">
-                      {statusShortLabel(status)}
-                    </h2>
-          </div>
-                  <p className="queue-lane-hint mt-0.5 text-[10px] leading-snug">{meta.hint}</p>
-                </button>
-                <button
-                  type="button"
-                  className="queue-lane-count floor-touch-btn shrink-0 rounded-full px-2 py-1 text-[11px] font-bold tabular-nums"
-                  onClick={() => setLaneFilter(laneFocused ? null : status)}
-                  aria-label={`${STATUS_LABELS[status]}: ${tickets.length} tickets`}
-                  aria-pressed={laneFocused}
-                >
-                  {tickets.length}
-                </button>
-            </div>
-              <div className="floor-lane-body">
-                {loading
-                  ? Array.from({ length: 2 }, (_, index) => (
-                      <div key={index} className="h-20 animate-pulse rounded-xl bg-muted" />
+                </TableHeader>
+                <TableBody>
+                  {loading ? (
+                    Array.from({ length: 5 }, (_, index) => (
+                      <TableRow key={index}>
+                        <TableCell colSpan={8}>
+                          <div className="h-10 animate-pulse rounded-lg bg-muted" />
+                        </TableCell>
+                      </TableRow>
                     ))
-                  : slice.rows.length
-                    ? slice.rows.map((ticket) => (
-                        <TicketCard
-                          key={ticket.booking_id}
-                          ticket={ticket}
-                          timingWarnings={timingWarnings}
-                          onOpen={canOpenTicket(ticket) ? () => openTicket(ticket) : undefined}
-                          viewOnly={salesView}
-                          compact
-                        />
-                      ))
-                    : <EmptyLine text="Empty" />}
-          </div>
-              <QueueLanePager
-                slice={slice}
-                label={statusShortLabel(status)}
-                onPage={(page) => setLanePage((cur) => ({ ...cur, [status]: page }))}
-              />
-    </section>
-          )
-        })}
-        </div>
-      )}
+                  ) : tableSlice.rows.length ? (
+                    tableSlice.rows.map((ticket) => (
+                      <TableRow
+                        key={ticket.booking_id}
+                        className={canOpenTicket(ticket) ? 'cursor-pointer' : undefined}
+                        onClick={canOpenTicket(ticket) ? () => openTicket(ticket) : undefined}
+                      >
+                        <TableCell>
+                          <span className={cn('bk-card-plate-tag', !ticket.vehicle_plate && 'is-tbd')}>
+                            {ticket.vehicle_plate ? String(ticket.vehicle_plate).toUpperCase() : 'PLATE TBD'}
+                          </span>
+                          <div className="mt-1 text-xs text-muted-foreground">{ticket.customer_phone || 'No phone'}</div>
+                        </TableCell>
+                        <TableCell className="text-foreground">{bookingCarText(ticket) || '—'}</TableCell>
+                        <TableCell className="q-col-service font-medium text-primary">
+                          <div>{ticket.service_name || '—'}</div>
+                          {ticket.notes?.trim() ? (
+                            <div className="mt-1 flex items-start gap-1 text-xs font-normal text-amber-800 dark:text-amber-300" title={ticket.notes}>
+                              <span className="shrink-0 rounded bg-amber-500/15 px-1 py-0.5 text-[10px] font-bold uppercase text-amber-900 dark:bg-amber-400/20 dark:text-amber-200">Note</span>
+                              <span className="line-clamp-1 break-words">{ticket.notes}</span>
+                            </div>
+                          ) : (
+                            <div className="text-[11px] font-normal text-muted-foreground/60">No notes</div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <StatusBadge status={ticket.status} label={statusShortLabel(ticket.status)} />
+                        </TableCell>
+                        <TableCell className="q-col-queue tabular-nums font-semibold text-foreground">
+                          {formatQueueNumber(ticket.queue_number, ticket.service_pay_category)}
+                        </TableCell>
+                        <TableCell className="q-col-branch capitalize text-foreground">
+                          {branchNameBySlug[ticket.branch] || ticket.branch || '—'}
+                        </TableCell>
+                        <TableCell className="q-col-crew text-muted-foreground">
+                          {ticket.assigned_staff_name || 'Unassigned'}
+                        </TableCell>
+                        <TableCell className="q-col-open">
+                          {canOpenTicket(ticket) ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              className="min-h-11 cursor-pointer"
+                              onClick={(event) => {
+                                event.stopPropagation()
+                                openTicket(ticket)
+                              }}
+                            >
+                              {canManageQueue ? 'Open ticket' : 'Open booking'}
+                            </Button>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">View only</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={8} className="h-24 text-center text-muted-foreground">
+                        {searchQuery.trim()
+                          ? 'No tickets match your search. Clear search or switch lane chips.'
+                          : 'No tickets in this family. Switch lane chips or create a ticket.'}
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+              <div className="bk-table-pager">
+                <label className="bk-table-page-size">
+                  Rows per page
+                  <select
+                    value={tablePageSize}
+                    onChange={(e) => {
+                      setTablePageSize(Number(e.target.value))
+                      setTablePage(1)
+                    }}
+                    aria-label="Rows per page"
+                  >
+                    {BOOKING_TABLE_PAGE_SIZES.map((n) => (
+                      <option key={n} value={n}>{n}</option>
+                    ))}
+                  </select>
+                </label>
+                <p className="bk-table-page-range tabular-nums">
+                  {tableSlice.from}-{tableSlice.to} of {tableSlice.total}
+                </p>
+                <div className="bk-table-page-nav">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="min-h-11 min-w-11 cursor-pointer px-0"
+                    disabled={tableSlice.page <= 1}
+                    aria-label="Previous page"
+                    onClick={() => setTablePage((p) => Math.max(1, p - 1))}
+                  >
+                    <ChevronLeft size={16} strokeWidth={2} />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="min-h-11 min-w-11 cursor-pointer px-0"
+                    disabled={tableSlice.page >= tableSlice.totalPages}
+                    aria-label="Next page"
+                    onClick={() => setTablePage((p) => p + 1)}
+                  >
+                    <ChevronRight size={16} strokeWidth={2} />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </TabsContent>
+      </Tabs>
 
       {canManageQueue ? (
         <QueueTicketEditModal
@@ -1882,8 +2147,8 @@ export function CrewPage() {
               {canManageCrew && canManagePeople(profile) ? (
                 <p className="mb-5 rounded-2xl border border-border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
                   New accounts are created in{' '}
-                  <Link to="/operations/people" className="font-semibold text-primary underline-offset-4 hover:underline">
-                    People
+                  <Link to="/operations/employees?tab=employees" className="font-semibold text-primary underline-offset-4 hover:underline">
+                    Employees
                   </Link>
                   . Use this tab to mark present and deploy crew on the floor.
                 </p>
@@ -2576,7 +2841,20 @@ function BranchSetupError() {
   )
 }
 
-function RefreshButton({ loading, onClick }) {
+function RefreshButton({ loading, onClick, variant = 'default' }) {
+  if (variant === 'chip') {
+    return (
+      <button
+        type="button"
+        onClick={onClick}
+        className="bk-status-chip cursor-pointer"
+        aria-label="Refresh queue"
+      >
+        <RefreshCw className={loading ? 'size-3.5 animate-spin' : 'size-3.5'} aria-hidden="true" />
+        <span>Refresh</span>
+      </button>
+    )
+  }
   return (
     <button
       type="button"

@@ -181,15 +181,34 @@ export async function receiptUrl(path) {
 
 /** Finance inbox / history. Filters: status, branch, from, to. */
 export async function listSheets({ status = 'all', branch = 'all', from, to, limit = 200 } = {}) {
+  const selectCols =
+    'id, branch, business_date, status, totals, notes, review_note, submitted_at, submitted_by, reviewed_at, staff_profiles!daily_sheets_submitted_by_fkey(full_name)'
+  if (from || to || limit > 1000) {
+    const rows = await collectPaged(async (rangeFrom, rangeTo) => {
+      let q = supabase
+        .from('daily_sheets')
+        .select(selectCols)
+        .order('business_date', { ascending: false })
+        .order('id', { ascending: false })
+        .range(rangeFrom, rangeTo)
+      if (status !== 'all') q = q.eq('status', status)
+      if (branch !== 'all') q = q.eq('branch', branch)
+      if (from) q = q.gte('business_date', from)
+      if (to) q = q.lte('business_date', to)
+      const { data, error } = await q
+      if (error) throw error
+      return data || []
+    }, 1000)
+    return fillStaffNames(rows)
+  }
   let q = supabase
     .from('daily_sheets')
-    .select('id, branch, business_date, status, totals, notes, review_note, submitted_at, submitted_by, reviewed_at, staff_profiles!daily_sheets_submitted_by_fkey(full_name)')
+    .select(selectCols)
     .order('business_date', { ascending: false })
+    .order('id', { ascending: false })
     .limit(limit)
   if (status !== 'all') q = q.eq('status', status)
   if (branch !== 'all') q = q.eq('branch', branch)
-  if (from) q = q.gte('business_date', from)
-  if (to) q = q.lte('business_date', to)
   const { data, error } = await q
   if (error) throw error
   return fillStaffNames(data || [])

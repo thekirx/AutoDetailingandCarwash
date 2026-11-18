@@ -59,6 +59,8 @@ const DELEGATED = {
   handleProvisionStaffRequest: 'provisionStaffAccount -> assertStaffManagerCaller() (+ ASA people grant)',
   handleProvisionRequest: 'provisionCustomerAccount -> assertQueueEditor()',
   handleVehicleTransferRequest: 'bearer -> requireTransferStaff() -> BossMich, ASA, or Branch Admin',
+  handleManageCustomerRequest: 'bearer -> requireCrmStaff() -> canEditCrm + assertCustomerInBranchScope() + SA/ASA archive/delete gate',
+  handleSmartSearchRequest: 'bearer -> requireActiveStaff() -> resolveSearchScope() -> runScopedQueries() per-role/branch',
   handleCustomerPortalRequest: 'requireCustomer() -> scopes every read by user_id = auth.uid()',
   handleFinanceQuoteRequest: 'verifies getUser(accessToken) then loads the staff row before acting',
   handleDataCenterRequest: 'requireSuperAdmin() -> staff.role must be exactly BossMich',

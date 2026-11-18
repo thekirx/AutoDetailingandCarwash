@@ -45,17 +45,27 @@ function usePlSpan({ enabled, start, end, profile, branchFilter }) {
   useEffect(() => {
     if (!enabled) return undefined
     let alive = true
-    const page = (table, cols) =>
+    const page = (table, cols, orderCols = []) =>
       collectPaged(async (from, to) => {
-        const q = scopeBranch(supabase.from(table).select(cols).gte('period_date', start).lte('period_date', end), profile, branchFilter)
+        let q = scopeBranch(supabase.from(table).select(cols).gte('period_date', start).lte('period_date', end), profile, branchFilter)
+        for (const [col, asc] of orderCols) q = q.order(col, { ascending: asc })
         const { data, error } = await q.range(from, to)
         if (error) throw error
         return data || []
       }, 1000)
     setState((s) => ({ ...s, loading: true, error: '' }))
     Promise.all([
-      page('finance_daily_pl', 'branch, period_date, kind, category, amount_minor'),
-      page('finance_daily_line_kind', 'branch, period_date, line_kind, amount_minor').catch(() => []),
+      page('finance_daily_pl', 'branch, period_date, kind, category, amount_minor', [
+        ['period_date', false],
+        ['branch', true],
+        ['kind', true],
+        ['category', true],
+      ]),
+      page('finance_daily_line_kind', 'branch, period_date, line_kind, amount_minor', [
+        ['period_date', false],
+        ['branch', true],
+        ['line_kind', true],
+      ]).catch(() => []),
     ]).then(
       ([pl, kinds]) => alive && setState({ loading: false, error: '', pl, kinds }),
       (err) => alive && setState({ loading: false, error: err.message || 'Could not load P&L', pl: [], kinds: [] }),

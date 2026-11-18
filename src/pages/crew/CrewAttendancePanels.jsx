@@ -141,7 +141,17 @@ function RegisterSkeleton() {
   )
 }
 
-export function CrewAttendancePanel({ profile, canManage, showClock = true, showRegister = true }) {
+const COMP_SETTINGS_SELECT =
+  'id, wash_pool_pct, ceramic_shirt_deduction_minor, ceramic_card_fee_pct, ceramic_crew_solo_pct, ceramic_crew_split_pct, ceramic_detailer_split_pct, payout_frequency, payout_weekday, attendance_present_weight, attendance_late_weight'
+
+export function CrewAttendancePanel({
+  profile,
+  canManage,
+  showClock = true,
+  showFloor = true,
+  showRegister = true,
+  onOpenRegister = null,
+}) {
   const [period, setPeriod] = useState('weekly')
   const [branchSlug, setBranchSlug] = useState(profile?.branch_slug || '')
   const [branches, setBranches] = useState([])
@@ -165,11 +175,12 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
   const [compRules, setCompRules] = useState(DEFAULT_COMPENSATION_RULES)
   const [clockError, setClockError] = useState('')
   const [locationAlerts, setLocationAlerts] = useState([])
-  const seesLocationAlerts = showRegister && (isSuperAdmin(profile) || isAssistantSuperAdmin(profile) || profile?.role === ROLES.ADMIN)
+  const seesLocationAlerts = (showFloor || showRegister) && (isSuperAdmin(profile) || isAssistantSuperAdmin(profile) || profile?.role === ROLES.ADMIN)
   const canOverride = canOverrideAttendance(profile)
   const scope = getBranchScopeList(profile)
   const today = getLocalCalendarDate()
-  const showPayPreview = showRegister && (canManage || isSuperAdmin(profile))
+  const showPayPreview = showFloor && (canManage || isSuperAdmin(profile))
+  const matrixPeriod = showRegister ? period : showClock ? 'weekly' : 'daily'
 
   const load = useCallback(async () => {
     if (!branchSlug) {
@@ -183,16 +194,18 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
     setLoading(true)
     try {
       const [matrixRes, floorRes, rulesRes, alertRows, bdayRes] = await Promise.all([
-        fetchAttendanceMatrix({ branchSlug, period }),
-        showRegister ? fetchCrewFloorSnapshot(branchSlug).catch(() => null) : Promise.resolve(null),
-        showPayPreview
-          ? supabase.from('compensation_settings').select('*').eq('id', 1).maybeSingle()
+        fetchAttendanceMatrix({ branchSlug, period: matrixPeriod }),
+        showFloor ? fetchCrewFloorSnapshot(branchSlug).catch(() => null) : Promise.resolve(null),
+        showPayPreview || seesOwnPayEstimate(profile)
+          ? supabase.from('compensation_settings').select(COMP_SETTINGS_SELECT).eq('id', 1).maybeSingle()
           : Promise.resolve({ data: null }),
         seesLocationAlerts ? fetchLocationAlerts(branchSlug).catch(() => []) : Promise.resolve([]),
-        supabase.rpc('staff_birthdays_month', { p_branch: branchSlug }).then(({ data, error }) => {
-          if (error) throw error
-          return data
-        }).catch(() => null),
+        showClock || showFloor
+          ? supabase.rpc('staff_birthdays_month', { p_branch: branchSlug }).then(({ data, error }) => {
+              if (error) throw error
+              return data
+            }).catch(() => null)
+          : Promise.resolve(null),
       ])
       setStaffBirthdays(Array.isArray(bdayRes?.people) ? bdayRes.people : [])
       const { staff: staffRows, attendance: attRows, range } = matrixRes
@@ -257,7 +270,7 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
     } finally {
       setLoading(false)
     }
-  }, [branchSlug, period, profile, showRegister, showPayPreview, seesLocationAlerts, today])
+  }, [branchSlug, matrixPeriod, profile, showClock, showFloor, showPayPreview, seesLocationAlerts, today])
 
   useEffect(() => {
     fetchBranches()
@@ -574,18 +587,22 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
         </Card>
       ) : null}
 
-      {showRegister ? (
+      {showFloor || showRegister ? (
         <>
           <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <h2 className="text-lg font-semibold tracking-tight">Attendance register</h2>
+              <h2 className="text-lg font-semibold tracking-tight">
+                {showRegister ? 'Attendance register' : 'Live branch attendance'}
+              </h2>
               <div className="mt-1 flex flex-col gap-0.5 text-sm">
                 <p className="font-semibold text-foreground">
                   {formatAttendanceHeadcountStrings(branchLabel, roleHeadcount).crewLine}
                 </p>
                 <p className="font-medium text-muted-foreground">
                   {formatAttendanceHeadcountStrings(branchLabel, roleHeadcount).adminLine}
-                  {canOverride ? <span className="text-xs text-muted-foreground font-normal"> · tap heatmap or Override to correct a row</span> : null}
+                  {showRegister && canOverride ? (
+                    <span className="font-normal text-xs text-muted-foreground"> · tap heatmap or Override to correct a row</span>
+                  ) : null}
                 </p>
               </div>
             </div>
@@ -604,35 +621,43 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
                   />
                 </div>
               ) : null}
-              <div className="flex flex-wrap gap-1 rounded-xl border border-border bg-muted/40 p-1">
-                {['daily', 'weekly', 'monthly'].map((key) => (
+              {showRegister ? (
+                <>
+                  <div className="flex flex-wrap gap-1 rounded-xl border border-border bg-muted/40 p-1">
+                    {['daily', 'weekly', 'monthly'].map((key) => (
+                      <Button
+                        key={key}
+                        type="button"
+                        size="sm"
+                        className="min-h-10 capitalize"
+                        variant={period === key ? 'default' : 'ghost'}
+                        onClick={() => setPeriod(key)}
+                      >
+                        {key}
+                      </Button>
+                    ))}
+                  </div>
                   <Button
-                    key={key}
                     type="button"
                     size="sm"
-                    className="min-h-10 capitalize"
-                    variant={period === key ? 'default' : 'ghost'}
-                    onClick={() => setPeriod(key)}
+                    variant="outline"
+                    className="min-h-10 gap-1.5"
+                    disabled={!filteredRows.length}
+                    onClick={() => {
+                      const csv = attendanceRowsToCsv(filteredRows)
+                      downloadTextFile(`attendance-${branchSlug || 'branch'}-${today}.csv`, csv)
+                      toast.success(`Exported ${filteredRows.length} row(s)`)
+                    }}
                   >
-                    {key}
+                    <Download data-icon="inline-start" aria-hidden />
+                    Export CSV
                   </Button>
-                ))}
-              </div>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="min-h-10 gap-1.5"
-                disabled={!filteredRows.length}
-                onClick={() => {
-                  const csv = attendanceRowsToCsv(filteredRows)
-                  downloadTextFile(`attendance-${branchSlug || 'branch'}-${today}.csv`, csv)
-                  toast.success(`Exported ${filteredRows.length} row(s)`)
-                }}
-              >
-                <Download data-icon="inline-start" aria-hidden />
-                Export CSV
-              </Button>
+                </>
+              ) : onOpenRegister ? (
+                <Button type="button" variant="outline" className="min-h-11" onClick={onOpenRegister}>
+                  Open register →
+                </Button>
+              ) : null}
             </div>
           </div>
 
@@ -659,15 +684,24 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
                   detail="Busy on active queue tickets"
                   icon={MapPin}
                 />
-                <StatTile
-                  label="Period recorded"
-                  value={periodSummary.recorded}
-                  detail={`${periodSummary.present} present · ${periodSummary.late} late · ${periodSummary.absent} absent`}
-                  icon={UserX}
-                />
+                {showRegister ? (
+                  <StatTile
+                    label="Period recorded"
+                    value={periodSummary.recorded}
+                    detail={`${periodSummary.present} present · ${periodSummary.late} late · ${periodSummary.absent} absent`}
+                    icon={UserX}
+                  />
+                ) : (
+                  <StatTile
+                    label="Needs attention"
+                    value={todaySummary.absent + todaySummary.empty + todaySummary.late}
+                    detail={`${todaySummary.late} late · ${todaySummary.absent} absent · ${todaySummary.empty} no record`}
+                    icon={UserX}
+                  />
+                )}
               </div>
 
-              {crewFloor && (crewFloor.availableStaff?.length || crewFloor.absentStaff?.length) ? (
+              {showFloor && crewFloor && (crewFloor.availableStaff?.length || crewFloor.absentStaff?.length) ? (
                 <Card className="border-border/80 shadow-sm">
                   <CardHeader className="pb-3">
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -677,9 +711,15 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
                           Only present or late bay crew can be assigned. Blocked staff cannot receive queue jobs.
                         </CardDescription>
                       </div>
-                      <Button type="button" variant="outline" className="min-h-11" asChild>
-                        <Link to="/operations/attendance">Open attendance</Link>
-                      </Button>
+                      {onOpenRegister ? (
+                        <Button type="button" variant="outline" className="min-h-11" onClick={onOpenRegister}>
+                          Edit on register →
+                        </Button>
+                      ) : !showFloor && !showRegister ? null : (
+                        <Button type="button" variant="outline" className="min-h-11" asChild>
+                          <Link to="/operations/employees?tab=register">Open register</Link>
+                        </Button>
+                      )}
                     </div>
                   </CardHeader>
                   <CardContent className="grid gap-4 lg:grid-cols-2">
@@ -770,6 +810,7 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
                 </Card>
               ) : null}
 
+              {showRegister ? (
               <Card className="border-border/80 shadow-sm">
                 <CardHeader className="gap-4 pb-3">
                   <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto] lg:items-end">
@@ -839,7 +880,36 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
                     </label>
                   </div>
 
-                  <div className="overflow-x-auto rounded-xl border border-border/70">
+                  <div className="flex flex-col gap-2.5 md:hidden">
+                    {pagedRows.map((row) => (
+                      <div key={row.key} className="flex flex-col gap-2.5 rounded-xl border border-border/80 bg-card p-3.5 shadow-xs">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold text-foreground">{row.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {attendanceRoleLabel(row.role)} · <span className="font-mono tabular-nums">{row.date}</span>
+                            </p>
+                          </div>
+                          <AttendanceStatusBadge status={row.status} />
+                        </div>
+                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                          <span className="font-mono tabular-nums">
+                            In {fmtTime(row.checked_in_at)} · Out {fmtTime(row.checked_out_at)}
+                          </span>
+                          {canOverride ? (
+                            <Button size="sm" variant="outline" className="min-h-11" onClick={() => openOverride(row)}>
+                              Override
+                            </Button>
+                          ) : null}
+                        </div>
+                      </div>
+                    ))}
+                    {!filteredRows.length ? (
+                      <p className="py-8 text-center text-sm text-muted-foreground">No attendance rows match this search or filter.</p>
+                    ) : null}
+                  </div>
+
+                  <div className="hidden overflow-x-auto rounded-xl border border-border/70 md:block">
                     <Table>
                       <TableHeader>
                         <TableRow>
@@ -872,7 +942,7 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
                             <TableCell className="capitalize text-muted-foreground">{row.source || '—'}</TableCell>
                             <TableCell>
                               {canOverride ? (
-                                <Button size="sm" variant="secondary" className="min-h-9" onClick={() => openOverride(row)}>
+                                <Button size="sm" variant="secondary" className="min-h-10" onClick={() => openOverride(row)}>
                                   Override
                                 </Button>
                               ) : null}
@@ -896,7 +966,7 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="min-h-10 gap-1"
+                        className="min-h-11 gap-1"
                         disabled={safePage <= 1}
                         onClick={() => setPage((p) => Math.max(1, p - 1))}
                       >
@@ -911,7 +981,7 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="min-h-10 gap-1"
+                        className="min-h-11 gap-1"
                         disabled={safePage >= totalPages}
                         onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                       >
@@ -922,6 +992,7 @@ export function CrewAttendancePanel({ profile, canManage, showClock = true, show
                   ) : null}
                 </CardContent>
               </Card>
+              ) : null}
             </>
           )}
         </>
@@ -1036,7 +1107,7 @@ export function CrewSettingsPanel({ profile }) {
 
   const loadPayRules = useCallback(async () => {
     if (!canPayRules) return
-    const { data, error } = await supabase.from('compensation_settings').select('*').eq('id', 1).maybeSingle()
+    const { data, error } = await supabase.from('compensation_settings').select(COMP_SETTINGS_SELECT).eq('id', 1).maybeSingle()
     if (error) toast.error(error.message)
     else setPayRules(normalizeCompensationSettings(data))
   }, [canPayRules])

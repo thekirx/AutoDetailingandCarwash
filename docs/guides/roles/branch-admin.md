@@ -6,7 +6,7 @@
 
 ## Nav (sidebar)
 
-Carwash Queue (read) · Detailing Schedule (read) · Team Planner (no Cash advance board) · Point of Sales · Financials · Inventory · Attendance · Customers (create / modify) · My advances · History · Audit · Transfer car  
+Carwash Queue (read) · Detailing Schedule (read) · Team Planner (no Cash advance board) · Point of Sales · Financials · Catalog & Inventory · Employees · Customers (create / modify) · My advances · Payslips · History · System & Data (Audit log only)
 
 No Floor Board. Contract: `docs/OPS/RBAC-MATRIX.md`.
 
@@ -14,7 +14,7 @@ No Floor Board. Contract: `docs/OPS/RBAC-MATRIX.md`.
 
 1. POS open — ring wash / merch / packages. A birthday free line needs the customer’s code typed in. The counter does not display the code. A ticket that already has a promo voucher keeps the discounted amount; the sale consumes one voucher use.  
 2. Bookings — detailing pipeline is read-only (no new job, no stage move). Queue is read-only. Customers can be created and modified.  
-3. Inventory — restock arrivals and Sunday recon (blocked when SA locks inventory)  
+3. Catalog & Inventory — restock arrivals (`Merch & Sellables`) and `Sunday Recon` (blocked when SA locks inventory)  
 
 4. Attendance exceptions  
 5. **POS → Daily sheet** — expenses, crew pay, float, counted cash → Submit  

@@ -4,12 +4,14 @@ import {
   Building2,
   Car,
   CarFront,
+  ChevronDown,
   ClipboardList,
   Clock,
   Columns3,
   Contact,
   Crown,
   Database,
+  Gift,
   Inbox,
   Gauge,
   History,
@@ -26,6 +28,7 @@ import {
   Plus,
   ScrollText,
   Settings,
+  ShieldCheck,
   ShoppingCart,
   Sparkles,
   Bell,
@@ -65,6 +68,7 @@ import {
 } from '../auth/permissions'
 import { internalRoleLabel } from '../auth/internalRoles'
 import { resolvePostLoginPath } from '../auth/authRedirect'
+import { opsNavIsActive, resolveOpsBreadcrumb } from '@/lib/opsNavigationRegistry'
 import { supabase } from '@/lib/supabase'
 import NotificationBell from '@/components/NotificationBell'
 import PushToggle from '@/components/PushToggle'
@@ -84,6 +88,9 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
   SidebarProvider,
   SidebarSeparator,
   SidebarTrigger,
@@ -127,9 +134,11 @@ const iconMap = {
   CarFront,
   Plus,
   Database,
+  Gift,
   Inbox,
   Layers,
   Settings,
+  ShieldCheck,
   Bell,
   History,
   Clock,
@@ -229,6 +238,7 @@ function FloorAppShell({
   const location = useLocation()
   const [moreOpen, setMoreOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [cmdOpen, setCmdOpen] = useState(false)
   const branch = formatScope(profile, useBranchNames())
   // Approved Daylight design (12 Oct 2026) — every floor role, not just team leads.
   const daylight = true
@@ -236,6 +246,18 @@ function FloorAppShell({
 
   const railNav = (
     <nav className="floor-rail-nav" aria-label="Primary navigation">
+      <div className="floor-rail-search-wrap">
+        <button
+          type="button"
+          className="floor-rail-search"
+          aria-label="Open smart search"
+          onClick={() => setCmdOpen(true)}
+        >
+          <Search size={18} aria-hidden />
+          <span>Search…</span>
+          <kbd>⌘K</kbd>
+        </button>
+      </div>
       <ul className="floor-rail-list">
         {dock.map(({ label, to, icon, primary, end }) => {
           const Icon = iconMap[icon] || ClipboardList
@@ -263,6 +285,14 @@ function FloorAppShell({
         })}
         {daylight && more?.length ? <li><button type="button" className="floor-rail-item" aria-label="Open more menu" aria-expanded={moreOpen} onClick={() => setMoreOpen(true)}><Menu size={22} aria-hidden /><span>More</span></button></li> : null}
       </ul>
+      {daylight ? (
+        <div className="floor-rail-footer mt-auto pt-3">
+          <button type="button" className="floor-rail-item" onClick={signOut} aria-label="Sign out">
+            <LogOut size={20} aria-hidden />
+            <span>Sign out</span>
+          </button>
+        </div>
+      ) : null}
     </nav>
   )
 
@@ -298,6 +328,24 @@ function FloorAppShell({
 
             </div>
             <div className="flex shrink-0 items-center gap-1">
+              <button
+                type="button"
+                className="floor-topbar-search hidden lg:inline-flex"
+                aria-label="Open smart search"
+                onClick={() => setCmdOpen(true)}
+              >
+                <Search size={15} aria-hidden />
+                <span>Search</span>
+                <kbd>⌘K</kbd>
+              </button>
+              <button
+                type="button"
+                className="floor-icon-btn lg:hidden"
+                aria-label="Open smart search"
+                onClick={() => setCmdOpen(true)}
+              >
+                <Search size={18} aria-hidden />
+              </button>
               <PushToggle audience="ops" compact allowUnsupportedInCompact surface="light" />
               <NotificationBell variant="floor" homeUrl={homeUrl} homeLabel={homeLabel} />
               <button type="button" className="floor-icon-btn" aria-label="Settings" onClick={() => setSettingsOpen(true)}>
@@ -320,7 +368,7 @@ function FloorAppShell({
             </div>
           </header>
 
-          <main className="floor-main ops-page-chrome min-h-0 flex-1 overflow-y-auto overscroll-y-contain py-3 sm:py-4 md:max-w-5xl md:self-stretch md:px-4">
+          <main className="floor-main ops-page-chrome min-h-0 flex-1 overflow-y-auto overscroll-y-contain pt-3 pb-[calc(4.75rem+env(safe-area-inset-bottom))] sm:pt-4 md:max-w-5xl md:self-stretch md:px-6 md:pb-6">
             <Outlet />
           </main>
 
@@ -384,6 +432,7 @@ function FloorAppShell({
           </div>
         </ResponsiveSheet>
 
+        <CommandMenu open={cmdOpen} onOpenChange={setCmdOpen} />
         <UserSettingsModal open={settingsOpen} onOpenChange={setSettingsOpen} profile={profile} audience="ops" />
         <OpsInstallPopup />
       </div>
@@ -487,63 +536,130 @@ function DetailerFloorShell({ profile, signOut }) {
   )
 }
 
-function commandNavIsActive(pathname, search, to) {
-  const [path, query] = String(to || '').split('?')
-  if (!path) return false
-  if (query) {
-    const want = new URLSearchParams(query)
-    const have = new URLSearchParams(search)
-    for (const [key, value] of want) {
-      if (have.get(key) !== value) return false
-    }
-    return pathname === path
-  }
-  if (path === '/operations/inventory') {
-    const tab = new URLSearchParams(search).get('tab')
-    if (tab === 'bay' || tab === 'detailing') return false
-  }
-  if (path === '/operations/finance') {
-    const tab = new URLSearchParams(search).get('tab')
-    if (tab === 'reports') return false
-  }
-  if (path === '/operations/planning') {
-    const tab = new URLSearchParams(search).get('tab')
-    if (tab === 'calendar') return false
-  }
-  if (path.endsWith('/console') || path.endsWith('/dashboard')) return pathname === path
-  return pathname === path || pathname.startsWith(`${path}/`)
-}
-
 function CommandNavList({ items }) {
   const location = useLocation()
   const { setOpenMobile } = useSidebar()
   const groups = groupOperationsNav(items)
+
+  const routeParentKey = useMemo(() => {
+    for (const item of items) {
+      if (!Array.isArray(item.children) || !item.children.length) continue
+      const hasActiveChild = item.children.some((child) => opsNavIsActive(location.pathname, location.search, child.to))
+      const parentRouteMatch = opsNavIsActive(location.pathname, location.search, item.to)
+      if (hasActiveChild || parentRouteMatch) return item.to
+    }
+    return null
+  }, [items, location.pathname, location.search])
+
+  const [accordionState, setAccordionState] = useState(() => ({
+    routeKey: routeParentKey,
+    openKey: routeParentKey,
+  }))
+  const openKey = accordionState.routeKey === routeParentKey ? accordionState.openKey : routeParentKey
 
   return groups.map((group) => (
     <SidebarGroup key={group.id} className="command-nav-group">
       <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
       <SidebarGroupContent>
         <SidebarMenu className="gap-1">
-          {group.items.map(({ label: itemLabel, to, icon }) => {
+          {group.items.map(({ label: itemLabel, to, icon, children }) => {
             const Icon = iconMap[icon] || ClipboardList
-            const isActive = commandNavIsActive(location.pathname, location.search, to)
+            const hasChildren = Array.isArray(children) && children.length > 0
+            const activeChild = hasChildren
+              ? children.find((child) => opsNavIsActive(location.pathname, location.search, child.to))
+              : null
+            const parentRouteMatch = opsNavIsActive(location.pathname, location.search, to)
+            const isActive = hasChildren ? parentRouteMatch && !activeChild : parentRouteMatch
+            const isOpen = hasChildren && openKey === to
+
+            if (!hasChildren) {
+              return (
+                <SidebarMenuItem key={to}>
+                  <SidebarMenuButton
+                    className="command-nav-btn"
+                    isActive={isActive}
+                    tooltip={itemLabel}
+                    render={
+                      <Link
+                        to={to}
+                        aria-current={isActive ? 'page' : undefined}
+                        onClick={() => setOpenMobile(false)}
+                      />
+                    }
+                  >
+                    <Icon />
+                    <span>{itemLabel}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              )
+            }
+
             return (
               <SidebarMenuItem key={to}>
-                <SidebarMenuButton
-                  className="command-nav-btn"
-                  isActive={isActive}
-                  tooltip={itemLabel}
-                  render={
-                    <Link
-                      to={to}
-                      aria-current={isActive ? 'page' : undefined}
-                      onClick={() => setOpenMobile(false)}
-                    />
-                  }
-                >
-                  <Icon />
-                  <span>{itemLabel}</span>
-                </SidebarMenuButton>
+                <div className="command-nav-parent-row">
+                  <SidebarMenuButton
+                    className="command-nav-btn flex-1 min-w-0"
+                    isActive={isActive}
+                    tooltip={itemLabel}
+                    render={
+                      <Link
+                        to={to}
+                        aria-current={isActive ? 'page' : undefined}
+                        onClick={() => {
+                          setAccordionState({ routeKey: routeParentKey, openKey: to })
+                          setOpenMobile(false)
+                        }}
+                      />
+                    }
+                  >
+                    <Icon />
+                    <span>{itemLabel}</span>
+                  </SidebarMenuButton>
+                  <button
+                    type="button"
+                    className="command-nav-chevron group-data-[collapsible=icon]:hidden"
+                    data-open={String(isOpen)}
+                    aria-expanded={isOpen}
+                    aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${itemLabel}`}
+                    onClick={() =>
+                      setAccordionState({
+                        routeKey: routeParentKey,
+                        openKey: isOpen ? null : to,
+                      })
+                    }
+                  >
+                    <ChevronDown size={15} aria-hidden />
+                  </button>
+                </div>
+                <div className="command-nav-accordion group-data-[collapsible=icon]:hidden" data-open={String(isOpen)}>
+                  <div>
+                    <SidebarMenuSub className="command-nav-sub">
+                      {children.map((child) => {
+                        const childActive = opsNavIsActive(location.pathname, location.search, child.to)
+                        return (
+                          <SidebarMenuSubItem key={child.to}>
+                            <SidebarMenuSubButton
+                              className="command-nav-sub-btn"
+                              isActive={childActive}
+                              render={
+                                <Link
+                                  to={child.to}
+                                  aria-current={childActive ? 'page' : undefined}
+                                  onClick={() => {
+                                    setAccordionState({ routeKey: routeParentKey, openKey: to })
+                                    setOpenMobile(false)
+                                  }}
+                                />
+                              }
+                            >
+                              <span>{child.label}</span>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        )
+                      })}
+                    </SidebarMenuSub>
+                  </div>
+                </div>
               </SidebarMenuItem>
             )
           })}
@@ -568,19 +684,34 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
           ? 'Admin console'
           : 'Command'
 
-  const crumb = useMemo(() => {
-    const match = navigation.find((item) => commandNavIsActive(location.pathname, location.search, item.to))
-    return match?.label || label
-  }, [navigation, location.pathname, location.search, label])
+  const crumb = useMemo(
+    () => resolveOpsBreadcrumb(navigation, location.pathname, location.search, label),
+    [navigation, location.pathname, location.search, label],
+  )
 
   return (
     <SidebarProvider
+      defaultOpen={typeof window === 'undefined' ? true : window.innerWidth >= 1024}
       className="command-shell command-daylight min-w-0 overflow-x-hidden bg-background text-foreground"
-      style={{ '--sidebar-width': '15rem' }}
+      style={{ '--sidebar-width': '15rem', '--sidebar-width-icon': '3.5rem' }}
     >
       <Sidebar collapsible="icon" variant="inset" className="command-rail">
         <SidebarHeader className="command-rail-header">
           <CommandRailBrand homeTo={resolvePostLoginPath(profile, null) || '/operations'} caption={label} />
+          <SidebarMenu className="mt-2 group-data-[collapsible=icon]:mt-1">
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                className="command-nav-btn command-rail-search"
+                tooltip="Search everything (⌘K)"
+                aria-label="Sidebar smart search"
+                onClick={() => setCmdOpen(true)}
+              >
+                <Search aria-hidden />
+                <span className="truncate">Search all…</span>
+                <kbd className="command-rail-kbd group-data-[collapsible=icon]:hidden">⌘K</kbd>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
         </SidebarHeader>
         <SidebarSeparator className="command-rail-rule" />
         <SidebarContent className="command-rail-body">
@@ -632,7 +763,7 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
           <Button
             type="button"
             variant="outline"
-            className="hidden min-h-11 gap-2 md:inline-flex"
+            className="hidden min-h-11 gap-2 lg:inline-flex"
             onClick={() => setCmdOpen(true)}
             aria-label="Open command menu"
           >
@@ -644,7 +775,7 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
             type="button"
             variant="ghost"
             size="icon"
-            className="min-h-11 min-w-11 md:hidden"
+            className="min-h-11 min-w-11 lg:hidden"
             onClick={() => setCmdOpen(true)}
             aria-label="Open command menu"
           >
@@ -675,7 +806,7 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
             </DropdownMenuContent>
           </DropdownMenu>
         </header>
-        <main className="ops-page-chrome mx-auto min-w-0 w-full max-w-7xl flex-1 p-4 sm:p-6 lg:p-8">
+        <main className="ops-page-chrome mx-auto min-w-0 w-full max-w-7xl flex-1 p-3 sm:p-5 lg:p-8">
           <Outlet />
         </main>
       </SidebarInset>

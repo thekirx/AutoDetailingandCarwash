@@ -305,8 +305,8 @@ export default function BranchesManagePage() {
           <CardDescription>
             <p>
               After create: assign staff under{' '}
-              <Link className="text-primary underline-offset-2 hover:underline" to="/operations/people">
-                People
+              <Link className="text-primary underline-offset-2 hover:underline" to="/operations/employees?tab=employees">
+                Employees
               </Link>
               . Live queue and shop TV exist as soon as the slug does — pin the TV link on the shop display.
             </p>

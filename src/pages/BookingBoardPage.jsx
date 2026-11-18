@@ -19,6 +19,7 @@ import {
   getBranchScopeList,
   isBranchAdmin,
   isFormBookingsOnlyRole,
+  isInvestor,
   ROLES,
 } from '@/auth/permissions'
 import ReferralSourceFields, { useReferralStaff } from '@/components/bookings/ReferralSourceFields'
@@ -35,6 +36,7 @@ import {
   BOOKING_TABLE_PAGE_SIZES,
   bookingCarPlateLine,
   bookingDetailingTypeText,
+  bookingPlateText,
   bookingServiceText,
   bookingVehicleText,
   filterBookingList,
@@ -58,7 +60,7 @@ import {
   pickDefaultBranchSlug,
   STATUS_LABELS,
 } from '@/queue/queueLogic'
-import { assignStaff, fetchPresentAssignableStaff, fetchServices } from '@/queue/queueApi'
+import { assignStaff, fetchPresentAssignableStaff, fetchServices, formatMoney } from '@/queue/queueApi'
 import { filterFloorDetailingServices, isBookingBoardRow } from '@/lib/serviceKinds'
 import { bookedDetailingServiceId, packagesForService, splitBookedService } from '@/lib/detailingPackages'
 import {
@@ -89,7 +91,7 @@ import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
 import { normalizePricingSize, PRICING_SIZES, resolveServicePriceMinor } from '@/lib/servicePricing'
 import { createCoalescedReload } from '@/lib/coalesceReload'
 import { cn } from '@/lib/utils'
-import { ArrowUpDown, CalendarDays, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ClipboardList, Send, Sparkles, Wrench } from 'lucide-react'
+import { ArrowUpDown, CalendarClock, CalendarDays, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ClipboardList, Columns3, LayoutGrid, MapPin, Send, Sparkles, UserCheck, Wrench } from 'lucide-react'
 
 const BOOKING_SHELL_TABS = Object.freeze([
   { id: 'board', label: 'Board' },
@@ -235,18 +237,39 @@ function BookingTableSortButton({ label, column, sort, onSort }) {
   )
 }
 
+function formatScheduleChip(iso) {
+  if (!iso) return 'Schedule TBD'
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return 'Schedule TBD'
+  return d.toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+}
+
 function BookingStageTicket({
   booking,
   tone,
   variant,
   canOpen,
   onOpen,
+  branchName,
+  staffName,
+  showPrice = true,
 }) {
   const isList = variant === 'list'
   const service = bookingDetailingTypeText(booking) || 'Detailing'
   const carPlate = bookingCarPlateLine(booking) || 'Vehicle TBD'
+  const plate = bookingPlateText(booking)
   const notes = String(booking?.notes || '').trim()
-  const label = `${service}, ${carPlate}${notes ? ` · Note: ${notes}` : ''}`
+  const branchLabel = branchName || booking?.branch || ''
+  const scheduleLabel = formatScheduleChip(booking?.scheduled_start)
+  const sizeLabel = booking?.vehicle_type ? normalizePricingSize(booking.vehicle_type) : ''
+  const priceMinor = Number(booking?.final_price_minor ?? booking?.price_minor ?? 0)
+  const needsCrewChip = ['confirmed', 'waiting', 'in_progress'].includes(booking?.status)
+  const label = `${service}, ${carPlate}${branchLabel ? `, ${branchLabel}` : ''}${notes ? ` · Note: ${notes}` : ''}`
   const className = cn(
     isList ? 'bk-card bk-ticket-compact planner-ticket' : 'floor-ticket bk-ticket-compact planner-ticket',
     tone,
@@ -255,24 +278,74 @@ function BookingStageTicket({
 
   const body = (
     <>
-      <div className="bk-ticket-header flex flex-col gap-0.5">
-        <p className="bk-ticket-service font-bold text-sm text-primary tracking-tight leading-snug">{service}</p>
-        <p className="bk-ticket-car-plate text-xs text-muted-foreground font-medium leading-tight">{carPlate}</p>
+      <div className="bk-card-top">
+        <span className={cn('bk-card-plate-tag', !plate && 'is-tbd')}>
+          {plate || 'PLATE TBD'}
+        </span>
+        <div className="bk-card-badges">
+          {booking?.queue_number != null ? (
+            <span className="bk-card-chip tabular-nums">Q{booking.queue_number}</span>
+          ) : null}
+          {branchLabel ? (
+            <span className="bk-card-chip capitalize">
+              <MapPin className="size-3 shrink-0" aria-hidden="true" />
+              <span className="truncate">{branchLabel}</span>
+            </span>
+          ) : null}
+          {booking?.reschedule_requested_at ? (
+            <span className="bk-card-chip bk-card-chip-warn">Reschedule</span>
+          ) : null}
+        </div>
       </div>
-      {booking?.reschedule_requested_at ? <p className="bk-ticket-status text-amber-700 dark:text-amber-300">Call to reschedule</p> : null}
+
+      <div className="bk-ticket-header flex flex-col gap-0.5">
+        <p className="bk-ticket-service">{service}</p>
+        <p className="bk-ticket-car-plate">{carPlate}</p>
+      </div>
+
+      <div className="bk-card-meta-row">
+        <span className="bk-card-meta-item tabular-nums">
+          <CalendarClock className="size-3.5 shrink-0" aria-hidden="true" />
+          <span>{scheduleLabel}</span>
+        </span>
+        {sizeLabel ? (
+          <span className="bk-card-meta-item uppercase">{sizeLabel}</span>
+        ) : null}
+        {staffName ? (
+          <span className="bk-card-meta-item">
+            <UserCheck className="size-3.5 shrink-0" aria-hidden="true" />
+            <span className="truncate">{staffName}</span>
+          </span>
+        ) : needsCrewChip ? (
+          <span className="bk-card-meta-item">Unassigned</span>
+        ) : null}
+      </div>
+
       {isList ? (
         <p className="bk-ticket-status">
           {detailingBoardStatusLabel(booking?.status) || STATUS_LABELS[booking?.status] || booking?.status}
         </p>
       ) : null}
+
       {notes ? (
-        <div className="bk-ticket-notes mt-1.5" title={notes}>
+        <div className="bk-ticket-notes" title={notes}>
           <span className="bk-ticket-notes-tag">Note</span>
-          <span className="bk-ticket-notes-text line-clamp-2">{notes}</span>
+          <span className="bk-ticket-notes-text">{notes}</span>
         </div>
-      ) : (
-        <p className="bk-ticket-notes-empty mt-1 text-xs text-muted-foreground/70">No notes</p>
-      )}
+      ) : null}
+
+      {(showPrice && priceMinor > 0) || canOpen ? (
+        <div className="bk-card-foot">
+          {showPrice && priceMinor > 0 ? (
+            <span className="bk-card-price">{formatMoney(priceMinor)}</span>
+          ) : (
+            <span className="bk-ticket-notes-empty mt-0">No notes</span>
+          )}
+          {canOpen ? <span className="bk-card-open-cue">Open →</span> : null}
+        </div>
+      ) : !notes ? (
+        <p className="bk-ticket-notes-empty">No notes</p>
+      ) : null}
     </>
   )
 
@@ -378,7 +451,9 @@ export default function BookingBoardPage() {
     }
   }, [formOpen])
   const [saving, setSaving] = useState(false)
-  const [boardFilter, setBoardFilter] = useState('pending')
+  const [boardFilter, setBoardFilter] = useState('all')
+  const [boardLayout, setBoardLayout] = useState('grid')
+  const [showEmptyLanes, setShowEmptyLanes] = useState(false)
   const [crewDialog, setCrewDialog] = useState(null)
   const [crewOptions, setCrewOptions] = useState([])
   const [crewSelected, setCrewSelected] = useState([])
@@ -399,9 +474,12 @@ export default function BookingBoardPage() {
     () => COLUMNS.filter((c) => boardStatuses.includes(c.id)),
     [boardStatuses],
   )
-  const focusedBoardStatus = visibleColumns.some((c) => c.id === boardFilter)
-    ? boardFilter
-    : (visibleColumns[0]?.id || 'pending')
+  const focusedBoardStatus =
+    boardFilter === 'all'
+      ? 'all'
+      : visibleColumns.some((c) => c.id === boardFilter)
+        ? boardFilter
+        : 'all'
 
   const range = useMemo(() => {
     if (datePreset === 'all' || datePreset === 'any') {
@@ -494,6 +572,14 @@ export default function BookingBoardPage() {
   }, [profile])
 
   const formBranchOptions = useMemo(() => bookableBranches(branches, profile), [branches, profile])
+  const staffNameById = useMemo(() => {
+    const map = {}
+    for (const s of [...(referralStaff || []), ...(detailers || [])]) {
+      if (s?.id && s?.full_name) map[s.id] = s.full_name
+    }
+    return map
+  }, [referralStaff, detailers])
+
   const branchNameBySlug = useMemo(
     () => Object.fromEntries((branches || []).map((b) => [b.slug, b.name || b.slug])),
     [branches],
@@ -1221,8 +1307,52 @@ export default function BookingBoardPage() {
             />
           ) : (
           <div className="bk-board">
-            <p className="bk-board-hint">Tap a card to open it. Tap a stage chip to jump columns.</p>
+            <div className="bk-board-toolbar">
+              <p className="bk-board-hint">Tap a card to open it. Tap a stage chip to focus or jump.</p>
+              <div className="bk-board-controls">
+                <button
+                  type="button"
+                  className={cn('bk-status-chip', showEmptyLanes && 'bk-status-chip-active')}
+                  aria-pressed={showEmptyLanes}
+                  onClick={() => setShowEmptyLanes((v) => !v)}
+                >
+                  <span>{showEmptyLanes ? 'Hide empty' : `Show empty (${visibleColumns.filter((c) => !grouped[c.id]?.length).length})`}</span>
+                </button>
+                <div className="bk-seg-group" role="group" aria-label="Board layout">
+                  <button
+                    type="button"
+                    className={cn('bk-seg-btn', boardLayout === 'grid' && 'is-active')}
+                    aria-pressed={boardLayout === 'grid'}
+                    onClick={() => setBoardLayout('grid')}
+                  >
+                    <LayoutGrid className="size-3.5" aria-hidden="true" />
+                    <span>Grid</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={cn('bk-seg-btn', boardLayout === 'columns' && 'is-active')}
+                    aria-pressed={boardLayout === 'columns'}
+                    onClick={() => setBoardLayout('columns')}
+                  >
+                    <Columns3 className="size-3.5" aria-hidden="true" />
+                    <span>Columns</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
             <div className="bk-status-strip" role="toolbar" aria-label="Filter bookings by status">
+              <button
+                type="button"
+                className={cn('bk-status-chip', focusedBoardStatus === 'all' && 'bk-status-chip-active')}
+                aria-pressed={focusedBoardStatus === 'all'}
+                onClick={() => setBoardFilter('all')}
+              >
+                <span>All</span>
+                <span className="bk-status-chip-count">
+                  {visibleColumns.reduce((sum, col) => sum + (grouped[col.id]?.length || 0), 0)}
+                </span>
+              </button>
               {visibleColumns.map((col) => {
                 const active = focusedBoardStatus === col.id
                 const n = grouped[col.id]?.length || 0
@@ -1234,8 +1364,10 @@ export default function BookingBoardPage() {
                     aria-pressed={active}
                     aria-controls={bookingLaneDomId(col.id)}
                     onClick={() => {
-                      setBoardFilter(col.id)
-                      scrollBookingLaneIntoView(col.id)
+                      const next = active ? 'all' : col.id
+                      setBoardFilter(next)
+                      if (n === 0 && next !== 'all') setShowEmptyLanes(true)
+                      if (next !== 'all') scrollBookingLaneIntoView(col.id)
                     }}
                   >
                     <span>{col.shortLabel || col.label}</span>
@@ -1245,44 +1377,65 @@ export default function BookingBoardPage() {
               })}
             </div>
 
-            <div className="booking-lane-board" role="region" aria-label="Booking columns">
-              {visibleColumns.map((col) => {
-                const laneFocused = col.id === focusedBoardStatus
-                return (
-                <section
-                  key={col.id}
-                  id={bookingLaneDomId(col.id)}
-                  className={cn('floor-lane', laneFocused ? 'bk-lane-focused' : 'bk-lane-dimmed')}
-                  aria-label={`${col.label} column`}
-                  aria-current={laneFocused ? 'true' : undefined}
+            {(() => {
+              const anyPopulated = visibleColumns.some((c) => (grouped[c.id]?.length || 0) > 0)
+              const columnsToRender = visibleColumns.filter((col) => {
+                const count = grouped[col.id]?.length || 0
+                if (focusedBoardStatus !== 'all') {
+                  return boardLayout === 'columns' ? (showEmptyLanes || !anyPopulated || count > 0 || col.id === focusedBoardStatus) : col.id === focusedBoardStatus
+                }
+                return showEmptyLanes || !anyPopulated || count > 0
+              })
+              const canOpenCard = canEdit || canEditServicePrice || canSchedule
+              const hideCardPrice = isInvestor(profile)
+              return (
+                <div
+                  className={cn('booking-lane-board', boardLayout === 'grid' && 'bk-board-grid')}
+                  role="region"
+                  aria-label="Booking columns"
                 >
-                  <div className="mb-2 flex items-start justify-between gap-1">
-                    <h2 className="floor-lane-title font-bold text-muted-foreground uppercase" title={col.label}>
-                      {col.shortLabel || col.label}
-                    </h2>
-                    <Badge variant="secondary" className="shrink-0 tabular-nums text-[10px]">{grouped[col.id].length}</Badge>
-                  </div>
-                  <div className="floor-lane-body">
-                    {grouped[col.id].map((booking) => (
-                      <BookingStageTicket
-                        key={booking.id}
-                        booking={booking}
-                        variant="lane"
-                        tone={col.tone}
-                        canOpen={canEdit || canEditServicePrice || canSchedule}
-                        onOpen={openEdit}
-                      />
-                    ))}
-                    {!grouped[col.id].length && (
-                      <p className="rounded-xl border border-dashed border-border bg-background/50 p-3 text-center text-sm text-muted-foreground">
-                        Empty
-                      </p>
-                    )}
-                  </div>
-                </section>
-                )
-              })}
-            </div>
+                  {columnsToRender.map((col) => {
+                    const laneFocused = focusedBoardStatus === 'all' || col.id === focusedBoardStatus
+                    return (
+                      <section
+                        key={col.id}
+                        id={bookingLaneDomId(col.id)}
+                        className={cn('floor-lane', laneFocused ? 'bk-lane-focused' : 'bk-lane-dimmed')}
+                        aria-label={`${col.label} column`}
+                        aria-current={col.id === focusedBoardStatus ? 'true' : undefined}
+                      >
+                        <div className="mb-2 flex items-start justify-between gap-1">
+                          <h2 className="floor-lane-title font-bold text-muted-foreground uppercase" title={col.label}>
+                            {col.shortLabel || col.label}
+                          </h2>
+                          <Badge variant="secondary" className="shrink-0 tabular-nums text-[10px]">{grouped[col.id].length}</Badge>
+                        </div>
+                        <div className="floor-lane-body">
+                          {grouped[col.id].map((booking) => (
+                            <BookingStageTicket
+                              key={booking.id}
+                              booking={booking}
+                              variant="lane"
+                              tone={col.tone}
+                              canOpen={canOpenCard}
+                              onOpen={openEdit}
+                              branchName={branchNameBySlug[booking.branch]}
+                              staffName={booking.assigned_staff_id ? staffNameById[booking.assigned_staff_id] : ''}
+                              showPrice={!hideCardPrice}
+                            />
+                          ))}
+                          {!grouped[col.id].length && (
+                            <p className="rounded-xl border border-dashed border-border bg-background/50 p-3 text-center text-sm text-muted-foreground">
+                              Empty
+                            </p>
+                          )}
+                        </div>
+                      </section>
+                    )
+                  })}
+                </div>
+              )
+            })()}
           </div>
           )}
         </TabsContent>

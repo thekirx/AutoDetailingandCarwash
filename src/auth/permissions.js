@@ -776,6 +776,16 @@ export function canAccessMemberships(profile) {
   return false
 }
 
+/** Unified Rewards hub: memberships, vouchers, points shop, and referral bonuses. */
+export function canAccessRewardsHub(profile) {
+  return (
+    canAccessMemberships(profile) ||
+    canViewVouchers(profile) ||
+    canManageMerchShop(profile) ||
+    isSuperAdmin(profile)
+  )
+}
+
 export function canAccessDataCenter(profile) {
   return isSuperAdmin(profile)
 }
@@ -825,8 +835,8 @@ export const COMMAND_NAV_GROUP_LABELS = Object.freeze({
   'ops-insight': 'Operations Insight',
 })
 
-function nav(label, to, icon, group) {
-  return { label, to, icon, group }
+function nav(label, to, icon, group, children) {
+  return children?.length ? { label, to, icon, group, children } : { label, to, icon, group }
 }
 
 /** Group the nav in list order, coalescing items sharing a group id. */
@@ -855,7 +865,7 @@ export function getOperationsNav(profile) {
       nav('Carwash Queue', '/operations/queue', 'ClipboardList', 'insight'),
       nav('Detailing Schedule', '/operations/bookings', 'Kanban', 'insight'),
       nav('Point of Sales', '/operations/pos', 'ShoppingCart', 'insight'),
-      nav('Vouchers', '/operations/vouchers', 'TicketPercent', 'insight'),
+      nav('Rewards', '/operations/rewards?tab=vouchers', 'Gift', 'insight'),
       nav('Financials', '/operations/finance', 'Wallet', 'insight'),
     ]
   }
@@ -901,6 +911,58 @@ export function getOperationsNav(profile) {
     ]
   }
 
+function buildEmployeesNavChildren(profile) {
+  const canClock = canUseAttendanceClock(profile)
+  const canRegister =
+    canOverrideAttendance(profile) ||
+    profile?.role === ROLES.TEAM_LEAD ||
+    isSuperAdmin(profile) ||
+    isAssistantSuperAdmin(profile)
+  const canPeople = allowRoute(profile, 'people') && canManagePeople(profile)
+  const showSettings = canEditAttendanceSettings(profile) || canEditAttendanceRoles(profile)
+  const kids = []
+  let firstAssigned = false
+  const addTab = (label, tab) => {
+    const to = firstAssigned ? `/operations/employees?tab=${tab}` : '/operations/employees'
+    firstAssigned = true
+    kids.push(nav(label, to))
+  }
+  if (canClock) addTab('Time clock', 'clock')
+  if (canRegister) {
+    addTab('Attendance', 'attendance')
+    addTab('Register', 'register')
+  }
+  if (canPeople) {
+    addTab('Employee list', 'employees')
+    addTab('RBAC & roles', 'access')
+  }
+  if (showSettings) addTab('Settings', 'settings')
+  return kids.length > 1 ? kids : undefined
+}
+
+function buildCustomersNavChildren(profile) {
+  const kids = [nav('Directory', '/operations/crm')]
+  if (canTransferVehicle(profile)) kids.push(nav('Transfer car', '/operations/crm?tab=transfer'))
+  if (canAccessInquiries(profile)) kids.push(nav('Inquiries', '/operations/crm?tab=inquiries'))
+  if (canEditCrm(profile) && canSendCustomerSms(profile)) kids.push(nav('SMS', '/operations/crm?tab=sms'))
+  return kids.length > 1 ? kids : undefined
+}
+
+function buildRewardsNavChildren(profile) {
+  const kids = []
+  if (canAccessMemberships(profile)) kids.push(nav('Memberships', '/operations/rewards'))
+  if (canViewVouchers(profile)) {
+    kids.push(nav('Vouchers', kids.length ? '/operations/rewards?tab=vouchers' : '/operations/rewards'))
+  }
+  if (canManageMerchShop(profile)) {
+    kids.push(nav('Points shop', kids.length ? '/operations/rewards?tab=points-shop' : '/operations/rewards'))
+  }
+  if (isSuperAdmin(profile) || canManageServices(profile)) {
+    kids.push(nav('Referrals', kids.length ? '/operations/rewards?tab=referrals' : '/operations/rewards'))
+  }
+  return kids.length > 1 ? kids : undefined
+}
+
   // Branch Admin: no Floor Board. Queue + detailing are read-only. POS + finance + HR are full.
   if (isBranchAdmin(profile)) {
     return [
@@ -909,14 +971,16 @@ export function getOperationsNav(profile) {
       nav('Team Planner', '/operations/planning', 'Columns3', 'insight'),
       nav('Point of Sales', '/operations/pos', 'ShoppingCart', 'insight'),
       nav('Financials', '/operations/finance', 'Wallet', 'insight'),
-      nav('Inventory', '/operations/inventory', 'Package', 'insight'),
-      nav('Attendance', '/operations/attendance', 'Clock', 'hr'),
-      nav('Customers', '/operations/crm', 'Contact', 'customers'),
+      nav('Catalog & Inventory', '/operations/inventory', 'Package', 'insight', [
+        nav('Restock Merch', '/operations/inventory?tab=restock'),
+        nav('Sunday Recon', '/operations/inventory?tab=recon'),
+      ]),
+      nav('Employees', '/operations/employees', 'Users', 'hr', buildEmployeesNavChildren(profile)),
+      nav('Customers', '/operations/crm', 'Contact', 'customers', buildCustomersNavChildren(profile)),
       nav('My advances', '/operations/my-advances', 'Wallet', 'hr'),
       nav('Payslips', '/operations/payslips', 'Banknote', 'hr'),
       nav('History', '/operations/history', 'History', 'ops-insight'),
-      nav('Audit', '/operations/audit', 'ScrollText', 'ops-insight'),
-      nav('Transfer car', '/operations/vehicle-transfer', 'ArrowLeftRight', 'config'),
+      nav('System & Data', '/operations/system', 'ShieldCheck', 'ops-insight'),
     ]
   }
 
@@ -927,12 +991,12 @@ export function getOperationsNav(profile) {
       nav('Team Planner', '/operations/planning', 'Columns3', 'insight'),
       nav('Point of Sales', '/operations/pos', 'ShoppingCart', 'insight'),
       nav('Financials', '/operations/finance', 'Wallet', 'insight'),
-      nav('Customers', '/operations/crm', 'Contact', 'customers'),
+      nav('Customers', '/operations/crm', 'Contact', 'customers', buildCustomersNavChildren(profile)),
       nav('My advances', '/operations/my-advances', 'Wallet', 'hr'),
       nav('Payslips', '/operations/payslips', 'Banknote', 'hr'),
       nav('Month KPI', '/operations/kpi', 'Gauge', 'ops-insight'),
       nav('History', '/operations/history', 'History', 'ops-insight'),
-      nav('Audit', '/operations/audit', 'ScrollText', 'ops-insight'),
+      nav('System & Data', '/operations/system', 'ShieldCheck', 'ops-insight'),
     ]
   }
 
@@ -970,29 +1034,66 @@ export function getOperationsNav(profile) {
   if (canAccessPos(profile)) {
     items.push(nav('Point of Sales', '/operations/pos', 'ShoppingCart', 'insight'))
   }
-  if (canManageVouchers(profile)) {
-    items.push(nav('Vouchers', '/operations/vouchers', 'TicketPercent', 'insight'))
-  }
   if (canAccessInventory(profile)) {
-    items.push(nav('Inventory', '/operations/inventory', 'Package', 'insight'))
+    const catalogChildren = []
+    if (canManageServices(profile)) {
+      catalogChildren.push(
+        nav('Services & Packages', '/operations/inventory?tab=services&scope=bay'),
+        nav('Detailing Packages', '/operations/inventory?tab=services&scope=detailing'),
+        nav('Merch & Sellables', '/operations/inventory?tab=merch'),
+      )
+      if (canManageVehicleCatalog(profile)) {
+        catalogChildren.push(nav('Vehicle List', '/operations/inventory?tab=cars'))
+      }
+      if (canRestockInventory(profile)) {
+        catalogChildren.push(nav('Sunday Recon', '/operations/inventory?tab=recon'))
+      }
+    } else if (canRestockInventory(profile)) {
+      catalogChildren.push(
+        nav('Restock Merch', '/operations/inventory?tab=restock'),
+        nav('Sunday Recon', '/operations/inventory?tab=recon'),
+      )
+    }
+    items.push(
+      nav(
+        'Catalog & Inventory',
+        '/operations/inventory',
+        'Package',
+        'insight',
+        catalogChildren.length > 1 ? catalogChildren : undefined,
+      ),
+    )
   }
-  if (canAccessFinance(profile)) {
-    items.push(nav('Financials', '/operations/finance', 'Wallet', 'insight'))
-  } else if (canAccessReports(profile)) {
-    items.push(nav('Financials', '/operations/finance?tab=reports', 'Wallet', 'insight'))
-  }
-  if (canEditFinanceBooks(profile)) {
-    items.push(nav('Monthly salaries', '/operations/monthly-payroll', 'Banknote', 'insight'))
-  }
-  if (canAccessApprovals(profile)) {
-    items.push(nav('Approvals', '/operations/approvals', 'ClipboardCheck', 'insight'))
+  if (canOpenFinanceHub(profile)) {
+    const financeChildren = []
+    if (canAccessFinance(profile)) {
+      financeChildren.push(nav('Overview & Books', '/operations/finance'))
+    }
+    if (canEditFinanceBooks(profile)) {
+      financeChildren.push(nav('Monthly salaries', '/operations/finance?tab=salaries'))
+    }
+    if (canAccessApprovals(profile)) {
+      financeChildren.push(nav('Approvals', '/operations/finance?tab=approvals'))
+    }
+    if (canAccessReports(profile)) {
+      financeChildren.push(nav('Reports', '/operations/finance?tab=reports'))
+    }
+    items.push(
+      nav(
+        'Financials',
+        canAccessFinance(profile) ? '/operations/finance' : '/operations/finance?tab=reports',
+        'Wallet',
+        'insight',
+        financeChildren.length > 1 ? financeChildren : undefined,
+      ),
+    )
   }
   if (canAccessMyPayslips(profile) && profile?.role !== ROLES.STAFF) {
     items.push(nav('Payslips', '/operations/payslips', 'Banknote', 'hr'))
   }
 
-  if (canViewQueueOperations(profile) || (canAccessAttendance(profile) && profile?.role !== ROLES.STAFF)) {
-    items.push(nav('Attendance', '/operations/attendance', 'Clock', 'hr'))
+  if (canManagePeople(profile) || canViewQueueOperations(profile) || (canAccessAttendance(profile) && profile?.role !== ROLES.STAFF)) {
+    items.push(nav('Employees', '/operations/employees', 'Users', 'hr', buildEmployeesNavChildren(profile)))
   }
   if (canAccessMyAdvances(profile) && profile?.role !== ROLES.STAFF) {
     items.push(nav('My advances', '/operations/my-advances', 'Wallet', 'hr'))
@@ -1002,32 +1103,18 @@ export function getOperationsNav(profile) {
   }
 
   if (canAccessCrm(profile)) {
-    items.push(nav('Customers', '/operations/crm', 'Contact', 'customers'))
-  }
-  if (canAccessMemberships(profile)) {
-    items.push(nav('Memberships', '/operations/memberships', 'Crown', 'customers'))
-  }
-  if (canManageMerchShop(profile)) items.push(nav('Merch shop', '/operations/merch-shop', 'Package', 'customers'))
-  if (canAccessInquiries(profile)) {
+    items.push(nav('Customers', '/operations/crm', 'Contact', 'customers', buildCustomersNavChildren(profile)))
+  } else if (canAccessInquiries(profile)) {
     items.push(nav('Inquiries', '/operations/inquiries', 'Inbox', 'customers'))
+  }
+  if (canAccessRewardsHub(profile)) {
+    items.push(nav('Rewards', '/operations/rewards', 'Gift', 'customers', buildRewardsNavChildren(profile)))
   }
 
   if (canManageBranches(profile)) {
     items.push(nav('Branches', '/operations/branches', 'Building2', 'config'))
   }
-  if (canManageServices(profile)) {
-    items.push(
-      nav('Services and Packages', '/operations/inventory?tab=bay', 'Car', 'config'),
-      nav('Detailing Packages', '/operations/inventory?tab=detailing', 'Sparkles', 'config'),
-    )
-  }
-  if (canManageVehicleCatalog(profile)) {
-    items.push(nav('Vehicle List', '/operations/cars', 'CarFront', 'config'))
-  }
-  if (canManagePeople(profile)) {
-    items.push(nav('RBAC Delegation', '/operations/people', 'UserPlus', 'config'))
-  }
-  if (canTransferVehicle(profile)) {
+  if (canTransferVehicle(profile) && !canAccessCrm(profile)) {
     items.push(nav('Transfer car', '/operations/vehicle-transfer', 'ArrowLeftRight', 'config'))
   }
   if (canManageSiteContent(profile)) {
@@ -1043,11 +1130,8 @@ export function getOperationsNav(profile) {
   if (canAccessNotifications(profile)) {
     items.push(nav('Notifications', '/operations/notifications', 'Bell', 'ops-insight'))
   }
-  if (canAccessAudit(profile)) {
-    items.push(nav('Audit', '/operations/audit', 'ScrollText', 'ops-insight'))
-  }
-  if (canAccessDataCenter(profile)) {
-    items.push(nav('Data Center', '/operations/data-center', 'Database', 'ops-insight'))
+  if (canAccessAudit(profile) || canAccessDataCenter(profile)) {
+    items.push(nav('System & Data', '/operations/system', 'ShieldCheck', 'ops-insight'))
   }
   return items
 }
@@ -1191,6 +1275,7 @@ export const BRANCH_ADMIN_ROUTE_KEYS = Object.freeze([
   'vehicle-transfer',
   'bookings',
   'attendance',
+  'employees',
   'my-advances',
   'payslips',
   'pos',
@@ -1201,10 +1286,11 @@ export const BRANCH_ADMIN_ROUTE_KEYS = Object.freeze([
   'planning',
   'history',
   'audit',
+  'system',
 ])
 
-/** Investor chrome: read-only queue, detailing, POS, vouchers, finance. No Floor Board. */
-export const INVESTOR_ROUTE_KEYS = Object.freeze(['queue', 'bookings', 'pos', 'vouchers', 'finance', 'reports'])
+/** Investor chrome: read-only queue, detailing, POS, rewards/vouchers, finance. No Floor Board. */
+export const INVESTOR_ROUTE_KEYS = Object.freeze(['queue', 'bookings', 'pos', 'vouchers', 'rewards', 'finance', 'reports'])
 
 /** Route allow helpers for App.jsx */
 export function allowRoute(profile, key) {
@@ -1213,11 +1299,13 @@ export function allowRoute(profile, key) {
   const map = {
     planning: canViewPlanning,
     people: canManagePeople,
+    employees: (p) => canManagePeople(p) || canAccessAttendance(p),
     branches: canManageBranches,
     cars: canManageVehicleCatalog,
     'vehicle-transfer': canTransferVehicle,
     audit: canAccessAudit,
     'data-center': canAccessDataCenter,
+    system: (p) => canAccessAudit(p) || canAccessDataCenter(p),
     inquiries: canAccessInquiries,
     dashboard: canAccessFloorBoard,
     queue: canViewQueueBoard,
@@ -1240,6 +1328,7 @@ export function allowRoute(profile, key) {
     memberships: canAccessMemberships,
     'merch-shop': canManageMerchShop,
     vouchers: canViewVouchers,
+    rewards: canAccessRewardsHub,
     settings: canAccessSettings,
     content: canManageSiteContent,
     notifications: canAccessNotifications,

@@ -1,5 +1,5 @@
-import { useCallback, useMemo, useState } from 'react'
-import { Navigate } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import {
   CalendarRange,
   CarFront,
@@ -78,7 +78,10 @@ function kindTone(kind) {
  */
 export default function HistoryPage() {
   const { profile } = useAuth()
-  const [q, setQ] = useState('')
+  const [searchParams] = useSearchParams()
+  const urlQ = searchParams.get('q') || ''
+  const [q, setQ] = useState(urlQ)
+  const autoRanQRef = useRef('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [searched, setSearched] = useState(false)
@@ -146,6 +149,14 @@ export default function HistoryPage() {
       setLoading(false)
     }
   }, [])
+
+  useEffect(() => {
+    const clean = urlQ.trim()
+    if (!clean || clean.length < 3 || autoRanQRef.current === clean || !canAccessHistory(profile)) return
+    autoRanQRef.current = clean
+    setQ(clean)
+    runSearch(clean)
+  }, [urlQ, profile, runSearch])
 
   const search = useCallback(
     async (e) => {

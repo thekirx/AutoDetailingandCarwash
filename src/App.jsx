@@ -1,8 +1,9 @@
 import { lazy, Suspense } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useSearchParams } from 'react-router-dom'
 import ProtectedRoute from './auth/ProtectedRoute'
 import OpsRoleGate from './auth/OpsRoleGate'
-import { OPS_LOGIN_ROLES } from './auth/permissions'
+import { useAuth } from './auth/AuthProvider'
+import { allowRoute, canAccessCrm, canAccessRewardsHub, canUseAttendanceClock, OPS_LOGIN_ROLES, usesFloorAppShell } from './auth/permissions'
 import OperationsLayout from './layouts/OperationsLayout'
 import PublicLayout from './layouts/PublicLayout'
 import LoginPage from './pages/LoginPage'
@@ -47,11 +48,13 @@ const CustomerCarsPage = lazy(() => import('./pages/CustomerCarsPage'))
 const ContentAdminPage = lazy(() => import('./pages/ContentAdminPage'))
 
 const PeopleManagePage = lazy(() => import('./pages/PeopleManagePage'))
+const EmployeesHubPage = lazy(() => import('./pages/EmployeesHubPage'))
 const BranchesManagePage = lazy(() => import('./pages/BranchesManagePage'))
 const CarsCatalogPage = lazy(() => import('./pages/CarsCatalogPage'))
 const VehicleTransferPage = lazy(() => import('./pages/VehicleTransferPage'))
 const AuditLogPage = lazy(() => import('./pages/AuditLogPage'))
 const DataCenterPage = lazy(() => import('./pages/DataCenterPage'))
+const SystemHubPage = lazy(() => import('./pages/SystemHubPage'))
 const InquiriesPage = lazy(() => import('./pages/InquiriesPage'))
 const PosPage = lazy(() => import('./pages/PosPage'))
 const MerchShopPage = lazy(() => import('./pages/MerchShopPage'))
@@ -74,6 +77,7 @@ const BroadcastPage = lazy(() => import('./pages/BroadcastPage'))
 const ReportsPage = lazy(() => import('./pages/ReportsPage'))
 const MembershipsPage = lazy(() => import('./pages/MembershipsPage'))
 const VouchersPage = lazy(() => import('./pages/VouchersPage'))
+const RewardsPage = lazy(() => import('./pages/RewardsPage'))
 const MonthlyPayrollPage = lazy(() => import('./pages/MonthlyPayrollPage'))
 const MyPayslipsPage = lazy(() => import('./pages/MyPayslipsPage'))
 const ApprovalsPage = lazy(() => import('./pages/ApprovalsPage'))
@@ -122,6 +126,78 @@ const opsRoles = OPS_LOGIN_ROLES
 
 function gate(routeKey, el) {
   return <OpsRoleGate routeKey={routeKey}>{el}</OpsRoleGate>
+}
+
+function CustomerHubRedirect({ tab, subTabParam, fallback }) {
+  const { profile } = useAuth()
+  const [searchParams] = useSearchParams()
+  if (!canAccessCrm(profile)) return fallback
+  const params = new URLSearchParams(searchParams)
+  if (subTabParam && params.get('tab')) {
+    params.set(subTabParam, params.get('tab'))
+  }
+  params.set('tab', tab)
+  return <Navigate to={`/operations/crm?${params.toString()}`} replace />
+}
+
+function RewardsHubRedirect({ tab, subTabParam, fallback }) {
+  const { profile } = useAuth()
+  const [searchParams] = useSearchParams()
+  if (!canAccessRewardsHub(profile)) return fallback
+  const params = new URLSearchParams(searchParams)
+  if (subTabParam && params.get('tab')) {
+    params.set(subTabParam, params.get('tab'))
+  }
+  params.set('tab', tab)
+  return <Navigate to={`/operations/rewards?${params.toString()}`} replace />
+}
+
+function EmployeesHubRedirect({ defaultTab = 'employees', preserveTabParam = false, fallback }) {
+  const { profile } = useAuth()
+  const [searchParams] = useSearchParams()
+  if (!allowRoute(profile, 'employees') || usesFloorAppShell(profile)) return fallback
+  const params = new URLSearchParams(searchParams)
+  const incomingTab = params.get('tab')
+  const hubTabs = new Set(['clock', 'attendance', 'register', 'employees', 'access', 'settings'])
+  let resolvedTab = defaultTab
+  if (preserveTabParam && incomingTab && hubTabs.has(incomingTab)) {
+    resolvedTab = incomingTab
+  } else if (incomingTab && ['crew', 'tl', 'admins', 'office'].includes(incomingTab)) {
+    params.set('dtab', incomingTab)
+  }
+  const hasClock = canUseAttendanceClock(profile)
+  const isHubDefault = hasClock ? resolvedTab === 'clock' : resolvedTab === 'attendance'
+  if (isHubDefault) params.delete('tab')
+  else params.set('tab', resolvedTab)
+  const qs = params.toString()
+  return <Navigate to={qs ? `/operations/employees?${qs}` : '/operations/employees'} replace />
+}
+
+function FinanceHubRedirect({ tab, fallback }) {
+  const { profile } = useAuth()
+  const [searchParams] = useSearchParams()
+  if (!allowRoute(profile, 'finance')) return fallback
+  const params = new URLSearchParams(searchParams)
+  params.set('tab', tab)
+  return <Navigate to={`/operations/finance?${params.toString()}`} replace />
+}
+
+function SystemHubRedirect({ tab, fallback }) {
+  const { profile } = useAuth()
+  const [searchParams] = useSearchParams()
+  if (!allowRoute(profile, 'system')) return fallback
+  const params = new URLSearchParams(searchParams)
+  params.set('tab', tab)
+  return <Navigate to={`/operations/system?${params.toString()}`} replace />
+}
+
+function CatalogCarsRedirect({ fallback }) {
+  const { profile } = useAuth()
+  const [searchParams] = useSearchParams()
+  if (!allowRoute(profile, 'inventory') || !allowRoute(profile, 'cars')) return fallback
+  const params = new URLSearchParams(searchParams)
+  params.set('tab', 'cars')
+  return <Navigate to={`/operations/inventory?${params.toString()}`} replace />
 }
 
 function RouteFallback() {
@@ -209,33 +285,35 @@ export default function App() {
         <Route element={<ProtectedRoute allowedRoles={opsRoles} />}>
           <Route path="/operations" element={<OperationsLayout />}>
             <Route index element={<OpsIndexRedirect />} />
-            <Route path="people" element={gate('people', <PeopleManagePage />)} />
+            <Route path="employees" element={gate('employees', <EmployeesHubPage />)} />
+            <Route path="people" element={gate('people', <EmployeesHubRedirect defaultTab="employees" preserveTabParam fallback={<PeopleManagePage />} />)} />
             <Route path="branches" element={gate('branches', <BranchesManagePage />)} />
-            <Route path="cars" element={gate('cars', <CarsCatalogPage />)} />
-            <Route path="vehicle-transfer" element={gate('vehicle-transfer', <VehicleTransferPage />)} />
-            <Route path="audit" element={gate('audit', <AuditLogPage />)} />
-            <Route path="data-center" element={gate('data-center', <DataCenterPage />)} />
-            <Route path="inquiries" element={gate('inquiries', <InquiriesPage />)} />
+            <Route path="cars" element={gate('cars', <CatalogCarsRedirect fallback={<CarsCatalogPage />} />)} />
+            <Route path="vehicle-transfer" element={gate('vehicle-transfer', <CustomerHubRedirect tab="transfer" fallback={<VehicleTransferPage />} />)} />
+            <Route path="system" element={gate('system', <SystemHubPage />)} />
+            <Route path="audit" element={gate('audit', <SystemHubRedirect tab="audit" fallback={<AuditLogPage />} />)} />
+            <Route path="data-center" element={gate('data-center', <SystemHubRedirect tab="data-center" fallback={<DataCenterPage />} />)} />
+            <Route path="inquiries" element={gate('inquiries', <CustomerHubRedirect tab="inquiries" fallback={<InquiriesPage />} />)} />
             <Route path="dashboard" element={gate('dashboard', <OperationsDashboardPage />)} />
             <Route path="queue" element={gate('queue', <OperationsQueuePage />)} />
             <Route path="queue/new" element={gate('queue-new', <NewQueueTicketPage />)} />
             <Route path="queue/:id" element={gate('queue', <QueueTicketPage />)} />
             <Route path="crew" element={<Navigate to="/operations/attendance" replace />} />
-            <Route path="attendance" element={gate('attendance', <AttendancePage />)} />
+            <Route path="attendance" element={gate('attendance', <EmployeesHubRedirect defaultTab="attendance" preserveTabParam fallback={<AttendancePage />} />)} />
             <Route path="my-advances" element={gate('my-advances', <MyCashAdvancesPage />)} />
             <Route path="kpi" element={gate('kpi', <KpiPage />)} />
             <Route path="my-tasks" element={gate('my-tasks', <MyTasksPage />)} />
             <Route path="pos" element={gate('pos', <PosPage />)} />
-            <Route path="merch-shop" element={gate('merch-shop', <MerchShopPage />)} />
+            <Route path="merch-shop" element={gate('merch-shop', <RewardsHubRedirect tab="points-shop" fallback={<MerchShopPage />} />)} />
             <Route path="inventory" element={gate('inventory', <InventoryPage />)} />
-            <Route path="approvals" element={gate('approvals', <ApprovalsPage />)} />
+            <Route path="approvals" element={gate('approvals', <FinanceHubRedirect tab="approvals" fallback={<ApprovalsPage />} />)} />
             <Route path="finance" element={gate('finance', <FinancePage />)} />
-            <Route path="monthly-payroll" element={gate('monthly-payroll', <MonthlyPayrollPage />)} />
+            <Route path="monthly-payroll" element={gate('monthly-payroll', <FinanceHubRedirect tab="salaries" fallback={<MonthlyPayrollPage />} />)} />
             <Route path="my-pay" element={<Navigate to="/operations" replace />} />
             <Route path="payslips" element={gate('payslips', <MyPayslipsPage />)} />
             <Route path="payroll" element={<Navigate to="/operations/monthly-payroll" replace />} />
             <Route path="crm" element={gate('crm', <CrmPage />)} />
-            <Route path="services" element={gate('inventory', <Navigate to="/operations/inventory" replace />)} />
+            <Route path="services" element={gate('inventory', <Navigate to="/operations/inventory?tab=services&scope=bay" replace />)} />
             <Route path="products" element={gate('inventory', <Navigate to="/operations/inventory?tab=merch" replace />)} />
             <Route path="sms" element={gate('crm', <Navigate to="/operations/crm?tab=sms" replace />)} />
             <Route path="bookings" element={gate('bookings', <BookingBoardPage />)} />
@@ -253,8 +331,9 @@ export default function App() {
             <Route path="history" element={gate('history', <HistoryPage />)} />
             <Route path="broadcast" element={gate('notifications', <BroadcastPage />)} />
             <Route path="reports" element={gate('reports', <ReportsPage />)} />
-            <Route path="memberships" element={gate('memberships', <MembershipsPage />)} />
-            <Route path="vouchers" element={gate('vouchers', <VouchersPage />)} />
+            <Route path="rewards" element={gate('rewards', <RewardsPage />)} />
+            <Route path="memberships" element={gate('memberships', <RewardsHubRedirect tab="memberships" subTabParam="mtab" fallback={<MembershipsPage />} />)} />
+            <Route path="vouchers" element={gate('vouchers', <RewardsHubRedirect tab="vouchers" fallback={<VouchersPage />} />)} />
             <Route path="reviews" element={gate('reviews', <Navigate to="/operations/forms/results" replace />)} />
           </Route>
         </Route>

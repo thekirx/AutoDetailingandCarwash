@@ -1,9 +1,10 @@
 /** Finance module shell — Xero-like books hub for Hakum Auto Care.
  * Tabs: Dashboard · Sales · Bills · P&L · Shift · Expense reports · Categories · Reports.
  * Real POS income + real expenses, scoped per branch or all branches. */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import {
+  Banknote,
   LayoutDashboard,
   ShoppingCart,
   Receipt,
@@ -19,7 +20,14 @@ import {
   ChevronDown,
 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessFinance, canEditFinanceBooks, canOpenFinanceHub, canSeeAllBranches, ROLES } from '@/auth/permissions'
+import {
+  canAccessApprovals,
+  canAccessFinance,
+  canEditFinanceBooks,
+  canOpenFinanceHub,
+  canSeeAllBranches,
+  ROLES,
+} from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
 import { supabase } from '@/lib/supabase'
 import { Badge } from '@/components/ui/badge'
@@ -80,6 +88,9 @@ import OpsGuideCard from '@/components/ops/OpsGuideCard'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import { FINANCE_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
 
+const MonthlyPayrollPage = lazy(() => import('@/pages/MonthlyPayrollPage'))
+const ApprovalsPage = lazy(() => import('@/pages/ApprovalsPage'))
+
 const TAB_ICONS = {
   overview: LayoutDashboard,
   sheets: ClipboardList,
@@ -92,6 +103,8 @@ const TAB_ICONS = {
   quotes: Mail,
   corporate: Building2,
   categories: Tags,
+  salaries: Banknote,
+  approvals: ClipboardCheck,
   reports: BookOpen,
 }
 
@@ -102,6 +115,8 @@ export default function FinancePage() {
   const canManageVendors = canManageFinanceVendors(profile)
   const showCorporate = canAccessCorporateFinance(profile)
   const showSheets = canReviewDailySheet(profile)
+  const showSalaries = canEditFinanceBooks(profile)
+  const showApprovals = canAccessApprovals(profile)
   const reportsOnly = !booksAccess && canOpenFinanceHub(profile)
   const [searchParams, setSearchParams] = useSearchParams()
   const scope = branchScopeList(profile)
@@ -122,11 +137,13 @@ export default function FinancePage() {
     return FINANCE_TABS.filter((t) => {
       if (t.id === 'corporate') return showCorporate
       if (t.id === 'sheets') return showSheets
+      if (t.id === 'salaries') return showSalaries
+      if (t.id === 'approvals') return showApprovals
       // Quotes write is SA/ASA/admin; investor has no SELECT on finance_quotes
       if (t.id === 'quotes' && profile?.role === ROLES.INVESTOR) return false
       return true
     })
-  }, [reportsOnly, showCorporate, showSheets, profile?.role])
+  }, [reportsOnly, showCorporate, showSheets, showSalaries, showApprovals, profile?.role])
   const primaryTabs = useMemo(
     () => visibleTabs.filter((t) => FINANCE_PRIMARY_TAB_IDS.includes(t.id)),
     [visibleTabs],
@@ -244,48 +261,62 @@ export default function FinancePage() {
       const startIso = `${queryRange.start}T00:00:00+08:00`
       const endIso = `${queryRange.end}T23:59:59.999+08:00`
 
-      let salesQ = supabase
-        .from('daily_sales_summary')
-        .select('*')
-        .gte('sale_date', queryRange.start)
-        .lte('sale_date', queryRange.end)
-        .order('sale_date', { ascending: false })
-      salesQ = scopeBranch(salesQ, profile, branchFilter)
+      const fetchSalesSummaryRows = (fromYmd, toYmd) =>
+        collectPaged(async (from, to) => {
+          let q = supabase
+            .from('daily_sales_summary')
+            .select('*')
+            .gte('sale_date', fromYmd)
+            .lte('sale_date', toYmd)
+            .order('sale_date', { ascending: false })
+            .order('branch', { ascending: true })
+            .range(from, to)
+          q = scopeBranch(q, profile, branchFilter)
+          const { data, error } = await q
+          if (error) throw error
+          return data || []
+        }, 1000)
 
-      let plQ = supabase
-        .from('finance_daily_pl')
-        .select('*')
-        .gte('period_date', queryRange.start)
-        .lte('period_date', queryRange.end)
-      plQ = scopeBranch(plQ, profile, branchFilter)
+      const fetchPlRows = (fromYmd, toYmd) =>
+        collectPaged(async (from, to) => {
+          let q = supabase
+            .from('finance_daily_pl')
+            .select('*')
+            .gte('period_date', fromYmd)
+            .lte('period_date', toYmd)
+            .order('period_date', { ascending: false })
+            .order('branch', { ascending: true })
+            .order('kind', { ascending: true })
+            .order('category', { ascending: true })
+            .range(from, to)
+          q = scopeBranch(q, profile, branchFilter)
+          const { data, error } = await q
+          if (error) throw error
+          return data || []
+        }, 1000)
 
-      let kindQ = supabase
-        .from('finance_daily_line_kind')
-        .select('branch, period_date, line_kind, amount_minor')
-        .gte('period_date', queryRange.start)
-        .lte('period_date', queryRange.end)
-      kindQ = scopeBranch(kindQ, profile, branchFilter)
+      const fetchKindRows = (fromYmd, toYmd) =>
+        collectPaged(async (from, to) => {
+          let q = supabase
+            .from('finance_daily_line_kind')
+            .select('branch, period_date, line_kind, amount_minor')
+            .gte('period_date', fromYmd)
+            .lte('period_date', toYmd)
+            .order('period_date', { ascending: false })
+            .order('branch', { ascending: true })
+            .order('line_kind', { ascending: true })
+            .range(from, to)
+          q = scopeBranch(q, profile, branchFilter)
+          const { data, error } = await q
+          if (error) return []
+          return data || []
+        }, 1000)
 
-      let priorQ = null
-      if (compareRange) {
-        priorQ = supabase
-          .from('finance_daily_pl')
-          .select('*')
-          .gte('period_date', compareRange.start)
-          .lte('period_date', compareRange.end)
-        priorQ = scopeBranch(priorQ, profile, branchFilter)
-      }
-      const priorKindQ = compareRange
-        ? scopeBranch(
-            supabase
-              .from('finance_daily_line_kind')
-              .select('branch, period_date, line_kind, amount_minor')
-              .gte('period_date', compareRange.start)
-              .lte('period_date', compareRange.end),
-            profile,
-            branchFilter,
-          )
-        : Promise.resolve({ data: [], error: null })
+      const salesQ = fetchSalesSummaryRows(queryRange.start, queryRange.end)
+      const plQ = fetchPlRows(queryRange.start, queryRange.end)
+      const kindQ = fetchKindRows(queryRange.start, queryRange.end)
+      const priorQ = compareRange ? fetchPlRows(compareRange.start, compareRange.end) : Promise.resolve([])
+      const priorKindQ = compareRange ? fetchKindRows(compareRange.start, compareRange.end) : Promise.resolve([])
 
       let lastPaidQ = supabase
         .from('daily_sales_summary')
@@ -315,6 +346,7 @@ export default function FinancePage() {
             .gte('occurred_at', fromIso)
             .lte('occurred_at', toIso)
             .order('occurred_at', { ascending: false })
+            .order('id', { ascending: false })
             .range(from, to)
           q = scopeBranch(q, profile, branchFilter)
           const { data, error } = await q
@@ -335,13 +367,14 @@ export default function FinancePage() {
             .gte('created_at', startIso)
             .lte('created_at', endIso)
             .order('created_at', { ascending: false })
+            .order('id', { ascending: false })
             .range(from, to)
           q = scopeBranch(q, profile, branchFilter)
           const { data, error } = await q
           if (error) throw error
           return data || []
         }, 1000),
-        priorQ || Promise.resolve({ data: [], error: null }),
+        priorQ,
         supabase.from('vendors').select('id, name, is_active').eq('is_active', true).order('name'),
         lastPaidQ,
         sheetCountQ,
@@ -350,19 +383,16 @@ export default function FinancePage() {
         priorKindQ,
       ])
       if (cats.error) throw cats.error
-      if (sales.error) throw sales.error
-      if (pl.error) throw pl.error
-      if (prior.error) throw prior.error
       // ponytail: vendors table may be missing until P5 migration — soft-fail empty list
       if (vendorRes.error) console.warn('vendors load:', vendorRes.error.message)
       setBranches(branchRows || [])
       setCategories(cats.data || [])
       setVendors(vendorRes.error ? [] : vendorRes.data || [])
-      setSalesRows(sales.data || [])
-      setKindRows(kindRes.error ? [] : kindRes.data || [])
-      setPriorKindRows(priorKindRes.error ? [] : priorKindRes.data || [])
-      setPlRows(pl.data || [])
-      setPriorPlRows(prior.data || [])
+      setSalesRows(sales || [])
+      setKindRows(kindRes || [])
+      setPriorKindRows(priorKindRes || [])
+      setPlRows(pl || [])
+      setPriorPlRows(prior || [])
       setExpenses(expRows)
       setSaleRows(curSales)
       setPriorSaleRows(prevSales)
@@ -722,6 +752,22 @@ export default function FinancePage() {
         <TabsContent value="categories" className="finance-tab-panel">
           <FinanceCategoriesTab categories={categories} canWrite={canWrite} onReload={load} />
         </TabsContent>
+
+        {showSalaries ? (
+          <TabsContent value="salaries" className="finance-tab-panel">
+            <Suspense fallback={<p className="py-6 text-sm text-muted-foreground">Loading monthly salaries…</p>}>
+              <MonthlyPayrollPage embedded />
+            </Suspense>
+          </TabsContent>
+        ) : null}
+
+        {showApprovals ? (
+          <TabsContent value="approvals" className="finance-tab-panel">
+            <Suspense fallback={<p className="py-6 text-sm text-muted-foreground">Loading approvals…</p>}>
+              <ApprovalsPage embedded />
+            </Suspense>
+          </TabsContent>
+        ) : null}
 
         <TabsContent value="reports" className="finance-tab-panel">
           <FinanceReportsTab

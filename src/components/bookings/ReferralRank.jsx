@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { collectPaged } from '@/lib/crmInsights'
 import { supabase } from '@/lib/supabase'
 import { rankReferrals } from '@/lib/referralSource'
 
@@ -37,24 +38,31 @@ export default function ReferralRank({ start, end, branch = 'all' }) {
     const from = start instanceof Date ? start.toISOString() : start
     const to = end instanceof Date ? end.toISOString() : end
     if (!from || !to) return undefined
-    let query = supabase
-      .from('bookings')
-      .select('referral_source, referred_by_name, created_at, branch')
-      .eq('is_archived', false)
-      .gte('created_at', from)
-      .lte('created_at', to)
-      .limit(1000)
-    if (branch && branch !== 'all') query = query.eq('branch', branch)
-    query.then(({ data, error: queryError }) => {
-      if (cancelled) return
-      if (queryError) {
-        setError(queryError.message)
+    collectPaged(async (rangeFrom, rangeTo) => {
+      let query = supabase
+        .from('bookings')
+        .select('referral_source, referred_by_name, created_at, branch')
+        .eq('is_archived', false)
+        .gte('created_at', from)
+        .lte('created_at', to)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .range(rangeFrom, rangeTo)
+      if (branch && branch !== 'all') query = query.eq('branch', branch)
+      const { data, error: queryError } = await query
+      if (queryError) throw queryError
+      return data || []
+    }, 1000)
+      .then((data) => {
+        if (cancelled) return
+        setError('')
+        setRows(data || [])
+      })
+      .catch((queryError) => {
+        if (cancelled) return
+        setError(queryError?.message || 'Unable to load referrals')
         setRows([])
-        return
-      }
-      setError('')
-      setRows(data || [])
-    })
+      })
     return () => {
       cancelled = true
     }

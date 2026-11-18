@@ -16,6 +16,8 @@ export const FINANCE_TABS = [
   { id: 'quotes', label: 'Quotations', hint: 'Email quotations to CRM customers', group: 'Settings' },
   { id: 'corporate', label: 'Corporate', hint: 'HQ books, EOM roll-up, manual cash balance', group: 'Settings' },
   { id: 'categories', label: 'Accounts', hint: 'Chart of accounts used by Daily Sheets and Bills', group: 'Settings' },
+  { id: 'salaries', label: 'Monthly salaries', hint: 'Office and admin semi-monthly payroll & base rates', group: 'Accounting' },
+  { id: 'approvals', label: 'Approvals', hint: 'Pending branch restock requests and approval queue', group: 'Books' },
   { id: 'reports', label: 'Reports', hint: 'Sales, operations, and retention exports', group: 'Reports' },
 ]
 
@@ -196,7 +198,10 @@ export const DATE_PRESETS = [
   { value: 'quarter', label: 'This quarter' },
   { value: '3mo', label: 'Last 3 months' },
   { value: '6mo', label: 'Last 6 months' },
+  { value: '12mo', label: 'Last 12 months' },
   { value: 'year', label: 'This year' },
+  { value: 'last_year', label: 'Last year' },
+  { value: 'all', label: 'All time' },
   { value: 'custom', label: 'Custom' },
 ]
 
@@ -329,7 +334,14 @@ export function financeRange(preset, customStart, customEnd, now = new Date()) {
     const end = new Date(now.getFullYear(), 11, 31)
     return { start: toManilaDay(start), end: toManilaDay(end) }
   }
-  const months = preset === '6mo' ? 6 : 3
+  if (preset === 'last_year') {
+    const y = now.getFullYear() - 1
+    return { start: `${y}-01-01`, end: `${y}-12-31` }
+  }
+  if (preset === 'all') {
+    return { start: '2025-01-01', end: toManilaDay(now) }
+  }
+  const months = preset === '12mo' ? 12 : preset === '6mo' ? 6 : 3
   const end = new Date(now)
   const start = new Date(now)
   start.setMonth(start.getMonth() - months)

@@ -34,7 +34,7 @@ export function filterDirectoryPeople(people = [], { tab = 'crew', q = '', branc
   const query = String(q || '').trim().toLowerCase()
   const branchKey = String(branch || '').trim()
   return (people || []).filter((row) => {
-    if (tab && personDirectoryTab(row.role) !== tab) return false
+    if (tab && tab !== 'all' && personDirectoryTab(row.role) !== tab) return false
     if (status === 'active' && !row.is_active) return false
     if (status === 'inactive' && row.is_active) return false
     if (branchKey) {

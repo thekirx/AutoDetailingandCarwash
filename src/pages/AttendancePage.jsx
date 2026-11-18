@@ -77,6 +77,7 @@ export default function AttendancePage() {
                 profile={profile}
                 canManage={canManageCrew(profile)}
                 showClock
+                showFloor={false}
                 showRegister={false}
               />
             </TabsContent>
@@ -88,6 +89,7 @@ export default function AttendancePage() {
                 profile={profile}
                 canManage={canManageCrew(profile)}
                 showClock={false}
+                showFloor
                 showRegister
               />
             </TabsContent>
@@ -102,10 +104,10 @@ export default function AttendancePage() {
       ) : (
         <>
           {tab === 'clock' && showClock ? (
-            <CrewAttendancePanel profile={profile} canManage={canManageCrew(profile)} showClock showRegister={false} />
+            <CrewAttendancePanel profile={profile} canManage={canManageCrew(profile)} showClock showFloor={false} showRegister={false} />
           ) : null}
           {tab === 'register' && canRegisterTab ? (
-            <CrewAttendancePanel profile={profile} canManage={canManageCrew(profile)} showClock={false} showRegister />
+            <CrewAttendancePanel profile={profile} canManage={canManageCrew(profile)} showClock={false} showFloor showRegister />
           ) : null}
           {tab === 'settings' && showSettings ? <CrewSettingsPanel profile={profile} /> : null}
         </>

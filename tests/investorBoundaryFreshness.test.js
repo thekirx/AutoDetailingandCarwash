@@ -45,7 +45,7 @@ const read = (p) => readFileSync(join(root, p), 'utf8')
  */
 const code = (p) => read(p).replace(/^\s*\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '')
 const investor = { role: ROLES.INVESTOR }
-const keyOf = (to) => String(to || '').replace(/^\/operations\/?/, '')
+const keyOf = (to) => String(to || '').split('?')[0].replace(/^\/operations\/?/, '')
 
 describe('the investor sees only what the investor gate allows', () => {
   const navKeys = getOperationsNav(investor).map((i) => keyOf(i.to))

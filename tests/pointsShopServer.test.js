@@ -17,7 +17,8 @@ test('branch/role scope and services_merch page grant are enforced', () => {
  assert.equal(allowRoute(asa,'merch-shop'),false)
  assert.equal(allowRoute({...asa,permission_grants:{services_merch:true}},'merch-shop'),true)
  const nav=getOperationsNav({role:'BossMich'}).map((r)=>r.label)
- assert.equal(nav.indexOf('Merch shop'),nav.indexOf('Memberships')+1)
+ assert.ok(nav.includes('Customers'))
+ assert.equal(nav.includes('Merch shop'),false)
 })
 test('claim/reminder/expiry messages contain no code; duplicate inbox means no duplicate push', async () => {
  const messages=[];const pushes=[];const tags=new Set()

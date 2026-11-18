@@ -98,21 +98,47 @@ export function voucherScopeLabel(voucher, serviceName = '') {
   return 'all services'
 }
 
-export function customerVoucherRulesLine(voucher) {
+export function formatPromoDiscount(voucher) {
   if (!voucher) return ''
-  const left = promoVoucherRemaining(voucher)
-  let kind = ''
-  if (voucher.discount_kind === 'free') {
-    kind = 'Free service'
-  } else if (voucher.discount_kind === 'fixed' || voucher.discount_kind === 'amount') {
+  if (voucher.discount_kind === 'free') return 'Free service'
+  if (voucher.discount_kind === 'fixed' || voucher.discount_kind === 'amount') {
     const amtMinor = voucher.discount_amount_minor != null
       ? Number(voucher.discount_amount_minor)
       : (Number(voucher.discount_amount || 0) * 100)
     const pesos = Math.round(amtMinor / 100)
-    kind = `₱${pesos.toLocaleString()} off`
-  } else {
-    kind = `${Math.round(Number(voucher.discount_percent) || 0)}% off`
+    return `₱${pesos.toLocaleString()} off`
   }
+  return `${Math.round(Number(voucher.discount_percent) || 0)}% off`
+}
+
+export function formatPromoScope(voucher, serviceName = '') {
+  if (!voucher) return 'All services'
+  const scope = String(voucher?.applies_to || 'any')
+  if (scope === 'detailing') return 'Detailing only'
+  if (scope === 'wash') return 'Wash and packages'
+  if (scope === 'service' || voucher?.service_id) {
+    const name = serviceName || voucher?.services?.name || ''
+    return name ? `${name} only` : 'Specific service'
+  }
+  if (scope !== 'any') return `${scope} only`
+  return 'All services'
+}
+
+export function promoVoucherStatus(voucher, todayKey) {
+  if (!voucher || voucher.is_active === false) return { id: 'paused', label: 'Paused' }
+  if (promoVoucherRemaining(voucher) <= 0) return { id: 'exhausted', label: 'Used up' }
+  const today = String(todayKey || '').slice(0, 10)
+  const start = voucher.starts_on ? String(voucher.starts_on).slice(0, 10) : ''
+  const end = voucher.ends_on ? String(voucher.ends_on).slice(0, 10) : ''
+  if (end && today && today > end) return { id: 'expired', label: 'Expired' }
+  if (start && today && today < start) return { id: 'scheduled', label: 'Scheduled' }
+  return { id: 'active', label: 'Active' }
+}
+
+export function customerVoucherRulesLine(voucher) {
+  if (!voucher) return ''
+  const left = promoVoucherRemaining(voucher)
+  const kind = formatPromoDiscount(voucher)
   const when = voucher.ends_on ? ` until ${String(voucher.ends_on).slice(0, 10)}` : ''
   return `${kind}. ${left} of ${voucher.max_uses} uses left${when}. Show the code to the Team Lead.`
 }

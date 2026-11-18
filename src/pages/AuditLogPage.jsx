@@ -18,7 +18,7 @@ function formatWhen(iso) {
   }
 }
 
-export default function AuditLogPage() {
+export default function AuditLogPage({ embedded = false } = {}) {
   const { profile } = useAuth()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
@@ -69,6 +69,31 @@ export default function AuditLogPage() {
       )
     : rows
 
+  const inner = (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <FilterBar search={q} onSearchChange={setQ} searchPlaceholder="Search actions, actors, entities…" onClear={() => setQ('')} />
+        </div>
+        {embedded ? (
+          <Button variant="outline" className="min-h-11 shrink-0" onClick={load} disabled={loading}>
+            {loading ? 'Refreshing…' : 'Refresh'}
+          </Button>
+        ) : null}
+      </div>
+      <DataTable
+        columns={columns}
+        data={filtered}
+        searchKeys={false}
+        emptyTitle="No audit events"
+        emptyDescription="Create or edit a branch, person, or service to start the trail."
+        getRowId={(row) => row.id}
+      />
+    </div>
+  )
+
+  if (embedded) return inner
+
   return (
     <OpsPageShell
       className="hakum-audit"
@@ -82,15 +107,7 @@ export default function AuditLogPage() {
         </Button>
       }
     >
-      <FilterBar search={q} onSearchChange={setQ} searchPlaceholder="Search actions, actors, entities…" onClear={() => setQ('')} />
-      <DataTable
-        columns={columns}
-        data={filtered}
-        searchKeys={false}
-        emptyTitle="No audit events"
-        emptyDescription="Create or edit a branch, person, or service to start the trail."
-        getRowId={(row) => row.id}
-      />
+      {inner}
     </OpsPageShell>
   )
 }

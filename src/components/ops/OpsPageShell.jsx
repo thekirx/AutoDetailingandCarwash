@@ -54,7 +54,7 @@ export default function OpsPageShell({
         {meta || actions ? (
           <div className="flex flex-col items-stretch gap-2 sm:items-end sticky bottom-0 z-10 bg-background/95 py-1 backdrop-blur supports-backdrop-filter:bg-background/80 lg:static lg:bg-transparent lg:py-0 lg:backdrop-blur-none">
             {meta ? (
-              <div className="ops-page-meta flex items-center gap-2 rounded-[var(--shape-card)] border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
+              <div className="ops-page-meta self-start sm:self-end flex items-center gap-2 rounded-[var(--shape-card)] border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
                 {meta}
               </div>
             ) : null}

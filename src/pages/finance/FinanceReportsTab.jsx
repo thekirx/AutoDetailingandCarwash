@@ -119,14 +119,24 @@ export default function FinanceReportsTab({
         profile,
         branchFilter,
       ),
-      scopeBranch(
-        supabase
-          .from('finance_customer_retention')
-          .select('branch, customer_id, full_name, phone, paid_sales, total_spent_minor, first_paid_at, last_paid_at')
-          .order('total_spent_minor', { ascending: false })
-          .limit(allSites ? 200 : 50),
-        profile,
-        branchFilter,
+      collectPaged(async (from, to) => {
+        let q = scopeBranch(
+          supabase
+            .from('finance_customer_retention')
+            .select('branch, customer_id, full_name, phone, paid_sales, total_spent_minor, first_paid_at, last_paid_at')
+            .order('total_spent_minor', { ascending: false })
+            .order('customer_id', { ascending: true })
+            .order('branch', { ascending: true })
+            .range(from, to),
+          profile,
+          branchFilter,
+        )
+        const { data, error } = await q
+        if (error) throw error
+        return data || []
+      }, 1000).then(
+        (data) => ({ data, error: null }),
+        (error) => ({ data: [], error }),
       ),
       shiftQ,
       collectPaged(async (from, to) => {
@@ -137,6 +147,7 @@ export default function FinanceReportsTab({
           .gte('occurred_at', startIso)
           .lte('occurred_at', endIso)
           .order('occurred_at', { ascending: false })
+          .order('id', { ascending: false })
           .range(from, to)
         q = scopeBranch(q, profile, branchFilter)
         const { data, error } = await q

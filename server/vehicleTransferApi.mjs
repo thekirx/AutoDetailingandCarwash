@@ -6,6 +6,7 @@ import {
   transferRefusal,
 } from '../src/lib/vehicleTransfer.js'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
+import { requireActiveStaff } from './staffAuth.mjs'
 import { adminClient } from './supabaseAdmin.mjs'
 
 async function visitBranchesFor(admin, vehicle) {
@@ -27,6 +28,39 @@ async function visitBranchesFor(admin, vehicle) {
     for (const row of byPlate || []) if (row.branch) branches.add(row.branch)
   }
   return [...branches]
+}
+
+export async function searchTransferCandidates({ accessToken, q = '' }) {
+  const admin = adminClient()
+  await requireTransferStaff(admin, accessToken)
+  const raw = String(q || '').trim()
+  const safe = raw.replace(/[,()*\\]/g, ' ').replace(/[%_]/g, '').trim()
+
+  let vehicleQuery = admin
+    .from('vehicles')
+    .select('id, plate_number, vehicle_make, vehicle_model, vehicle_type, customer_id, customers(id, full_name, phone)')
+    .eq('is_archived', false)
+    .order('created_at', { ascending: false })
+    .limit(40)
+  if (safe) {
+    vehicleQuery = vehicleQuery.or(`plate_number.ilike.%${safe}%,vehicle_make.ilike.%${safe}%,vehicle_model.ilike.%${safe}%`)
+  }
+
+  let customerQuery = admin
+    .from('customers')
+    .select('id, full_name, phone, email')
+    .eq('role', 'customer')
+    .eq('is_archived', false)
+    .order('created_at', { ascending: false })
+    .limit(40)
+  if (safe) {
+    customerQuery = customerQuery.or(`full_name.ilike.%${safe}%,phone.ilike.%${safe}%,email.ilike.%${safe}%`)
+  }
+
+  const [{ data: vehicles, error: vErr }, { data: customers, error: cErr }] = await Promise.all([vehicleQuery, customerQuery])
+  if (vErr) throw Object.assign(new Error(vErr.message), { status: 400 })
+  if (cErr) throw Object.assign(new Error(cErr.message), { status: 400 })
+  return { vehicles: vehicles || [], customers: customers || [] }
 }
 
 async function openMaintenanceRows(admin, vehicle) {
@@ -147,28 +181,16 @@ export async function transferVehicle({ accessToken, vehicleId, toCustomerId }) 
 }
 
 async function requireTransferStaff(admin, accessToken) {
-  if (!accessToken) throw Object.assign(new Error('Sign in required.'), { status: 401 })
-  const { data: userData } = await admin.auth.getUser(accessToken)
-  const callerId = userData?.user?.id
-  if (!callerId) throw Object.assign(new Error('Sign in required.'), { status: 401 })
-  const { data: staff } = await admin
-    .from('staff_profiles')
-    .select('id, role, is_active, branch_slug')
-    .eq('id', callerId)
-    .eq('is_active', true)
-    .maybeSingle()
-  if (!canTransferVehicle(staff)) {
-    throw Object.assign(new Error('Only Super Admin, Assistant Super Admin, or Branch Admin can transfer a car.'), { status: 403 })
-  }
-  let branchSlugs = staff.branch_slug ? [staff.branch_slug] : []
-  if (staff.role === 'admin') {
-    const { data: assigns, error } = await admin
-      .from('staff_branch_assignments')
-      .select('branch_slug')
-      .eq('staff_id', staff.id)
-    if (error) throw Object.assign(new Error(error.message), { status: 400 })
-    if (assigns?.length) branchSlugs = assigns.map((row) => row.branch_slug).filter(Boolean)
-  }
+  const staff = await requireActiveStaff(admin, accessToken, {
+    select: 'id, role, is_active, branch_slug',
+    unauthorizedMessage: 'Sign in required.',
+    forbiddenMessage: 'Only Super Admin, Assistant Super Admin, or Branch Admin can transfer a car.',
+    authorize: (row) => canTransferVehicle(row),
+    hydrateBranches: true,
+  })
+  const fallbackBranches = staff.branch_slug ? [staff.branch_slug] : []
+  const branchSlugs =
+    staff.role === 'admin' && staff.extraBranchSlugs?.length ? staff.extraBranchSlugs : fallbackBranches
   return { ...staff, branchSlugs }
 }
 
@@ -211,6 +233,9 @@ export async function handleVehicleTransferRequest(req, res) {
   try {
     const body = await readJsonBody(req)
     const token = bearer(req)
+    if (body.action === 'search') {
+      return json(res, 200, await searchTransferCandidates({ accessToken: token, q: body.q }))
+    }
     if (body.action === 'lookup') {
       return json(res, 200, await lookupTransfer({ accessToken: token, plate: body.plate, phone: body.phone }))
     }

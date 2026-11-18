@@ -1,5 +1,6 @@
 /** BA restock + Sunday recon; SA/ASA also approve recon and set absolute qty. */
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { AlertTriangle, CheckCircle2, ClipboardCheck, Clock, Info, Package, Sparkles, XCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
@@ -52,10 +53,29 @@ export default function BranchInventoryPage({
   canMutate = true,
 } = {}) {
   const { profile, user } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const canCatalog = canManageServices(profile)
   const canEditStock = canModifyStock(profile)
   const scopeList = getBranchScopeList(profile)
-  const [tab, setTab] = useState(defaultTab === 'recon' ? 'recon' : 'restock')
+  const [localTab, setLocalTab] = useState(defaultTab === 'recon' ? 'recon' : 'restock')
+  const urlTab = searchParams.get('tab') === 'recon'
+    ? 'recon'
+    : searchParams.get('tab') === 'restock'
+      ? 'restock'
+      : (defaultTab === 'recon' ? 'recon' : 'restock')
+  const tab = embedded ? localTab : urlTab
+
+  function setTab(next) {
+    if (embedded) {
+      setLocalTab(next)
+      return
+    }
+    setSearchParams((prev) => {
+      const params = new URLSearchParams(prev)
+      params.set('tab', next === 'recon' ? 'recon' : 'restock')
+      return params
+    }, { replace: true })
+  }
   const [stockFilter, setStockFilter] = useState('assigned')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [branches, setBranches] = useState([])

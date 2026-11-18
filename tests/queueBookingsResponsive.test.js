@@ -63,6 +63,22 @@ describe('open bookings + queue one-screen board', () => {
     assert.match(css, /\.queue-lane-dimmed[\s\S]*display:\s*none/)
   })
 
+  it('carwash board matches detailing board chrome, filters, Grid/Columns toggle, and ticket cards', () => {
+    const page = readFileSync(join(root, 'src/pages/OperationsPages.jsx'), 'utf8')
+    const css = readFileSync(join(root, 'src/styles.css'), 'utf8')
+    assert.match(page, /className="bk-board"/)
+    assert.match(page, /className="bk-board-toolbar"/)
+    assert.match(page, /className="bk-status-strip"/)
+    assert.match(page, /className="bk-seg-group"/)
+    assert.match(page, /showEmptyLanes/)
+    assert.match(page, /bk-board-grid/)
+    assert.match(page, /bk-card-plate-tag/)
+    assert.match(page, /bk-card-meta-row/)
+    assert.match(page, /bk-card-foot/)
+    assert.match(page, /useUrlQueryState/)
+    assert.match(css, /\.queue-board\s+\.queue-lane-board-fit\.bk-board-grid/)
+  })
+
   it('public kiosk views keep open jobs until completed (migration)', () => {
     const migration = readFileSync(
       join(root, 'supabase/migrations/20260828140000_queue_open_until_pos_complete.sql'),

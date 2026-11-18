@@ -97,8 +97,17 @@ export async function fetchExpenseCategoryLines({
     categoryName === 'Cash advance and cash advance payment' ||
     /cash advance/i.test(categoryName)
 
-  // 1. Fetch from public.expenses
+  const isAll =
+    !categoryName ||
+    categoryName.startsWith('All ') ||
+    categoryName === 'Total operating expenses' ||
+    categoryName === 'Operating expenses'
+
+  const isUncategorized = categoryName.toLowerCase() === 'uncategorized'
+
+  // 1. Fetch from public.expenses (narrow at the database layer when drilling into a specific account)
   const expenseRows = await collectPaged(async (from, to) => {
+    const catRel = isAll || isUncategorized ? 'expense_categories (id, name, code)' : 'expense_categories!inner (id, name, code)'
     let q = supabase
       .from('expenses')
       .select(`
@@ -117,33 +126,22 @@ export async function fetchExpenseCategoryLines({
         vendor_id,
         category_id,
         vendors (name),
-        expense_categories (id, name, code)
+        ${catRel}
       `)
       .in('status', ['paid', 'posted'])
 
+    if (isUncategorized) q = q.is('category_id', null)
+    else if (!isAll) q = q.eq('expense_categories.name', categoryName)
     if (start) q = q.gte('created_at', `${start}T00:00:00+08:00`)
     if (end) q = q.lte('created_at', `${end}T23:59:59.999+08:00`)
 
     q = scopeBranch(q, profile, branch)
-    const { data, error } = await q.order('created_at', { ascending: false }).range(from, to)
+    const { data, error } = await q.order('created_at', { ascending: false }).order('id', { ascending: false }).range(from, to)
     if (error) throw error
     return data || []
   }, 1000)
 
-  // Filter to matching category name
-  const isAll =
-    !categoryName ||
-    categoryName.startsWith('All ') ||
-    categoryName === 'Total operating expenses' ||
-    categoryName === 'Operating expenses'
-
-  const matchedExpenses = isAll
-    ? expenseRows
-    : expenseRows.filter(
-        (r) =>
-          (r.expense_categories?.name || 'Uncategorized').toLowerCase() ===
-          categoryName.toLowerCase()
-      )
+  const matchedExpenses = expenseRows
 
   const normalized = matchedExpenses.map((r) => {
     const meta = getExpenseSourceMeta(r)
@@ -261,6 +259,12 @@ export async function fetchIncomeCategoryLines({
   const lineKind = isAll ? null : FAMILY_TO_LINE_KIND[categoryName]
 
   const salesRows = await collectPaged(async (from, to) => {
+    const lineItemsSelect = lineKind
+      ? 'sale_line_items!inner (id, name, item_type, line_kind, quantity, unit_price_minor, line_total_minor, service_id, services (slug, pay_category))'
+      : isDiscounts
+        ? ''
+        : 'sale_line_items (id, name, item_type, line_kind, quantity, unit_price_minor, line_total_minor, service_id, services (slug, pay_category))'
+
     let q = supabase
       .from('sales')
       .select(`
@@ -272,26 +276,17 @@ export async function fetchIncomeCategoryLines({
         discount_reason,
         payment_method,
         status,
-        customers (full_name),
-        sale_line_items (
-          id,
-          name,
-          item_type,
-          line_kind,
-          quantity,
-          unit_price_minor,
-          line_total_minor,
-          service_id,
-          services (slug, pay_category)
-        )
+        customers (full_name)${lineItemsSelect ? `, ${lineItemsSelect}` : ''}
       `)
       .eq('status', 'paid')
 
+    if (lineKind) q = q.eq('sale_line_items.line_kind', lineKind)
+    if (isDiscounts) q = q.gt('discount_minor', 0)
     if (start) q = q.gte('occurred_at', `${start}T00:00:00+08:00`)
     if (end) q = q.lte('occurred_at', `${end}T23:59:59.999+08:00`)
 
     q = scopeBranch(q, profile, branch)
-    const { data, error } = await q.order('occurred_at', { ascending: false }).range(from, to)
+    const { data, error } = await q.order('occurred_at', { ascending: false }).order('id', { ascending: false }).range(from, to)
     if (error) throw error
     return data || []
   }, 1000)

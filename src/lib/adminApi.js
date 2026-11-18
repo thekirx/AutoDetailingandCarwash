@@ -332,7 +332,7 @@ export async function updateStaffPerson({
     patch.permission_grants = permission_grants
   }
 
-  const { data, error } = await supabase.from('staff_profiles').update(patch).eq('id', id).select().maybeSingle()
+  const { data, error } = await supabase.from('staff_profiles').update(patch).eq('id', id).select(STAFF_LIST_COLS).maybeSingle()
   if (error) throw mapDbError(error)
   if (!data) throw new Error('Staff profile not found.')
 
