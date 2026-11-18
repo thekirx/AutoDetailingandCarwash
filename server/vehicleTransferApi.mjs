@@ -6,6 +6,7 @@ import {
   transferRefusal,
 } from '../src/lib/vehicleTransfer.js'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
+import { requireActiveStaff } from './staffAuth.mjs'
 import { adminClient } from './supabaseAdmin.mjs'
 
 async function visitBranchesFor(admin, vehicle) {
@@ -180,28 +181,16 @@ export async function transferVehicle({ accessToken, vehicleId, toCustomerId }) 
 }
 
 async function requireTransferStaff(admin, accessToken) {
-  if (!accessToken) throw Object.assign(new Error('Sign in required.'), { status: 401 })
-  const { data: userData } = await admin.auth.getUser(accessToken)
-  const callerId = userData?.user?.id
-  if (!callerId) throw Object.assign(new Error('Sign in required.'), { status: 401 })
-  const { data: staff } = await admin
-    .from('staff_profiles')
-    .select('id, role, is_active, branch_slug')
-    .eq('id', callerId)
-    .eq('is_active', true)
-    .maybeSingle()
-  if (!canTransferVehicle(staff)) {
-    throw Object.assign(new Error('Only Super Admin, Assistant Super Admin, or Branch Admin can transfer a car.'), { status: 403 })
-  }
-  let branchSlugs = staff.branch_slug ? [staff.branch_slug] : []
-  if (staff.role === 'admin') {
-    const { data: assigns, error } = await admin
-      .from('staff_branch_assignments')
-      .select('branch_slug')
-      .eq('staff_id', staff.id)
-    if (error) throw Object.assign(new Error(error.message), { status: 400 })
-    if (assigns?.length) branchSlugs = assigns.map((row) => row.branch_slug).filter(Boolean)
-  }
+  const staff = await requireActiveStaff(admin, accessToken, {
+    select: 'id, role, is_active, branch_slug',
+    unauthorizedMessage: 'Sign in required.',
+    forbiddenMessage: 'Only Super Admin, Assistant Super Admin, or Branch Admin can transfer a car.',
+    authorize: (row) => canTransferVehicle(row),
+    hydrateBranches: true,
+  })
+  const fallbackBranches = staff.branch_slug ? [staff.branch_slug] : []
+  const branchSlugs =
+    staff.role === 'admin' && staff.extraBranchSlugs?.length ? staff.extraBranchSlugs : fallbackBranches
   return { ...staff, branchSlugs }
 }
 

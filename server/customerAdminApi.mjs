@@ -2,44 +2,38 @@
  * Admin / CRM customer & vehicle lifecycle API (service role, strict RBAC).
  * Used via /api/customer?operation=manage-customer in Vercel and Vite dev.
  */
-import { canEditCrm, getBranchScopeList, isAssistantSuperAdmin, isSuperAdmin } from '../src/auth/permissions.js'
+import { canEditCrm, isAssistantSuperAdmin, isSuperAdmin } from '../src/auth/permissions.js'
 import { canTransferVehicle } from '../src/lib/vehicleTransfer.js'
 import { canonicalPhMobile, normalizePlate, phoneLoginEmail, plateValidationError } from '../src/lib/customerAuth.js'
 import { normalizePricingSize } from '../src/lib/servicePricing.js'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
+import { requireActiveStaff } from './staffAuth.mjs'
 import { adminClient } from './supabaseAdmin.mjs'
 
 const SYNTHETIC_EMAIL = /@customers\.hakumautocare\.com$/i
+const SIMPLE_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+function isMissingAuthUserError(err) {
+  if (!err) return false
+  return err.status === 404 || /user not found|not found/i.test(String(err.message || ''))
+}
+
+async function syncCustomerAuthUser(admin, customerId, patch) {
+  const { error } = await admin.auth.admin.updateUserById(customerId, patch)
+  if (error && !isMissingAuthUserError(error)) {
+    throw Object.assign(new Error(error.message || 'Could not update customer auth account.'), {
+      status: error.status && error.status >= 400 ? error.status : 400,
+    })
+  }
+}
 
 async function requireCrmStaff(admin, accessToken) {
-  if (!accessToken) throw Object.assign(new Error('Unauthorized'), { status: 401 })
-  const { data: userRes, error: authErr } = await admin.auth.getUser(accessToken)
-  if (authErr || !userRes?.user) throw Object.assign(new Error('Unauthorized'), { status: 401 })
-
-  const { data: staff, error: staffErr } = await admin
-    .from('staff_profiles')
-    .select('id, role, full_name, is_active, permission_grants, branch_slug')
-    .eq('id', userRes.user.id)
-    .eq('is_active', true)
-    .maybeSingle()
-
-  if (staffErr) throw Object.assign(new Error(staffErr.message), { status: 500 })
-  if (!staff || !canEditCrm(staff)) {
-    throw Object.assign(new Error('Only Super Admin, General Admin, Branch Admin, or Customer Rep can manage customers.'), { status: 403 })
-  }
-
-  let branchSlugs = getBranchScopeList(staff)
-  if (Array.isArray(branchSlugs)) {
-    const { data: assigns } = await admin
-      .from('staff_branch_assignments')
-      .select('branch_slug')
-      .eq('staff_id', staff.id)
-    if (assigns?.length) {
-      branchSlugs = [...new Set([...branchSlugs, ...assigns.map((a) => a.branch_slug).filter(Boolean)])]
-    }
-  }
-
-  return { ...staff, branchSlugs }
+  return requireActiveStaff(admin, accessToken, {
+    select: 'id, role, full_name, is_active, permission_grants, branch_slug',
+    unauthorizedMessage: 'Unauthorized',
+    forbiddenMessage: 'Only Super Admin, General Admin, Branch Admin, or Customer Rep can manage customers.',
+    authorize: (staff) => canEditCrm(staff),
+  })
 }
 
 async function assertCustomerInBranchScope(admin, staff, customerId) {
@@ -103,9 +97,20 @@ async function updateCustomer(admin, staff, body) {
   if (!fullName) throw Object.assign(new Error('Customer name is required.'), { status: 400 })
 
   const rawPhone = body.phone !== undefined ? String(body.phone || '').trim() : (existing.phone || '')
-  const phone = rawPhone ? (canonicalPhMobile(rawPhone) || rawPhone) : ''
+  let phone = ''
+  if (rawPhone) {
+    const canonical = canonicalPhMobile(rawPhone)
+    const isValidPh = /^09\d{9}$/.test(canonical)
+    if (body.phone !== undefined && !isValidPh) {
+      throw Object.assign(new Error('Enter a valid PH mobile number (e.g. 09171234567).'), { status: 400 })
+    }
+    phone = isValidPh ? canonical : rawPhone
+  }
 
   const rawEmail = body.email !== undefined ? String(body.email || '').trim().toLowerCase() : (existing.email || '')
+  if (body.email !== undefined && rawEmail && !SYNTHETIC_EMAIL.test(rawEmail) && !SIMPLE_EMAIL.test(rawEmail)) {
+    throw Object.assign(new Error('Enter a valid email address.'), { status: 400 })
+  }
   const realEmail = rawEmail && !SYNTHETIC_EMAIL.test(rawEmail) ? rawEmail : ''
 
   if (phone) {
@@ -142,6 +147,13 @@ async function updateCustomer(admin, staff, body) {
   const storedEmail = realEmail || (existing.email && SYNTHETIC_EMAIL.test(existing.email) ? existing.email : phone ? phoneLoginEmail(phone) : null)
   const now = new Date().toISOString()
 
+  const authPatch = {
+    ban_duration: isDisabled ? '876000h' : 'none',
+    user_metadata: { role: 'customer', full_name: fullName, phone: phone || null },
+  }
+  if (realEmail && realEmail !== existing.email) authPatch.email = realEmail
+  await syncCustomerAuthUser(admin, customerId, authPatch)
+
   const { data: updated, error: updErr } = await admin
     .from('customers')
     .update({
@@ -160,13 +172,6 @@ async function updateCustomer(admin, staff, body) {
     .select('id, full_name, first_name, last_name, phone, email, date_of_birth, loyalty_points, loyalty_stamps, created_at, notify_sms, notify_push, is_disabled, is_archived')
     .single()
   if (updErr) throw Object.assign(new Error(updErr.message), { status: 400 })
-
-  const authPatch = {
-    ban_duration: isDisabled ? '876000h' : 'none',
-    user_metadata: { role: 'customer', full_name: fullName, phone: phone || null },
-  }
-  if (realEmail && realEmail !== existing.email) authPatch.email = realEmail
-  await admin.auth.admin.updateUserById(customerId, authPatch).catch(() => null)
 
   await writeAudit(admin, staff.id, 'crm.customer.updated', customerId, {
     target_table: 'customers',
@@ -202,14 +207,15 @@ async function archiveOrRestoreCustomer(admin, staff, customerId, archive) {
     .eq('id', customerId)
   if (updErr) throw Object.assign(new Error(updErr.message), { status: 400 })
 
-  await admin
+  const { error: vehErr } = await admin
     .from('vehicles')
     .update({ is_archived: archive, updated_at: now })
     .eq('customer_id', customerId)
+  if (vehErr) throw Object.assign(new Error(vehErr.message), { status: 400 })
 
-  await admin.auth.admin.updateUserById(customerId, {
+  await syncCustomerAuthUser(admin, customerId, {
     ban_duration: archive ? '876000h' : 'none',
-  }).catch(() => null)
+  })
 
   await writeAudit(admin, staff.id, archive ? 'crm.customer.archived' : 'crm.customer.restored', customerId, {
     target_table: 'customers',
@@ -244,7 +250,8 @@ async function deleteCustomerPermanently(admin, staff, customerId) {
     )
   }
 
-  await Promise.all([
+  const cleanupResults = await Promise.all([
+    admin.from('vehicle_maintenance_schedules').delete().eq('customer_id', customerId),
     admin.from('vehicles').delete().eq('customer_id', customerId),
     admin.from('customer_notes').delete().eq('customer_id', customerId),
     admin.from('loyalty_ledger').delete().eq('customer_id', customerId),
@@ -252,11 +259,16 @@ async function deleteCustomerPermanently(admin, staff, customerId) {
     admin.from('customer_memberships').delete().eq('customer_id', customerId),
     admin.from('user_notifications').delete().eq('user_id', customerId),
   ])
+  const childErr = cleanupResults.find((r) => r?.error)?.error
+  if (childErr) throw Object.assign(new Error(childErr.message || 'Could not clear customer links before delete.'), { status: 409 })
 
   const { error: delErr } = await admin.from('customers').delete().eq('id', customerId)
   if (delErr) throw Object.assign(new Error(delErr.message), { status: 400 })
 
-  await admin.auth.admin.deleteUser(customerId).catch(() => null)
+  const { error: authDelErr } = await admin.auth.admin.deleteUser(customerId)
+  if (authDelErr && !isMissingAuthUserError(authDelErr)) {
+    throw Object.assign(new Error(authDelErr.message || 'Customer row removed, but Auth cleanup failed.'), { status: 500 })
+  }
   await writeAudit(admin, staff.id, 'crm.customer.deleted', customerId, {
     target_table: 'customers',
     full_name: existing.full_name,
@@ -361,7 +373,7 @@ export async function handleManageCustomerRequest(req, res, helpers = {}) {
 
   try {
     const token = helpers.getAccessToken ? helpers.getAccessToken() : bearer(req)
-    const admin = adminClient()
+    const admin = helpers.adminClient ? helpers.adminClient() : adminClient()
     const staff = await requireCrmStaff(admin, token)
     const body = helpers.getBody ? await helpers.getBody() : await readJsonBody(req)
     const action = String(body?.action || '')

@@ -1,4 +1,5 @@
 import { bearer, json, setCors } from './httpUtil.mjs'
+import { requireActiveStaff } from './staffAuth.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
 import { filterSubmissionsByBranchScope } from '../src/lib/opsForms.js'
 import {
@@ -475,28 +476,18 @@ export async function handleSmartSearchRequest(req, res) {
   if (!token) return json(res, 401, { error: 'Unauthorized' })
 
   const db = admin()
-  const { data: userData, error: userErr } = await db.auth.getUser(token)
-  if (userErr || !userData?.user) return json(res, 401, { error: 'Unauthorized' })
+  let staff
+  try {
+    staff = await requireActiveStaff(db, token, {
+      select: STAFF_SELECT,
+      unauthorizedMessage: 'Unauthorized',
+      forbiddenMessage: 'Forbidden',
+    })
+  } catch (err) {
+    return json(res, err.status || 403, { error: err.message || 'Forbidden' })
+  }
 
-  const { data: staff } = await db
-    .from('staff_profiles')
-    .select(STAFF_SELECT)
-    .eq('id', userData.user.id)
-    .eq('is_active', true)
-    .eq('is_archived', false)
-    .maybeSingle()
-
-  const { data: extraBranches } = staff
-    ? await db
-        .from('staff_branch_assignments')
-        .select('branch_slug')
-        .eq('staff_id', staff.id)
-    : { data: [] }
-
-  const scope = resolveSearchScope(
-    staff,
-    (extraBranches || []).map((b) => b.branch_slug),
-  )
+  const scope = resolveSearchScope(staff, staff.extraBranchSlugs || [])
   if (!scope) return json(res, 403, { error: 'Forbidden' })
 
   const url = new URL(req.url, 'http://localhost')
