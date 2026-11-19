@@ -1,7 +1,11 @@
 # Project Status
 
-**Last Updated:** 2026-11-19 (Asia/Manila) — Complete Technical SEO, Dynamic Sitemap/RSS/Crawler Meta & WordPress-Style Blog CMS  
-**Overall Status:** Code, guarded WordPress SEO migration (`20261119120000` pending live DB apply alongside applied `20261116120000`, `20261116180000`, `20261116190000`, `20261118170000`), and automated checks verified cleanly (`2738/2738` unit tests, `41/41` browser tests, `0` lint/auth-audit issues). For full AI/engineering onboarding see [`HANDOFF.md`](HANDOFF.md).
+**Last Updated:** 2026-11-19 (Asia/Manila) — Live Supabase Optimization & Migration Sync + SEO & WordPress Blog CMS  
+**Overall Status:** All pending migrations (`20261118170000`, `20261119120000`) plus guarded optimization migration `20261119140000_db_scale_cleanup_and_trigger_hardening.sql` are applied and registered in live Supabase (`lybxhpzzqqyqswvuwpxv`), achieving `0` Performance Advisor warnings/errors (`0` duplicate indexes, `0` unindexed FKs, `0` multiple permissive policies), `0` mutable `search_path` functions, `0` unprotected tables, and full schema/workflow health. For full AI/engineering onboarding see [`HANDOFF.md`](HANDOFF.md).
+
+## Executive Summary (2026-11-19 Latest — Live Supabase Optimization & Hardening)
+
+- **Applied Migrations & Live Verification (`20261118170000`, `20261119120000`, `20261119140000`, `tests/guardedMigrationContract.test.js`)**: Applied multi-month scale indexes and WordPress blog taxonomy/SEO/scheduling schema (`26` `public.blogs` columns) to live Supabase; shipped and applied `20261119140000_db_scale_cleanup_and_trigger_hardening.sql` dropping duplicate `public.bookings_schedule_idx`, locking down `log_queue_status_change()` trigger grants, consolidating all `12` multiple-permissive `SELECT` policy sets, dropping stale `blogs_select_anon`, initplan-wrapping `blogs_select_authenticated`, and refreshing `ANALYZE` statistics. Note: Supabase Auth HIBP leaked-password toggle returned `402 entitlement_required` on the current Free plan (Pro+ required).
 
 ## Executive Summary (2026-11-19 Latest — Technical SEO Suite & WordPress-Style Blog CMS)
 
