@@ -990,8 +990,8 @@
     "semantic_hash": "57f70942e26092dfa4dcbca94e97240b"
   },
   "src/components/PublicPageMeta.jsx": {
-    "mtime": 1795089417.89134,
-    "seen": 1795090702.7634807,
+    "mtime": 1795091087.952477,
+    "seen": 1795092389.2850983,
     "ast_hash": "def9eda3d25a563cbd6c8c36b5313e6d",
     "semantic_hash": ""
   },
@@ -1050,14 +1050,14 @@
     "semantic_hash": "3a676befe8f8a626cd860b5c062f04c9"
   },
   "src/components/content/ContentBlockEditor.jsx": {
-    "mtime": 1795089733.9692092,
-    "seen": 1795090702.7635317,
+    "mtime": 1795091088.3667173,
+    "seen": 1795092389.285169,
     "ast_hash": "7c57991b2687ac9c5668414eabc69973",
     "semantic_hash": ""
   },
   "src/components/content/ContentBlockRenderer.jsx": {
-    "mtime": 1795089696.806072,
-    "seen": 1795090702.7635348,
+    "mtime": 1795091088.507632,
+    "seen": 1795092389.2851734,
     "ast_hash": "fb470483735efc68439f6fb3a168da57",
     "semantic_hash": ""
   },
@@ -1746,8 +1746,8 @@
     "semantic_hash": "6152cfa5b9408878cef646bde05807e6"
   },
   "src/lib/pageMeta.js": {
-    "mtime": 1795089585.1809282,
-    "seen": 1795090702.764155,
+    "mtime": 1795091089.373736,
+    "seen": 1795092389.2860022,
     "ast_hash": "d9868b7791862f0ef5601f1a1f8adb35",
     "semantic_hash": ""
   },
@@ -2034,8 +2034,8 @@
     "semantic_hash": ""
   },
   "src/pages/BlogPage.jsx": {
-    "mtime": 1795090151.3323717,
-    "seen": 1795090702.7644503,
+    "mtime": 1795091089.6567323,
+    "seen": 1795092389.2863882,
     "ast_hash": "da16f86a5de175be60c0225800f2b610",
     "semantic_hash": ""
   },
@@ -2088,8 +2088,8 @@
     "semantic_hash": "4aae32ccee0a4a91596f5559799b3960"
   },
   "src/pages/ContentAdminPage.jsx": {
-    "mtime": 1795089903.9484313,
-    "seen": 1795090702.7645066,
+    "mtime": 1795091089.9484155,
+    "seen": 1795092389.286435,
     "ast_hash": "0dd711bc7127f7606b7f7ec1545ea1fb",
     "semantic_hash": ""
   },
@@ -2112,8 +2112,8 @@
     "semantic_hash": ""
   },
   "src/pages/CustomerBlogPage.jsx": {
-    "mtime": 1795090151.6970296,
-    "seen": 1795090702.764522,
+    "mtime": 1795091090.04242,
+    "seen": 1795092389.2864525,
     "ast_hash": "6ca847df0d3fd82905fa8f21b3a99e1e",
     "semantic_hash": ""
   },
@@ -2346,8 +2346,8 @@
     "semantic_hash": "fd75d4e799eb83fe71fd7ac06009bf42"
   },
   "src/pages/ServiceDetailPage.jsx": {
-    "mtime": 1795089430.2359157,
-    "seen": 1795090702.7647378,
+    "mtime": 1795091090.2900972,
+    "seen": 1795092389.2867103,
     "ast_hash": "c3beebfc7ce94a2e29d6bc544c0889c0",
     "semantic_hash": ""
   },
@@ -4914,8 +4914,8 @@
     "semantic_hash": "da945457ee26b9a2d82f246c0380e8d5"
   },
   "tests/vercelFunctionRouting.test.js": {
-    "mtime": 1795090204.3241253,
-    "seen": 1795090702.7674785,
+    "mtime": 1795091090.5948343,
+    "seen": 1795092389.2903163,
     "ast_hash": "fc931e46b58f9deb4fc33b8cc7b62f2b",
     "semantic_hash": ""
   },
@@ -4944,9 +4944,9 @@
     "semantic_hash": "b2fd8c1a303fa745eeb26b3fac07046c"
   },
   "CHANGELOG.md": {
-    "mtime": 1795090596.3088245,
-    "seen": 1795090702.7675087,
-    "ast_hash": "df16a79be4c522240cb14695dddd9b5b",
+    "mtime": 1795092126.9272418,
+    "seen": 1795092389.2903547,
+    "ast_hash": "6030bb8208005f8d997e498b20bcdb37",
     "semantic_hash": ""
   },
   "CLAUDE.md": {
@@ -4974,9 +4974,9 @@
     "semantic_hash": "983fbeb6e7617283c5643ec1912d89f8"
   },
   "PROJECT_STATUS.md": {
-    "mtime": 1795090598.9874928,
-    "seen": 1795090702.7675412,
-    "ast_hash": "e984c60ab7e80ffc6661ec084ab9a722",
+    "mtime": 1795092129.7490396,
+    "seen": 1795092389.2903948,
+    "ast_hash": "0e8fbfb576db6c2465060f1181dfc0ea",
     "semantic_hash": ""
   },
   "SECURITY_AUDIT.md": {
@@ -6666,8 +6666,8 @@
     "semantic_hash": "7495617d90ef1e1e98cdc93c1f647c59"
   },
   "index.html": {
-    "mtime": 1795089539.3458047,
-    "seen": 1795090702.7688773,
+    "mtime": 1795091086.9117558,
+    "seen": 1795092389.2921038,
     "ast_hash": "7cfe91a12ce7d2ae57d39a628ba12f66",
     "semantic_hash": ""
   },
@@ -8550,9 +8550,9 @@
     "semantic_hash": "1de1fa29e24f8951951426fd1cdc404d"
   },
   "tests/guardedMigrationContract.test.js": {
-    "mtime": 1795089337.0133767,
-    "seen": 1795090702.7665706,
-    "ast_hash": "edeb4c5090b4dce63932e29eb81fb3f2",
+    "mtime": 1795091971.2148893,
+    "seen": 1795092389.2892237,
+    "ast_hash": "899c16e44a5d749bf88ee70c16acda13",
     "semantic_hash": ""
   },
   "tests/paymentMethodBucketing.test.js": {
@@ -10440,8 +10440,8 @@
     "semantic_hash": "c4392e91387a05eeaf87bd6f82f3df95"
   },
   "src/components/content/ContentStudioModal.jsx": {
-    "mtime": 1795089793.1877139,
-    "seen": 1795090702.763538,
+    "mtime": 1795091088.7053154,
+    "seen": 1795092389.2851782,
     "ast_hash": "c2f514fb89fc258e72a5d48339445469",
     "semantic_hash": ""
   },
@@ -10464,8 +10464,8 @@
     "semantic_hash": "7c8d0d07783a01095464823aff4795af"
   },
   "src/lib/seoLocalGuides.js": {
-    "mtime": 1795089666.1436145,
-    "seen": 1795090702.764322,
+    "mtime": 1795091089.5211544,
+    "seen": 1795092389.2862284,
     "ast_hash": "5df45a5087384d70a11b345c083067f5",
     "semantic_hash": ""
   },
@@ -10476,10 +10476,10 @@
     "semantic_hash": "0586cfe12c9b60c63dda8bfee6acf031"
   },
   "src/pages/CustomerCarsPage.jsx": {
-    "mtime": 1794708779.139187,
-    "seen": 1794750478.5162961,
-    "ast_hash": "fb2b0098a96502d27d4712b407538646",
-    "semantic_hash": "fb2b0098a96502d27d4712b407538646"
+    "mtime": 1795091245.9199297,
+    "seen": 1795092389.2864625,
+    "ast_hash": "11fcba95e12a9615d82f60710425c86c",
+    "semantic_hash": ""
   },
   "supabase/migrations/20261111090000_imus_coming_soon_branch.sql": {
     "mtime": 1794398263.9428918,
@@ -10554,8 +10554,8 @@
     "semantic_hash": "62b9e70e2232f728521ca549c0764a63"
   },
   "src/components/content/BlogArticlePreview.jsx": {
-    "mtime": 1795089849.503906,
-    "seen": 1795090702.7635286,
+    "mtime": 1795091088.089186,
+    "seen": 1795092389.2851644,
     "ast_hash": "a711537d95e6ea8dcd629b6e498ef666",
     "semantic_hash": ""
   },
@@ -10572,8 +10572,8 @@
     "semantic_hash": "5f7f3d084e5d36e969bc326225e9f67d"
   },
   "scripts/prerender-seo.mjs": {
-    "mtime": 1795089572.330722,
-    "seen": 1795090702.7628844,
+    "mtime": 1795091087.4149902,
+    "seen": 1795092389.2843103,
     "ast_hash": "d63a2b83c62d588a7ea38f58b1cd6c67",
     "semantic_hash": ""
   },
@@ -10656,9 +10656,9 @@
     "semantic_hash": ""
   },
   "docs/seo-ai-visibility.md": {
-    "mtime": 1795090580.8793926,
-    "seen": 1795090702.768588,
-    "ast_hash": "d139cd646099f5493133fd5ffdc3d6d5",
+    "mtime": 1795091184.9227977,
+    "seen": 1795092389.2917256,
+    "ast_hash": "c82a0cabad546f81ed94426a2bc88b75",
     "semantic_hash": ""
   },
   "scripts/e2e-push-and-redirect-ui.mjs": {
@@ -10923,6 +10923,12 @@
     "mtime": 1795089955.2141314,
     "seen": 1795090702.76749,
     "ast_hash": "90f535e0c8fb76a311c41965e7883d9e",
+    "semantic_hash": ""
+  },
+  "supabase/migrations/20261119140000_db_scale_cleanup_and_trigger_hardening.sql": {
+    "mtime": 1795092076.29983,
+    "seen": 1795092389.2884612,
+    "ast_hash": "3d977b672aadcb4a528b10e7b2712a67",
     "semantic_hash": ""
   }
 }
