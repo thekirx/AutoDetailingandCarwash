@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { Pencil, Plus, Search, Settings2, Trash2 } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { Pencil, Plus, Rss, Search, Settings2, Tag, Trash2, X } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { canManageSiteContent } from '@/auth/permissions'
 import ContentStudioModal from '@/components/content/ContentStudioModal'
+import { BLOG_CATEGORY_OPTIONS } from '@/lib/contentBlocks'
 import {
   createEmptyBlogDraft,
   deleteCmsBlog,
@@ -33,15 +34,45 @@ const REGION_FILTERS = [
   { id: 'craft', label: 'Paint & Ceramic Craft' },
 ]
 
+const PAGE_SIZE = 9
+
 export function BlogListSection() {
   const { profile } = useAuth()
   const canEdit = canManageSiteContent(profile)
+  const [searchParams, setSearchParams] = useSearchParams()
   const [dbPosts, setDbPosts] = useState([])
   const [error, setError] = useState('')
-  const [activeRegion, setActiveRegion] = useState('all')
-  const [searchQuery, setSearchQuery] = useState('')
   const [showDrafts, setShowDrafts] = useState(false)
   const [editorPost, setEditorPost] = useState(null)
+
+  const activeRegion = searchParams.get('region') || 'all'
+  const activeCategory = searchParams.get('category') || 'all'
+  const activeTag = searchParams.get('tag') || ''
+  const sortBy = searchParams.get('sort') || 'newest'
+  const searchQuery = searchParams.get('q') || ''
+  const currentPage = Math.max(1, Number(searchParams.get('page') || 1) || 1)
+
+  function updateQuery(patch, { resetPage = true } = {}) {
+    const next = new URLSearchParams(searchParams)
+    for (const [k, v] of Object.entries(patch)) {
+      const cleaned = String(v ?? '').trim()
+      if (!cleaned || cleaned === 'all' || (k === 'page' && Number(cleaned) <= 1)) {
+        next.delete(k)
+      } else {
+        next.set(k, cleaned)
+      }
+    }
+    if (resetPage && !('page' in patch)) next.delete('page')
+    setSearchParams(next, { replace: true })
+  }
+
+  function buildPageHref(pageNum) {
+    const next = new URLSearchParams(searchParams)
+    if (pageNum <= 1) next.delete('page')
+    else next.set('page', String(pageNum))
+    const qs = next.toString()
+    return qs ? `/blog?${qs}` : '/blog'
+  }
 
   const loadBlogs = useCallback(async () => {
     if (canEdit) {
@@ -51,10 +82,10 @@ export function BlogListSection() {
     }
     const { data, error: e } = await supabase
       .from('blogs')
-      .select('id, title, slug, excerpt, cover_url, author_label, published_at, status, is_published, content_blocks')
-      .eq('is_published', true)
-      .eq('status', 'published')
+      .select('id, title, slug, excerpt, cover_url, author_label, published_at, updated_at, status, is_published, content_blocks')
+      .in('status', ['published', 'scheduled'])
       .order('published_at', { ascending: false })
+      .limit(200)
     if (e) setError('')
     setDbPosts(data || [])
   }, [canEdit])
@@ -75,24 +106,63 @@ export function BlogListSection() {
     [dbPosts, canEdit, showDrafts],
   )
 
+  const popularTags = useMemo(() => {
+    const counts = new Map()
+    for (const p of allPosts) {
+      for (const t of Array.isArray(p.tags) ? p.tags : []) {
+        const key = String(t).trim().toLowerCase()
+        if (key) counts.set(key, (counts.get(key) || 0) + 1)
+      }
+    }
+    return [...counts.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([tag]) => tag)
+  }, [allPosts])
+
   const visiblePosts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
-    return allPosts.filter((p) => {
+    const tagLower = activeTag.trim().toLowerCase()
+    const filtered = allPosts.filter((p) => {
       if (activeRegion !== 'all' && (p.region || 'craft') !== activeRegion) return false
+      if (activeCategory !== 'all' && String(p.category || '').toLowerCase() !== activeCategory.toLowerCase()) {
+        return false
+      }
+      if (tagLower) {
+        const postTags = (Array.isArray(p.tags) ? p.tags : []).map((t) => String(t).toLowerCase())
+        if (!postTags.includes(tagLower)) return false
+      }
       if (!q) return true
-      const hay = `${p.title || ''} ${p.excerpt || ''} ${p.regionLabel || ''} ${p.category || ''}`.toLowerCase()
+      const hay = `${p.title || ''} ${p.excerpt || ''} ${p.regionLabel || ''} ${p.category || ''} ${(p.tags || []).join(' ')}`.toLowerCase()
       return hay.includes(q)
     })
-  }, [allPosts, activeRegion, searchQuery])
 
+    if (sortBy === 'quick') {
+      return [...filtered].sort((a, b) => (Number(a.read_minutes) || 99) - (Number(b.read_minutes) || 99))
+    }
+    return [...filtered].sort((a, b) => {
+      const aPin = a.is_featured || a.featured ? 1 : 0
+      const bPin = b.is_featured || b.featured ? 1 : 0
+      if (aPin !== bPin) return bPin - aPin
+      const aMs = a.published_at ? Date.parse(a.published_at) : 0
+      const bMs = b.published_at ? Date.parse(b.published_at) : 0
+      return bMs - aMs
+    })
+  }, [allPosts, activeRegion, activeCategory, activeTag, searchQuery, sortBy])
+
+  const hasFilter = activeRegion !== 'all' || activeCategory !== 'all' || Boolean(activeTag) || Boolean(searchQuery.trim())
   const featuredPost =
-    activeRegion === 'all' && !searchQuery.trim() && visiblePosts.length > 1
+    !hasFilter && currentPage === 1 && visiblePosts.length > 1
       ? visiblePosts.find((p) => p.is_featured || p.featured) || visiblePosts[0]
       : null
 
-  const gridPosts = featuredPost
+  const poolPosts = featuredPost
     ? visiblePosts.filter((p) => (p.id || p.slug) !== (featuredPost.id || featuredPost.slug))
     : visiblePosts
+
+  const totalPages = Math.max(1, Math.ceil(poolPosts.length / PAGE_SIZE))
+  const safePage = Math.min(currentPage, totalPages)
+  const gridPosts = poolPosts.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
 
   async function handleQuickDelete(post) {
     if (!window.confirm(`Delete "${post.title}"?`)) return
@@ -178,24 +248,85 @@ export function BlogListSection() {
                     role="tab"
                     aria-selected={active}
                     className={`bd-blog-filter-pill ${active ? 'is-active' : ''}`}
-                    onClick={() => setActiveRegion(filter.id)}
+                    onClick={() => updateQuery({ region: filter.id })}
                   >
                     {filter.label}
                   </button>
                 )
               })}
             </div>
-            <div className="bd-blog-search-wrap">
-              <Search size={15} className="bd-blog-search-icon" aria-hidden="true" />
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search ceramic, PPF, Bacoor, Batangas…"
-                aria-label="Search blog guides and stories"
-                className="bd-blog-search-input"
-              />
+            <div className="bd-blog-search-row">
+              <div className="bd-blog-search-wrap">
+                <Search size={15} className="bd-blog-search-icon" aria-hidden="true" />
+                <input
+                  type="search"
+                  value={searchQuery}
+                  onChange={(e) => updateQuery({ q: e.target.value })}
+                  placeholder="Search ceramic, PPF, Bacoor, Batangas…"
+                  aria-label="Search blog guides and stories"
+                  className="bd-blog-search-input"
+                />
+              </div>
+              <select
+                aria-label="Filter by category"
+                value={activeCategory}
+                onChange={(e) => updateQuery({ category: e.target.value })}
+                className="bd-blog-select"
+              >
+                <option value="all">All Categories</option>
+                {BLOG_CATEGORY_OPTIONS.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                aria-label="Sort articles"
+                value={sortBy}
+                onChange={(e) => updateQuery({ sort: e.target.value })}
+                className="bd-blog-select"
+              >
+                <option value="newest">Latest Published</option>
+                <option value="quick">Quickest Read</option>
+              </select>
+              <a
+                href="/rss.xml"
+                className="bd-blog-rss-link"
+                title="Subscribe via RSS 2.0"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Rss size={14} aria-hidden="true" /> RSS
+              </a>
             </div>
+            {(popularTags.length > 0 || activeTag || hasFilter) && (
+              <div className="bd-blog-tag-strip">
+                {activeTag ? (
+                  <button
+                    type="button"
+                    className="bd-blog-filter-pill is-active"
+                    onClick={() => updateQuery({ tag: '' })}
+                  >
+                    <Tag size={12} aria-hidden="true" /> #{activeTag} <X size={12} aria-hidden="true" />
+                  </button>
+                ) : null}
+                {popularTags.map((t) => (
+                  <button
+                    key={t}
+                    type="button"
+                    className={`bd-blog-tag-btn ${activeTag === t ? 'is-active' : ''}`}
+                    onClick={() => updateQuery({ tag: activeTag === t ? '' : t })}
+                  >
+                    #{t}
+                  </button>
+                ))}
+                {hasFilter && (
+                  <Link to="/blog" className="bd-blog-clear-link">
+                    Clear all filters
+                  </Link>
+                )}
+              </div>
+            )}
           </div>
 
           {featuredPost ? (() => {
@@ -299,6 +430,19 @@ export function BlogListSection() {
                       <Link to={`/blog/${post.slug}`}>{post.title}</Link>
                     </h2>
                     {post.excerpt ? <p className="bd-post-excerpt">{post.excerpt}</p> : null}
+                    {Array.isArray(post.tags) && post.tags.length > 0 ? (
+                      <div className="bd-post-card-tags">
+                        {post.tags.slice(0, 3).map((tag) => (
+                          <Link
+                            key={tag}
+                            to={`/blog?tag=${encodeURIComponent(tag)}`}
+                            className="bd-post-card-tag"
+                          >
+                            #{tag}
+                          </Link>
+                        ))}
+                      </div>
+                    ) : null}
                     {post.highlights?.length ? (
                       <ul className="bd-post-highlights">
                         {post.highlights.slice(0, 2).map((item, idx) => (
@@ -344,6 +488,31 @@ export function BlogListSection() {
               )
             })}
           </div>
+
+          {totalPages > 1 && (
+            <nav className="bd-blog-pagination" aria-label="Blog pagination">
+              {safePage > 1 && (
+                <Link className="bd-blog-page-link" to={buildPageHref(safePage - 1)}>
+                  ← Newer Guides
+                </Link>
+              )}
+              {Array.from({ length: totalPages }, (_, idx) => idx + 1).map((num) => (
+                <Link
+                  key={num}
+                  to={buildPageHref(num)}
+                  aria-current={num === safePage ? 'page' : undefined}
+                  className={`bd-blog-page-link ${num === safePage ? 'is-active' : ''}`}
+                >
+                  {num}
+                </Link>
+              ))}
+              {safePage < totalPages && (
+                <Link className="bd-blog-page-link" to={buildPageHref(safePage + 1)}>
+                  Older Guides →
+                </Link>
+              )}
+            </nav>
+          )}
         </div>
       </section>
 

@@ -4,6 +4,7 @@ import {
   emptyBlock,
   estimateReadingStats,
   extractContentMeta,
+  normalizeBlogTags,
   normalizeBlocks,
   slugifyContentTitle,
 } from '@/lib/contentBlocks'
@@ -12,7 +13,7 @@ import { findBuiltInBlogPost } from '@/lib/seoLocalGuides'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
-const BLOG_SELECT_COLS =
+export const BLOG_SELECT_COLS =
   'id, title, slug, excerpt, cover_url, author_label, status, is_published, published_at, content_blocks, created_at, updated_at, created_by'
 const EVENT_SELECT_COLS =
   'id, title, description, branch, starts_at, ends_at, is_published, is_date_tba, slug, form_id, banner_url, content_blocks, created_at, updated_at'
@@ -53,10 +54,14 @@ export function createEmptyBlogDraft() {
     published_at: new Date().toISOString(),
     category: 'Regional Authority Guide',
     region: 'all',
+    tags: [],
     ai_summary: '',
     seo_title: '',
     seo_description: '',
     seo_keywords: '',
+    canonical_url: '',
+    og_image_url: '',
+    noindex: false,
     read_minutes: 4,
     is_featured: false,
     content_blocks: [emptyBlock('heading'), emptyBlock('paragraph')],
@@ -79,10 +84,14 @@ export function prepareBlogForEditor(post = {}) {
     published_at: post.published_at || new Date().toISOString(),
     category: meta.category || 'Regional Authority Guide',
     region: meta.region || 'all',
+    tags: meta.tags || [],
     ai_summary: meta.ai_summary || post.excerpt || '',
     seo_title: meta.seo_title || '',
     seo_description: meta.seo_description || '',
     seo_keywords: meta.seo_keywords || '',
+    canonical_url: meta.canonical_url || '',
+    og_image_url: meta.og_image_url || '',
+    noindex: Boolean(meta.noindex),
     read_minutes: meta.read_minutes || estimateReadingStats(blocks, post.title, post.excerpt).readMinutes,
     is_featured: Boolean(meta.is_featured),
     is_builtin_guide: Boolean(post.is_builtin_guide && !isValidUuid(post.id)),
@@ -179,16 +188,23 @@ export async function saveCmsBlog(editorState, profileOrOptions = null) {
   const isPublishOpt = typeof profileOrOptions?.publish === 'boolean'
   const profile = isPublishOpt ? null : profileOrOptions
 
+  const tags = normalizeBlogTags(editorState.tags)
   const stats = estimateReadingStats(editorState.content_blocks, title, editorState.excerpt)
+  const readMinutes = Math.max(1, Math.min(240, Number(editorState.read_minutes) || stats.readMinutes))
   const blocksWithMeta = attachContentMeta(editorState.content_blocks, {
     category: editorState.category || 'Regional Authority Guide',
     region: editorState.region || 'all',
+    tags,
     ai_summary: editorState.ai_summary || editorState.excerpt || '',
     seo_title: editorState.seo_title || '',
     seo_description: editorState.seo_description || '',
     seo_keywords: editorState.seo_keywords || '',
-    read_minutes: Number(editorState.read_minutes) || stats.readMinutes,
+    canonical_url: editorState.canonical_url || '',
+    og_image_url: editorState.og_image_url || '',
+    noindex: Boolean(editorState.noindex),
+    read_minutes: readMinutes,
     is_featured: Boolean(editorState.is_featured),
+    template_key: editorState.template_key || '',
   })
 
   let existingId = isValidUuid(editorState.id) ? editorState.id : null
@@ -232,14 +248,14 @@ export async function saveCmsBlog(editorState, profileOrOptions = null) {
         ? profileOrOptions.publish
           ? 'published'
           : 'draft'
-        : ['draft', 'published', 'archived'].includes(editorState.status)
+        : ['draft', 'scheduled', 'published', 'archived'].includes(editorState.status)
           ? editorState.status
           : editorState.is_published
             ? 'published'
             : 'draft'
   const published = status === 'published'
 
-  const row = {
+  const baseRow = {
     id: finalId,
     title,
     slug,
@@ -248,24 +264,49 @@ export async function saveCmsBlog(editorState, profileOrOptions = null) {
     author_label: String(editorState.author_label || '').trim() || 'Hakum Auto Care',
     status,
     is_published: published,
-    published_at: published
-      ? editorState.published_at
-        ? new Date(editorState.published_at).toISOString()
-        : new Date().toISOString()
-      : editorState.published_at || null,
+    published_at:
+      status === 'published'
+        ? editorState.published_at
+          ? new Date(editorState.published_at).toISOString()
+          : new Date().toISOString()
+        : status === 'scheduled'
+          ? editorState.published_at
+            ? new Date(editorState.published_at).toISOString()
+            : new Date(Date.now() + 3600_000).toISOString()
+          : editorState.published_at || null,
     content_blocks: blocksWithMeta,
     updated_at: new Date().toISOString(),
   }
 
-  const query = existingId
-    ? supabase.from('blogs').update(row).eq('id', existingId).select(BLOG_SELECT_COLS).maybeSingle()
-    : supabase
-        .from('blogs')
-        .insert({ ...row, created_by: profile?.id || null })
-        .select(BLOG_SELECT_COLS)
-        .maybeSingle()
+  const row = {
+    ...baseRow,
+    category: String(editorState.category || 'Regional Authority Guide').trim(),
+    region: String(editorState.region || 'all').trim(),
+    tags,
+    seo_title: String(editorState.seo_title || '').trim() || null,
+    seo_description: String(editorState.seo_description || '').trim() || null,
+    seo_keywords: String(editorState.seo_keywords || '').trim() || null,
+    ai_summary: String(editorState.ai_summary || '').trim() || null,
+    canonical_url: String(editorState.canonical_url || '').trim() || null,
+    og_image_url: String(editorState.og_image_url || '').trim() || null,
+    noindex: Boolean(editorState.noindex),
+    is_featured: Boolean(editorState.is_featured),
+    read_minutes: readMinutes,
+  }
 
-  const { data, error } = await query
+  const writeDirect = (payload) =>
+    existingId
+      ? supabase.from('blogs').update(payload).eq('id', existingId).select(BLOG_SELECT_COLS).maybeSingle()
+      : supabase
+          .from('blogs')
+          .insert({ ...payload, created_by: profile?.id || null })
+          .select(BLOG_SELECT_COLS)
+          .maybeSingle()
+
+  let { data, error } = await writeDirect(row)
+  if (error && /column .* does not exist|schema cache/i.test(error.message || '')) {
+    ;({ data, error } = await writeDirect(baseRow))
+  }
   if (!error) {
     const saved = data || row
     clearAutosaveDraft('blog', existingId || slug || 'new')

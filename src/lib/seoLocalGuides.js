@@ -612,22 +612,42 @@ export function findBuiltInBlogPost(slug) {
   return SEO_LOCAL_GUIDES.find((g) => g.slug.toLowerCase() === normalized) || null
 }
 
+/** Check whether a blog row is live to non-editor visitors (published or scheduled whose timestamp has arrived). */
+export function isLiveBlogPost(p, nowMs = Date.now()) {
+  if (!p || p.status === 'archived' || p.status === 'draft') return false
+  const pubMs = p.published_at ? Date.parse(p.published_at) : NaN
+  if (p.status === 'scheduled') return Number.isFinite(pubMs) && pubMs <= nowMs
+  if (Boolean(p.is_published) && (p.status || 'published') === 'published') {
+    return !Number.isFinite(pubMs) || pubMs <= nowMs
+  }
+  return false
+}
+
 /** Merge database blog posts with built-in SEO guides, avoiding duplicate slugs. */
 export function mergeBlogPostsWithGuides(dbPosts = [], { includeDrafts = false } = {}) {
   const safeDb = Array.isArray(dbPosts) ? dbPosts : []
+  const nowMs = Date.now()
   const seenSlugs = new Set(safeDb.map((p) => String(p?.slug || '').toLowerCase()).filter(Boolean))
   const enrichedDb = safeDb
-    .filter((p) => (includeDrafts ? true : Boolean(p?.is_published) && (p?.status || 'published') === 'published'))
+    .filter((p) => (includeDrafts ? true : isLiveBlogPost(p, nowMs)))
     .map((p) => {
       const builtIn = findBuiltInBlogPost(p?.slug)
       const firstMeta = p?.content_blocks?.[0]?.post_meta || {}
+      const rawTags = Array.isArray(p?.tags) && p.tags.length ? p.tags : firstMeta.tags || builtIn?.tags || []
       return {
         ...(builtIn || {}),
         ...p,
         region: p?.region || firstMeta.region || builtIn?.region || 'all',
         regionLabel: p?.regionLabel || firstMeta.regionLabel || builtIn?.regionLabel || '',
         category: p?.category || firstMeta.category || builtIn?.category || 'Studio Guide',
+        tags: Array.isArray(rawTags) ? rawTags : [],
         ai_summary: p?.ai_summary || firstMeta.ai_summary || builtIn?.ai_summary || p?.excerpt || '',
+        seo_title: p?.seo_title || firstMeta.seo_title || builtIn?.seo_title || '',
+        seo_description: p?.seo_description || firstMeta.seo_description || builtIn?.seo_description || '',
+        seo_keywords: p?.seo_keywords || firstMeta.seo_keywords || builtIn?.seo_keywords || '',
+        canonical_url: p?.canonical_url || firstMeta.canonical_url || '',
+        og_image_url: p?.og_image_url || firstMeta.og_image_url || '',
+        noindex: Boolean(p?.noindex ?? firstMeta.noindex ?? false),
         read_minutes: Number(p?.read_minutes || firstMeta.read_minutes || builtIn?.read_minutes) || 4,
         is_featured: Boolean(p?.is_featured ?? firstMeta.is_featured ?? false),
         is_db_row: true,
@@ -635,6 +655,7 @@ export function mergeBlogPostsWithGuides(dbPosts = [], { includeDrafts = false }
     })
   const remainingGuides = SEO_LOCAL_GUIDES.filter((g) => !seenSlugs.has(g.slug.toLowerCase())).map((g) => ({
     ...g,
+    tags: Array.isArray(g.tags) ? g.tags : [],
     status: 'published',
     is_published: true,
     is_builtin_guide: true,
@@ -705,7 +726,9 @@ export function buildBlogPostJsonLd(post, origin = 'https://www.hakumautocare.co
     image: cover,
     articleSection: post.category || 'Automotive Care & Detailing',
     ...(wordCount > 0 ? { wordCount } : {}),
-    ...(post.seo_keywords ? { keywords: post.seo_keywords } : {}),
+    ...(post.seo_keywords || (Array.isArray(post.tags) && post.tags.length)
+      ? { keywords: post.seo_keywords || post.tags.join(', ') }
+      : {}),
     about: [
       { '@type': 'Thing', name: 'Car Wash' },
       { '@type': 'Thing', name: 'Auto Detailing' },

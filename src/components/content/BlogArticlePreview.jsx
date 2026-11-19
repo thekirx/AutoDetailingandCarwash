@@ -1,7 +1,12 @@
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowLeft, Calendar, Check, Clock, Copy, MapPin, Share2, Sparkles, User } from 'lucide-react'
-import { estimateReadingStats, extractContentMeta, normalizeBlocks } from '@/lib/contentBlocks'
+import { ArrowLeft, ArrowRight, Calendar, Check, Clock, Copy, ListOrdered, MapPin, Share2, Sparkles, Tag, User } from 'lucide-react'
+import {
+  estimateReadingStats,
+  extractContentMeta,
+  extractTableOfContents,
+  normalizeBlocks,
+} from '@/lib/contentBlocks'
 import ContentBlockRenderer from '@/components/content/ContentBlockRenderer'
 
 const REGION_LABELS = {
@@ -40,13 +45,18 @@ export default function BlogArticlePreview({
   post = {},
   formsById = {},
   relatedGuides = [],
+  prevPost = null,
+  nextPost = null,
   isPreview = false,
   mobile = false,
   toolbar = null,
 }) {
   const [copied, setCopied] = useState(false)
+  const [progress, setProgress] = useState(0)
   const meta = extractContentMeta(post)
   const blocks = normalizeBlocks(post?.content_blocks)
+  const toc = useMemo(() => extractTableOfContents(blocks), [blocks])
+  const tags = Array.isArray(post?.tags) && post.tags.length ? post.tags : meta.tags || []
   const stats = estimateReadingStats(blocks, post?.title || '', post?.excerpt || '')
   const readMinutes = Number(post?.read_minutes || meta.read_minutes) || stats.readMinutes || 3
   const regionKey = String(post?.region || meta.region || 'all').toLowerCase()
@@ -54,11 +64,37 @@ export default function BlogArticlePreview({
     REGION_LABELS[regionKey] || post?.regionLabel || REGION_LABELS.all
   const category = post?.category || meta.category || 'Hakum Journal'
   const isPublished =
-    post?.status === 'published' ? post?.is_published !== false : Boolean(post?.is_published) && post?.status !== 'archived'
+    post?.status === 'published'
+      ? post?.is_published !== false
+      : post?.status === 'scheduled'
+        ? Boolean(post?.published_at && Date.parse(post.published_at) <= Date.now())
+        : Boolean(post?.is_published) && post?.status !== 'archived'
+  const isScheduled = post?.status === 'scheduled' && !isPublished
   const isArchived = post?.status === 'archived'
   const coverUrl = post?.cover_url || '/branding/hakum-lw-blue.png'
   const authorLabel = post?.author_label || 'Hakum Auto Care'
   const displayDate = formatPublishDate(post?.published_at || post?.updated_at)
+
+  useEffect(() => {
+    if (isPreview || typeof window === 'undefined') return undefined
+    let raf = 0
+    const onScroll = () => {
+      if (raf) return
+      raf = window.requestAnimationFrame(() => {
+        raf = 0
+        const doc = document.documentElement
+        const scrollTop = window.scrollY || doc.scrollTop || 0
+        const maxScroll = Math.max(1, doc.scrollHeight - window.innerHeight)
+        setProgress(Math.max(0, Math.min(100, Math.round((scrollTop / maxScroll) * 100))))
+      })
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      if (raf) window.cancelAnimationFrame(raf)
+    }
+  }, [isPreview])
 
   async function handleShare() {
     if (isPreview) return
@@ -88,6 +124,11 @@ export default function BlogArticlePreview({
 
   return (
     <div className={`bredesign bd-article-shell ${isPreview ? 'is-studio-preview' : ''} ${mobile ? 'is-mobile-frame' : ''}`.trim()}>
+      {!isPreview && (
+        <div className="bd-reading-progress-track" aria-hidden="true">
+          <div className="bd-reading-progress-fill" style={{ width: `${progress}%` }} />
+        </div>
+      )}
       <section className={`bd-page-hero bd-article-hero ${isPreview ? 'is-preview' : ''}`.trim()}>
         <div
           className="bd-page-hero-media"
@@ -110,7 +151,11 @@ export default function BlogArticlePreview({
             )}
             {(!isPublished || isArchived) && (
               <span className="bd-post-badge is-draft">
-                {isArchived ? 'Archived — Hidden from public' : 'Draft Preview'}
+                {isArchived
+                  ? 'Archived — Hidden from public'
+                  : isScheduled
+                    ? `Scheduled (${displayDate})`
+                    : 'Draft Preview'}
               </span>
             )}
           </div>
@@ -193,6 +238,21 @@ export default function BlogArticlePreview({
               </aside>
             ) : null}
 
+            {toc.length >= 2 && (
+              <nav className="bd-article-toc" aria-label="Table of Contents">
+                <span className="bd-article-toc-head">
+                  <ListOrdered className="size-3.5" aria-hidden="true" /> Table of Contents
+                </span>
+                <ol>
+                  {toc.map((item) => (
+                    <li key={item.id} className={`level-${item.level}`}>
+                      <a href={`#${item.anchor}`}>{item.text}</a>
+                    </li>
+                  ))}
+                </ol>
+              </nav>
+            )}
+
             {blocks.length > 0 ? (
               <ContentBlockRenderer
                 blocks={blocks}
@@ -215,6 +275,66 @@ export default function BlogArticlePreview({
                   </p>
                 ) : null}
               </div>
+            )}
+
+            {tags.length > 0 && (
+              <div className="bd-article-tags" aria-label="Article tags">
+                <span className="bd-article-tags-label">
+                  <Tag className="size-3.5" aria-hidden="true" /> Topics:
+                </span>
+                {tags.map((t) =>
+                  isPreview ? (
+                    <span key={t} className="bd-article-tag-chip">#{t}</span>
+                  ) : (
+                    <Link
+                      key={t}
+                      to={`/blog?tag=${encodeURIComponent(t)}`}
+                      className="bd-article-tag-chip"
+                    >
+                      #{t}
+                    </Link>
+                  ),
+                )}
+              </div>
+            )}
+
+            <aside className="bd-article-author-card" aria-label="Author credentials">
+              <div className="bd-article-author-avatar" aria-hidden="true">
+                {String(authorLabel || 'H').charAt(0).toUpperCase()}
+              </div>
+              <div className="bd-article-author-info">
+                <span className="bd-eyebrow">Written &amp; Verified By</span>
+                <strong>{authorLabel}</strong>
+                <p>
+                  Certified detailing technicians &amp; studio editors at Hakum Auto Care serving Bacoor, Imus, Cavite,
+                  and Batangas City.
+                </p>
+              </div>
+            </aside>
+
+            {(prevPost || nextPost) && !isPreview && (
+              <nav className="bd-article-prevnext" aria-label="Previous and Next Articles">
+                {prevPost ? (
+                  <Link to={`/blog/${prevPost.slug}`} className="bd-article-prevnext-card is-prev">
+                    <span>
+                      <ArrowLeft className="size-3.5" aria-hidden="true" /> Previous Article
+                    </span>
+                    <strong>{prevPost.title}</strong>
+                  </Link>
+                ) : (
+                  <div />
+                )}
+                {nextPost ? (
+                  <Link to={`/blog/${nextPost.slug}`} className="bd-article-prevnext-card is-next">
+                    <span>
+                      Next Article <ArrowRight className="size-3.5" aria-hidden="true" />
+                    </span>
+                    <strong>{nextPost.title}</strong>
+                  </Link>
+                ) : (
+                  <div />
+                )}
+              </nav>
             )}
 
             <div className="bd-article-footer-bar">

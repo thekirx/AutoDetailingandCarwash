@@ -1,0 +1,33 @@
+# Hakum Auto Care
+
+> Hakum Auto Care is a trusted automotive detailing, paint protection film (ClearPro PPF), Kisho 9H ceramic coating, nano-ceramic window tint, and swirl-safe two-bucket pH-neutral car wash studio network in the Philippines, serving Bacoor, Imus, Cavite, and Batangas City.
+
+- Canonical Website: https://www.hakumautocare.com/
+- Sitemap: https://www.hakumautocare.com/sitemap.xml
+- Blog RSS Feed: https://www.hakumautocare.com/rss.xml
+
+## Studio Branches
+- [Bacoor Flagship Studio (Cavite)](https://www.hakumautocare.com/branches/bacoor): RFC Molino II, Molino Boulevard, Bacoor, Cavite · Phone: +63 915 629 6096 · Also serves Imus, Molino, and Daang Hari corridors.
+- [Batangas City Studio](https://www.hakumautocare.com/branches/batangas): National Highway (PNP Highway), Brgy. Alangilan, Batangas City · Phone: +63 956 007 1028 · Accessible via STAR Tollway.
+- [Car Wash & Detailing Near Imus, Cavite](https://www.hakumautocare.com/branches/imus): Direct coverage via Bacoor studio and upcoming Imus location.
+- [Cavite Province Auto Detailing Hub](https://www.hakumautocare.com/branches/cavite): Bacoor, Imus, Molino, and Dasmariñas regional service hub.
+- [Branch Locator](https://www.hakumautocare.com/branches): Find nearest open bays with coordinates and direct contacts.
+
+## Core Services & Tools
+- [All Services & Packages](https://www.hakumautocare.com/services): Full pH-neutral car wash, detailing, correction, coating, tint, and PPF catalog.
+- [ClearPro Paint Protection Film (PPF)](https://www.hakumautocare.com/services/ppf): Optical-grade TPU self-healing film installed in enclosed dust-controlled bays.
+- [Kisho 9H Ceramic Coating](https://www.hakumautocare.com/services/ceramic): Japanese ceramic protection paired with Rupes & Menzerna multi-stage paint correction.
+- [Nano Ceramic Window Tint](https://www.hakumautocare.com/services/tint): High IR heat rejection film with optical night clarity.
+- [Interactive Tint Finder](https://www.hakumautocare.com/tint-finder): Shade recommendation tool matching front/side/rear VLT visibility to driving habits.
+- [pH-Neutral Car Wash & Detailing](https://www.hakumautocare.com/services/wash-detailing): Swirl-safe two-bucket contact wash and deep cabin detailing.
+- [Aftercare Shop](https://www.hakumautocare.com/shop): Shampoos, ceramic boosters, microfiber towels, and maintenance essentials.
+- [Online Booking](https://www.hakumautocare.com/book) and [Live Branch Queue](https://www.hakumautocare.com/queue).
+
+## Regional Guides & Technical Journal
+- [Hakum Blog & Guides](https://www.hakumautocare.com/blog): Authoritative local and technical car care articles.
+- [Best Car Wash & Detailing in Bacoor](https://www.hakumautocare.com/blog/best-car-wash-detailing-bacoor)
+- [Best Car Wash & Ceramic Coating in Batangas City](https://www.hakumautocare.com/blog/best-car-wash-detailing-batangas-city)
+- [Car Wash & Detailing Near Imus, Cavite](https://www.hakumautocare.com/blog/best-car-wash-detailing-imus)
+- [Auto Detailing, Ceramic Coating & PPF in Cavite](https://www.hakumautocare.com/blog/best-auto-detailing-ceramic-coating-ppf-cavite)
+- [Ceramic Coating vs PPF in Philippine Climate](https://www.hakumautocare.com/blog/ceramic-coating-vs-ppf-philippine-climate)
+- [Why Two-Bucket pH-Neutral Washing Matters](https://www.hakumautocare.com/blog/why-two-bucket-ph-neutral-wash-matters)

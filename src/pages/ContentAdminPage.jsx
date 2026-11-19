@@ -50,6 +50,7 @@ import {
   saveCmsBlog,
   saveCmsEvent,
 } from '@/lib/contentCmsApi'
+import { analyzeContentSeo } from '@/lib/contentAnalyzer'
 import { mergeBlogPostsWithGuides } from '@/lib/seoLocalGuides'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
@@ -125,7 +126,10 @@ export default function ContentAdminPage() {
       if (blogStatusFilter === 'published' && (!post.is_published || post.status === 'archived')) {
         return false
       }
-      if (blogStatusFilter === 'draft' && (post.is_published || post.status === 'archived')) {
+      if (blogStatusFilter === 'draft' && (post.is_published || post.status === 'archived' || post.status === 'scheduled')) {
+        return false
+      }
+      if (blogStatusFilter === 'scheduled' && post.status !== 'scheduled') {
         return false
       }
       if (blogStatusFilter === 'archived' && post.status !== 'archived') {
@@ -339,6 +343,7 @@ export default function ContentAdminPage() {
                 {[
                   { id: 'all', label: 'All' },
                   { id: 'published', label: 'Published' },
+                  { id: 'scheduled', label: 'Scheduled' },
                   { id: 'draft', label: 'Drafts' },
                   { id: 'seo-guides', label: 'Regional SEO Guides' },
                   { id: 'archived', label: 'Archived' },
@@ -418,9 +423,14 @@ export default function ContentAdminPage() {
                             <div className="text-muted-foreground">{post.category || 'Guide'}</div>
                           </TableCell>
                           <TableCell>
-                            <Badge variant={isPublished ? 'default' : 'secondary'}>
-                              {isPublished ? 'Published' : post.status || 'Draft'}
-                            </Badge>
+                            <div className="flex flex-col items-start gap-1">
+                              <Badge variant={isPublished ? 'default' : 'secondary'}>
+                                {isPublished ? 'Published' : post.status || 'Draft'}
+                              </Badge>
+                              <span className="text-[11px] text-muted-foreground">
+                                SEO {analyzeContentSeo(post).score}/100
+                              </span>
+                            </div>
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground">
                             {post.updated_at || post.published_at

@@ -108,7 +108,7 @@ describe('Vercel API rewrite contract', () => {
     assert.equal(readGatewayOperation({ url: destination.pathname + destination.search }), null)
   })
 
-  it('contains exactly eight deployable JavaScript function entrypoints', () => {
+  it('contains only the expected deployable JavaScript function entrypoints (under Hobby 12 cap)', () => {
     const files = readdirSync(new URL('../api/', import.meta.url))
       .filter((file) => file.endsWith('.js'))
       .sort()
@@ -122,6 +122,7 @@ describe('Vercel API rewrite contract', () => {
       'finance.js',
       'notifications.js',
       'public-inquiry.js',
+      'seo.js',
       'staff.js',
     ])
   })

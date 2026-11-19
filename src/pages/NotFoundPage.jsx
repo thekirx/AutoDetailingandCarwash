@@ -6,6 +6,7 @@ export default function NotFoundPage() {
     title: 'Page not found',
     description: 'That Hakum Auto Care page does not exist. Head home or book a service.',
     path: '/404',
+    noindex: true,
   })
 
   return (

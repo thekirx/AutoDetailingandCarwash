@@ -47,6 +47,8 @@ const PUBLIC = {
     'public form notifier. The bearer is optional by design ("staff fill may send a bearer; public forms do not"); rate limited per IP',
   handleReferralStaffRequest:
     'public booking form loads employee names for the "talked to an employee" choice. Returns id, name, role, and branch only',
+  handleSeoRequest:
+    'read-only public SEO endpoints (GET/HEAD only: dynamic sitemap.xml, rss.xml, published crawler meta, IndexNow verification key)',
   handleDemoLoginRequest:
     'one-click demo sign-in for testing (owner decision 2026-10-12). Unauthenticated BY DEFINITION — the point is to sign in without a session. It 404s without the QA key (only its SHA-256 is in the repo), and it returns a session for a FIXED set of known demo accounts, never an arbitrary identity. It mints a one-time link server-side and returns only tokens, so no credential is involved. DEMO_LOGIN_ENABLED=false removes the route entirely. Recorded on BUG-088.',
 }

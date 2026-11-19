@@ -467,6 +467,8 @@ async function assertContentManagerCaller(admin, accessToken, { forEvents = fals
   return { user: userData.user, staff }
 }
 
+import { extractContentMeta, normalizeBlogTags } from '../src/lib/contentBlocks.js'
+
 const BLOG_SELECT_COLS =
   'id, title, slug, excerpt, cover_url, author_label, status, is_published, published_at, content_blocks, created_at, updated_at, created_by'
 
@@ -534,15 +536,18 @@ export async function manageSiteContent({ accessToken, body }) {
       }
     }
 
-    const status = ['draft', 'published', 'archived'].includes(row.status)
+    const status = ['draft', 'scheduled', 'published', 'archived'].includes(row.status)
       ? row.status
       : row.is_published
         ? 'published'
         : 'draft'
     const isPublished = status === 'published'
     const targetId = existing?.id || rowId || crypto.randomUUID()
+    const blocks = Array.isArray(row.content_blocks) ? row.content_blocks : []
+    const meta = extractContentMeta({ ...row, content_blocks: blocks })
+    const tags = normalizeBlogTags(Array.isArray(row.tags) && row.tags.length ? row.tags : meta.tags)
 
-    const payload = {
+    const basePayload = {
       title,
       slug: cleanSlug,
       excerpt: String(row.excerpt || '').trim() || null,
@@ -550,23 +555,65 @@ export async function manageSiteContent({ accessToken, body }) {
       author_label: String(row.author_label || '').trim() || 'Hakum Auto Care',
       status,
       is_published: isPublished,
-      published_at: isPublished
-        ? row.published_at || existing?.published_at || new Date().toISOString()
-        : existing?.published_at || null,
-      content_blocks: Array.isArray(row.content_blocks) ? row.content_blocks : [],
+      published_at:
+        status === 'published'
+          ? row.published_at || existing?.published_at || new Date().toISOString()
+          : status === 'scheduled'
+            ? row.published_at || new Date(Date.now() + 3600_000).toISOString()
+            : existing?.published_at || null,
+      content_blocks: blocks,
       updated_at: new Date().toISOString(),
     }
 
-    const mutation = existing
-      ? admin.from('blogs').update(payload).eq('id', targetId).select(BLOG_SELECT_COLS).maybeSingle()
-      : admin
-          .from('blogs')
-          .insert({ id: targetId, ...payload, created_by: user.id })
-          .select(BLOG_SELECT_COLS)
-          .maybeSingle()
+    const payload = {
+      ...basePayload,
+      category: String(row.category || meta.category || 'Regional Authority Guide').trim(),
+      region: String(row.region || meta.region || 'all').trim(),
+      tags,
+      seo_title: String(row.seo_title ?? meta.seo_title ?? '').trim() || null,
+      seo_description: String(row.seo_description ?? meta.seo_description ?? '').trim() || null,
+      seo_keywords: String(row.seo_keywords ?? meta.seo_keywords ?? '').trim() || null,
+      ai_summary: String(row.ai_summary ?? meta.ai_summary ?? '').trim() || null,
+      canonical_url: String(row.canonical_url ?? meta.canonical_url ?? '').trim() || null,
+      og_image_url: String(row.og_image_url ?? meta.og_image_url ?? '').trim() || null,
+      noindex: Boolean(row.noindex ?? meta.noindex ?? false),
+      is_featured: Boolean(row.is_featured ?? meta.is_featured ?? false),
+      read_minutes: Math.max(1, Math.min(240, Number(row.read_minutes || meta.read_minutes) || 4)),
+    }
 
-    const { data, error } = await mutation
+    const writeAdmin = (p) =>
+      existing
+        ? admin.from('blogs').update(p).eq('id', targetId).select(BLOG_SELECT_COLS).maybeSingle()
+        : admin
+            .from('blogs')
+            .insert({ id: targetId, ...p, created_by: user.id })
+            .select(BLOG_SELECT_COLS)
+            .maybeSingle()
+
+    let { data, error } = await writeAdmin(payload)
+    if (error && /column .* does not exist|schema cache/i.test(error.message || '')) {
+      ;({ data, error } = await writeAdmin(basePayload))
+    }
     if (error) throw Object.assign(new Error(error.message), { status: 400 })
+
+    // Optional IndexNow ping when INDEXNOW_KEY is configured and post is public.
+    const indexNowKey = String(process.env.INDEXNOW_KEY || '').trim()
+    if (indexNowKey && status === 'published' && !payload.noindex) {
+      fetch('https://api.indexnow.org/indexnow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=utf-8' },
+        body: JSON.stringify({
+          host: 'www.hakumautocare.com',
+          key: indexNowKey,
+          keyLocation: 'https://www.hakumautocare.com/api/seo?operation=indexnow-key',
+          urlList: [
+            `https://www.hakumautocare.com/blog/${cleanSlug}`,
+            'https://www.hakumautocare.com/blog',
+          ],
+        }),
+      }).catch(() => {})
+    }
+
     return { data }
   }
 

@@ -2,9 +2,14 @@ import { useEffect, useRef, useState } from 'react'
 import {
   ArrowDown,
   ArrowUp,
+  Bold,
+  Code,
   Copy,
   FolderOpen,
+  GripVertical,
   ImagePlus,
+  Italic,
+  Link2,
   Loader2,
   Plus,
   Sparkles,
@@ -333,10 +338,26 @@ export function MediaDropzoneField({
   )
 }
 
+const INTERNAL_SEO_LINKS = [
+  { label: 'Book Online', href: '/book' },
+  { label: 'Live Queue', href: '/queue' },
+  { label: 'Branches Locator', href: '/branches' },
+  { label: 'Bacoor Branch', href: '/branches/bacoor' },
+  { label: 'Batangas Branch', href: '/branches/batangas' },
+  { label: 'Imus Hub', href: '/branches/imus' },
+  { label: 'Cavite Hub', href: '/branches/cavite' },
+  { label: 'ClearPro PPF', href: '/services/ppf' },
+  { label: 'Kisho Ceramic Coating', href: '/services/ceramic' },
+  { label: 'Nano Ceramic Tint', href: '/services/tint' },
+  { label: 'Wash & Detailing', href: '/services/wash-detailing' },
+  { label: 'Tint Finder', href: '/tint-finder' },
+]
+
 /**
  * WordPress-like Gutenberg block editor for blogs & events.
- * Supports drag-and-drop photo upload, multi-photo galleries, callouts, headings,
- * paragraphs, quotes, lists, videos, dividers, and form CTA buttons.
+ * Supports true drag-and-drop block & gallery reordering, canvas/paste image upload,
+ * inline rich-text formatting + internal SEO link insertion, `/` block switcher,
+ * callouts, headings, quotes, lists, videos, dividers, and form CTA buttons.
  */
 export default function ContentBlockEditor({
   blocks = [],
@@ -347,7 +368,13 @@ export default function ContentBlockEditor({
 }) {
   const rows = normalizeBlocks(blocks)
   const [uploadingIndex, setUploadingIndex] = useState(null)
+  const [canvasUploading, setCanvasUploading] = useState(false)
+  const [canvasDragFiles, setCanvasDragFiles] = useState(false)
   const [libraryTarget, setLibraryTarget] = useState(null)
+  const [dragBlockIndex, setDragBlockIndex] = useState(null)
+  const [dragOverIndex, setDragOverIndex] = useState(null)
+  const [galleryDrag, setGalleryDrag] = useState(null) // { blockIndex, imgIndex }
+  const paragraphRefs = useRef({})
 
   function commit(next) {
     onChange?.(normalizeBlocks(next))
@@ -355,6 +382,96 @@ export default function ContentBlockEditor({
 
   function update(index, patch) {
     commit(rows.map((b, i) => (i === index ? { ...b, ...patch } : b)))
+  }
+
+  function reorderBlocks(fromIdx, toIdx) {
+    if (fromIdx == null || toIdx == null || fromIdx === toIdx) return
+    if (fromIdx < 0 || fromIdx >= rows.length || toIdx < 0 || toIdx >= rows.length) return
+    const next = [...rows]
+    const [moved] = next.splice(fromIdx, 1)
+    next.splice(toIdx, 0, moved)
+    commit(next)
+  }
+
+  function transformBlockType(index, type) {
+    const fresh = emptyBlock(type)
+    commit(
+      rows.map((b, i) => (i === index ? { ...fresh, id: b.id, post_meta: b.post_meta } : b)),
+    )
+  }
+
+  function wrapParagraphSelection(index, prefix, suffix = prefix, fallbackText = '') {
+    const el = paragraphRefs.current[index]
+    const current = String(rows[index]?.text || '')
+    if (!el || typeof el.selectionStart !== 'number') {
+      update(index, { text: current ? `${current} ${prefix}${fallbackText}${suffix}` : `${prefix}${fallbackText}${suffix}` })
+      return
+    }
+    const start = el.selectionStart
+    const end = el.selectionEnd
+    const selected = current.slice(start, end) || fallbackText
+    const nextText = `${current.slice(0, start)}${prefix}${selected}${suffix}${current.slice(end)}`
+    update(index, { text: nextText })
+    requestAnimationFrame(() => {
+      try {
+        el.focus()
+        const caret = start + prefix.length + selected.length + suffix.length
+        el.setSelectionRange(caret, caret)
+      } catch {
+        // ignore focus errors
+      }
+    })
+  }
+
+  function insertParagraphLink(index, defaultHref = '', defaultLabel = '') {
+    const el = paragraphRefs.current[index]
+    const current = String(rows[index]?.text || '')
+    const start = el && typeof el.selectionStart === 'number' ? el.selectionStart : current.length
+    const end = el && typeof el.selectionEnd === 'number' ? el.selectionEnd : current.length
+    const selected = current.slice(start, end).trim()
+    const href = defaultHref || window.prompt('Enter internal route (e.g. /book) or full https:// URL:', '/book')
+    if (!href) return
+    const anchor = selected || defaultLabel || href.replace(/^\//, '').replace(/[-/]+/g, ' ') || 'Hakum Guide'
+    const token = `[${anchor}](${href.trim()})`
+    const nextText = `${current.slice(0, start)}${token}${current.slice(end)}`
+    update(index, { text: nextText })
+  }
+
+  async function handleCanvasFilesDrop(fileList, insertAt = rows.length) {
+    const files = Array.from(fileList || []).filter((f) => String(f?.type || '').startsWith('image/'))
+    if (!files.length || disabled) return
+    setCanvasUploading(true)
+    try {
+      if (files.length === 1) {
+        const url = await uploadContentMedia(files[0])
+        const alt = String(files[0].name || '').replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ')
+        const blk = { ...emptyBlock('image'), url, alt }
+        const next = [...rows]
+        next.splice(Math.max(0, Math.min(next.length, insertAt)), 0, blk)
+        commit(next)
+        toast.success('Photo dropped & added as Image block')
+      } else {
+        const imgs = []
+        for (const f of files.slice(0, 8)) {
+          const url = await uploadContentMedia(f)
+          imgs.push({
+            id: `g-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+            url,
+            alt: String(f.name || '').replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' '),
+            caption: '',
+          })
+        }
+        const blk = { ...emptyBlock('gallery'), columns: Math.min(4, Math.max(2, imgs.length)), images: imgs }
+        const next = [...rows]
+        next.splice(Math.max(0, Math.min(next.length, insertAt)), 0, blk)
+        commit(next)
+        toast.success(`${imgs.length} photos dropped & added as Gallery block`)
+      }
+    } catch (err) {
+      toast.error(err?.message || 'Image drop upload failed')
+    } finally {
+      setCanvasUploading(false)
+    }
   }
 
   function remove(index) {
@@ -438,28 +555,90 @@ export default function ContentBlockEditor({
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div
+      className={`flex flex-col gap-3 rounded-xl transition ${
+        canvasDragFiles ? 'ring-2 ring-primary/60 bg-primary/5 p-2' : ''
+      }`.trim()}
+      onDragOver={(e) => {
+        if (disabled) return
+        if (e.dataTransfer?.types?.includes('Files')) {
+          e.preventDefault()
+          setCanvasDragFiles(true)
+        }
+      }}
+      onDragLeave={() => setCanvasDragFiles(false)}
+      onDrop={(e) => {
+        setCanvasDragFiles(false)
+        if (disabled) return
+        if (e.dataTransfer?.files?.length && dragBlockIndex === null && !galleryDrag) {
+          e.preventDefault()
+          handleCanvasFilesDrop(e.dataTransfer.files)
+        }
+      }}
+    >
+      {canvasUploading && (
+        <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-primary">
+          <Loader2 className="size-3.5 animate-spin" /> Uploading dropped/pasted photo(s)…
+        </div>
+      )}
+
       {rows.map((block, index) => (
         <div
           key={block.id}
-          className="rounded-xl border border-border bg-muted/20 p-3.5 transition hover:border-border/80"
+          onDragOver={(e) => {
+            if (disabled || dragBlockIndex === null || dragBlockIndex === index) return
+            e.preventDefault()
+            if (dragOverIndex !== index) setDragOverIndex(index)
+          }}
+          onDrop={(e) => {
+            if (disabled || dragBlockIndex === null) return
+            e.preventDefault()
+            e.stopPropagation()
+            reorderBlocks(dragBlockIndex, index)
+            setDragBlockIndex(null)
+            setDragOverIndex(null)
+          }}
+          className={`rounded-xl border bg-muted/20 p-3.5 transition ${
+            dragOverIndex === index && dragBlockIndex !== null && dragBlockIndex !== index
+              ? 'border-primary ring-2 ring-primary/40'
+              : dragBlockIndex === index
+                ? 'border-dashed border-primary/60 opacity-60'
+                : 'border-border hover:border-border/80'
+          }`}
         >
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 border-b border-border/60 pb-2.5">
             <div className="flex items-center gap-2">
+              {!disabled && (
+                <button
+                  type="button"
+                  draggable
+                  onDragStart={(e) => {
+                    setDragBlockIndex(index)
+                    try {
+                      e.dataTransfer.effectAllowed = 'move'
+                      e.dataTransfer.setData('text/plain', String(index))
+                    } catch {
+                      // ignore
+                    }
+                  }}
+                  onDragEnd={() => {
+                    setDragBlockIndex(null)
+                    setDragOverIndex(null)
+                  }}
+                  title="Drag to reorder block"
+                  aria-label={`Drag to reorder block ${index + 1}`}
+                  className="inline-flex size-7 cursor-grab items-center justify-center rounded-md border border-border/60 bg-background/70 text-muted-foreground hover:text-foreground active:cursor-grabbing"
+                >
+                  <GripVertical className="size-3.5" />
+                </button>
+              )}
               <span className="inline-flex size-6 items-center justify-center rounded-md bg-muted text-xs font-semibold text-muted-foreground">
                 {index + 1}
               </span>
               <Select
                 disabled={disabled}
                 value={block.type}
-                onValueChange={(type) => {
-                  const fresh = emptyBlock(type)
-                  commit(
-                    rows.map((b, i) =>
-                      i === index ? { ...fresh, id: b.id, post_meta: b.post_meta } : b,
-                    ),
-                  )
-                }}
+                onValueChange={(type) => transformBlockType(index, type)}
               >
                 <SelectTrigger className="h-8 w-44 cursor-pointer text-xs">
                   <SelectValue />
@@ -563,15 +742,110 @@ export default function ContentBlockEditor({
           )}
 
           {block.type === 'paragraph' && (
-            <div className="flex flex-col gap-1.5">
-              <Label>Paragraph Text</Label>
+            <div className="flex flex-col gap-2">
+              <div className="flex flex-wrap items-center justify-between gap-1.5">
+                <Label>Paragraph Text</Label>
+                {!disabled && (
+                  <div className="flex flex-wrap items-center gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 cursor-pointer px-2 text-xs"
+                      onClick={() => wrapParagraphSelection(index, '**', '**', 'bold text')}
+                      title="Bold selected text (**bold**)"
+                    >
+                      <Bold className="size-3" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 cursor-pointer px-2 text-xs"
+                      onClick={() => wrapParagraphSelection(index, '*', '*', 'italic text')}
+                      title="Italic selected text (*italic*)"
+                    >
+                      <Italic className="size-3" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 cursor-pointer px-2 text-xs"
+                      onClick={() => wrapParagraphSelection(index, '`', '`', 'detailing')}
+                      title="Inline code highlight"
+                    >
+                      <Code className="size-3" />
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 cursor-pointer px-2 text-xs"
+                      onClick={() => insertParagraphLink(index)}
+                      title="Insert custom link"
+                    >
+                      <Link2 className="mr-1 size-3" /> Link
+                    </Button>
+                    <Select
+                      value=""
+                      onValueChange={(href) => {
+                        const found = INTERNAL_SEO_LINKS.find((l) => l.href === href)
+                        if (found) insertParagraphLink(index, found.href, found.label)
+                      }}
+                    >
+                      <SelectTrigger className="h-7 w-40 cursor-pointer text-[11px]">
+                        <SelectValue placeholder="+ Internal SEO Link" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {INTERNAL_SEO_LINKS.map((l) => (
+                          <SelectItem key={l.href} value={l.href}>
+                            {l.label} ({l.href})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+
               <Textarea
+                ref={(el) => {
+                  paragraphRefs.current[index] = el
+                }}
                 disabled={disabled}
                 rows={4}
-                placeholder="Write your paragraph content…"
+                placeholder="Write your paragraph, type / for block picker, or paste a screenshot…"
                 value={block.text}
                 onChange={(e) => update(index, { text: e.target.value })}
+                onPaste={(e) => {
+                  const files = Array.from(e.clipboardData?.files || []).filter((f) =>
+                    String(f?.type || '').startsWith('image/'),
+                  )
+                  if (files.length && !disabled) {
+                    e.preventDefault()
+                    handleCanvasFilesDrop(files, index + 1)
+                  }
+                }}
               />
+
+              {!disabled && String(block.text || '').trim().startsWith('/') && (
+                <div className="flex flex-wrap items-center gap-1 rounded-lg border border-primary/40 bg-background/95 p-2 shadow-md">
+                  <span className="mr-1 text-[11px] font-semibold text-primary">Switch block:</span>
+                  {BLOCK_TYPES.filter((t) => t.value !== 'paragraph').map((t) => (
+                    <Button
+                      key={t.value}
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="h-6 cursor-pointer px-2 text-[11px]"
+                      onClick={() => transformBlockType(index, t.value)}
+                    >
+                      {t.label}
+                    </Button>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -773,10 +1047,40 @@ export default function ContentBlockEditor({
                   {block.images.map((img, imgIdx) => (
                     <div
                       key={img.id || imgIdx}
-                      className="flex flex-col gap-1.5 rounded-lg border border-border bg-background/60 p-2"
+                      draggable={!disabled}
+                      onDragStart={(e) => {
+                        setGalleryDrag({ blockIndex: index, imgIndex: imgIdx })
+                        try {
+                          e.stopPropagation()
+                          e.dataTransfer.effectAllowed = 'move'
+                        } catch {
+                          // ignore
+                        }
+                      }}
+                      onDragOver={(e) => {
+                        if (galleryDrag?.blockIndex === index && galleryDrag.imgIndex !== imgIdx) {
+                          e.preventDefault()
+                        }
+                      }}
+                      onDrop={(e) => {
+                        if (galleryDrag?.blockIndex !== index || galleryDrag.imgIndex === imgIdx) return
+                        e.preventDefault()
+                        e.stopPropagation()
+                        const nextImgs = [...block.images]
+                        const [moved] = nextImgs.splice(galleryDrag.imgIndex, 1)
+                        nextImgs.splice(imgIdx, 0, moved)
+                        update(index, { images: nextImgs })
+                        setGalleryDrag(null)
+                      }}
+                      onDragEnd={() => setGalleryDrag(null)}
+                      className={`flex flex-col gap-1.5 rounded-lg border bg-background/60 p-2 transition ${
+                        galleryDrag?.blockIndex === index && galleryDrag.imgIndex === imgIdx
+                          ? 'border-primary opacity-60'
+                          : 'border-border'
+                      }`}
                     >
                       <div className="relative aspect-[4/3] w-full overflow-hidden rounded-md bg-black/20">
-                        <img src={img.url} alt={img.alt || ''} className="h-full w-full object-cover" />
+                        <img src={img.url} alt={img.alt || ''} className="h-full w-full cursor-grab object-cover" />
                         <button
                           type="button"
                           disabled={disabled}

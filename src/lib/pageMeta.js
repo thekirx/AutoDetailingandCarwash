@@ -241,9 +241,94 @@ export function buildSiteJsonLd({
         inLanguage: 'en-PH',
         description: DEFAULT_DESCRIPTION,
         publisher: { '@id': `${baseUrl}#organization` },
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: {
+            '@type': 'EntryPoint',
+            urlTemplate: `${baseUrl}blog?q={search_term_string}`,
+          },
+          'query-input': 'required name=search_term_string',
+        },
       },
     ],
   }
+}
+
+export function buildBreadcrumbJsonLd(items = [], origin) {
+  const baseUrl = String(origin || PRODUCTION_ORIGIN).replace(/\/$/, '')
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: items.map((item, idx) => {
+      const path = canonicalPath(item.path || '/')
+      return {
+        '@type': 'ListItem',
+        position: idx + 1,
+        name: item.name,
+        item: path === '/' ? `${baseUrl}/` : `${baseUrl}${path}`,
+      }
+    }),
+  }
+}
+
+/** Structured Service + FAQ + Breadcrumb graph for service landing pages (strictly fact-based). */
+export function buildServicePageJsonLd({
+  slug,
+  name,
+  description,
+  faqs = [],
+  image = '/og-image.png',
+  origin,
+} = {}) {
+  const baseUrl = String(origin || PRODUCTION_ORIGIN).replace(/\/$/, '')
+  const pagePath = slug ? `/services/${slug}` : '/services'
+  const pageUrl = `${baseUrl}${pagePath}`
+  const graph = [
+    {
+      '@type': 'Service',
+      '@id': `${pageUrl}#service`,
+      name: String(name || 'Hakum Auto Care Service'),
+      serviceType: String(name || 'Automotive Detailing'),
+      description: String(description || DEFAULT_DESCRIPTION),
+      url: pageUrl,
+      image: image.startsWith('http') ? image : `${baseUrl}${image.startsWith('/') ? '' : '/'}${image}`,
+      provider: { '@id': `${baseUrl}/#organization` },
+      areaServed: [
+        { '@type': 'City', name: 'Bacoor' },
+        { '@type': 'City', name: 'Imus' },
+        { '@type': 'AdministrativeArea', name: 'Cavite' },
+        { '@type': 'City', name: 'Batangas City' },
+        { '@type': 'Country', name: 'Philippines' },
+      ],
+    },
+    buildBreadcrumbJsonLd(
+      [
+        { name: 'Home', path: '/' },
+        { name: 'Services', path: '/services' },
+        ...(slug ? [{ name: name || slug, path: pagePath }] : []),
+      ],
+      baseUrl,
+    ),
+  ]
+
+  if (Array.isArray(faqs) && faqs.length) {
+    const items = faqs
+      .map((f) => ({ q: f?.question || f?.q, a: f?.answer || f?.a }))
+      .filter((f) => f.q && f.a)
+    if (items.length) {
+      graph.push({
+        '@type': 'FAQPage',
+        '@id': `${pageUrl}#faq`,
+        mainEntity: items.map((f) => ({
+          '@type': 'Question',
+          name: f.q,
+          acceptedAnswer: { '@type': 'Answer', text: f.a },
+        })),
+      })
+    }
+  }
+
+  return { '@context': 'https://schema.org', '@graph': graph }
 }
 
 function publicName(branch) {
@@ -263,12 +348,19 @@ function upsertMeta(attr, key, content) {
   el.setAttribute('content', content)
 }
 
-/** Canonical + robots directives, so duplicate URL forms consolidate. */
-export function upsertLink(rel, href) {
-  let el = document.head.querySelector(`link[rel="${rel}"]`)
+/** Canonical + hreflang directives, so duplicate URL forms consolidate. */
+export function upsertLink(rel, href, extraAttrs = {}) {
+  const selector =
+    extraAttrs.hreflang != null
+      ? `link[rel="${rel}"][hreflang="${extraAttrs.hreflang}"]`
+      : `link[rel="${rel}"]`
+  let el = document.head.querySelector(selector)
   if (!el) {
     el = document.createElement('link')
     el.setAttribute('rel', rel)
+    for (const [k, v] of Object.entries(extraAttrs)) {
+      if (v != null) el.setAttribute(k, String(v))
+    }
     document.head.appendChild(el)
   }
   el.setAttribute('href', href)
@@ -302,33 +394,68 @@ export function buildHeadPatch({
   description = DEFAULT_DESCRIPTION,
   path = '/',
   image = '/og-image.png',
+  ogType = 'website',
+  keywords = '',
+  canonical = '',
+  article = null,
   noindex = false,
   jsonLd = null,
   jsonLdId = 'hakum-jsonld',
 } = {}) {
   const fullTitle = buildDocumentTitle(title)
-  const url = absoluteUrl(canonicalPath(path))
-  const ogImage = absoluteUrl(image)
+  const routeUrl = absoluteUrl(canonicalPath(path))
+  const canonicalTrimmed = String(canonical || '').trim()
+  const resolvedCanonical = canonicalTrimmed
+    ? /^https?:\/\//i.test(canonicalTrimmed)
+      ? canonicalTrimmed
+      : absoluteUrl(canonicalPath(canonicalTrimmed))
+    : routeUrl
+  const ogImage = /^https?:\/\//i.test(String(image || '').trim())
+    ? String(image).trim()
+    : absoluteUrl(image || '/og-image.png')
+  const robotsValue = noindex ? 'noindex,nofollow' : 'index,follow'
+  const meta = [
+    { attr: 'name', key: 'description', content: description },
+    ...(String(keywords || '').trim() ? [{ attr: 'name', key: 'keywords', content: String(keywords).trim() }] : []),
+    { attr: 'property', key: 'og:title', content: fullTitle },
+    { attr: 'property', key: 'og:description', content: description },
+    { attr: 'property', key: 'og:type', content: ogType === 'article' ? 'article' : 'website' },
+    { attr: 'property', key: 'og:locale', content: 'en_PH' },
+    { attr: 'property', key: 'og:url', content: resolvedCanonical },
+    { attr: 'property', key: 'og:image', content: ogImage },
+    { attr: 'property', key: 'og:site_name', content: SITE },
+    { attr: 'name', key: 'twitter:card', content: 'summary_large_image' },
+    { attr: 'name', key: 'twitter:title', content: fullTitle },
+    { attr: 'name', key: 'twitter:description', content: description },
+    { attr: 'name', key: 'twitter:image', content: ogImage },
+    // The in-store TV board & /404 routes are excluded from the index.
+    { attr: 'name', key: 'robots', content: robotsValue },
+    ...(!noindex
+      ? [{ attr: 'name', key: 'googlebot', content: 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1' }]
+      : []),
+  ]
+
+  if (ogType === 'article' && article && typeof article === 'object') {
+    if (article.publishedTime) meta.push({ attr: 'property', key: 'article:published_time', content: article.publishedTime })
+    if (article.modifiedTime) meta.push({ attr: 'property', key: 'article:modified_time', content: article.modifiedTime })
+    if (article.section) meta.push({ attr: 'property', key: 'article:section', content: article.section })
+    if (article.author) meta.push({ attr: 'property', key: 'article:author', content: article.author })
+  }
+
+  const links = [{ rel: 'canonical', href: resolvedCanonical }]
+  if (!noindex) {
+    links.push(
+      { rel: 'alternate', hreflang: 'en-PH', href: resolvedCanonical },
+      { rel: 'alternate', hreflang: 'x-default', href: resolvedCanonical },
+    )
+  }
+
   return {
     title: fullTitle,
-    canonical: url,
-    robots: noindex ? 'noindex,nofollow' : 'index,follow',
-    meta: [
-      { attr: 'name', key: 'description', content: description },
-      { attr: 'property', key: 'og:title', content: fullTitle },
-      { attr: 'property', key: 'og:description', content: description },
-      { attr: 'property', key: 'og:type', content: 'website' },
-      { attr: 'property', key: 'og:url', content: url },
-      { attr: 'property', key: 'og:image', content: ogImage },
-      { attr: 'property', key: 'og:site_name', content: SITE },
-      { attr: 'name', key: 'twitter:card', content: 'summary_large_image' },
-      { attr: 'name', key: 'twitter:title', content: fullTitle },
-      { attr: 'name', key: 'twitter:description', content: description },
-      { attr: 'name', key: 'twitter:image', content: ogImage },
-      // The in-store TV board is a content-free display; keep it out of the index.
-      { attr: 'name', key: 'robots', content: noindex ? 'noindex,nofollow' : 'index,follow' },
-    ],
-    links: [{ rel: 'canonical', href: url }],
+    canonical: resolvedCanonical,
+    robots: robotsValue,
+    meta,
+    links,
     jsonLd,
     jsonLdId,
   }
@@ -338,7 +465,9 @@ function applyHeadPatch(options) {
   const patch = buildHeadPatch(options)
   document.title = patch.title
   for (const entry of patch.meta) upsertMeta(entry.attr, entry.key, entry.content)
-  for (const link of patch.links) upsertLink(link.rel, link.href)
+  for (const link of patch.links) {
+    upsertLink(link.rel, link.href, link.hreflang ? { hreflang: link.hreflang } : {})
+  }
   if (patch.jsonLd) upsertJsonLd(patch.jsonLd, options.jsonLdId)
 }
 
@@ -348,34 +477,53 @@ export function usePageMeta({
   description,
   path,
   image,
+  ogType,
+  keywords,
+  canonical,
+  article,
   noindex,
   jsonLd = null,
   jsonLdId = 'hakum-jsonld',
 } = {}) {
+  const articleKey = article ? JSON.stringify(article) : ''
   useEffect(() => {
-    applyHeadPatch({ title, description, path, image, noindex, jsonLd, jsonLdId })
-  }, [title, description, path, image, noindex, jsonLd, jsonLdId])
+    applyHeadPatch({
+      title,
+      description,
+      path,
+      image,
+      ogType,
+      keywords,
+      canonical,
+      article,
+      noindex,
+      jsonLd,
+      jsonLdId,
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [title, description, path, image, ogType, keywords, canonical, articleKey, noindex, jsonLd, jsonLdId])
 }
 
 /**
  * The public layout's site-wide defaults. Layout effects run before every
  * passive effect in the same commit, so a page's own usePageMeta always lands
- * after these and its title wins. Before this, both ran as passive effects and
- * the parent layout ran last, so /services/tint showed "Hakum Auto Care"
- * whenever the layout re-rendered after the page.
+ * after these and its title wins.
  */
 export function useLayoutPageMeta({
   title,
   description,
   path,
   image,
+  ogType,
+  keywords,
+  canonical,
   noindex,
   jsonLd = null,
   jsonLdId = 'hakum-jsonld',
 } = {}) {
   useLayoutEffect(() => {
-    applyHeadPatch({ title, description, path, image, noindex, jsonLd, jsonLdId })
-  }, [title, description, path, image, noindex, jsonLd, jsonLdId])
+    applyHeadPatch({ title, description, path, image, ogType, keywords, canonical, noindex, jsonLd, jsonLdId })
+  }, [title, description, path, image, ogType, keywords, canonical, noindex, jsonLd, jsonLdId])
 }
 
 export { SITE, DEFAULT_DESCRIPTION }

@@ -29,10 +29,10 @@ export default function CustomerBlogPage() {
   const loadPosts = useCallback(async () => {
     const { data, error: e } = await supabase
       .from('blogs')
-      .select('id, title, slug, excerpt, cover_url, author_label, published_at, status, is_published, content_blocks')
-      .eq('is_published', true)
-      .eq('status', 'published')
+      .select('id, title, slug, excerpt, cover_url, author_label, published_at, updated_at, status, is_published, content_blocks')
+      .in('status', ['published', 'scheduled'])
       .order('published_at', { ascending: false })
+      .limit(100)
     if (e) setError('')
     const merged = mergeBlogPostsWithGuides(data || [])
     setPosts(merged)

@@ -88,9 +88,8 @@ const PAGE_META = {
   '/403': { title: 'Access denied', description: 'You do not have access to that Hakum Auto Care page.' },
 }
 
-// The shop floor board is a content-free display for the in-store TV, not a
-// page anyone should land on from a search result.
-const NOINDEX_PATHS = /^\/queue\/[^/]+\/tv\/?$/
+// The shop floor board is a content-free display for the in-store TV, and 403/404 are error pages.
+const NOINDEX_PATHS = /^(?:\/queue\/[^/]+\/tv|\/403|\/404)\/?$/
 
 /** Sets document title / OG tags / JSON-LD for public marketing pages. */
 export default function PublicPageMeta() {

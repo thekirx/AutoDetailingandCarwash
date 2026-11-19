@@ -5204,3 +5204,266 @@
   .bredesign .bd-talk-fab { transition: none; }
   .bredesign .bd-talk-fab:hover { transform: none; }
 }
+
+/* ---- WordPress-style Blog Hub, TOC, Rich Inline Links & Reading Progress --- */
+.bredesign .bd-reading-progress-track {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  z-index: 95;
+  pointer-events: none;
+}
+.bredesign .bd-reading-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #9db4ff, #5b82ff);
+  transition: width 0.1s linear;
+}
+.bredesign .bd-blog-search-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.bredesign .bd-blog-select,
+.bredesign .bd-blog-rss-link {
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--bd-ink);
+  font-size: 13px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+.bredesign .bd-blog-select option {
+  background: #081238;
+  color: #f1f1ed;
+}
+.bredesign .bd-blog-rss-link:hover {
+  border-color: rgba(157, 180, 255, 0.55);
+  color: #9db4ff;
+}
+.bredesign .bd-blog-tag-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.bredesign .bd-blog-tag-btn,
+.bredesign .bd-post-card-tag,
+.bredesign .bd-article-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.04);
+  color: rgba(241, 241, 237, 0.84);
+  font-size: 12px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.bredesign .bd-blog-tag-btn.is-active,
+.bredesign .bd-blog-tag-btn:hover,
+.bredesign .bd-post-card-tag:hover,
+.bredesign .bd-article-tag-chip:hover {
+  border-color: rgba(157, 180, 255, 0.65);
+  background: rgba(157, 180, 255, 0.14);
+  color: #fff;
+}
+.bredesign .bd-post-card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 4px;
+}
+.bredesign .bd-blog-clear-link {
+  font-size: 12px;
+  color: #9db4ff;
+  text-decoration: underline;
+  margin-left: auto;
+}
+.bredesign .bd-blog-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-top: 32px;
+}
+.bredesign .bd-blog-page-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  min-height: 38px;
+  padding: 0 12px;
+  border-radius: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--bd-ink);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.bredesign .bd-blog-page-link.is-active {
+  background: var(--bd-accent);
+  border-color: var(--bd-accent);
+  color: #fff;
+}
+.bredesign .bd-article-toc {
+  margin: 0 0 28px;
+  padding: 18px 20px;
+  border-radius: 14px;
+  border: 1px solid rgba(157, 180, 255, 0.25);
+  background: rgba(255, 255, 255, 0.04);
+}
+.bredesign .bd-article-toc-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #9db4ff;
+  margin-bottom: 10px;
+}
+.bredesign .bd-article-toc ol {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+}
+.bredesign .bd-article-toc li.level-3 {
+  margin-left: 14px;
+  font-size: 13px;
+}
+.bredesign .bd-article-toc a {
+  color: rgba(241, 241, 237, 0.9);
+  text-decoration: none;
+  font-size: 14px;
+}
+.bredesign .bd-article-toc a:hover {
+  color: #9db4ff;
+  text-decoration: underline;
+}
+.bredesign .bd-article-tags {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 28px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+.bredesign .bd-article-tags-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(241, 241, 237, 0.72);
+}
+.bredesign .bd-article-author-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: 24px;
+  padding: 18px 20px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+}
+.bredesign .bd-article-author-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #2753ec, #9db4ff);
+  color: #fff;
+  font-weight: 800;
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.bredesign .bd-article-author-info strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 15px;
+  color: #fff;
+}
+.bredesign .bd-article-author-info p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: rgba(241, 241, 237, 0.78);
+}
+.bredesign .bd-article-prevnext {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 22px;
+}
+.bredesign .bd-article-prevnext-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.03);
+  text-decoration: none;
+  color: var(--bd-ink);
+}
+.bredesign .bd-article-prevnext-card.is-next {
+  text-align: right;
+  align-items: flex-end;
+}
+.bredesign .bd-article-prevnext-card span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #9db4ff;
+}
+.bredesign .bd-article-prevnext-card strong {
+  font-size: 14px;
+  line-height: 1.35;
+}
+.bredesign .bd-article-prevnext-card:hover {
+  border-color: rgba(157, 180, 255, 0.55);
+  background: rgba(157, 180, 255, 0.08);
+}
+.hakum-inline-link {
+  color: #9db4ff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.hakum-inline-code {
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: rgba(157, 180, 255, 0.14);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+}
+@media (max-width: 640px) {
+  .bredesign .bd-article-prevnext {
+    grid-template-columns: 1fr;
+  }
+  .bredesign .bd-article-prevnext-card.is-next {
+    text-align: left;
+    align-items: flex-start;
+  }
+}

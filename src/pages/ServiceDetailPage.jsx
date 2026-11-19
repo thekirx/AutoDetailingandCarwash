@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
 
 import TintFinder from '../components/public/TintFinder'
@@ -13,7 +14,7 @@ import { loopSlides, useLoopRail } from '../components/public/bredesign/useLoopR
 import { CeramicSection, PpfInformationSection } from '../components/public/home/HomeServiceSections'
 import PpfPackagesSection from '../components/public/home/PpfPackagesSection'
 import { SERVICE_DETAIL_CONTENT } from '../data/serviceDetailContent'
-import { usePageMeta } from '../lib/pageMeta'
+import { buildServicePageJsonLd, usePageMeta } from '../lib/pageMeta'
 import { WASH_CARD_SERVICE_SLUG, formatStartingPrice, useStartingPrices } from '../lib/serviceStartingPrices'
 
 /* The colour mark, not the monochrome one used in the logo marquee: this is a
@@ -325,11 +326,27 @@ export default function ServiceDetailPage() {
   const { slug } = useParams()
   const section = WHY_SECTIONS.find((s) => s.id === slug)
   const detail = SERVICE_DETAIL_CONTENT[slug]
+  const pageDescription = section ? section.points.map(([t]) => t).join(' · ') : undefined
+  const serviceJsonLd = useMemo(
+    () =>
+      buildServicePageJsonLd({
+        slug,
+        name: TITLES[slug] || detail?.serviceName || 'Hakum Auto Care Service',
+        description: pageDescription,
+        faqs: detail?.faqs || [],
+        image: section?.image || '/og-image.png',
+        origin: typeof window !== 'undefined' ? window.location.origin : undefined,
+      }),
+    [slug, detail?.serviceName, detail?.faqs, pageDescription, section?.image],
+  )
 
   usePageMeta({
     title: TITLES[slug] || 'Services',
-    description: section ? section.points.map(([t]) => t).join(' · ') : undefined,
+    description: pageDescription,
     path: `/services/${slug}`,
+    image: section?.image || '/og-image.png',
+    jsonLd: serviceJsonLd,
+    jsonLdId: `hakum-service-${slug || 'detail'}`,
   })
 
   useReveal()

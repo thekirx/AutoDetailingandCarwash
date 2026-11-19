@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
-import { normalizeBlocks, resolveVideoEmbed } from '@/lib/contentBlocks'
+import InlineRichText from '@/components/content/InlineRichText'
+import { extractTableOfContents, normalizeBlocks, resolveVideoEmbed } from '@/lib/contentBlocks'
 
 const CALLOUT_LABELS = {
   tip: 'Studio Tip',
@@ -20,14 +21,16 @@ export default function ContentBlockRenderer({
   mobile = false,
 }) {
   const rows = normalizeBlocks(blocks)
+  const tocByBlockId = new Map(extractTableOfContents(rows).map((item) => [item.id, item.anchor]))
 
   return (
     <div className={`hakum-blocks ${mobile ? 'is-mobile' : ''} ${className}`.trim()}>
       {rows.map((block) => {
         if (block.type === 'heading') {
           const Tag = block.level === 1 ? 'h2' : block.level === 3 ? 'h4' : 'h3'
+          const anchor = tocByBlockId.get(block.id)
           return (
-            <Tag key={block.id} className={`hakum-block-heading level-${block.level}`}>
+            <Tag key={block.id} id={anchor || undefined} className={`hakum-block-heading level-${block.level}`}>
               {block.text}
             </Tag>
           )
@@ -35,7 +38,7 @@ export default function ContentBlockRenderer({
         if (block.type === 'paragraph') {
           return (
             <p key={block.id} className="hakum-block-p">
-              {block.text}
+              <InlineRichText text={block.text} />
             </p>
           )
         }
@@ -96,7 +99,11 @@ export default function ContentBlockRenderer({
           return (
             <aside key={block.id} className={`hakum-block-callout is-${tone}`}>
               <p className="hakum-block-callout-title">{label}</p>
-              {block.text ? <p className="hakum-block-callout-body">{block.text}</p> : null}
+              {block.text ? (
+                <p className="hakum-block-callout-body">
+                  <InlineRichText text={block.text} />
+                </p>
+              ) : null}
             </aside>
           )
         }
@@ -127,7 +134,9 @@ export default function ContentBlockRenderer({
         if (block.type === 'quote') {
           return (
             <blockquote key={block.id} className="hakum-block-quote">
-              <p>{block.text}</p>
+              <p>
+                <InlineRichText text={block.text} />
+              </p>
               {block.cite ? <cite>{block.cite}</cite> : null}
             </blockquote>
           )
@@ -137,7 +146,9 @@ export default function ContentBlockRenderer({
           return (
             <Tag key={block.id} className="hakum-block-list">
               {(block.items || []).map((item, i) => (
-                <li key={`${block.id}-${i}`}>{item}</li>
+                <li key={`${block.id}-${i}`}>
+                  <InlineRichText text={item} />
+                </li>
               ))}
             </Tag>
           )

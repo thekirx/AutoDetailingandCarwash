@@ -1,7 +1,8 @@
 import { mkdirSync, readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { buildDocumentTitle, buildLocalBusinessJsonLd, buildSiteJsonLd } from '../src/lib/pageMeta.js'
+import { buildBreadcrumbJsonLd, buildDocumentTitle, buildLocalBusinessJsonLd, buildServicePageJsonLd, buildSiteJsonLd } from '../src/lib/pageMeta.js'
+import { SERVICE_DETAIL_CONTENT } from '../src/data/serviceDetailContent.js'
 import { SEO_LOCAL_GUIDES, SEO_LOCAL_FAQS, buildBlogPostJsonLd, buildEventsBlogSeoJsonLd } from '../src/lib/seoLocalGuides.js'
 import { BRANCH_MAP_LISTINGS, MAIN_LINE, branchPhone } from '../src/lib/homeBranches.js'
 import { LOCAL_BRANCH_PAGES, buildBranchCityJsonLd } from '../src/lib/localBranchPages.js'
@@ -68,6 +69,14 @@ function buildStaticRoutes() {
       title: 'ClearPro Paint Protection Film (PPF) Installation Philippines',
       description:
         'Self-healing ClearPro TPU Paint Protection Film installed inside dust-controlled Hakum Auto Care studios in Bacoor, Cavite and Batangas City.',
+      jsonLd: buildServicePageJsonLd({
+        slug: 'ppf',
+        name: 'ClearPro Paint Protection Film (PPF)',
+        description: 'Self-healing ClearPro TPU Paint Protection Film installed inside dust-controlled Hakum Auto Care studios in Bacoor, Cavite and Batangas City.',
+        faqs: SERVICE_DETAIL_CONTENT.ppf?.faqs || [],
+        origin: ORIGIN,
+      }),
+      jsonLdId: 'hakum-service-ppf',
       h1: 'ClearPro Paint Protection Film (PPF)',
       bodyHtml:
         '<p>Protect factory paint from stone chips, road rash, and tropical UV with ClearPro TPU PPF installed by trained Hakum technicians serving Bacoor, Imus, Cavite, and Batangas.</p>',
@@ -77,6 +86,14 @@ function buildStaticRoutes() {
       title: 'Kisho 9H Ceramic Coating Philippines',
       description:
         'Long-lasting Kisho 9H ceramic coating paired with machine paint correction and IPA prep for glossy, hydrophobic protection in Cavite and Batangas.',
+      jsonLd: buildServicePageJsonLd({
+        slug: 'ceramic',
+        name: 'Kisho 9H Ceramic Coating',
+        description: 'Long-lasting Kisho 9H ceramic coating paired with machine paint correction and IPA prep for glossy, hydrophobic protection in Cavite and Batangas.',
+        faqs: SERVICE_DETAIL_CONTENT.ceramic?.faqs || [],
+        origin: ORIGIN,
+      }),
+      jsonLdId: 'hakum-service-ceramic',
       h1: 'Kisho 9H Ceramic Coating',
       bodyHtml:
         '<p>Multi-stage decontamination, paint correction, and genuine Kisho ceramic protection engineered for Philippine sun, rain, and daily commutes.</p>',
@@ -86,6 +103,14 @@ function buildStaticRoutes() {
       title: 'Nano Ceramic Window Tint Philippines',
       description:
         'High IR heat-rejection nano ceramic window tint installation in Bacoor, Cavite and Batangas City — clear night visibility and cabin comfort.',
+      jsonLd: buildServicePageJsonLd({
+        slug: 'tint',
+        name: 'Nano Ceramic Window Tint',
+        description: 'High IR heat-rejection nano ceramic window tint installation in Bacoor, Cavite and Batangas City — clear night visibility and cabin comfort.',
+        faqs: SERVICE_DETAIL_CONTENT.tint?.faqs || [],
+        origin: ORIGIN,
+      }),
+      jsonLdId: 'hakum-service-tint',
       h1: 'Nano Ceramic Window Tint',
       bodyHtml:
         '<p>Compare shade visibility and infrared heat rejection with our interactive Tint Finder and book window tinting in Bacoor or Batangas City.</p>',
@@ -95,9 +120,34 @@ function buildStaticRoutes() {
       title: 'pH-Neutral Car Wash & Auto Detailing Philippines',
       description:
         'Swirl-safe two-bucket pH-neutral car wash, deep interior detailing, engine bay cleanup, and leather conditioning at Hakum Auto Care.',
+      jsonLd: buildServicePageJsonLd({
+        slug: 'wash-detailing',
+        name: 'Signature pH-Neutral Car Wash & Auto Detailing',
+        description: 'Swirl-safe two-bucket pH-neutral car wash, deep interior detailing, engine bay cleanup, and leather conditioning at Hakum Auto Care.',
+        faqs: SERVICE_DETAIL_CONTENT['wash-detailing']?.faqs || [],
+        origin: ORIGIN,
+      }),
+      jsonLdId: 'hakum-service-wash',
       h1: 'Signature pH-Neutral Car Wash & Auto Detailing',
       bodyHtml:
         '<p>Safe daily maintenance washes and complete interior/exterior detailing with grit guards, soft microfiber zones, and transparent live queue tracking.</p>',
+    },
+    {
+      path: '/shop',
+      title: 'Car Care & Aftercare Shop Philippines',
+      description:
+        'Shop pH-neutral car shampoos, ceramic boosters, microfiber towels, and detailing essentials at Hakum Auto Care in Bacoor, Cavite, and Batangas.',
+      jsonLd: buildBreadcrumbJsonLd(
+        [
+          { name: 'Home', path: '/' },
+          { name: 'Car Care Shop', path: '/shop' },
+        ],
+        ORIGIN,
+      ),
+      jsonLdId: 'hakum-shop-breadcrumb',
+      h1: 'Hakum Car Care & Aftercare Shop',
+      bodyHtml:
+        '<p>Browse ceramic boosters, swirl-safe pH-neutral shampoos, and detailing accessories stocked at Hakum Auto Care studios.</p>',
     },
     {
       path: '/tint-finder',
@@ -202,6 +252,7 @@ function buildStaticRoutes() {
         path: `/blog/${guide.slug}`,
         title: guide.title,
         description: guide.ai_summary || guide.excerpt,
+        ogType: 'article',
         image: guide.cover_url ? `${ORIGIN}${guide.cover_url.startsWith('/') ? '' : '/'}${guide.cover_url}` : `${ORIGIN}/og-image.png`,
         jsonLd: buildBlogPostJsonLd(guide, ORIGIN),
         jsonLdId: 'hakum-blogpost-jsonld',
@@ -261,6 +312,18 @@ function stampRouteHtml(template, route) {
   html = html.replace(
     /<meta\s+property="og:url"\s+content="[^"]*"\s*\/>/,
     `<meta property="og:url" content="${esc(canonical)}" />`,
+  )
+  html = html.replace(
+    /<meta\s+property="og:type"\s+content="[^"]*"\s*\/>/,
+    `<meta property="og:type" content="${route.ogType === 'article' ? 'article' : 'website'}" />`,
+  )
+  html = html.replace(
+    /<link\s+rel="alternate"\s+hreflang="en-PH"\s+href="[^"]*"\s*\/>/,
+    `<link rel="alternate" hreflang="en-PH" href="${esc(canonical)}" />`,
+  )
+  html = html.replace(
+    /<link\s+rel="alternate"\s+hreflang="x-default"\s+href="[^"]*"\s*\/>/,
+    `<link rel="alternate" hreflang="x-default" href="${esc(canonical)}" />`,
   )
   html = html.replace(
     /<meta\s+property="og:image"\s+content="[^"]*"\s*\/>/,

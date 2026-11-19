@@ -38,10 +38,14 @@ import { NamedSelect } from '@/components/ui/named-select'
 import { Textarea } from '@/components/ui/textarea'
 import {
   BLOG_CATEGORY_OPTIONS,
+  BLOG_POST_TEMPLATES,
   BLOG_REGION_OPTIONS,
   estimateReadingStats,
+  normalizeBlogTags,
+  normalizeBlocks,
   slugifyContentTitle,
 } from '@/lib/contentBlocks'
+import { analyzeContentSeo } from '@/lib/contentAnalyzer'
 import { slugifyEventTitle } from '@/lib/planningPart6'
 import {
   clearAutosaveDraft,
@@ -50,6 +54,7 @@ import {
   readAutosaveDraft,
   saveCmsBlog,
   saveCmsEvent,
+  toLocalDatetimeInput,
   writeAutosaveDraft,
 } from '@/lib/contentCmsApi'
 import { toast } from 'sonner'
@@ -84,6 +89,8 @@ export default function ContentStudioModal({
   const [saving, setSaving] = useState(false)
   const [autosaveInfo, setAutosaveInfo] = useState({ status: 'idle', time: '' })
   const [recoverableDraft, setRecoverableDraft] = useState(null)
+  const [tagInput, setTagInput] = useState('')
+  const [showAdvancedSeo, setShowAdvancedSeo] = useState(false)
   const dirtyRef = useRef(false)
 
   const draftKey = useMemo(() => {
@@ -147,15 +154,47 @@ export default function ContentStudioModal({
     [draft?.content_blocks, draft?.title, draft?.excerpt, draft?.description, kind],
   )
 
+  const isBlog = kind === 'blog'
+  const seoReport = useMemo(
+    () => (isBlog && draft ? analyzeContentSeo(draft) : null),
+    [isBlog, draft],
+  )
+
   if (!draft) return null
 
-  const isBlog = kind === 'blog'
   const isPublished = isBlog ? draft.status === 'published' || draft.is_published : Boolean(draft.is_published)
+  const isScheduled = isBlog && draft.status === 'scheduled'
   const previewSlug =
     draft.slug ||
     (isBlog
       ? slugifyContentTitle(draft.title || 'new-post')
       : slugifyEventTitle(draft.title || 'new-event'))
+
+  function applyBlogTemplate(tpl) {
+    if (!tpl) return
+    const hasCustomContent = normalizeBlocks(draft.content_blocks).some(
+      (b) => String(b.text || '').trim() || String(b.url || '').trim(),
+    )
+    if (hasCustomContent && !window.confirm(`Replace existing blocks with "${tpl.label}" format?`)) {
+      return
+    }
+    updateDraft({
+      template_key: tpl.key,
+      category: tpl.category || draft.category,
+      tags: normalizeBlogTags([...(Array.isArray(draft.tags) ? draft.tags : []), ...(tpl.tags || [])]),
+      content_blocks: normalizeBlocks(tpl.blocks),
+    })
+    toast.success(`Applied "${tpl.label}" article format`)
+  }
+
+  function addTagsFromInput(rawVal) {
+    const incoming = normalizeBlogTags(rawVal)
+    if (!incoming.length) return
+    updateDraft({
+      tags: normalizeBlogTags([...(Array.isArray(draft.tags) ? draft.tags : []), ...incoming]),
+    })
+    setTagInput('')
+  }
 
   async function persistWithStatus(targetStatus) {
     const nextDraft = { ...draft }
@@ -163,6 +202,13 @@ export default function ContentStudioModal({
       if (targetStatus === 'published') {
         nextDraft.status = 'published'
         nextDraft.is_published = true
+      } else if (targetStatus === 'scheduled') {
+        if (!nextDraft.published_at || Number.isNaN(Date.parse(nextDraft.published_at))) {
+          toast.error('Pick a scheduled publish date and time first.')
+          return
+        }
+        nextDraft.status = 'scheduled'
+        nextDraft.is_published = false
       } else if (targetStatus === 'draft') {
         nextDraft.status = 'draft'
         nextDraft.is_published = false
@@ -178,13 +224,16 @@ export default function ContentStudioModal({
       const saved = isBlog
         ? await saveCmsBlog(nextDraft, profile)
         : await saveCmsEvent(nextDraft)
+      clearAutosaveDraft(kind, draftKey)
       dirtyRef.current = false
       toast.success(
         targetStatus === 'published'
           ? `${isBlog ? 'Blog post' : 'Event'} published live!`
-          : targetStatus === 'draft'
-            ? `${isBlog ? 'Blog' : 'Event'} saved as draft`
-            : `${isBlog ? 'Blog' : 'Event'} saved`,
+          : targetStatus === 'scheduled'
+            ? 'Blog post scheduled!'
+            : targetStatus === 'draft'
+              ? `${isBlog ? 'Blog' : 'Event'} saved as draft`
+              : `${isBlog ? 'Blog' : 'Event'} saved`,
       )
       onSaved?.(saved)
       onOpenChange?.(false)
@@ -457,10 +506,17 @@ export default function ContentStudioModal({
                       <NamedSelect
                         value={draft.status || 'draft'}
                         onChange={(status) =>
-                          updateDraft({ status, is_published: status === 'published' })
+                          updateDraft({
+                            status,
+                            is_published: status === 'published',
+                            ...(status === 'scheduled' && !draft.published_at
+                              ? { published_at: new Date(Date.now() + 3600_000).toISOString() }
+                              : {}),
+                          })
                         }
                         options={[
                           { value: 'draft', label: 'Draft (Private)' },
+                          { value: 'scheduled', label: 'Scheduled (Auto-Publish at Date)' },
                           { value: 'published', label: 'Published (Live on Site)' },
                           { value: 'archived', label: 'Archived (Hidden)' },
                         ]}
@@ -541,6 +597,61 @@ export default function ContentStudioModal({
                         />
                       </div>
                       <div className="flex flex-col gap-1.5 sm:col-span-2">
+                        <Label>
+                          {isScheduled ? 'Scheduled Publish Date & Time' : 'Publish Timestamp'}
+                        </Label>
+                        <Input
+                          type="datetime-local"
+                          value={toLocalDatetimeInput(draft.published_at)}
+                          onChange={(e) =>
+                            updateDraft({
+                              published_at: e.target.value ? new Date(e.target.value).toISOString() : '',
+                            })
+                          }
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1.5 sm:col-span-2">
+                        <Label>WordPress Tags (press Enter or comma to add)</Label>
+                        <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-input bg-background/70 p-2">
+                          {(Array.isArray(draft.tags) ? draft.tags : []).map((tag) => (
+                            <Badge key={tag} variant="secondary" className="gap-1 text-xs">
+                              #{tag}
+                              <button
+                                type="button"
+                                className="ml-0.5 cursor-pointer hover:text-destructive"
+                                onClick={() =>
+                                  updateDraft({ tags: (draft.tags || []).filter((t) => t !== tag) })
+                                }
+                                aria-label={`Remove tag ${tag}`}
+                              >
+                                ×
+                              </button>
+                            </Badge>
+                          ))}
+                          <Input
+                            value={tagInput}
+                            onChange={(e) => setTagInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' || e.key === ',') {
+                                e.preventDefault()
+                                addTagsFromInput(tagInput)
+                              }
+                            }}
+                            onBlur={() => addTagsFromInput(tagInput)}
+                            placeholder="e.g., ceramic coating, clearpro ppf, bacoor"
+                            className="h-7 min-w-[12rem] flex-1 border-0 bg-transparent px-1 text-xs shadow-none focus-visible:ring-0"
+                          />
+                        </div>
+                      </div>
+                      <label className="flex items-center gap-2 text-xs text-muted-foreground sm:col-span-2">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(draft.is_featured)}
+                          onChange={(e) => updateDraft({ is_featured: e.target.checked })}
+                        />
+                        Pin as Featured Lead Guide on /blog
+                      </label>
+                      <div className="flex flex-col gap-1.5 sm:col-span-2">
                         <Label>Card Excerpt (Shown on /events#blog grid)</Label>
                         <Textarea
                           rows={2}
@@ -601,7 +712,7 @@ export default function ContentStudioModal({
                           <Globe className="size-3" /> Google Search &amp; AI Snippet Preview
                         </p>
                         <p className="truncate text-xs text-emerald-500">
-                          https://www.hakumautocare.com/blog/{previewSlug}
+                          {draft.canonical_url || `https://www.hakumautocare.com/blog/${previewSlug}`}
                         </p>
                         <p className="truncate text-sm font-semibold text-blue-400">
                           {draft.seo_title || draft.title || 'Untitled Blog Post'} · Hakum Auto Care
@@ -613,6 +724,85 @@ export default function ContentStudioModal({
                             'Explore car wash, auto detailing, ceramic coating, and PPF guides from Hakum Auto Care.'}
                         </p>
                       </div>
+
+                      {/* Yoast-Style Live On-Page SEO & GEO Analyzer */}
+                      {seoReport && (
+                        <div className="rounded-lg border border-border bg-background/80 p-3 sm:col-span-2">
+                          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                            <span className="flex items-center gap-1.5 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+                              <Sparkles className="size-3.5 text-primary" /> On-Page SEO &amp; AI Readiness
+                            </span>
+                            <Badge
+                              variant={seoReport.tone === 'good' ? 'default' : 'secondary'}
+                              className={
+                                seoReport.tone === 'good'
+                                  ? 'bg-emerald-600 text-white'
+                                  : seoReport.tone === 'ok'
+                                    ? 'bg-amber-600 text-white'
+                                    : 'bg-rose-600 text-white'
+                              }
+                            >
+                              {seoReport.score}/100 · {seoReport.grade}
+                            </Badge>
+                          </div>
+                          <ul className="grid gap-1 sm:grid-cols-2">
+                            {seoReport.checks.map((chk) => (
+                              <li key={chk.id} className="flex items-start gap-1.5 text-[11px]">
+                                <span
+                                  className={`mt-1 inline-block size-2 shrink-0 rounded-full ${
+                                    chk.passed ? 'bg-emerald-500' : chk.warn ? 'bg-amber-500' : 'bg-rose-500'
+                                  }`}
+                                  aria-hidden="true"
+                                />
+                                <span className="text-foreground/90">
+                                  {chk.label}{' '}
+                                  <span className="text-muted-foreground">({chk.detail})</span>
+                                </span>
+                              </li>
+                            ))}
+                          </ul>
+
+                          <div className="mt-2.5 border-t border-border/60 pt-2">
+                            <button
+                              type="button"
+                              className="cursor-pointer text-[11px] font-medium text-primary hover:underline"
+                              onClick={() => setShowAdvancedSeo((v) => !v)}
+                            >
+                              {showAdvancedSeo ? 'Hide Advanced Robots & Canonical' : 'Advanced Robots, Canonical & OG Image'}
+                            </button>
+                            {showAdvancedSeo && (
+                              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                                <div className="flex flex-col gap-1">
+                                  <Label className="text-[11px]">Canonical URL Override (optional)</Label>
+                                  <Input
+                                    value={draft.canonical_url || ''}
+                                    onChange={(e) => updateDraft({ canonical_url: e.target.value })}
+                                    placeholder={`https://www.hakumautocare.com/blog/${previewSlug}`}
+                                    className="h-8 text-xs"
+                                  />
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                  <Label className="text-[11px]">Custom Social Share OG Image URL</Label>
+                                  <Input
+                                    value={draft.og_image_url || ''}
+                                    onChange={(e) => updateDraft({ og_image_url: e.target.value })}
+                                    placeholder="Defaults to Featured Cover Photo"
+                                    className="h-8 text-xs"
+                                  />
+                                </div>
+                                <label className="flex items-center gap-2 text-xs text-muted-foreground sm:col-span-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={Boolean(draft.noindex)}
+                                    onChange={(e) => updateDraft({ noindex: e.target.checked })}
+                                  />
+                                  Discourage search engines from indexing this article (noindex,nofollow)
+                                </label>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="grid gap-3 sm:grid-cols-2">
@@ -674,15 +864,34 @@ export default function ContentStudioModal({
                 </div>
               )}
 
-              {/* WordPress Block Editor */}
+              {/* WordPress Block Editor + 1-Click Format Presets */}
               <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
+                {isBlog && (
+                  <div className="flex flex-wrap items-center gap-1.5 rounded-xl border border-border bg-muted/15 px-3 py-2">
+                    <span className="mr-1 text-xs font-medium text-muted-foreground">Article Format:</span>
+                    {BLOG_POST_TEMPLATES.map((tpl) => (
+                      <Button
+                        key={tpl.key}
+                        type="button"
+                        size="sm"
+                        variant={draft.template_key === tpl.key ? 'secondary' : 'outline'}
+                        className="h-7 cursor-pointer text-[11px]"
+                        onClick={() => applyBlogTemplate(tpl)}
+                        title={tpl.summary}
+                      >
+                        {tpl.label}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="flex flex-wrap items-center justify-between gap-2">
                   <Label className="flex items-center gap-1.5 text-sm font-semibold">
                     <FileText className="size-4 text-primary" />
                     WordPress Content Blocks ({stats.blockCount})
                   </Label>
                   <span className="text-xs text-muted-foreground">
-                    Add headings, paragraphs, photos, galleries, callouts, videos, quotes, or CTA buttons
+                    Drag blocks by grip handle, drop/paste photos directly onto canvas, or type / in a paragraph
                   </span>
                 </div>
                 <ContentBlockEditor
@@ -869,6 +1078,20 @@ export default function ContentStudioModal({
               {saving ? <Loader2 className="mr-1.5 size-3.5 animate-spin" /> : <Save className="mr-1.5 size-3.5" />}
               Save as Draft
             </Button>
+
+            {isBlog && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={saving}
+                className="cursor-pointer"
+                onClick={() => persistWithStatus('scheduled')}
+              >
+                <Clock className="mr-1.5 size-3.5" />
+                {isScheduled ? 'Update Schedule' : 'Schedule'}
+              </Button>
+            )}
 
             <Button
               type="button"
