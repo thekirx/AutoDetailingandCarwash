@@ -6,7 +6,16 @@
   "trailingSlash": false,
   "redirects": [
     { "source": "/packages", "destination": "/services", "permanent": true },
-    { "source": "/booking", "destination": "/book", "permanent": true }
+    { "source": "/booking", "destination": "/book", "permanent": true },
+    { "source": "/services/detailing", "destination": "/services/wash-detailing", "permanent": true },
+    { "source": "/services/wash", "destination": "/services/wash-detailing", "permanent": true },
+    { "source": "/services/paint-protection-film", "destination": "/services/ppf", "permanent": true },
+    { "source": "/services/ceramic-coating", "destination": "/services/ceramic", "permanent": true },
+    { "source": "/services/window-tint", "destination": "/services/tint", "permanent": true },
+    { "source": "/locations", "destination": "/branches", "permanent": true },
+    { "source": "/branches/molino", "destination": "/branches/bacoor", "permanent": true },
+    { "source": "/branches/alangilan", "destination": "/branches/batangas", "permanent": true },
+    { "source": "/contact-us", "destination": "/contact", "permanent": true }
   ],
   "rewrites": [
     { "source": "/api/points-shop", "destination": "/api/bookings?operation=points-shop" },
@@ -69,6 +78,50 @@
         }
       ],
       "destination": "/api/seo?operation=event-meta&slug=:slug"
+    },
+    {
+      "source": "/branches/:citySlug/:serviceSlug",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|Bingbot|bingbot|Applebot|OAI-SearchBot|ChatGPT-User|Claude-SearchBot|PerplexityBot|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Viber|TelegramBot|Discordbot|Slackbot).*"
+        }
+      ],
+      "destination": "/api/seo?operation=branch-service-meta&citySlug=:citySlug&serviceSlug=:serviceSlug"
+    },
+    {
+      "source": "/branches/:citySlug",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|Bingbot|bingbot|Applebot|OAI-SearchBot|ChatGPT-User|Claude-SearchBot|PerplexityBot|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Viber|TelegramBot|Discordbot|Slackbot).*"
+        }
+      ],
+      "destination": "/api/seo?operation=branch-meta&citySlug=:citySlug"
+    },
+    {
+      "source": "/services/:serviceSlug",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|Bingbot|bingbot|Applebot|OAI-SearchBot|ChatGPT-User|Claude-SearchBot|PerplexityBot|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Viber|TelegramBot|Discordbot|Slackbot).*"
+        }
+      ],
+      "destination": "/api/seo?operation=service-meta&serviceSlug=:serviceSlug"
+    },
+    {
+      "source": "/services",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|Bingbot|bingbot|Applebot|OAI-SearchBot|ChatGPT-User|Claude-SearchBot|PerplexityBot|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Viber|TelegramBot|Discordbot|Slackbot).*"
+        }
+      ],
+      "destination": "/api/seo?operation=service-meta"
     },
     { "source": "/((?!api/|assets/).*)", "destination": "/index.html" }
   ],

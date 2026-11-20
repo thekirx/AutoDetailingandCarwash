@@ -22,9 +22,17 @@ import {
 } from '../src/lib/pageMeta.js'
 import {
   buildArticleCrawlerHtml,
+  buildBranchCityCrawlerHtml,
+  buildBranchServiceCrawlerHtml,
+  buildCoreServiceCrawlerHtml,
   buildRssXml,
   buildSitemapXml,
+  handleSeoRequest,
 } from '../server/seoApi.mjs'
+import {
+  findLocalBranchPage,
+  findLocalBranchServicePage,
+} from '../src/lib/localBranchPages.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const read = (rel) => readFileSync(join(root, rel), 'utf8')
@@ -148,6 +156,60 @@ describe('Technical SEO & AI Visibility setup', () => {
     })
     assert.match(html, /<meta property="og:type" content="article" \/>/)
     assert.match(html, /"@type":"BlogPosting"/)
+  })
+
+  it('renders rich crawler HTML for branch cities, local services, and core services with Schema.org graph', async () => {
+    const bacoorPage = findLocalBranchPage('bacoor')
+    const cityHtml = buildBranchCityCrawlerHtml({ cityPage: bacoorPage })
+    assert.match(cityHtml, /<title>Best Car Wash, Auto Detailing, Ceramic Coating &amp; PPF in Bacoor, Cavite · Hakum Auto Care<\/title>/)
+    assert.match(cityHtml, /"@type":"AutomotiveBusiness"/)
+    assert.match(cityHtml, /"@type":"FAQPage"/)
+    assert.match(cityHtml, /href="https:\/\/www\.hakumautocare\.com\/branches\/bacoor"/)
+    assert.match(cityHtml, /RFC Molino II/)
+
+    const ppfMatch = findLocalBranchServicePage('bacoor', 'ppf')
+    const serviceHtml = buildBranchServiceCrawlerHtml({ page: ppfMatch.page })
+    assert.match(serviceHtml, /<title>PPF Bacoor Near Me — ClearPro Self-Healing Paint Protection Film Bacoor, Cavite · Hakum Auto Care<\/title>/)
+    assert.match(serviceHtml, /"@type":"Service"/)
+    assert.match(serviceHtml, /"@type":"FAQPage"/)
+    assert.match(serviceHtml, /ClearPro/)
+
+    const coreHtml = buildCoreServiceCrawlerHtml({ serviceSlug: 'ppf' })
+    assert.match(coreHtml, /ClearPro Paint Protection Film/)
+    assert.match(coreHtml, /"@type":"Service"/)
+
+    // Test handleSeoRequest handler outputs
+    const fakeRes = (onEnd) => ({
+      status: 200,
+      headers: {},
+      body: '',
+      writeHead(status, headers) {
+        this.status = status
+        this.headers = headers
+      },
+      end(chunk) {
+        this.body = chunk || ''
+        if (onEnd) onEnd(this)
+      },
+    })
+
+    await new Promise((resolve) => {
+      const res = fakeRes((r) => {
+        assert.equal(r.status, 200)
+        assert.match(r.body, /Bacoor/)
+        resolve()
+      })
+      handleSeoRequest({ method: 'GET', url: '/api/seo?operation=branch-meta&citySlug=bacoor' }, res)
+    })
+
+    await new Promise((resolve) => {
+      const res = fakeRes((r) => {
+        assert.equal(r.status, 301)
+        assert.equal(r.headers.Location, '/branches/bacoor/ceramic-coating')
+        resolve()
+      })
+      handleSeoRequest({ method: 'GET', url: '/api/seo?operation=branch-service-meta&citySlug=imus&serviceSlug=ceramic' }, res)
+    })
   })
 })
 

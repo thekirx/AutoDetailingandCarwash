@@ -4,11 +4,14 @@ import {
   AlertTriangle,
   Bell,
   Copy,
+  ListFilter,
   ListTree,
   Megaphone,
   Pencil,
   Plus,
+  Search,
   ShieldCheck,
+  Smartphone,
   Trash2,
   Users,
 } from 'lucide-react'
@@ -31,10 +34,10 @@ import {
   insertMessageToken,
   messageMaxForChannel,
   notificationScopeLabel,
-  renderNotificationMessage,
   titleMaxForChannel,
   validateNotificationCopy,
 } from '@/lib/notificationCopy'
+import NotificationSimulatorPreview from '@/components/notifications/NotificationSimulatorPreview'
 import { PAINT_MAINTENANCE_SLUG } from '@/lib/paintMaintenance'
 import { filterFloorDetailingServices } from '@/lib/serviceKinds'
 import { supabase } from '@/lib/supabase'
@@ -236,8 +239,11 @@ function ReminderRulesPanel() {
   const [settings, setSettings] = useState([])
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [draft, setDraft] = useState(EMPTY_REMINDER)
+  const [draft, setDraft] = useState({ ...EMPTY_REMINDER, id: '' })
   const [ruleOpen, setRuleOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [scopeFilter, setScopeFilter] = useState('all')
+  const [togglingId, setTogglingId] = useState(null)
 
   const detailingServices = useMemo(() => filterFloorDetailingServices(services), [services])
   const paintMaint = detailingServices.find((s) => s.slug === PAINT_MAINTENANCE_SLUG)
@@ -286,6 +292,57 @@ function ReminderRulesPanel() {
     }))
   }
 
+  function openCreate() {
+    setDraft({
+      ...EMPTY_REMINDER,
+      id: '',
+      service_id: paintMaint?.id || '',
+    })
+    setRuleOpen(true)
+  }
+
+  function openEdit(s) {
+    setDraft({
+      id: s.id,
+      scope: s.scope || 'whole',
+      service_id: s.service_id || '',
+      branch_slug: s.branch_slug || '',
+      channel: s.channel || 'push',
+      frequency_months: s.frequency_months || 6,
+      enabled: s.enabled !== false,
+      title: s.title || '',
+      message: s.message || '',
+    })
+    setRuleOpen(true)
+  }
+
+  async function toggleReminderEnabled(s) {
+    const next = !s.enabled
+    setTogglingId(s.id)
+    setSettings((prev) => prev.map((row) => (row.id === s.id ? { ...row, enabled: next } : row)))
+    try {
+      const token = await getAccessTokenFresh()
+      const res = await fetch('/api/notification-settings', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          id: s.id,
+          enabled: next,
+        }),
+      })
+      if (!res.ok) throw new Error('Toggle failed')
+      toast.success(`Reminder rule ${next ? 'activated' : 'paused'}`)
+    } catch (err) {
+      toast.error(err.message)
+      load()
+    } finally {
+      setTogglingId(null)
+    }
+  }
+
   async function saveDraft(e) {
     e.preventDefault()
     if (!draft.frequency_months || draft.frequency_months < 1) {
@@ -316,30 +373,32 @@ function ReminderRulesPanel() {
     setSaving(true)
     try {
       const token = await getAccessTokenFresh()
+      const payload = {
+        id: draft.id || undefined,
+        scope: draft.scope,
+        service_id: draft.service_id || null,
+        branch_slug: draft.branch_slug || null,
+        channel: draft.channel,
+        frequency_months: Number(draft.frequency_months),
+        enabled: draft.enabled,
+        title: draft.title.trim(),
+        message: draft.message.trim(),
+      }
       const res = await fetch('/api/notification-settings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({
-          scope: draft.scope,
-          service_id: draft.service_id || null,
-          branch_slug: draft.branch_slug || null,
-          channel: draft.channel,
-          frequency_months: Number(draft.frequency_months),
-          enabled: draft.enabled,
-          title: draft.title.trim(),
-          message: draft.message.trim(),
-        }),
+        body: JSON.stringify(payload),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
         toast.error(data.error || 'Save failed')
         return
       }
-      toast.success('Reminder saved')
-      setDraft({ ...EMPTY_REMINDER, service_id: paintMaint?.id || '' })
+      toast.success(draft.id ? 'Reminder rule updated' : 'Reminder rule created')
+      setDraft({ ...EMPTY_REMINDER, id: '', service_id: paintMaint?.id || '' })
       setRuleOpen(false)
       load()
     } finally {
@@ -348,6 +407,7 @@ function ReminderRulesPanel() {
   }
 
   async function removeSetting(id) {
+    if (!window.confirm('Delete this reminder rule?')) return
     const token = await getAccessTokenFresh()
     const res = await fetch(`/api/notification-settings?id=${id}`, {
       method: 'DELETE',
@@ -360,244 +420,391 @@ function ReminderRulesPanel() {
     }
   }
 
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    return settings.filter((s) => {
+      if (scopeFilter !== 'all' && s.scope !== scopeFilter) return false
+      if (!q) return true
+      const svc = services.find((x) => x.id === s.service_id)
+      const br = branches.find((x) => x.slug === s.branch_slug)
+      return (
+        String(s.title || '').toLowerCase().includes(q) ||
+        String(s.message || '').toLowerCase().includes(q) ||
+        String(svc?.name || '').toLowerCase().includes(q) ||
+        String(br?.name || '').toLowerCase().includes(q) ||
+        String(s.scope || '').toLowerCase().includes(q)
+      )
+    })
+  }, [settings, query, scopeFilter, services, branches])
+
   return (
     <div className="flex flex-col gap-5">
+      {/* Edit / Create Rule Dialog with Live Phone Simulator */}
       <Dialog open={ruleOpen} onOpenChange={setRuleOpen}>
-        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>New reminder rule</DialogTitle>
-            <DialogDescription>
-              Scope: whole network, one branch, one service, or service × branch. Tap tokens to insert into title or
-              message. Prefer <strong className="font-medium text-foreground">Paint Maintenance</strong> for Ceramic/PPF
-              cycles. SMS uses each customer&apos;s mobile on file.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={saveDraft} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-2 sm:col-span-2">
-              <Label htmlFor="ns-scope">Scope</Label>
-              <Select value={draft.scope} onValueChange={setScope} items={NOTIFICATION_SCOPES.map((s) => ({ value: s.id, label: `${s.label} — ${s.hint}` }))}>
-                <SelectTrigger id="ns-scope" className="min-h-11 w-full cursor-pointer">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {NOTIFICATION_SCOPES.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.label} — {s.hint}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+        <DialogContent className="max-h-[92svh] overflow-y-auto sm:max-w-4xl p-0">
+          <div className="flex flex-col">
+            <DialogHeader className="p-5 pb-3 border-b border-border/80">
+              <DialogTitle className="text-xl font-bold">
+                {draft.id ? 'Edit Reminder Rule' : 'New Reminder Rule'}
+              </DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm">
+                Targeted paint-maintenance reminders based on service, branch, or whole network.
+              </DialogDescription>
+            </DialogHeader>
 
-            {needsService ? (
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="ns-service">Detailing service</Label>
-                <Select
-                  value={draft.service_id}
-                  onValueChange={(v) => setDraft({ ...draft, service_id: v })}
-                  items={detailingServices.map((s) => ({ value: s.id, label: s.name }))}
-                >
-                  <SelectTrigger id="ns-service" className="min-h-11 w-full cursor-pointer">
-                    <SelectValue placeholder="Pick service" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {detailingServices.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                        {s.slug === PAINT_MAINTENANCE_SLUG ? ' · program' : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 p-5">
+              <form id="reminder-rule-form" onSubmit={saveDraft} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-2 sm:col-span-2">
+                  <Label htmlFor="ns-scope">Scope</Label>
+                  <Select
+                    value={draft.scope}
+                    onValueChange={setScope}
+                    items={NOTIFICATION_SCOPES.map((s) => ({ value: s.id, label: `${s.label} — ${s.hint}` }))}
+                  >
+                    <SelectTrigger id="ns-scope" className="min-h-10 w-full cursor-pointer">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {NOTIFICATION_SCOPES.map((s) => (
+                        <SelectItem key={s.id} value={s.id}>
+                          {s.label} — {s.hint}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {needsService ? (
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="ns-service">Detailing Service</Label>
+                    <Select
+                      value={draft.service_id}
+                      onValueChange={(v) => setDraft({ ...draft, service_id: v })}
+                      items={detailingServices.map((s) => ({ value: s.id, label: s.name }))}
+                    >
+                      <SelectTrigger id="ns-service" className="min-h-10 w-full cursor-pointer">
+                        <SelectValue placeholder="Pick service" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {detailingServices.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>
+                            {s.name}
+                            {s.slug === PAINT_MAINTENANCE_SLUG ? ' · program' : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : null}
+
+                {needsBranch ? (
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="ns-branch">Branch</Label>
+                    <Select
+                      value={draft.branch_slug}
+                      onValueChange={(v) => setDraft({ ...draft, branch_slug: v })}
+                      items={branches.map((b) => ({ value: b.slug, label: b.name }))}
+                    >
+                      <SelectTrigger id="ns-branch" className="min-h-10 w-full cursor-pointer">
+                        <SelectValue placeholder="Pick branch" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {branches.map((b) => (
+                          <SelectItem key={b.slug} value={b.slug}>
+                            {b.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : null}
+
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="ns-channel">Channel</Label>
+                  <Select
+                    value={draft.channel}
+                    onValueChange={(v) => setDraft({ ...draft, channel: v })}
+                    items={[
+                      { value: 'push', label: 'Push' },
+                      { value: 'sms', label: 'SMS (BusyBee)' },
+                      { value: 'both', label: 'Push + SMS' },
+                    ]}
+                  >
+                    <SelectTrigger id="ns-channel" className="min-h-10 w-full cursor-pointer">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="push">Push</SelectItem>
+                      <SelectItem value="sms">SMS (BusyBee)</SelectItem>
+                      <SelectItem value="both">Push + SMS</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="ns-freq">Frequency (every X months)</Label>
+                  <Input
+                    id="ns-freq"
+                    type="number"
+                    min={1}
+                    max={24}
+                    className="min-h-10"
+                    value={draft.frequency_months}
+                    onChange={(e) => setDraft({ ...draft, frequency_months: e.target.value })}
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2 sm:col-span-2">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <Label htmlFor="ns-title">Title</Label>
+                    <span
+                      className={`text-xs tabular-nums ${draft.title.length > titleMax ? 'text-destructive font-semibold' : 'text-muted-foreground'}`}
+                    >
+                      {draft.title.length}/{titleMax}
+                    </span>
+                  </div>
+                  <Input
+                    id="ns-title"
+                    className="min-h-10"
+                    value={draft.title}
+                    maxLength={titleMax}
+                    onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+                    required
+                  />
+                  <MessageTokenChips
+                    inputId="ns-title"
+                    value={draft.title}
+                    onChange={(title) => setDraft({ ...draft, title: title.slice(0, titleMax) })}
+                  />
+                </div>
+
+                <div className="flex flex-col gap-2 sm:col-span-2">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <Label htmlFor="ns-message">Message</Label>
+                    <span
+                      className={`text-xs tabular-nums ${draft.message.length > messageMax ? 'text-destructive font-semibold' : 'text-muted-foreground'}`}
+                    >
+                      {draft.message.length}/{messageMax}
+                      {draft.channel !== 'push' ? ` · ~${smsCredits} SMS` : ''}
+                    </span>
+                  </div>
+                  <Textarea
+                    id="ns-message"
+                    rows={4}
+                    value={draft.message}
+                    maxLength={messageMax}
+                    onChange={(e) => setDraft({ ...draft, message: e.target.value })}
+                    required
+                  />
+                  <MessageTokenChips
+                    inputId="ns-message"
+                    value={draft.message}
+                    onChange={(message) => setDraft({ ...draft, message: message.slice(0, messageMax) })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {draft.channel === 'push'
+                      ? 'Push body capped at 200 characters.'
+                      : `BusyBee single SMS is ${BUSYBEE_SMS_SINGLE_MAX} characters · sent to the customer mobile.`}
+                  </p>
+                </div>
+
+                <label className="flex min-h-10 cursor-pointer items-center gap-2 text-sm font-medium sm:col-span-2">
+                  <input
+                    id="ns-enabled"
+                    type="checkbox"
+                    className="size-4 cursor-pointer"
+                    checked={draft.enabled}
+                    onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })}
+                  />
+                  Rule active &amp; scheduled
+                </label>
+              </form>
+
+              {/* Right column: Simulator Preview */}
+              <div className="flex flex-col items-center">
+                <p className="text-xs font-semibold text-muted-foreground mb-2">Live Customer Preview</p>
+                <NotificationSimulatorPreview
+                  channel={draft.channel}
+                  title={draft.title}
+                  body={draft.message}
+                  sms_body={draft.message}
+                  triggerRoute="/book"
+                />
               </div>
-            ) : null}
-
-            {needsBranch ? (
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="ns-branch">Branch</Label>
-                <Select
-                  value={draft.branch_slug}
-                  onValueChange={(v) => setDraft({ ...draft, branch_slug: v })}
-                  items={branches.map((b) => ({ value: b.slug, label: b.name }))}
-                >
-                  <SelectTrigger id="ns-branch" className="min-h-11 w-full cursor-pointer">
-                    <SelectValue placeholder="Pick branch" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {branches.map((b) => (
-                      <SelectItem key={b.slug} value={b.slug}>
-                        {b.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : null}
-
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="ns-channel">Channel</Label>
-              <Select
-                value={draft.channel}
-                onValueChange={(v) => setDraft({ ...draft, channel: v })}
-                items={[
-                  { value: 'push', label: 'Push' },
-                  { value: 'sms', label: 'SMS (BusyBee)' },
-                  { value: 'both', label: 'Push + SMS' },
-                ]}
-              >
-                <SelectTrigger id="ns-channel" className="min-h-11 w-full cursor-pointer">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="push">Push</SelectItem>
-                  <SelectItem value="sms">SMS (BusyBee)</SelectItem>
-                  <SelectItem value="both">Push + SMS</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="ns-freq">Every (months)</Label>
-              <Input
-                id="ns-freq"
-                type="number"
-                min={1}
-                max={24}
-                className="min-h-11"
-                value={draft.frequency_months}
-                onChange={(e) => setDraft({ ...draft, frequency_months: e.target.value })}
-              />
-            </div>
-
-            <div className="flex flex-col gap-2 sm:col-span-2">
-              <div className="flex items-baseline justify-between gap-2">
-                <Label htmlFor="ns-title">Title</Label>
-                <span
-                  className={`text-xs tabular-nums ${draft.title.length > titleMax ? 'text-destructive' : 'text-muted-foreground'}`}
-                >
-                  {draft.title.length}/{titleMax}
-                </span>
-              </div>
-              <Input
-                id="ns-title"
-                className="min-h-11"
-                value={draft.title}
-                maxLength={titleMax}
-                onChange={(e) => setDraft({ ...draft, title: e.target.value })}
-                required
-              />
-              <MessageTokenChips
-                inputId="ns-title"
-                value={draft.title}
-                onChange={(title) => setDraft({ ...draft, title: title.slice(0, titleMax) })}
-              />
-            </div>
-
-            <div className="flex flex-col gap-2 sm:col-span-2">
-              <div className="flex items-baseline justify-between gap-2">
-                <Label htmlFor="ns-message">Message</Label>
-                <span
-                  className={`text-xs tabular-nums ${draft.message.length > messageMax ? 'text-destructive' : 'text-muted-foreground'}`}
-                >
-                  {draft.message.length}/{messageMax}
-                  {draft.channel !== 'push' ? ` · ~${smsCredits} SMS` : ''}
-                </span>
-              </div>
-              <Textarea
-                id="ns-message"
-                rows={4}
-                value={draft.message}
-                maxLength={messageMax}
-                onChange={(e) => setDraft({ ...draft, message: e.target.value })}
-                required
-              />
-              <MessageTokenChips
-                inputId="ns-message"
-                value={draft.message}
-                onChange={(message) => setDraft({ ...draft, message: message.slice(0, messageMax) })}
-              />
-              <p className="text-xs text-muted-foreground">
-                {draft.channel === 'push'
-                  ? 'Push body capped at 200 characters.'
-                  : `BusyBee single SMS is ${BUSYBEE_SMS_SINGLE_MAX} characters · sent to the customer mobile.`}
-              </p>
-            </div>
-
-            <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm font-medium sm:col-span-2">
-              <input
-                id="ns-enabled"
-                type="checkbox"
-                className="size-4 cursor-pointer"
-                checked={draft.enabled}
-                onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })}
-              />
-              Enabled
-            </label>
-
-            <DialogFooter className="sm:col-span-2">
-              <Button type="button" variant="outline" className="min-h-11" onClick={() => setRuleOpen(false)}>
+            <DialogFooter className="p-4 border-t border-border/80 flex items-center justify-end gap-2 bg-muted/15">
+              <Button type="button" variant="ghost" className="min-h-10 cursor-pointer" onClick={() => setRuleOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" className="min-h-11" disabled={saving}>
-                {saving ? 'Saving…' : 'Save reminder'}
+              <Button type="submit" form="reminder-rule-form" className="min-h-10 cursor-pointer" disabled={saving}>
+                {saving ? 'Saving…' : draft.id ? 'Save changes' : 'Create reminder'}
               </Button>
             </DialogFooter>
-          </form>
+          </div>
         </DialogContent>
       </Dialog>
 
-      <Card className="border-border/80 shadow-none">
-        <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <CardTitle className="text-lg">Active rules</CardTitle>
-            <CardDescription>
-              {loading ? 'Loading…' : `${settings.length} rule${settings.length === 1 ? '' : 's'}`}
+      {/* Active Rules Card */}
+      <Card className="border-border/80 shadow-xs">
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle className="text-xl font-bold tracking-tight">Active Reminder Rules</CardTitle>
+              <Badge variant="secondary" className="font-semibold text-xs">
+                {settings.length} {settings.length === 1 ? 'rule' : 'rules'}
+              </Badge>
+            </div>
+            <CardDescription className="text-xs sm:text-sm">
+              Recurring service maintenance alerts sent to vehicle owners. Edit copy, toggle channels, or change intervals.
             </CardDescription>
           </div>
-          <Button type="button" className="min-h-11" onClick={() => setRuleOpen(true)}>
+          <Button type="button" className="min-h-10 cursor-pointer text-xs font-semibold" onClick={openCreate}>
             <Plus size={16} className="mr-1.5" aria-hidden />
             New reminder
           </Button>
         </CardHeader>
-        <CardContent>
-          {settings.length === 0 && !loading ? (
-            <p className="text-sm text-muted-foreground">
-              No rules yet. Default fallback is push every 6 months for the paint-maintenance program.
-            </p>
+
+        <CardContent className="space-y-3 pt-0">
+          {/* Search & Scope Filters */}
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative min-w-0 flex-1">
+              <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+              <Input
+                aria-label="Filter reminder rules"
+                className="min-h-10 pl-9 text-xs sm:text-sm"
+                placeholder="Search rule title, message, service, or branch…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs font-medium text-muted-foreground mr-1 flex items-center gap-1">
+                <ListFilter className="size-3.5" aria-hidden />
+                Scope:
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                variant={scopeFilter === 'all' ? 'secondary' : 'ghost'}
+                className="h-8 px-2.5 text-xs cursor-pointer"
+                onClick={() => setScopeFilter('all')}
+              >
+                All
+              </Button>
+              {NOTIFICATION_SCOPES.map((sc) => (
+                <Button
+                  key={sc.id}
+                  type="button"
+                  size="sm"
+                  variant={scopeFilter === sc.id ? 'secondary' : 'ghost'}
+                  className="h-8 px-2.5 text-xs cursor-pointer"
+                  onClick={() => setScopeFilter(sc.id)}
+                >
+                  {sc.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {loading ? (
+            <p className="py-8 text-center text-sm text-muted-foreground animate-pulse">Loading reminder rules…</p>
+          ) : filtered.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border py-10 text-center">
+              <p className="text-sm font-medium text-foreground">No reminder rules found</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {query || scopeFilter !== 'all' ? 'Try adjusting your search or filter.' : 'Default fallback is push every 6 months for paint maintenance.'}
+              </p>
+            </div>
           ) : (
-            <ul className="divide-y divide-border">
-              {settings.map((s) => {
-                const svc =
-                  detailingServices.find((x) => x.id === s.service_id) ||
-                  services.find((x) => x.id === s.service_id)
+            <ul className="divide-y divide-border rounded-xl border border-border">
+              {filtered.map((s) => {
+                const svc = detailingServices.find((x) => x.id === s.service_id) || services.find((x) => x.id === s.service_id)
                 const br = branches.find((x) => x.slug === s.branch_slug)
                 return (
-                  <li key={s.id} className="flex items-start justify-between gap-3 py-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold">
-                        {notificationScopeLabel(s.scope)}
-                        {svc ? ` · ${svc.name}` : ''}
-                        {br ? ` · ${br.name}` : ''}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {(s.channel || 'push').toUpperCase()} · every {s.frequency_months} mo ·{' '}
-                        {s.enabled ? 'On' : 'Off'}
-                      </p>
-                      {s.title ? <p className="mt-1 truncate text-sm">{s.title}</p> : null}
+                  <li
+                    key={s.id}
+                    className={cn(
+                      'flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between transition-colors hover:bg-muted/10',
+                      !s.enabled && 'opacity-65 bg-muted/5',
+                    )}
+                  >
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="outline" className="font-semibold text-xs">
+                          {notificationScopeLabel(s.scope)}
+                        </Badge>
+                        {svc ? (
+                          <Badge variant="secondary" className="font-medium text-xs">
+                            {svc.name}
+                          </Badge>
+                        ) : null}
+                        {br ? (
+                          <Badge variant="outline" className="font-medium text-xs">
+                            {br.name}
+                          </Badge>
+                        ) : null}
+                        <Badge variant="outline" className="uppercase text-[11px]">
+                          {(s.channel || 'push')}
+                        </Badge>
+                        <span className="text-xs text-muted-foreground">
+                          Every {s.frequency_months} mo
+                        </span>
+                        {s.enabled ? (
+                          <span className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                            <span className="size-1.5 rounded-full bg-emerald-500" />
+                            Active
+                          </span>
+                        ) : (
+                          <Badge variant="destructive" className="text-[11px] font-medium">
+                            Paused
+                          </Badge>
+                        )}
+                      </div>
+
+                      {s.title ? <p className="text-sm font-bold text-foreground">{s.title}</p> : null}
                       {s.message ? (
-                        <p className="truncate text-xs text-muted-foreground">{s.message}</p>
+                        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">{s.message}</p>
                       ) : null}
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="shrink-0"
-                      onClick={() => removeSetting(s.id)}
-                      aria-label="Remove reminder"
-                    >
-                      <Trash2 className="size-4" aria-hidden />
-                    </Button>
+
+                    <div className="flex shrink-0 items-center gap-2 pt-1 sm:pt-0">
+                      {/* One-click toggle switch */}
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant={s.enabled ? 'outline' : 'secondary'}
+                        className="min-h-9 text-xs cursor-pointer"
+                        disabled={togglingId === s.id}
+                        onClick={() => toggleReminderEnabled(s)}
+                      >
+                        {s.enabled ? 'Pause' : 'Activate'}
+                      </Button>
+
+                      {/* Edit modal button */}
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="size-9 cursor-pointer"
+                        onClick={() => openEdit(s)}
+                        aria-label="Edit reminder rule"
+                      >
+                        <Pencil className="size-4" />
+                      </Button>
+
+                      {/* Delete button */}
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="size-9 cursor-pointer text-destructive hover:bg-destructive/10"
+                        onClick={() => removeSetting(s.id)}
+                        aria-label="Remove reminder rule"
+                      >
+                        <Trash2 className="size-4" aria-hidden />
+                      </Button>
+                    </div>
                   </li>
                 )
               })}
@@ -621,15 +828,6 @@ const EMPLOYEE_ROLE_CHOICES = [
   { id: ROLES.OPERATIONS_LEAD, label: 'Ops Lead' },
   { id: ROLES.SUPER_ADMIN, label: 'Super Admin' },
 ]
-
-const BROADCAST_PREVIEW_VARS = Object.freeze({
-  name: 'Ana',
-  plate: 'ABC-1234',
-  service: 'Ceramic Coating',
-  branch: 'Bacoor',
-  when: ', Nov 20, 10:00 AM',
-  appUrl: 'hakumautocare.com',
-})
 
 const AUDIENCE_GROUP_LABELS = Object.freeze({
   customers: 'Customers',
@@ -1175,18 +1373,6 @@ function BroadcastPanel({ canManageKinds = false }) {
                 ) : null}
               </div>
 
-              {(form.title.trim() || form.body.trim()) ? (
-                <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs">
-                  <p className="font-semibold text-foreground">Live preview</p>
-                  <p className="mt-1 font-medium text-foreground">
-                    {renderNotificationMessage(form.title || 'Title', BROADCAST_PREVIEW_VARS)}
-                  </p>
-                  <p className="mt-0.5 text-muted-foreground">
-                    {renderNotificationMessage(form.body || '', BROADCAST_PREVIEW_VARS)}
-                  </p>
-                </div>
-              ) : null}
-
               <div className="grid gap-4 sm:grid-cols-2">
                 {includesCustomers ? (
                   <div className="flex flex-col gap-2">
@@ -1212,98 +1398,135 @@ function BroadcastPanel({ canManageKinds = false }) {
                 ) : null}
               </div>
 
-              <Button type="submit" disabled={sending || !copyValidation.ok} className="min-h-11 w-full sm:w-fit">
+              <Button type="submit" disabled={sending || !copyValidation.ok} className="min-h-11 w-full sm:w-fit cursor-pointer">
                 {sending ? 'Sending…' : 'Send broadcast'}
               </Button>
             </form>
           </CardContent>
         </Card>
 
-        <Card className="border-border/80 shadow-none">
-          <CardHeader>
-            <CardTitle className="text-lg">Recent broadcasts &amp; announcements</CardTitle>
-            <CardDescription>Last 30 sends. Reuse, edit log metadata, or remove entries.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {history.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No broadcasts yet.</p>
-            ) : (
-              <ul className="divide-y divide-border">
-                {history.map((h) => (
-                  <li key={h.id} className="flex items-start justify-between gap-2 py-3">
-                    <div className="min-w-0 flex-1 space-y-1">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <p className="text-sm font-semibold">{h.title}</p>
-                        {h.audience_group && h.audience_group !== 'customers' ? (
-                          <Badge variant="secondary" className="text-[11px]">
-                            {AUDIENCE_GROUP_LABELS[h.audience_group] || h.audience_group}
+        <div className="flex flex-col gap-5">
+          {/* Live Mobile Simulator Preview */}
+          <Card className="border-border/80 shadow-xs">
+            <CardHeader className="py-3.5 px-4 flex flex-row items-center justify-between border-b border-border/70">
+              <CardTitle className="text-sm font-bold flex items-center gap-1.5">
+                <Smartphone className="size-4 text-primary" aria-hidden />
+                Live Customer Simulator
+              </CardTitle>
+              <Badge variant="outline" className="text-[11px] font-semibold uppercase">
+                {effectiveChannel}
+              </Badge>
+            </CardHeader>
+            <CardContent className="p-4 pt-3 flex flex-col items-center">
+              <NotificationSimulatorPreview
+                channel={effectiveChannel}
+                title={form.title}
+                body={form.body}
+                sms_body={form.body}
+                allow_multipart={form.allow_multipart}
+                triggerRoute={includesCustomers ? form.url || '/account' : form.staff_url || '/operations/dashboard'}
+              />
+            </CardContent>
+          </Card>
+
+          {/* Recent Broadcasts History */}
+          <Card className="border-border/80 shadow-xs">
+            <CardHeader className="py-3.5 px-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base font-bold">Broadcast History</CardTitle>
+                  <CardDescription className="text-xs">Last 30 campaigns. Reuse copy, edit, or delete.</CardDescription>
+                </div>
+                <Badge variant="secondary" className="text-xs tabular-nums font-semibold">
+                  {history.length}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-0">
+              {history.length === 0 ? (
+                <p className="p-6 text-center text-sm text-muted-foreground">No broadcasts sent yet.</p>
+              ) : (
+                <ul className="divide-y divide-border">
+                  {history.map((h) => (
+                    <li key={h.id} className="flex items-start justify-between gap-2 p-3.5 hover:bg-muted/10 transition-colors">
+                      <div className="min-w-0 flex-1 space-y-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <p className="text-sm font-bold text-foreground">{h.title}</p>
+                          {h.audience_group && h.audience_group !== 'customers' ? (
+                            <Badge variant="secondary" className="text-[10px] font-medium">
+                              {AUDIENCE_GROUP_LABELS[h.audience_group] || h.audience_group}
+                            </Badge>
+                          ) : null}
+                          <Badge variant="outline" className="text-[10px] uppercase font-mono">
+                            {h.channel}
                           </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          {h.kind} · {h.audience_group === 'employees' ? `staff ${h.employee_scope || 'all'}` : h.target_audience}
+                          {h.branch_slug ? ` · ${h.branch_slug}` : ''} · sent <strong className="text-foreground">{h.sent_count}</strong> · failed {h.failed_count}
+                        </p>
+                        {h.body ? <p className="text-xs text-muted-foreground line-clamp-2">{h.body}</p> : null}
+                      </div>
+                      <div className="flex shrink-0 gap-1 pt-1">
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          className="size-8 cursor-pointer"
+                          title="Reuse into composer"
+                          aria-label={`Reuse ${h.title}`}
+                          onClick={() =>
+                            setForm((f) => ({
+                              ...f,
+                              kind: h.kind || f.kind,
+                              audience_group: canTargetEmployees ? h.audience_group || 'customers' : 'customers',
+                              channel: h.channel || 'push',
+                              title: h.title || '',
+                              body: h.body || '',
+                              url: h.url || '/account',
+                              branch_slug: h.branch_slug || '',
+                              allow_multipart: Boolean(h.allow_multipart),
+                            }))
+                          }
+                        >
+                          <Copy className="size-3.5" />
+                        </Button>
+                        {canTargetEmployees ? (
+                          <>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="size-8 cursor-pointer"
+                              aria-label={`Edit ${h.title}`}
+                              onClick={() => setEditingRow({ ...h })}
+                            >
+                              <Pencil className="size-3.5" />
+                            </Button>
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="size-8 cursor-pointer text-destructive hover:bg-destructive/10"
+                              aria-label={`Delete ${h.title}`}
+                              onClick={() => {
+                                if (window.confirm(`Delete broadcast log "${h.title}"?`)) {
+                                  deleteBroadcast(h.id)
+                                }
+                              }}
+                            >
+                              <Trash2 className="size-3.5" />
+                            </Button>
+                          </>
                         ) : null}
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {h.kind} · {h.channel}
-                        {h.audience_group === 'employees'
-                          ? ` · staff ${h.employee_scope || 'all'}`
-                          : ` · ${h.target_audience}`}
-                        {h.branch_slug ? ` · ${h.branch_slug}` : ''} · sent {h.sent_count} · failed {h.failed_count}
-                      </p>
-                      {h.body ? <p className="text-sm text-muted-foreground">{h.body}</p> : null}
-                    </div>
-                    <div className="flex shrink-0 gap-1">
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className="size-9 cursor-pointer"
-                        title="Reuse into composer"
-                        aria-label={`Reuse ${h.title}`}
-                        onClick={() =>
-                          setForm((f) => ({
-                            ...f,
-                            kind: h.kind || f.kind,
-                            audience_group: canTargetEmployees ? h.audience_group || 'customers' : 'customers',
-                            channel: h.channel || 'push',
-                            title: h.title || '',
-                            body: h.body || '',
-                            url: h.url || '/account',
-                            branch_slug: h.branch_slug || '',
-                            allow_multipart: Boolean(h.allow_multipart),
-                          }))
-                        }
-                      >
-                        <Copy className="size-4" />
-                      </Button>
-                      {canTargetEmployees ? (
-                        <>
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            className="size-9 cursor-pointer"
-                            aria-label={`Edit ${h.title}`}
-                            onClick={() => setEditingRow({ ...h })}
-                          >
-                            <Pencil className="size-4" />
-                          </Button>
-                          <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            className="size-9 cursor-pointer text-destructive"
-                            aria-label={`Delete ${h.title}`}
-                            onClick={() => deleteBroadcast(h.id)}
-                          >
-                            <Trash2 className="size-4" />
-                          </Button>
-                        </>
-                      ) : null}
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <Dialog open={Boolean(editingRow)} onOpenChange={(open) => { if (!open) setEditingRow(null) }}>

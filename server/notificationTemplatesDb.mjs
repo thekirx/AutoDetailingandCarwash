@@ -10,13 +10,21 @@ export async function loadMergedTemplates(db) {
   if (!db) return mergeNotificationTemplates([])
   let { data, error } = await db
     .from('notification_templates')
-    .select('key, title, body, sms_body, enabled, allow_multipart, updated_at')
-  if (error && /column .*allow_multipart.* does not exist/i.test(error.message || '')) {
+    .select('key, title, body, sms_body, enabled, allow_multipart, updated_at, label, description, category, channel, is_custom')
+  if (error && /column .* does not exist/i.test(error.message || '')) {
     const fallback = await db
       .from('notification_templates')
-      .select('key, title, body, sms_body, enabled, updated_at')
-    data = fallback.data
-    error = fallback.error
+      .select('key, title, body, sms_body, enabled, allow_multipart, updated_at')
+    if (fallback.error && /column .*allow_multipart.* does not exist/i.test(fallback.error.message || '')) {
+      const basic = await db
+        .from('notification_templates')
+        .select('key, title, body, sms_body, enabled, updated_at')
+      data = basic.data
+      error = basic.error
+    } else {
+      data = fallback.data
+      error = fallback.error
+    }
   }
   if (error) {
     console.warn('[notify] templates load failed', error.message)

@@ -7,6 +7,9 @@ export const operations = Object.freeze({
   'blog-meta': handleSeoRequest,
   'event-meta': handleSeoRequest,
   'indexnow-key': handleSeoRequest,
+  'branch-meta': handleSeoRequest,
+  'branch-service-meta': handleSeoRequest,
+  'service-meta': handleSeoRequest,
 })
 
 export default createGateway(operations, { defaultOperation: 'sitemap' })

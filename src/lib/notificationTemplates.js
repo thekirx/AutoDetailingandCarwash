@@ -14,6 +14,7 @@ export const TEMPLATE_CATEGORIES = [
   { id: 'lifecycle', label: 'Lifecycle', hint: 'Welcome, loyalty, visit milestones' },
   { id: 'ops_forms', label: 'Ops forms', hint: 'Complaint and form alerts' },
   { id: 'reminder', label: 'Reminders', hint: 'Default paint-maintenance copy' },
+  { id: 'custom', label: 'Custom templates', hint: 'Custom shop promotions, alerts, and recurring messages' },
 ]
 
 const BOOKING_TOKENS = ['name', 'plate', 'service', 'branch', 'when']
@@ -480,10 +481,10 @@ export function bookingTemplateKey(status, audience = 'customer') {
   return `booking.${status}.${audience}`
 }
 
-/** Overlay SA row onto the code default. Unknown keys are ignored. */
+/** Overlay SA row onto the code default. Unknown keys are ignored unless marked is_custom or prefixed custom. */
 export function mergeNotificationTemplates(dbRows = []) {
   const byKey = new Map((dbRows || []).map((row) => [row.key, row]))
-  return SYSTEM_TEMPLATES.map((sys) => {
+  const systemMerged = SYSTEM_TEMPLATES.map((sys) => {
     const db = byKey.get(sys.key)
     const meta = templateTriggerMeta(sys)
     const defaults = {
@@ -505,6 +506,34 @@ export function mergeNotificationTemplates(dbRows = []) {
       updated_at: db.updated_at || null,
     }
   })
+
+  const customRows = (dbRows || [])
+    .filter((r) => r && (r.is_custom === true || (typeof r.key === 'string' && r.key.startsWith('custom.'))))
+    .map((db) => {
+      const channel = ['push', 'sms', 'both'].includes(db.channel) ? db.channel : 'both'
+      return {
+        key: db.key,
+        category: db.category || 'custom',
+        label: db.label || db.key.replace(/^custom\./, '').replace(/_/g, ' '),
+        description: db.description || 'Custom shop notification template',
+        channel,
+        audience: db.audience || 'customer',
+        tokens: BOOKING_TOKENS,
+        title: db.title || '',
+        body: db.body || '',
+        sms_body: db.sms_body || '',
+        enabled: db.enabled !== false,
+        allow_multipart: Boolean(db.allow_multipart),
+        is_custom: true,
+        has_override: true,
+        trigger_event: 'Custom trigger / broadcast',
+        trigger_route: '/account',
+        recipient_summary: db.audience === 'ops' ? 'Operations staff' : 'Targeted customers',
+        updated_at: db.updated_at || null,
+      }
+    })
+
+  return [...systemMerged, ...customRows]
 }
 
 export function templatesByKeyMap(merged = SYSTEM_TEMPLATES) {

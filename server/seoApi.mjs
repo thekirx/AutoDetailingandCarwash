@@ -8,8 +8,15 @@ function tryAdminClient() {
   }
 }
 import { extractContentMeta } from '../src/lib/contentBlocks.js'
-import { LOCAL_BRANCH_PAGES, LOCAL_BRANCH_SERVICE_PAGES } from '../src/lib/localBranchPages.js'
-import { buildDocumentTitle } from '../src/lib/pageMeta.js'
+import {
+  LOCAL_BRANCH_PAGES,
+  LOCAL_BRANCH_SERVICE_PAGES,
+  buildBranchCityJsonLd,
+  buildBranchServiceJsonLd,
+  findLocalBranchPage,
+  findLocalBranchServicePage,
+} from '../src/lib/localBranchPages.js'
+import { buildDocumentTitle, buildServicePageJsonLd } from '../src/lib/pageMeta.js'
 import {
   SEO_LOCAL_GUIDES,
   buildBlogPostJsonLd,
@@ -280,6 +287,299 @@ export function buildArticleCrawlerHtml({ post, origin = ORIGIN, slug = '' } = {
 </html>`
 }
 
+export const CORE_SERVICES_DATA = {
+  ppf: {
+    slug: 'ppf',
+    name: 'ClearPro Paint Protection Film (PPF)',
+    title: 'ClearPro Paint Protection Film (PPF) — Bacoor & Batangas',
+    description:
+      'Self-healing ClearPro TPU Paint Protection Film (PPF) installed in dust-controlled bays in Bacoor, Cavite and Batangas City, serving Imus, Dasmariñas, and CALABARZON.',
+    h1: 'ClearPro Paint Protection Film (PPF) Philippines',
+    hero: 'Optical-grade TPU self-healing film installed in enclosed dust-controlled bays with wrapped edges and 10-year warranty.',
+    faqs: [
+      {
+        question: 'What is ClearPro PPF made of?',
+        answer:
+          'ClearPro is manufactured from optical-grade aliphatic thermoplastic polyurethane (TPU) with a heat-activated self-healing top coat.',
+      },
+      {
+        question: 'How long does the warranty last?',
+        answer:
+          'ClearPro PPF includes a 10-year manufacturer warranty against yellowing, cracking, peeling, and bubbling.',
+      },
+      {
+        question: 'Which branches offer PPF installation?',
+        answer:
+          'Enclosed PPF installation bays operate at our Bacoor, Cavite flagship (RFC Molino II) and Batangas City studio (Brgy. Alangilan).',
+      },
+    ],
+  },
+  ceramic: {
+    slug: 'ceramic',
+    name: 'Kisho 9H Ceramic Coating',
+    title: 'Kisho 9H Ceramic Coating — Bacoor, Cavite & Batangas',
+    description:
+      'Multi-stage paint correction and authentic Kisho 9H Ceramic Coating in Bacoor, Cavite and Batangas City with Unlimited Recoating packages.',
+    h1: 'Kisho 9H Ceramic Coating Philippines',
+    hero: 'Japanese inorganic silica ceramic protection paired with multi-stage Rupes & Menzerna machine paint correction for mirror clarity and hydrophobic rain protection.',
+    faqs: [
+      {
+        question: 'What ceramic coating brand do you use?',
+        answer:
+          'We use genuine Kisho Japan 9H ceramic coating formulations applied inside clean, lighting-calibrated curing bays.',
+      },
+      {
+        question: 'Is paint correction included?',
+        answer:
+          'Yes, all Hakum ceramic coating packages include full chemical and clay decontamination plus multi-stage machine polishing to remove swirls before coating.',
+      },
+      {
+        question: 'What is the Paint Maintenance program?',
+        answer:
+          'Every ceramic coating customer receives automated 6-month maintenance reminders with Unlimited Recoating on Premium & Platinum tiers.',
+      },
+    ],
+  },
+  tint: {
+    slug: 'tint',
+    name: 'Nano Ceramic Window Tint',
+    title: 'Nano Ceramic Window Tint — Bacoor, Imus & Batangas',
+    description:
+      'High heat-rejection nano ceramic window tint in Bacoor, Cavite and Batangas City — RFID-safe night clarity previewed in 3D before booking.',
+    h1: 'Nano Ceramic Window Tint Philippines',
+    hero: 'Advanced non-metallic nano-ceramic window films blocking infrared solar heat and UV radiation without reducing nighttime clarity or blocking Autosweep/Easytrip RFID signals.',
+    faqs: [
+      {
+        question: 'Does nano ceramic tint block RFID or GPS signals?',
+        answer:
+          'No, our nano-ceramic films contain zero metallic particles and never interfere with RFID toll tags, mobile data, or GPS.',
+      },
+      {
+        question: 'Can I preview shades before installation?',
+        answer:
+          'Yes, use our interactive 3D Tint Finder at hakumautocare.com/tint-finder to test visibility across shade combinations.',
+      },
+    ],
+  },
+  'wash-detailing': {
+    slug: 'wash-detailing',
+    name: 'Car Wash & Auto Detailing',
+    title: 'Car Wash & Auto Detailing — Bacoor, Imus & Batangas',
+    description:
+      'Two-bucket pH-neutral car wash, interior sanitization, and swirl-free detailing in Bacoor (Molino), Batangas City (Alangilan), serving Imus and Dasmariñas.',
+    h1: 'Two-Bucket pH-Neutral Car Wash & Auto Detailing',
+    hero: 'Swirl-free contact washing using dedicated grit-guard buckets, pH-neutral foam shampoos, clean microfiber per zone, and deep cabin sanitization.',
+    faqs: [
+      {
+        question: 'Why is two-bucket washing safer for car paint?',
+        answer:
+          'Two-bucket washing isolates road grit in a rinse bucket with a grit guard, preventing dirt from being dragged across your clear coat and causing swirl marks.',
+      },
+      {
+        question: 'Can I check queue wait times online?',
+        answer:
+          'Yes, open hakumautocare.com/queue to view real-time bay and vehicle counts before driving to our Bacoor or Batangas studios.',
+      },
+    ],
+  },
+}
+
+export function buildBranchCityCrawlerHtml({ cityPage, origin = ORIGIN } = {}) {
+  if (!cityPage) {
+    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><title>Branch not found · Hakum Auto Care</title></head><body><main><h1>Branch not found</h1><p><a href="/branches">Back to Branches</a></p></main></body></html>`
+  }
+  const fullTitle = buildDocumentTitle(cityPage.seoTitle)
+  const canonical = `${origin}/branches/${cityPage.slug}`
+  const jsonLd = buildBranchCityJsonLd(cityPage, { origin })
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${escHtml(fullTitle)}</title>
+    <meta name="description" content="${escHtml(cityPage.seoDescription)}" />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <link rel="canonical" href="${escHtml(canonical)}" />
+    <link rel="alternate" hreflang="en-PH" href="${escHtml(canonical)}" />
+    <link rel="alternate" hreflang="x-default" href="${escHtml(canonical)}" />
+    <meta property="og:site_name" content="Hakum Auto Care" />
+    <meta property="og:type" content="business.business" />
+    <meta property="og:locale" content="en_PH" />
+    <meta property="og:title" content="${escHtml(fullTitle)}" />
+    <meta property="og:description" content="${escHtml(cityPage.seoDescription)}" />
+    <meta property="og:url" content="${escHtml(canonical)}" />
+    <meta property="og:image" content="${origin}/og-image.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${escHtml(fullTitle)}" />
+    <meta name="twitter:description" content="${escHtml(cityPage.seoDescription)}" />
+    <meta name="twitter:image" content="${origin}/og-image.png" />
+    ${jsonLd ? `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>` : ''}
+  </head>
+  <body>
+    <main style="max-width:860px;margin:0 auto;padding:32px 20px;font-family:system-ui,sans-serif;line-height:1.6">
+      <nav aria-label="Breadcrumb"><a href="/">Home</a> · <a href="/branches">Branches</a> · <span>${escHtml(cityPage.cityName)}</span></nav>
+      <h1>${escHtml(cityPage.h1)}</h1>
+      <p><strong>${escHtml(cityPage.eyebrow)}</strong></p>
+      <p>${escHtml(cityPage.heroSummary)}</p>
+      <h2>Studio Address &amp; Service Corridors</h2>
+      <p>${escHtml(cityPage.landmarkAddress)}</p>
+      <p><strong>Corridors Served:</strong> ${escHtml(cityPage.corridors.join(', '))}</p>
+      <h2>Studio Highlights</h2>
+      <ul>${cityPage.highlights.map((h) => `<li>${escHtml(h)}</li>`).join('')}</ul>
+      <h2>Specialized Local Services</h2>
+      <ul>
+        <li><a href="/branches/${cityPage.slug}/car-wash">Car Wash &amp; Auto Detailing in ${escHtml(cityPage.shortName)}</a></li>
+        <li><a href="/branches/${cityPage.slug}/ceramic-coating">Ceramic Coating (Kisho 9H) in ${escHtml(cityPage.shortName)}</a></li>
+        <li><a href="/branches/${cityPage.slug}/ppf">Paint Protection Film (ClearPro PPF) in ${escHtml(cityPage.shortName)}</a></li>
+        <li><a href="/branches/${cityPage.slug}/window-tint">Nano Ceramic Window Tint in ${escHtml(cityPage.shortName)}</a></li>
+      </ul>
+      <h2>Frequently Asked Questions</h2>
+      ${cityPage.qa.map((qa) => `<details open><summary><strong>${escHtml(qa.q)}</strong></summary><p>${escHtml(qa.a)}</p></details>`).join('')}
+      <nav aria-label="Call to action">
+        <a href="/book?branch=${cityPage.branchSlug}">Book Detailing Slot</a> · 
+        <a href="/queue/${cityPage.branchSlug}">Live Bay Queue Status</a> · 
+        <a href="/branches">All Studio Branches</a>
+      </nav>
+    </main>
+  </body>
+</html>`
+}
+
+export function buildBranchServiceCrawlerHtml({ page, origin = ORIGIN } = {}) {
+  if (!page) {
+    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><title>Service not found · Hakum Auto Care</title></head><body><main><h1>Service not found</h1><p><a href="/branches">Back to Branches</a></p></main></body></html>`
+  }
+  const fullTitle = buildDocumentTitle(page.seoTitle)
+  const canonical = `${origin}/branches/${page.citySlug}/${page.serviceSlug}`
+  const jsonLd = buildBranchServiceJsonLd(page, { origin })
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${escHtml(fullTitle)}</title>
+    <meta name="description" content="${escHtml(page.seoDescription)}" />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <link rel="canonical" href="${escHtml(canonical)}" />
+    <link rel="alternate" hreflang="en-PH" href="${escHtml(canonical)}" />
+    <link rel="alternate" hreflang="x-default" href="${escHtml(canonical)}" />
+    <meta property="og:site_name" content="Hakum Auto Care" />
+    <meta property="og:type" content="service" />
+    <meta property="og:locale" content="en_PH" />
+    <meta property="og:title" content="${escHtml(fullTitle)}" />
+    <meta property="og:description" content="${escHtml(page.seoDescription)}" />
+    <meta property="og:url" content="${escHtml(canonical)}" />
+    <meta property="og:image" content="${origin}/og-image.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${escHtml(fullTitle)}" />
+    <meta name="twitter:description" content="${escHtml(page.seoDescription)}" />
+    <meta name="twitter:image" content="${origin}/og-image.png" />
+    ${jsonLd ? `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>` : ''}
+  </head>
+  <body>
+    <main style="max-width:860px;margin:0 auto;padding:32px 20px;font-family:system-ui,sans-serif;line-height:1.6">
+      <nav aria-label="Breadcrumb">
+        <a href="/">Home</a> · 
+        <a href="/branches">Branches</a> · 
+        <a href="/branches/${page.citySlug}">${escHtml(page.cityName)}</a> · 
+        <span>${escHtml(page.serviceLabel)}</span>
+      </nav>
+      <h1>${escHtml(page.h1)}</h1>
+      <p><strong>${escHtml(page.eyebrow)}</strong></p>
+      <p>${escHtml(page.heroSummary)}</p>
+      <h2>Service Process &amp; Standards</h2>
+      <ol>${page.processSteps.map((s) => `<li>${escHtml(s)}</li>`).join('')}</ol>
+      <h2>Local Studio Advantages</h2>
+      <ul>${page.localHighlights.map((h) => `<li>${escHtml(h)}</li>`).join('')}</ul>
+      <h2>Frequently Asked Questions</h2>
+      ${page.qa.map((qa) => `<details open><summary><strong>${escHtml(qa.q)}</strong></summary><p>${escHtml(qa.a)}</p></details>`).join('')}
+      <nav aria-label="Actions">
+        ${page.mode === 'queue' ? `<a href="/queue/${page.branchSlug}">Check Live ${escHtml(page.shortCity)} Queue</a>` : `<a href="/book?branch=${page.branchSlug}">Book ${escHtml(page.serviceLabel)} in ${escHtml(page.shortCity)}</a>`} · 
+        <a href="/branches/${page.citySlug}">More Services at Hakum ${escHtml(page.shortCity)}</a>
+      </nav>
+    </main>
+  </body>
+</html>`
+}
+
+export function buildCoreServiceCrawlerHtml({ serviceSlug = '', origin = ORIGIN } = {}) {
+  const clean = String(serviceSlug || '').trim().toLowerCase()
+  const s = CORE_SERVICES_DATA[clean]
+  if (clean && !s) {
+    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow"><title>Service not found · Hakum Auto Care</title></head><body><main><h1>Service not found</h1><p><a href="/services">All Services</a></p></main></body></html>`
+  }
+
+  const name = s ? s.name : 'All Detailing, Car Wash & Paint Protection Services'
+  const title = s ? s.title : 'All Services & Packages — PPF, Ceramic Coating, Tint & Detailing'
+  const desc = s
+    ? s.description
+    : 'Explore Hakum Auto Care services across Bacoor, Imus, Cavite, and Batangas: ClearPro PPF, Kisho 9H Ceramic Coating, Nano Ceramic Tint, and two-bucket pH-neutral car wash.'
+  const fullTitle = buildDocumentTitle(title)
+  const canonical = clean ? `${origin}/services/${clean}` : `${origin}/services`
+  const jsonLd = buildServicePageJsonLd({
+    slug: clean || undefined,
+    name,
+    description: desc,
+    faqs: s ? s.faqs : [],
+    origin,
+  })
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${escHtml(fullTitle)}</title>
+    <meta name="description" content="${escHtml(desc)}" />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <link rel="canonical" href="${escHtml(canonical)}" />
+    <link rel="alternate" hreflang="en-PH" href="${escHtml(canonical)}" />
+    <link rel="alternate" hreflang="x-default" href="${escHtml(canonical)}" />
+    <meta property="og:site_name" content="Hakum Auto Care" />
+    <meta property="og:type" content="service" />
+    <meta property="og:locale" content="en_PH" />
+    <meta property="og:title" content="${escHtml(fullTitle)}" />
+    <meta property="og:description" content="${escHtml(desc)}" />
+    <meta property="og:url" content="${escHtml(canonical)}" />
+    <meta property="og:image" content="${origin}/og-image.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${escHtml(fullTitle)}" />
+    <meta name="twitter:description" content="${escHtml(desc)}" />
+    <meta name="twitter:image" content="${origin}/og-image.png" />
+    ${jsonLd ? `<script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>` : ''}
+  </head>
+  <body>
+    <main style="max-width:860px;margin:0 auto;padding:32px 20px;font-family:system-ui,sans-serif;line-height:1.6">
+      <nav aria-label="Breadcrumb"><a href="/">Home</a> · <a href="/services">Services</a>${clean ? ` · <span>${escHtml(name)}</span>` : ''}</nav>
+      <h1>${escHtml(s ? s.h1 : 'Hakum Auto Care Services & Packages')}</h1>
+      <p>${escHtml(s ? s.hero : desc)}</p>
+      ${
+        s
+          ? `<h2>Frequently Asked Questions</h2>${s.faqs.map((f) => `<details open><summary><strong>${escHtml(f.question)}</strong></summary><p>${escHtml(f.answer)}</p></details>`).join('')}`
+          : `<h2>Service Categories</h2>
+          <ul>
+            <li><a href="/services/ppf">ClearPro Paint Protection Film (PPF)</a></li>
+            <li><a href="/services/ceramic">Kisho 9H Ceramic Coating</a></li>
+            <li><a href="/services/tint">Nano Ceramic Window Tint</a></li>
+            <li><a href="/services/wash-detailing">Two-Bucket pH-Neutral Car Wash &amp; Detailing</a></li>
+          </ul>`
+      }
+      <h2>Available Studio Branches</h2>
+      <ul>
+        <li><a href="/branches/bacoor">Bacoor, Cavite Flagship Studio (RFC Molino II)</a></li>
+        <li><a href="/branches/batangas">Batangas City Studio (National Highway, Brgy. Alangilan)</a></li>
+        <li><a href="/branches/imus">Car Wash &amp; Detailing Near Imus, Cavite</a></li>
+        <li><a href="/branches/cavite">Cavite Regional Detailing Studio Network</a></li>
+        <li><a href="/branches/dasmarinas">Car Wash &amp; Detailing Near Dasmariñas, Cavite</a></li>
+      </ul>
+      <nav aria-label="Action links"><a href="/book">Book Online</a> · <a href="/queue">Live Queue Status</a></nav>
+    </main>
+  </body>
+</html>`
+}
+
 /** Public read-only SEO endpoint (/sitemap.xml, /rss.xml, crawler meta, optional IndexNow verification key). */
 export async function handleSeoRequest(req, res) {
   const url = new URL(req.url || '/', 'http://localhost')
@@ -357,6 +657,56 @@ export async function handleSeoRequest(req, res) {
     res.writeHead(ev ? 200 : 404, {
       'Content-Type': 'text/html; charset=utf-8',
       'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=600',
+    })
+    res.end(html)
+    return
+  }
+
+  if (op === 'branch-meta') {
+    const citySlug = String(url.searchParams.get('citySlug') || url.searchParams.get('slug') || '').trim().toLowerCase()
+    const cityPage = findLocalBranchPage(citySlug)
+    const html = buildBranchCityCrawlerHtml({ cityPage, origin: ORIGIN })
+    res.writeHead(cityPage ? 200 : 404, {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=1200',
+    })
+    res.end(html)
+    return
+  }
+
+  if (op === 'branch-service-meta') {
+    const citySlug = String(url.searchParams.get('citySlug') || '').trim().toLowerCase()
+    const serviceSlug = String(url.searchParams.get('serviceSlug') || url.searchParams.get('slug') || '').trim().toLowerCase()
+    const match = findLocalBranchServicePage(citySlug, serviceSlug)
+    if (!match) {
+      const html = buildBranchServiceCrawlerHtml({ page: null, origin: ORIGIN })
+      res.writeHead(404, { 'Content-Type': 'text/html; charset=utf-8' })
+      res.end(html)
+      return
+    }
+    if (match.redirected) {
+      res.writeHead(301, {
+        Location: `/branches/${match.canonicalCitySlug}/${match.canonicalServiceSlug}`,
+        'Cache-Control': 'public, max-age=86400',
+      })
+      res.end()
+      return
+    }
+    const html = buildBranchServiceCrawlerHtml({ page: match.page, origin: ORIGIN })
+    res.writeHead(200, {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=1200',
+    })
+    res.end(html)
+    return
+  }
+
+  if (op === 'service-meta') {
+    const serviceSlug = String(url.searchParams.get('serviceSlug') || url.searchParams.get('slug') || '').trim().toLowerCase()
+    const html = buildCoreServiceCrawlerHtml({ serviceSlug, origin: ORIGIN })
+    res.writeHead(200, {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=1200',
     })
     res.end(html)
     return

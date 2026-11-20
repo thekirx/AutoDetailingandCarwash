@@ -3,11 +3,14 @@ import {
   AlertTriangle,
   Cake,
   Link2,
+  ListFilter,
   MessageSquare,
   Pencil,
+  Plus,
   RotateCcw,
   Search,
   Smartphone,
+  Trash2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { getAccessTokenFresh } from '@/lib/authToken'
@@ -15,13 +18,12 @@ import {
   BUSYBEE_PUSH_BODY_MAX,
   BUSYBEE_PUSH_TITLE_MAX,
   BUSYBEE_SMS_MULTIPART_MAX,
-  BUSYBEE_SMS_SINGLE_MAX,
   analyzeBusybeeSms,
   insertMessageToken,
-  renderNotificationMessage,
   validateNotificationCopy,
 } from '@/lib/notificationCopy'
 import { TEMPLATE_CATEGORIES } from '@/lib/notificationTemplates.js'
+import NotificationSimulatorPreview from '@/components/notifications/NotificationSimulatorPreview'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -36,16 +38,14 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-
-const PREVIEW_SAMPLE_VARS = Object.freeze({
-  name: 'Ana',
-  plate: 'ABC-1234',
-  service: 'Ceramic Coating',
-  branch: 'Bacoor',
-  when: ', Nov 20, 10:00 AM',
-  code: 'BD8K2P',
-  appUrl: 'hakumautocare.com',
-})
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { cn } from '@/lib/utils'
 
 function TokenChips({ value, onChange, inputId, tokens }) {
   const list = tokens?.length
@@ -71,7 +71,7 @@ function TokenChips({ value, onChange, inputId, tokens }) {
         <button
           key={token}
           type="button"
-          className="min-h-8 cursor-pointer rounded-lg border border-border bg-muted/50 px-2 text-xs font-semibold text-foreground transition hover:border-primary/50 hover:bg-primary/10"
+          className="min-h-8 cursor-pointer rounded-lg border border-border bg-muted/50 px-2 text-xs font-semibold text-foreground transition hover:border-primary/50 hover:bg-primary/10 active:scale-95"
           onClick={() => insert(token)}
         >
           {token}
@@ -81,15 +81,32 @@ function TokenChips({ value, onChange, inputId, tokens }) {
   )
 }
 
+const EMPTY_CUSTOM_TEMPLATE = {
+  key: '',
+  label: '',
+  description: '',
+  category: 'custom',
+  channel: 'both',
+  title: '',
+  body: '',
+  sms_body: '',
+  enabled: true,
+  allow_multipart: false,
+}
+
 export default function NotificationTemplatesPanel() {
   const [templates, setTemplates] = useState([])
   const [canEdit, setCanEdit] = useState(true)
   const [loading, setLoading] = useState(true)
   const [query, setQuery] = useState('')
   const [channelFilter, setChannelFilter] = useState('all')
+  const [categoryFilter, setCategoryFilter] = useState('all')
   const [draft, setDraft] = useState(null)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [newTemplate, setNewTemplate] = useState(EMPTY_CUSTOM_TEMPLATE)
   const [saving, setSaving] = useState(false)
   const [resetting, setResetting] = useState(false)
+  const [deletingKey, setDeletingKey] = useState(null)
   const [running, setRunning] = useState(false)
 
   const load = useCallback(async () => {
@@ -118,6 +135,7 @@ export default function NotificationTemplatesPanel() {
     const q = query.trim().toLowerCase()
     return templates.filter((row) => {
       if (channelFilter !== 'all' && row.channel !== channelFilter) return false
+      if (categoryFilter !== 'all' && row.category !== categoryFilter) return false
       if (!q) return true
       return (
         String(row.label || '').toLowerCase().includes(q) ||
@@ -128,14 +146,17 @@ export default function NotificationTemplatesPanel() {
         String(row.sms_body || '').toLowerCase().includes(q)
       )
     })
-  }, [templates, query, channelFilter])
+  }, [templates, query, channelFilter, categoryFilter])
 
   const grouped = useMemo(() => {
     return TEMPLATE_CATEGORIES.map((cat) => ({
       ...cat,
-      rows: filtered.filter((t) => t.category === cat.id),
+      rows: filtered.filter((t) => (t.category || (t.is_custom ? 'custom' : '')) === cat.id),
     })).filter((g) => g.rows.length)
   }, [filtered])
+
+  const totalCustomCount = useMemo(() => templates.filter((t) => t.is_custom).length, [templates])
+  const totalCustomizedCount = useMemo(() => templates.filter((t) => t.has_override && !t.is_custom).length, [templates])
 
   const draftCheck = useMemo(() => {
     if (!draft) return { ok: true, smsAnalysis: null }
@@ -150,12 +171,54 @@ export default function NotificationTemplatesPanel() {
 
   const draftSmsAnalysis = useMemo(() => {
     if (!draft || draft.channel === 'push') return null
-    return analyzeBusybeeSms(draft.sms_body || '', {
+    return analyzeBusybeeSms(draft.sms_body || draft.body || '', {
       allowMultiPart: Boolean(draft.allow_multipart),
     })
   }, [draft])
 
-  async function save(e) {
+  const createCheck = useMemo(() => {
+    if (!createOpen) return { ok: true }
+    return validateNotificationCopy({
+      channel: newTemplate.channel,
+      title: newTemplate.title || '',
+      body: newTemplate.body || '',
+      sms_body: newTemplate.sms_body || '',
+      allowMultiPart: Boolean(newTemplate.allow_multipart),
+      requireTitle: newTemplate.channel !== 'sms',
+      requireBody: newTemplate.channel !== 'sms',
+    })
+  }, [createOpen, newTemplate])
+
+  async function toggleTemplateEnabled(template) {
+    if (!canEdit) return
+    const nextEnabled = template.enabled === false
+    setTemplates((prev) =>
+      prev.map((t) => (t.key === template.key ? { ...t, enabled: nextEnabled } : t)),
+    )
+    try {
+      const token = await getAccessTokenFresh()
+      const res = await fetch('/api/notification-templates', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          key: template.key,
+          enabled: nextEnabled,
+        }),
+      })
+      if (!res.ok) {
+        throw new Error('Failed to toggle status')
+      }
+      toast.success(`${template.label}: ${nextEnabled ? 'Enabled' : 'Paused'}`)
+    } catch (err) {
+      toast.error(err.message)
+      load()
+    }
+  }
+
+  async function saveDraft(e) {
     e.preventDefault()
     if (!draft?.key) return
     if (!draftCheck.ok) {
@@ -173,6 +236,10 @@ export default function NotificationTemplatesPanel() {
         },
         body: JSON.stringify({
           key: draft.key,
+          label: draft.label,
+          description: draft.description,
+          category: draft.category,
+          channel: draft.channel,
           title: draft.title,
           body: draft.body,
           sms_body: draft.sms_body,
@@ -183,12 +250,67 @@ export default function NotificationTemplatesPanel() {
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Save failed')
       setTemplates(data.templates || [])
-      toast.success('Template saved')
+      toast.success('Template saved successfully')
       setDraft(null)
     } catch (err) {
       toast.error(err.message)
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function createCustomTemplate(e) {
+    e.preventDefault()
+    if (!newTemplate.label.trim()) {
+      toast.error('Template label is required.')
+      return
+    }
+    if (!createCheck.ok) {
+      toast.error(createCheck.error)
+      return
+    }
+    setSaving(true)
+    try {
+      const token = await getAccessTokenFresh()
+      const res = await fetch('/api/notification-templates', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(newTemplate),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Creation failed')
+      setTemplates(data.templates || [])
+      toast.success('Custom notification template created')
+      setCreateOpen(false)
+      setNewTemplate(EMPTY_CUSTOM_TEMPLATE)
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function deleteTemplate(key) {
+    if (!key) return
+    setDeletingKey(key)
+    try {
+      const token = await getAccessTokenFresh()
+      const res = await fetch(`/api/notification-templates?key=${encodeURIComponent(key)}`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Delete failed')
+      setTemplates(data.templates || [])
+      toast.success('Template deleted')
+      if (draft?.key === key) setDraft(null)
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setDeletingKey(null)
     }
   }
 
@@ -227,7 +349,7 @@ export default function NotificationTemplatesPanel() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Run failed')
-      toast.success(`Birthday run done · ${data.scanned || 0} match${data.scanned === 1 ? '' : 'es'} today`)
+      toast.success(`Birthday run completed · ${data.scanned || 0} match${data.scanned === 1 ? '' : 'es'} today`)
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -243,90 +365,191 @@ export default function NotificationTemplatesPanel() {
   ]
 
   return (
-    <div className="grid gap-4">
-      <Card className="border-border/80 shadow-none">
-        <CardHeader className="gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="grid gap-5">
+      {/* Top Header Card with Quick Stats & Actions */}
+      <Card className="border-border/80 shadow-xs">
+        <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="space-y-1">
-            <CardTitle className="text-lg">System push &amp; SMS templates</CardTitle>
-            <CardDescription>
-              Every automated alert the shop sends, what triggers it, where a tap opens, and its BusyBee SMS segment limit ({BUSYBEE_SMS_SINGLE_MAX} chars default · up to {BUSYBEE_SMS_MULTIPART_MAX} opt-in).
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle className="text-xl font-bold tracking-tight">System &amp; Custom Templates</CardTitle>
+              <Badge variant="secondary" className="font-semibold text-xs">
+                {templates.length} total
+              </Badge>
+              {totalCustomizedCount > 0 ? (
+                <Badge variant="outline" className="border-primary/40 bg-primary/10 text-primary font-medium text-xs">
+                  {totalCustomizedCount} customized
+                </Badge>
+              ) : null}
+              {totalCustomCount > 0 ? (
+                <Badge variant="outline" className="border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-medium text-xs">
+                  {totalCustomCount} custom
+                </Badge>
+              ) : null}
+            </div>
+            <CardDescription className="text-xs sm:text-sm">
+              Manage all automated shop alerts, service milestones, and custom promotional templates. Real-time preview simulator and BusyBee SMS calculations.
             </CardDescription>
           </div>
-          <Button type="button" variant="outline" className="min-h-11 shrink-0" disabled={running} onClick={runBirthdays}>
-            <Cake className="size-4" aria-hidden />
-            {running ? 'Running…' : 'Send today’s birthdays'}
-          </Button>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3 pt-0 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative min-w-0 flex-1">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
-            <Input
-              aria-label="Filter notification templates"
-              className="min-h-11 pl-9"
-              placeholder="Search template, trigger event, or route…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-wrap gap-1.5" role="group" aria-label="Channel filter">
-            {filterChannels.map((c) => (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-10 cursor-pointer text-xs font-semibold"
+              disabled={running}
+              onClick={runBirthdays}
+            >
+              <Cake className="size-4 text-primary" aria-hidden />
+              {running ? 'Running…' : 'Send today’s birthdays'}
+            </Button>
+            {canEdit ? (
               <Button
-                key={c.id}
+                type="button"
+                className="min-h-10 cursor-pointer text-xs font-semibold"
+                onClick={() => setCreateOpen(true)}
+              >
+                <Plus className="size-4" aria-hidden />
+                New custom template
+              </Button>
+            ) : null}
+          </div>
+        </CardHeader>
+
+        {/* Filter controls */}
+        <CardContent className="space-y-3 pt-0">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="relative min-w-0 flex-1">
+              <Search
+                className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+              <Input
+                aria-label="Filter notification templates"
+                className="min-h-10 pl-9 text-xs sm:text-sm"
+                placeholder="Search template name, trigger event, route, or copy…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Channel filter">
+              {filterChannels.map((c) => (
+                <Button
+                  key={c.id}
+                  type="button"
+                  size="sm"
+                  variant={channelFilter === c.id ? 'default' : 'outline'}
+                  className="min-h-9 text-xs cursor-pointer"
+                  onClick={() => setChannelFilter(c.id)}
+                >
+                  {c.label}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Category filter pills */}
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+            <span className="flex items-center gap-1 text-xs font-medium text-muted-foreground mr-1">
+              <ListFilter className="size-3.5" aria-hidden />
+              Category:
+            </span>
+            <Button
+              type="button"
+              size="sm"
+              variant={categoryFilter === 'all' ? 'secondary' : 'ghost'}
+              className="h-7 px-2.5 text-xs cursor-pointer"
+              onClick={() => setCategoryFilter('all')}
+            >
+              All
+            </Button>
+            {TEMPLATE_CATEGORIES.map((cat) => (
+              <Button
+                key={cat.id}
                 type="button"
                 size="sm"
-                variant={channelFilter === c.id ? 'default' : 'outline'}
-                className="min-h-10"
-                onClick={() => setChannelFilter(c.id)}
+                variant={categoryFilter === cat.id ? 'secondary' : 'ghost'}
+                className="h-7 px-2.5 text-xs cursor-pointer"
+                onClick={() => setCategoryFilter(cat.id)}
               >
-                {c.label}
+                {cat.label}
               </Button>
             ))}
           </div>
         </CardContent>
       </Card>
 
+      {/* Templates List */}
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading templates…</p>
+        <Card className="border-border/80 shadow-none">
+          <CardContent className="py-12 text-center text-sm text-muted-foreground animate-pulse">
+            Loading notification templates…
+          </CardContent>
+        </Card>
       ) : grouped.length === 0 ? (
         <Card className="border-border/80 shadow-none">
-          <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            No templates match your filter.
+          <CardContent className="py-12 text-center text-sm text-muted-foreground">
+            No notification templates match your search or filter.
           </CardContent>
         </Card>
       ) : (
         grouped.map((group) => (
-          <Card key={group.id} className="border-border/80 shadow-none">
-            <CardHeader>
-              <CardTitle className="text-base">{group.label}</CardTitle>
-              <CardDescription>{group.hint}</CardDescription>
+          <Card key={group.id} className="border-border/80 shadow-xs">
+            <CardHeader className="py-3.5 px-4 bg-muted/20 border-b border-border/60">
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="text-base font-bold text-foreground">{group.label}</CardTitle>
+                  <CardDescription className="text-xs">{group.hint}</CardDescription>
+                </div>
+                <Badge variant="outline" className="text-xs font-medium tabular-nums">
+                  {group.rows.length} template{group.rows.length === 1 ? '' : 's'}
+                </Badge>
+              </div>
             </CardHeader>
             <CardContent className="p-0">
               <ul className="divide-y divide-border">
                 {group.rows.map((row) => {
-                  const smsInfo = row.channel !== 'push'
-                    ? analyzeBusybeeSms(row.sms_body || '', { allowMultiPart: Boolean(row.allow_multipart) })
-                    : null
+                  const smsInfo =
+                    row.channel !== 'push'
+                      ? analyzeBusybeeSms(row.sms_body || row.body || '', {
+                          allowMultiPart: Boolean(row.allow_multipart),
+                        })
+                      : null
                   return (
-                    <li key={row.key} className="flex items-start justify-between gap-3 px-4 py-3.5">
-                      <div className="min-w-0 space-y-1">
+                    <li
+                      key={row.key}
+                      className={cn(
+                        'flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between transition-colors hover:bg-muted/10',
+                        row.enabled === false && 'opacity-65 bg-muted/5',
+                      )}
+                    >
+                      <div className="min-w-0 flex-1 space-y-1.5">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-semibold text-foreground">{row.label}</p>
-                          <Badge variant="outline" className="text-[11px] font-medium">
+                          <p className="text-sm font-bold text-foreground">{row.label}</p>
+                          <Badge variant="outline" className="text-[11px] font-medium uppercase">
                             {row.channel === 'sms' ? 'SMS' : row.channel === 'push' ? 'Push' : 'Push + SMS'}
                           </Badge>
-                          {row.has_override ? (
-                            <Badge variant="secondary" className="text-[11px] font-medium">
+                          {row.is_custom ? (
+                            <Badge className="bg-emerald-600 text-white text-[11px] font-medium">
+                              Custom
+                            </Badge>
+                          ) : null}
+                          {row.has_override && !row.is_custom ? (
+                            <Badge variant="secondary" className="text-[11px] font-medium text-primary">
                               Customized
                             </Badge>
                           ) : null}
                           {row.enabled === false ? (
                             <Badge variant="destructive" className="text-[11px] font-medium">
-                              Off
+                              Paused
                             </Badge>
-                          ) : null}
+                          ) : (
+                            <span className="flex items-center gap-1 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                              <span className="size-1.5 rounded-full bg-emerald-500" />
+                              Active
+                            </span>
+                          )}
                         </div>
 
-                        <p className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                        <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
                           <span className="inline-flex items-center gap-1">
                             <Link2 className="size-3 shrink-0 text-primary" aria-hidden />
                             <strong className="font-medium text-foreground">{row.trigger_event || row.description}</strong>
@@ -339,30 +562,74 @@ export default function NotificationTemplatesPanel() {
                         </p>
 
                         {row.title ? (
-                          <p className="truncate text-sm text-foreground/90">{row.title}</p>
+                          <p className="truncate text-sm font-medium text-foreground/90">
+                            {row.title}
+                          </p>
                         ) : null}
+
+                        {row.body && row.channel !== 'sms' ? (
+                          <p className="line-clamp-2 text-xs text-muted-foreground">
+                            {row.body}
+                          </p>
+                        ) : null}
+
                         {smsInfo ? (
                           <p
-                            className={`text-xs tabular-nums ${
-                              smsInfo.ok ? 'text-muted-foreground' : 'text-destructive'
+                            className={`text-xs tabular-nums font-mono ${
+                              smsInfo.ok ? 'text-muted-foreground' : 'text-destructive font-semibold'
                             }`}
                           >
                             BusyBee SMS: {smsInfo.length}/{smsInfo.maxChars} chars · {smsInfo.encoding} · {smsInfo.credits} credit{smsInfo.credits === 1 ? '' : 's'}
+                            {smsInfo.warning ? ` · ${smsInfo.warning}` : ''}
                           </p>
                         ) : null}
                       </div>
 
                       {canEdit ? (
-                        <Button
-                          type="button"
-                          size="icon"
-                          variant="ghost"
-                          className="size-10 shrink-0 cursor-pointer"
-                          aria-label={`Edit ${row.label}`}
-                          onClick={() => setDraft({ ...row })}
-                        >
-                          <Pencil className="size-4" />
-                        </Button>
+                        <div className="flex shrink-0 items-center gap-2 pt-1 sm:pt-0">
+                          {/* Quick Enable/Disable Toggle */}
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={row.enabled !== false ? 'outline' : 'secondary'}
+                            className="min-h-9 text-xs cursor-pointer"
+                            title={row.enabled !== false ? 'Click to pause alert' : 'Click to activate alert'}
+                            onClick={() => toggleTemplateEnabled(row)}
+                          >
+                            {row.enabled !== false ? 'Pause' : 'Activate'}
+                          </Button>
+
+                          {/* Edit Copy */}
+                          <Button
+                            type="button"
+                            size="icon"
+                            variant="ghost"
+                            className="size-9 cursor-pointer"
+                            aria-label={`Edit ${row.label}`}
+                            onClick={() => setDraft({ ...row })}
+                          >
+                            <Pencil className="size-4" />
+                          </Button>
+
+                          {/* Delete custom template */}
+                          {row.is_custom ? (
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="ghost"
+                              className="size-9 cursor-pointer text-destructive hover:bg-destructive/10"
+                              disabled={deletingKey === row.key}
+                              aria-label={`Delete custom template ${row.label}`}
+                              onClick={() => {
+                                if (window.confirm(`Delete custom template "${row.label}"?`)) {
+                                  deleteTemplate(row.key)
+                                }
+                              }}
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          ) : null}
+                        </div>
                       ) : null}
                     </li>
                   )
@@ -373,196 +640,413 @@ export default function NotificationTemplatesPanel() {
         ))
       )}
 
+      {/* ===================== EDIT TEMPLATE DIALOG WITH SIMULATOR ===================== */}
       <Dialog open={Boolean(draft)} onOpenChange={(open) => { if (!open) setDraft(null) }}>
-        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent className="max-h-[92svh] overflow-y-auto sm:max-w-4xl p-0">
           {draft ? (
-            <>
-              <DialogHeader>
-                <DialogTitle>{draft.label}</DialogTitle>
-                <DialogDescription className="space-y-1">
-                  <span className="block font-mono text-xs">{draft.key}</span>
-                  <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
-                    <span>Trigger: <strong className="text-foreground">{draft.trigger_event}</strong></span>
-                    <span>→ Tap route: <code className="rounded bg-muted px-1 py-0.5">{draft.trigger_route}</code></span>
-                    <span>· {draft.recipient_summary}</span>
-                  </span>
-                </DialogDescription>
+            <div className="flex flex-col">
+              <DialogHeader className="p-5 pb-3 border-b border-border/80">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <DialogTitle className="text-xl font-bold">{draft.label}</DialogTitle>
+                    <DialogDescription className="space-y-0.5 mt-1">
+                      <span className="block font-mono text-xs text-muted-foreground">{draft.key}</span>
+                      <span className="flex flex-wrap items-center gap-x-2 text-xs">
+                        <span>Trigger: <strong className="text-foreground">{draft.trigger_event}</strong></span>
+                        <span>→ Route: <code className="rounded bg-muted px-1 py-0.5">{draft.trigger_route}</code></span>
+                      </span>
+                    </DialogDescription>
+                  </div>
+                  <Badge variant="outline" className="uppercase text-xs font-semibold">
+                    {draft.channel}
+                  </Badge>
+                </div>
               </DialogHeader>
 
-              <form onSubmit={save} className="grid gap-4">
-                {draft.channel !== 'sms' ? (
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 p-5">
+                {/* Form Controls */}
+                <form id="edit-template-form" onSubmit={saveDraft} className="grid gap-4">
+                  {draft.is_custom ? (
+                    <div className="grid gap-2">
+                      <Label htmlFor="edit-custom-label">Template Label</Label>
+                      <Input
+                        id="edit-custom-label"
+                        className="min-h-10"
+                        value={draft.label || ''}
+                        onChange={(e) => setDraft({ ...draft, label: e.target.value })}
+                        required
+                      />
+                    </div>
+                  ) : null}
+
+                  {draft.channel !== 'sms' ? (
+                    <div className="grid gap-2">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <Label htmlFor="tpl-title">
+                          <Smartphone className="mr-1 inline size-3.5" aria-hidden />
+                          Push &amp; In-App Title
+                        </Label>
+                        <span
+                          className={`text-xs tabular-nums ${
+                            (draft.title || '').trim().length > BUSYBEE_PUSH_TITLE_MAX
+                              ? 'text-destructive font-semibold'
+                              : 'text-muted-foreground'
+                          }`}
+                        >
+                          {(draft.title || '').length}/{BUSYBEE_PUSH_TITLE_MAX}
+                        </span>
+                      </div>
+                      <Input
+                        id="tpl-title"
+                        className="min-h-10"
+                        maxLength={BUSYBEE_PUSH_TITLE_MAX}
+                        value={draft.title || ''}
+                        onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+                      />
+                      <TokenChips
+                        inputId="tpl-title"
+                        value={draft.title || ''}
+                        tokens={draft.tokens}
+                        onChange={(title) => setDraft({ ...draft, title })}
+                      />
+                    </div>
+                  ) : null}
+
+                  {draft.channel !== 'sms' ? (
+                    <div className="grid gap-2">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <Label htmlFor="tpl-body">Push &amp; Inbox Body</Label>
+                        <span
+                          className={`text-xs tabular-nums ${
+                            (draft.body || '').trim().length > BUSYBEE_PUSH_BODY_MAX
+                              ? 'text-destructive font-semibold'
+                              : 'text-muted-foreground'
+                          }`}
+                        >
+                          {(draft.body || '').length}/{BUSYBEE_PUSH_BODY_MAX}
+                        </span>
+                      </div>
+                      <Textarea
+                        id="tpl-body"
+                        rows={3}
+                        maxLength={BUSYBEE_PUSH_BODY_MAX}
+                        value={draft.body || ''}
+                        onChange={(e) => setDraft({ ...draft, body: e.target.value })}
+                      />
+                      <TokenChips
+                        inputId="tpl-body"
+                        value={draft.body || ''}
+                        tokens={draft.tokens}
+                        onChange={(body) => setDraft({ ...draft, body })}
+                      />
+                    </div>
+                  ) : null}
+
+                  {draft.channel !== 'push' ? (
+                    <div className="grid gap-2">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <Label htmlFor="tpl-sms">
+                          <MessageSquare className="mr-1 inline size-3.5" aria-hidden />
+                          BusyBee SMS Copy
+                        </Label>
+                        {draftSmsAnalysis ? (
+                          <span
+                            className={`text-xs tabular-nums ${
+                              draftSmsAnalysis.ok
+                                ? 'text-muted-foreground'
+                                : 'font-semibold text-destructive'
+                            }`}
+                          >
+                            {draftSmsAnalysis.length}/{draftSmsAnalysis.maxChars} · {draftSmsAnalysis.encoding} · {draftSmsAnalysis.credits} credit{draftSmsAnalysis.credits === 1 ? '' : 's'}
+                          </span>
+                        ) : null}
+                      </div>
+                      <Textarea
+                        id="tpl-sms"
+                        rows={3}
+                        maxLength={BUSYBEE_SMS_MULTIPART_MAX + 40}
+                        value={draft.sms_body || ''}
+                        onChange={(e) => setDraft({ ...draft, sms_body: e.target.value })}
+                      />
+                      <TokenChips
+                        inputId="tpl-sms"
+                        value={draft.sms_body || ''}
+                        tokens={draft.tokens}
+                        onChange={(sms_body) => setDraft({ ...draft, sms_body })}
+                      />
+                      <label className="flex min-h-9 cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(draft.allow_multipart)}
+                          onChange={(e) => setDraft({ ...draft, allow_multipart: e.target.checked })}
+                        />
+                        Allow multi-part SMS up to {BUSYBEE_SMS_MULTIPART_MAX} chars (2 BusyBee credits per recipient)
+                      </label>
+                      {draftSmsAnalysis?.error ? (
+                        <p className="flex items-center gap-1.5 text-xs font-medium text-destructive" role="alert">
+                          <AlertTriangle className="size-3.5 shrink-0" aria-hidden />
+                          {draftSmsAnalysis.error}
+                        </p>
+                      ) : draftSmsAnalysis?.warning ? (
+                        <p className="flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+                          <AlertTriangle className="size-3.5 shrink-0" aria-hidden />
+                          {draftSmsAnalysis.warning}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+
+                  <label className="flex min-h-10 cursor-pointer items-center gap-2 text-sm font-medium">
+                    <input
+                      type="checkbox"
+                      checked={draft.enabled !== false}
+                      onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })}
+                    />
+                    Template active &amp; ready to send
+                  </label>
+                </form>
+
+                {/* Right Column: Live Mobile Simulator */}
+                <div className="flex flex-col items-center">
+                  <p className="text-xs font-semibold text-muted-foreground mb-2">Rendered preview (Live customer simulator)</p>
+                  <NotificationSimulatorPreview
+                    channel={draft.channel}
+                    title={draft.title || draft.default_title}
+                    body={draft.body || draft.default_body}
+                    sms_body={draft.sms_body || draft.default_sms_body}
+                    allow_multipart={draft.allow_multipart}
+                    triggerRoute={draft.trigger_route}
+                  />
+                </div>
+              </div>
+
+              <DialogFooter className="p-4 border-t border-border/80 flex flex-wrap items-center justify-between gap-2 bg-muted/15">
+                <div>
+                  {draft.is_custom ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="min-h-10 text-destructive hover:bg-destructive/10 cursor-pointer"
+                      disabled={saving || Boolean(deletingKey)}
+                      onClick={() => {
+                        if (window.confirm(`Delete custom template "${draft.label}"?`)) {
+                          deleteTemplate(draft.key)
+                        }
+                      }}
+                    >
+                      <Trash2 className="size-4" aria-hidden />
+                      Delete custom template
+                    </Button>
+                  ) : draft.has_override ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="min-h-10 text-destructive hover:bg-destructive/10 cursor-pointer"
+                      disabled={resetting || saving}
+                      onClick={() => resetToDefault(draft.key)}
+                    >
+                      <RotateCcw className="size-4" aria-hidden />
+                      {resetting ? 'Resetting…' : 'Reset to default'}
+                    </Button>
+                  ) : null}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="ghost" className="min-h-10 cursor-pointer" onClick={() => setDraft(null)}>
+                    Cancel
+                  </Button>
+                  <Button
+                    type="submit"
+                    form="edit-template-form"
+                    className="min-h-10 cursor-pointer"
+                    disabled={saving || resetting || !draftCheck.ok}
+                  >
+                    {saving ? 'Saving…' : 'Save template'}
+                  </Button>
+                </div>
+              </DialogFooter>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
+
+      {/* ===================== CREATE CUSTOM TEMPLATE DIALOG ===================== */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent className="max-h-[92svh] overflow-y-auto sm:max-w-4xl p-0">
+          <div className="flex flex-col">
+            <DialogHeader className="p-5 pb-3 border-b border-border/80">
+              <DialogTitle className="text-xl font-bold">New Custom Notification Template</DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm">
+                Create a custom notification template for shop promotions, VIP campaigns, or custom branch alerts.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-6 p-5">
+              <form id="create-template-form" onSubmit={createCustomTemplate} className="grid gap-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="new-tpl-label">Template Label</Label>
+                  <Input
+                    id="new-tpl-label"
+                    className="min-h-10"
+                    placeholder="e.g. Rainy Season Special 20% Off"
+                    required
+                    value={newTemplate.label}
+                    onChange={(e) => setNewTemplate({ ...newTemplate, label: e.target.value })}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid gap-2">
+                    <Label htmlFor="new-tpl-category">Category</Label>
+                    <Select
+                      value={newTemplate.category}
+                      onValueChange={(v) => setNewTemplate({ ...newTemplate, category: v })}
+                    >
+                      <SelectTrigger id="new-tpl-category" className="min-h-10 cursor-pointer">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {TEMPLATE_CATEGORIES.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="new-tpl-channel">Channel</Label>
+                    <Select
+                      value={newTemplate.channel}
+                      onValueChange={(v) => setNewTemplate({ ...newTemplate, channel: v })}
+                    >
+                      <SelectTrigger id="new-tpl-channel" className="min-h-10 cursor-pointer">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="both">Push + SMS</SelectItem>
+                        <SelectItem value="sms">SMS only</SelectItem>
+                        <SelectItem value="push">Push only</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                {newTemplate.channel !== 'sms' ? (
                   <div className="grid gap-2">
                     <div className="flex items-baseline justify-between gap-2">
-                      <Label htmlFor="tpl-title">
-                        <Smartphone className="mr-1 inline size-3.5" aria-hidden />
-                        Push title
-                      </Label>
-                      <span
-                        className={`text-xs tabular-nums ${
-                          (draft.title || '').trim().length > BUSYBEE_PUSH_TITLE_MAX
-                            ? 'text-destructive font-semibold'
-                            : 'text-muted-foreground'
-                        }`}
-                      >
-                        {(draft.title || '').length}/{BUSYBEE_PUSH_TITLE_MAX}
+                      <Label htmlFor="new-tpl-title">Push Title</Label>
+                      <span className="text-xs text-muted-foreground">
+                        {(newTemplate.title || '').length}/{BUSYBEE_PUSH_TITLE_MAX}
                       </span>
                     </div>
                     <Input
-                      id="tpl-title"
-                      className="min-h-11"
+                      id="new-tpl-title"
+                      className="min-h-10"
                       maxLength={BUSYBEE_PUSH_TITLE_MAX}
-                      value={draft.title || ''}
-                      onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+                      placeholder="e.g. Hakum Auto Care promo"
+                      value={newTemplate.title}
+                      onChange={(e) => setNewTemplate({ ...newTemplate, title: e.target.value })}
                     />
                     <TokenChips
-                      inputId="tpl-title"
-                      value={draft.title || ''}
-                      tokens={draft.tokens}
-                      onChange={(title) => setDraft({ ...draft, title })}
+                      inputId="new-tpl-title"
+                      value={newTemplate.title}
+                      onChange={(title) => setNewTemplate({ ...newTemplate, title })}
                     />
                   </div>
                 ) : null}
 
-                {draft.channel !== 'sms' ? (
+                {newTemplate.channel !== 'sms' ? (
                   <div className="grid gap-2">
                     <div className="flex items-baseline justify-between gap-2">
-                      <Label htmlFor="tpl-body">Push &amp; inbox body</Label>
-                      <span
-                        className={`text-xs tabular-nums ${
-                          (draft.body || '').trim().length > BUSYBEE_PUSH_BODY_MAX
-                            ? 'text-destructive font-semibold'
-                            : 'text-muted-foreground'
-                        }`}
-                      >
-                        {(draft.body || '').length}/{BUSYBEE_PUSH_BODY_MAX}
+                      <Label htmlFor="new-tpl-body">Push &amp; In-App Body</Label>
+                      <span className="text-xs text-muted-foreground">
+                        {(newTemplate.body || '').length}/{BUSYBEE_PUSH_BODY_MAX}
                       </span>
                     </div>
                     <Textarea
-                      id="tpl-body"
+                      id="new-tpl-body"
                       rows={3}
                       maxLength={BUSYBEE_PUSH_BODY_MAX}
-                      value={draft.body || ''}
-                      onChange={(e) => setDraft({ ...draft, body: e.target.value })}
+                      placeholder="e.g. Hi {name}, enjoy 20% off your next visit at {branch}!"
+                      value={newTemplate.body}
+                      onChange={(e) => setNewTemplate({ ...newTemplate, body: e.target.value })}
                     />
                     <TokenChips
-                      inputId="tpl-body"
-                      value={draft.body || ''}
-                      tokens={draft.tokens}
-                      onChange={(body) => setDraft({ ...draft, body })}
+                      inputId="new-tpl-body"
+                      value={newTemplate.body}
+                      onChange={(body) => setNewTemplate({ ...newTemplate, body })}
                     />
                   </div>
                 ) : null}
 
-                {draft.channel !== 'push' ? (
+                {newTemplate.channel !== 'push' ? (
                   <div className="grid gap-2">
                     <div className="flex items-baseline justify-between gap-2">
-                      <Label htmlFor="tpl-sms">
-                        <MessageSquare className="mr-1 inline size-3.5" aria-hidden />
-                        BusyBee SMS body
-                      </Label>
-                      {draftSmsAnalysis ? (
-                        <span
-                          className={`text-xs tabular-nums ${
-                            draftSmsAnalysis.ok
-                              ? 'text-muted-foreground'
-                              : 'font-semibold text-destructive'
-                          }`}
-                        >
-                          {draftSmsAnalysis.length}/{draftSmsAnalysis.maxChars} · {draftSmsAnalysis.encoding} · {draftSmsAnalysis.credits} credit{draftSmsAnalysis.credits === 1 ? '' : 's'}
-                        </span>
-                      ) : null}
+                      <Label htmlFor="new-tpl-sms">BusyBee SMS Copy</Label>
                     </div>
                     <Textarea
-                      id="tpl-sms"
+                      id="new-tpl-sms"
                       rows={3}
                       maxLength={BUSYBEE_SMS_MULTIPART_MAX + 40}
-                      value={draft.sms_body || ''}
-                      onChange={(e) => setDraft({ ...draft, sms_body: e.target.value })}
+                      placeholder="e.g. Hakum: Hi {name}, get special discounts on {service} at {branch}!"
+                      value={newTemplate.sms_body}
+                      onChange={(e) => setNewTemplate({ ...newTemplate, sms_body: e.target.value })}
                     />
                     <TokenChips
-                      inputId="tpl-sms"
-                      value={draft.sms_body || ''}
-                      tokens={draft.tokens}
-                      onChange={(sms_body) => setDraft({ ...draft, sms_body })}
+                      inputId="new-tpl-sms"
+                      value={newTemplate.sms_body}
+                      onChange={(sms_body) => setNewTemplate({ ...newTemplate, sms_body })}
                     />
-                    <label className="flex min-h-10 cursor-pointer items-center gap-2 text-xs text-muted-foreground">
+                    <label className="flex min-h-9 cursor-pointer items-center gap-2 text-xs text-muted-foreground">
                       <input
                         type="checkbox"
-                        checked={Boolean(draft.allow_multipart)}
-                        onChange={(e) => setDraft({ ...draft, allow_multipart: e.target.checked })}
+                        checked={Boolean(newTemplate.allow_multipart)}
+                        onChange={(e) => setNewTemplate({ ...newTemplate, allow_multipart: e.target.checked })}
                       />
-                      Allow multi-part SMS up to {BUSYBEE_SMS_MULTIPART_MAX} chars (2 BusyBee credits per recipient)
+                      Allow multi-part SMS up to {BUSYBEE_SMS_MULTIPART_MAX} chars (2 credits per recipient)
                     </label>
-                    {draftSmsAnalysis?.error ? (
-                      <p className="flex items-center gap-1.5 text-xs font-medium text-destructive" role="alert">
-                        <AlertTriangle className="size-3.5 shrink-0" aria-hidden />
-                        {draftSmsAnalysis.error}
-                      </p>
-                    ) : draftSmsAnalysis?.warning ? (
-                      <p className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-300">
-                        <AlertTriangle className="size-3.5 shrink-0" aria-hidden />
-                        {draftSmsAnalysis.warning}
-                      </p>
-                    ) : null}
                   </div>
                 ) : null}
 
-                <div className="rounded-xl border border-border bg-muted/30 p-3 text-xs">
-                  <p className="font-semibold text-foreground">Rendered preview (sample)</p>
-                  {draft.channel !== 'sms' ? (
-                    <div className="mt-1.5 space-y-0.5 text-muted-foreground">
-                      <p className="font-medium text-foreground">
-                        {renderNotificationMessage(draft.title || draft.default_title || 'Notification', PREVIEW_SAMPLE_VARS)}
-                      </p>
-                      <p>
-                        {renderNotificationMessage(draft.body || draft.default_body || '', PREVIEW_SAMPLE_VARS)}
-                      </p>
-                    </div>
-                  ) : null}
-                  {draft.channel !== 'push' && draft.sms_body ? (
-                    <p className="mt-1.5 border-t border-border/70 pt-1.5 text-muted-foreground">
-                      <strong className="text-foreground">SMS:</strong>{' '}
-                      {renderNotificationMessage(draft.sms_body, PREVIEW_SAMPLE_VARS)}
-                    </p>
-                  ) : null}
-                </div>
-
-                <label className="flex min-h-11 cursor-pointer items-center gap-2 text-sm">
+                <label className="flex min-h-10 cursor-pointer items-center gap-2 text-sm font-medium">
                   <input
                     type="checkbox"
-                    checked={draft.enabled !== false}
-                    onChange={(e) => setDraft({ ...draft, enabled: e.target.checked })}
+                    checked={newTemplate.enabled !== false}
+                    onChange={(e) => setNewTemplate({ ...newTemplate, enabled: e.target.checked })}
                   />
-                  Send this notification
+                  Active and ready to use
                 </label>
-
-                <DialogFooter className="flex-wrap justify-between gap-2 sm:justify-between">
-                  <div>
-                    {draft.has_override ? (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        className="min-h-11 text-destructive"
-                        disabled={resetting || saving}
-                        onClick={() => resetToDefault(draft.key)}
-                      >
-                        <RotateCcw className="size-4" aria-hidden />
-                        {resetting ? 'Resetting…' : 'Reset to default'}
-                      </Button>
-                    ) : null}
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="button" variant="ghost" className="min-h-11" onClick={() => setDraft(null)}>
-                      Cancel
-                    </Button>
-                    <Button type="submit" className="min-h-11" disabled={saving || resetting || !draftCheck.ok}>
-                      {saving ? 'Saving…' : 'Save template'}
-                    </Button>
-                  </div>
-                </DialogFooter>
               </form>
-            </>
-          ) : null}
+
+              {/* Live simulator preview */}
+              <div className="flex flex-col items-center">
+                <p className="text-xs font-semibold text-muted-foreground mb-2">Live Customer Preview</p>
+                <NotificationSimulatorPreview
+                  channel={newTemplate.channel}
+                  title={newTemplate.title || 'Hakum Auto Care'}
+                  body={newTemplate.body || 'Custom notification message copy…'}
+                  sms_body={newTemplate.sms_body || newTemplate.body}
+                  allow_multipart={newTemplate.allow_multipart}
+                  triggerRoute="/account"
+                />
+              </div>
+            </div>
+
+            <DialogFooter className="p-4 border-t border-border/80 flex items-center justify-end gap-2 bg-muted/15">
+              <Button type="button" variant="ghost" className="min-h-10 cursor-pointer" onClick={() => setCreateOpen(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                form="create-template-form"
+                className="min-h-10 cursor-pointer"
+                disabled={saving || !createCheck.ok}
+              >
+                {saving ? 'Creating…' : 'Create template'}
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

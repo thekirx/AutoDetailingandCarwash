@@ -26,12 +26,13 @@ const SELECT_COLS =
   'id, scope, service_id, branch_slug, channel, frequency_months, enabled, title, message, created_at, updated_at'
 
 /**
- * GET  /api/notification-settings
- * POST /api/notification-settings — upsert scoped detailing reminder with custom copy
+ * GET    /api/notification-settings
+ * POST   /api/notification-settings — create or edit scoped detailing reminder with custom copy
+ * PATCH  /api/notification-settings — update existing reminder rule (e.g. quick toggle or edit)
  * DELETE /api/notification-settings?id=...
  */
 export async function handleNotificationSettingsRequest(req, res) {
-  setCors(res, 'GET, POST, DELETE, OPTIONS')
+  setCors(res, 'GET, POST, PATCH, DELETE, OPTIONS')
   if (req.method === 'OPTIONS') {
     res.statusCode = 204
     res.end()
@@ -56,6 +57,7 @@ export async function handleNotificationSettingsRequest(req, res) {
 
   if (req.method === 'POST') {
     const body = await readJsonBody(req)
+    const ruleId = body.id ? String(body.id).trim() : null
     const scoped = resolveNotificationScope({
       scope: body.scope,
       service_id: body.service_id,
@@ -110,9 +112,29 @@ export async function handleNotificationSettingsRequest(req, res) {
       message: copy.message,
       frequency_months: Math.min(24, Math.max(1, Number(body.frequency_months) || 6)),
       enabled: body.enabled !== false,
-      created_by: staff.id,
       updated_at: new Date().toISOString(),
     }
+
+    if (ruleId) {
+      // Clean up any other conflicting row with the same scope
+      let conflictDel = db.from('notification_settings').delete().neq('id', ruleId).eq('scope', scoped.scope)
+      if (scoped.service_id) conflictDel = conflictDel.eq('service_id', scoped.service_id)
+      else conflictDel = conflictDel.is('service_id', null)
+      if (scoped.branch_slug) conflictDel = conflictDel.eq('branch_slug', scoped.branch_slug)
+      else conflictDel = conflictDel.is('branch_slug', null)
+      await conflictDel
+
+      const { data, error } = await db
+        .from('notification_settings')
+        .update(payload)
+        .eq('id', ruleId)
+        .select(SELECT_COLS)
+        .single()
+      if (error) return json(res, 400, { error: error.message })
+      return json(res, 200, { setting: data })
+    }
+
+    payload.created_by = staff.id
 
     // Upsert by unique scope index — delete conflicting row then insert keeps it simple.
     let del = db.from('notification_settings').delete().eq('scope', scoped.scope)
@@ -129,6 +151,53 @@ export async function handleNotificationSettingsRequest(req, res) {
       .single()
     if (error) return json(res, 400, { error: error.message })
     return json(res, 200, { setting: data })
+  }
+
+  if (req.method === 'PATCH') {
+    const body = await readJsonBody(req)
+    const id = String(body.id || '').trim()
+    if (!id) return json(res, 400, { error: 'id required' })
+
+    const { data: existing, error: findErr } = await db
+      .from('notification_settings')
+      .select(SELECT_COLS)
+      .eq('id', id)
+      .maybeSingle()
+    if (findErr) return json(res, 400, { error: findErr.message })
+    if (!existing) return json(res, 404, { error: 'Reminder rule not found.' })
+
+    const patch = { updated_at: new Date().toISOString() }
+    if (typeof body.enabled === 'boolean') patch.enabled = body.enabled
+
+    if (body.frequency_months !== undefined) {
+      patch.frequency_months = Math.min(24, Math.max(1, Number(body.frequency_months) || 6))
+    }
+
+    if (body.channel || body.title !== undefined || body.message !== undefined) {
+      const channel = ['push', 'sms', 'both'].includes(body.channel) ? body.channel : existing.channel
+      const title = body.title !== undefined ? String(body.title).trim() : existing.title
+      const message = body.message !== undefined ? String(body.message).trim() : existing.message
+      const tMax = titleMaxForChannel(channel)
+      const mMax = messageMaxForChannel(channel)
+      if (title && title.length > tMax) {
+        return json(res, 400, { error: `Title must be ${tMax} characters or fewer.` })
+      }
+      if (message && message.length > mMax) {
+        return json(res, 400, { error: `Message must be ${mMax} characters or fewer.` })
+      }
+      patch.channel = channel
+      patch.title = title || null
+      patch.message = message || existing.message
+    }
+
+    const { data: updated, error: updErr } = await db
+      .from('notification_settings')
+      .update(patch)
+      .eq('id', id)
+      .select(SELECT_COLS)
+      .single()
+    if (updErr) return json(res, 400, { error: updErr.message })
+    return json(res, 200, { setting: updated })
   }
 
   if (req.method === 'DELETE') {
