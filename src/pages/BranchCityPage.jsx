@@ -10,6 +10,7 @@ import { formatHoursSummary, openNowLabel } from '../lib/branchOperatingHours'
 import {
   BRAND_POSITIONING,
   LOCAL_BRANCH_PAGES,
+  LOCAL_SERVICE_PILLARS,
   buildBranchCityJsonLd,
   findLocalBranchPage,
 } from '../lib/localBranchPages'
@@ -195,6 +196,23 @@ export default function BranchCityPage() {
                   <p>{item.a}</p>
                 </div>
               </details>
+            ))}
+          </div>
+
+          <div className="bd-city-directory bd-reveal">
+            {LOCAL_SERVICE_PILLARS.map((svc) => (
+              <Link
+                key={svc.slug}
+                to={`/branches/${cityPage.branchSlug}/${svc.slug}`}
+                className="bd-city-tile"
+              >
+                <strong>{svc.label}</strong>
+                <p>
+                  Available at Hakum {cityPage.branchSlug === 'batangas' ? 'Batangas City' : 'Bacoor'}
+                  {cityPage.isOpen ? '' : ` (serving ${cityPage.shortName})`}
+                </p>
+                <span>Open {svc.shortLabel} guide →</span>
+              </Link>
             ))}
           </div>
 

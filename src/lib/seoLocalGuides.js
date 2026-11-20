@@ -338,6 +338,78 @@ export const SEO_LOCAL_GUIDES = [
     ],
   },
   {
+    id: 'seo-guide-dasmarinas',
+    slug: 'best-car-wash-detailing-dasmarinas',
+    region: 'dasmarinas',
+    regionLabel: 'Dasmariñas, Cavite',
+    category: 'Regional Authority Guide',
+    title: 'Best Car Wash, Ceramic Coating & PPF Near Dasmariñas, Cavite: Complete Studio Guide',
+    author_label: 'Hakum Technical Bay · Dasmariñas & Cavite',
+    published_at: '2026-11-10T08:00:00+08:00',
+    read_minutes: 5,
+    cover_url: exteriorDetailing,
+    excerpt:
+      'Serving Dasmariñas motorists from Pala-Pala, Salitran, Salawag, and Paliparan via Daang Hari & Aguinaldo Highway—with Hakum Dasmariñas expansion underway.',
+    ai_summary:
+      'Hakum Auto Care serves Dasmariñas, Cavite drivers looking for swirl-free two-bucket car washes, Kisho 9H ceramic coating, ClearPro TPU Paint Protection Film (PPF), and nano ceramic window tint via our nearby open Bacoor studio (RFC Molino II), while our dedicated Dasmariñas location rolls out.',
+    branch_info: {
+      name: 'Hakum Auto Care — Dasmariñas Corridor & Nearby Bacoor Studio',
+      landmark: 'Serving Pala-Pala, Salitran & Salawag via Daang Hari / Molino Blvd (Dasmariñas Branch Coming Soon)',
+      phone: '0915 629 6096',
+      corridors: 'Pala-Pala · Salitran · Salawag · Paliparan · Governor’s Drive · CALAX · Daang Hari',
+      bookHref: '/book?branch=bacoor',
+      queueHref: '/queue/bacoor',
+    },
+    highlights: [
+      'Direct Salawag–Molino & Daang Hari access from Dasmariñas to our enclosed Bacoor bays',
+      'Protects paint against CALAX/Governor’s Drive truck gravel and monsoon acid rain',
+      'Full two-bucket pH-neutral washes, interior deep cleaning, Kisho Ceramic Coating & ClearPro PPF',
+    ],
+    content_blocks: [
+      {
+        id: 'dasma-h1',
+        type: 'heading',
+        level: 1,
+        text: 'Swirl-Free Car Wash, Ceramic Coating & PPF for Dasmariñas Drivers',
+      },
+      {
+        id: 'dasma-p1',
+        type: 'paragraph',
+        text: 'Daily routes across Pala-Pala, Salitran, Salawag, Governor’s Drive, and CALAX expose cars and pickups in Dasmariñas to heavy construction dust, wet red clay splash, and highway stone chips. Standard roadside bays rush cars through with hard water and gritty sponges, quickly dulling modern black, pearl-white, and metallic finishes.',
+      },
+      {
+        id: 'dasma-p2',
+        type: 'paragraph',
+        text: 'Hakum Auto Care gives Dasmariñas owners direct studio access right up Molino Boulevard at RFC Molino II—and with our dedicated Dasmariñas expansion underway, your vehicle history, plates, and loyalty perks carry forward automatically.',
+      },
+      {
+        id: 'dasma-h2',
+        type: 'heading',
+        level: 2,
+        text: 'Popular Studio Services Booked by Dasmariñas Vehicle Owners',
+      },
+      {
+        id: 'dasma-list1',
+        type: 'list',
+        ordered: false,
+        items: [
+          'Two-Bucket pH-Neutral Car Wash & Underbody/Fender Flush',
+          'Full Interior Deep Clean, Seat Extraction & Leather Conditioning',
+          'Kisho 9H Ceramic Coating with Rupes Paint Correction & 6-Month Maintenance Tracking',
+          'ClearPro Self-Healing TPU Paint Protection Film (Full Front & Full Body)',
+          'Nano Ceramic Window Tint calibrated for cooler daytime commutes along Aguinaldo Highway',
+        ],
+      },
+      {
+        id: 'dasma-cta',
+        type: 'cta',
+        label: 'Book Detailing or Check Live Queue',
+        url: '/book?branch=bacoor',
+        style: 'primary',
+      },
+    ],
+  },
+  {
     id: 'seo-guide-ceramic-vs-ppf',
     slug: 'ceramic-coating-vs-ppf-philippine-climate',
     region: 'craft',

@@ -8,25 +8,55 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const read = (p) => readFileSync(join(root, p), 'utf8')
 
 describe('Local branch SEO hubs, nearest locator, and blog SEO', () => {
-  it('covers Bacoor, Batangas City, Imus, and Cavite dedicated city pages cleanly', async () => {
+  it('covers Bacoor, Batangas City, Imus, Dasmariñas, and Cavite dedicated city pages cleanly', async () => {
     const { LOCAL_BRANCH_PAGES, buildBranchCityJsonLd, findLocalBranchPage } = await import(
       '../src/lib/localBranchPages.js'
     )
     assert.deepEqual(
       LOCAL_BRANCH_PAGES.map((p) => p.slug),
-      ['bacoor', 'batangas', 'imus', 'cavite'],
+      ['bacoor', 'batangas', 'imus', 'cavite', 'dasmarinas'],
     )
     const bacoor = findLocalBranchPage('bacoor')
     const imus = findLocalBranchPage('imus')
-    assert.ok(bacoor && imus)
+    const dasma = findLocalBranchPage('dasmarinas')
+    assert.ok(bacoor && imus && dasma)
     assert.equal(imus.branchSlug, 'bacoor', 'Imus page directs drivers to open Bacoor bay while Imus rolls out')
+    assert.equal(dasma.branchSlug, 'bacoor', 'Dasmariñas page directs drivers to open Bacoor bay while Dasmariñas rolls out')
 
     const jsonLd = buildBranchCityJsonLd(bacoor)
     assert.equal(jsonLd['@context'], 'https://schema.org')
     const studio = jsonLd['@graph'].find((n) => n['@type'] === 'AutomotiveBusiness')
     const crumbs = jsonLd['@graph'].find((n) => n['@type'] === 'BreadcrumbList')
+    const faq = jsonLd['@graph'].find((n) => n['@type'] === 'FAQPage')
     assert.ok(studio && studio.geo && studio.hasMap, 'City schema must include verified geo & hasMap')
+    assert.ok(faq && faq.mainEntity.length >= 2, 'City schema must include local FAQs')
     assert.equal(crumbs.itemListElement.length, 3)
+  })
+
+  it('publishes all 8 open Branch × Service pages and resolves city/service aliases cleanly', async () => {
+    const {
+      LOCAL_BRANCH_SERVICE_PAGES,
+      buildBranchServiceJsonLd,
+      findLocalBranchServicePage,
+    } = await import('../src/lib/localBranchPages.js')
+
+    assert.equal(LOCAL_BRANCH_SERVICE_PAGES.length, 8)
+
+    const bacoorPpf = findLocalBranchServicePage('bacoor', 'ppf')
+    assert.equal(bacoorPpf?.redirected, false)
+    assert.match(bacoorPpf?.page.seoTitle, /PPF Bacoor/i)
+
+    const aliasImusCeramic = findLocalBranchServicePage('imus', 'ceramic')
+    assert.equal(aliasImusCeramic?.redirected, true)
+    assert.equal(aliasImusCeramic?.canonicalCitySlug, 'bacoor')
+    assert.equal(aliasImusCeramic?.canonicalServiceSlug, 'ceramic-coating')
+
+    const ld = buildBranchServiceJsonLd(bacoorPpf.page)
+    const types = ld['@graph'].map((n) => n['@type'])
+    assert.ok(types.includes('Service'))
+    assert.ok(types.includes('BreadcrumbList'))
+    assert.ok(types.includes('FAQPage'))
+    assert.equal(JSON.stringify(ld).includes('aggregateRating'), false)
   })
 
   it('ranks open branches accurately for Bacoor, Imus, and Batangas City queries', async () => {
@@ -78,10 +108,32 @@ describe('Local branch SEO hubs, nearest locator, and blog SEO', () => {
     assert.ok(Array.isArray(ld.spatialCoverage) && ld.spatialCoverage.length >= 2)
   })
 
-  it('includes /blog, city routes, AI search bots, and pre-render build hook', () => {
+  it('includes /blog, 5 city hubs, 8 local service pages, AI bots, and excludes low-value legal/form routes from sitemap', () => {
+    const app = read('src/App.jsx')
+    assert.match(app, /path="\/branches\/:citySlug\/:serviceSlug"/)
+
     const sitemap = read('public/sitemap.xml')
-    for (const p of ['/blog', '/branches/bacoor', '/branches/batangas', '/branches/imus', '/branches/cavite']) {
-      assert.match(sitemap, new RegExp(`https://www\\.hakumautocare\\.com${p.replace('/', '\\/')}<`))
+    for (const p of [
+      '/blog',
+      '/branches/bacoor',
+      '/branches/batangas',
+      '/branches/imus',
+      '/branches/dasmarinas',
+      '/branches/cavite',
+      '/branches/bacoor/car-wash',
+      '/branches/bacoor/ceramic-coating',
+      '/branches/bacoor/ppf',
+      '/branches/bacoor/window-tint',
+      '/branches/batangas/car-wash',
+      '/branches/batangas/ceramic-coating',
+      '/branches/batangas/ppf',
+      '/branches/batangas/window-tint',
+      '/blog/best-car-wash-detailing-dasmarinas',
+    ]) {
+      assert.match(sitemap, new RegExp(`https://www\\.hakumautocare\\.com${p.replace(/\//g, '\\/')}<`))
+    }
+    for (const excluded of ['/complaints', '/terms', '/privacy', '/cookies']) {
+      assert.doesNotMatch(sitemap, new RegExp(`https://www\\.hakumautocare\\.com${excluded}<`))
     }
     const robots = read('public/robots.txt')
     assert.match(robots, /OAI-SearchBot/)

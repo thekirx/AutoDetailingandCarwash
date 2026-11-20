@@ -1,9 +1,14 @@
 # Project Status
 
-**Last Updated:** 2026-11-19 (Asia/Manila) — Live Supabase Optimization & Migration Sync + SEO & WordPress Blog CMS  
-**Overall Status:** All pending migrations (`20261118170000`, `20261119120000`) plus guarded optimization migration `20261119140000_db_scale_cleanup_and_trigger_hardening.sql` are applied and registered in live Supabase (`lybxhpzzqqyqswvuwpxv`), achieving `0` Performance Advisor warnings/errors (`0` duplicate indexes, `0` unindexed FKs, `0` multiple permissive policies), `0` mutable `search_path` functions, `0` unprotected tables, and full schema/workflow health. For full AI/engineering onboarding see [`HANDOFF.md`](HANDOFF.md).
+**Last Updated:** 2026-11-19 (Asia/Manila) — Local Branch × Service SEO Matrix, Dasmariñas Hub & GSC Crawl Hygiene  
+**Overall Status:** Local SEO architecture (`/branches/{bacoor|batangas}/{car-wash|ceramic-coating|ppf|window-tint}`, `5` city hubs incl. `/branches/dasmarinas`, enriched `35` pre-rendered HTML shells, `/home` & `/complaints` crawl hygiene, synced sitemap) + live Supabase migrations (`20261118170000`, `20261119120000`, `20261119140000`) complete and verified. For full AI/engineering onboarding see [`HANDOFF.md`](HANDOFF.md).
 
-## Executive Summary (2026-11-19 Latest — Live Supabase Optimization & Hardening)
+## Executive Summary (2026-11-19 Latest — Local & Detailing SEO Architecture + GSC Indexing Fixes)
+
+- **Branch × Service Local Intent Matrix (`localBranchPages.js`, `BranchServicePage.jsx`, `BranchCityPage.jsx`, `ServiceDetailPage.jsx`, `seoLocalGuides.js`, `SiteFooter.jsx`)**: Shipped `/branches/dasmarinas` + `best-car-wash-detailing-dasmarinas` guide alongside Bacoor, Batangas City, Imus, and Cavite; added `8` dedicated `/branches/{bacoor|batangas}/{car-wash|ceramic-coating|ppf|window-tint}` pages targeting `"car wash bacoor"`, `"car wash batangas"`, `"ceramic coating bacoor"`, `"ppf bacoor near me"`, etc., with studio-specific copy, live queue status, starting prices, verified Google reviews, Maps CID/Waze links, and `Service` + `AutoWash` + `FAQPage` + `BreadcrumbList` JSON-LD.
+- **GSC Crawl Hygiene & Enriched SSR Shells (`scripts/prerender-seo.mjs`, `server/seoApi.mjs`, `PublicPageMeta.jsx`, `ComplaintsPage.jsx`, `vercel.json`, `public/sitemap.xml`, `public/llms.txt`)**: Expanded all `35` static HTML shells with rich headings/FAQs/links (fixing thin-shell `"Crawled - currently not indexed"`), added `dist/home.html` (`canonical: /`, `noindex,nofollow`) eliminating live `/home` `404`, set `/complaints` `noindex,nofollow`, added `308` redirects for `/packages` & `/booking`, and excluded low-value utility/legal pages from `sitemap.xml`.
+
+## Executive Summary (2026-11-19 — Live Supabase Optimization & Hardening)
 
 - **Applied Migrations & Live Verification (`20261118170000`, `20261119120000`, `20261119140000`, `tests/guardedMigrationContract.test.js`)**: Applied multi-month scale indexes and WordPress blog taxonomy/SEO/scheduling schema (`26` `public.blogs` columns) to live Supabase; shipped and applied `20261119140000_db_scale_cleanup_and_trigger_hardening.sql` dropping duplicate `public.bookings_schedule_idx`, locking down `log_queue_status_change()` trigger grants, consolidating all `12` multiple-permissive `SELECT` policy sets, dropping stale `blogs_select_anon`, initplan-wrapping `blogs_select_authenticated`, and refreshing `ANALYZE` statistics. Note: Supabase Auth HIBP leaked-password toggle returned `402 entitlement_required` on the current Free plan (Pro+ required).
 

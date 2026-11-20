@@ -165,6 +165,23 @@ export default function SiteFooter({ branches = [] }) {
             ) : null}
             <Link to="/complaints">Complaints</Link>
           </p>
+          <p className="sf-quiet" style={{ marginTop: 8 }}>
+            <Link to="/branches/bacoor">Bacoor</Link>
+            <span aria-hidden="true"> · </span>
+            <Link to="/branches/batangas">Batangas</Link>
+            <span aria-hidden="true"> · </span>
+            <Link to="/branches/imus">Imus</Link>
+            <span aria-hidden="true"> · </span>
+            <Link to="/branches/dasmarinas">Dasmariñas</Link>
+            <span aria-hidden="true"> · </span>
+            <Link to="/branches/cavite">Cavite</Link>
+            <span aria-hidden="true"> · </span>
+            <Link to="/branches/bacoor/ceramic-coating">Ceramic Coating</Link>
+            <span aria-hidden="true"> · </span>
+            <Link to="/branches/bacoor/ppf">PPF</Link>
+            <span aria-hidden="true"> · </span>
+            <Link to="/blog">Blog</Link>
+          </p>
         </div>
       </div>
 

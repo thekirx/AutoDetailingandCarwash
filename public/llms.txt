@@ -1,15 +1,24 @@
 # Hakum Auto Care
 
-> Hakum Auto Care is a trusted automotive detailing, paint protection film (ClearPro PPF), Kisho 9H ceramic coating, nano-ceramic window tint, and swirl-safe two-bucket pH-neutral car wash studio network in the Philippines, serving Bacoor, Imus, Cavite, and Batangas City.
+> Hakum Auto Care is a trusted automotive detailing, paint protection film (ClearPro PPF), Kisho 9H ceramic coating, nano-ceramic window tint, and swirl-safe two-bucket pH-neutral car wash studio network in the Philippines, serving Bacoor, Imus, Dasmariñas, Cavite, and Batangas City.
 
 - Canonical Website: https://www.hakumautocare.com/
 - Sitemap: https://www.hakumautocare.com/sitemap.xml
 - Blog RSS Feed: https://www.hakumautocare.com/rss.xml
 
-## Studio Branches
+## Studio Branches & Local Service Hubs
 - [Bacoor Flagship Studio (Cavite)](https://www.hakumautocare.com/branches/bacoor): RFC Molino II, Molino Boulevard, Bacoor, Cavite · Phone: +63 915 629 6096 · Also serves Imus, Molino, and Daang Hari corridors.
+  - [Car Wash in Bacoor, Cavite](https://www.hakumautocare.com/branches/bacoor/car-wash)
+  - [Ceramic Coating in Bacoor, Cavite](https://www.hakumautocare.com/branches/bacoor/ceramic-coating)
+  - [Paint Protection Film (PPF) in Bacoor](https://www.hakumautocare.com/branches/bacoor/ppf)
+  - [Nano Ceramic Window Tint in Bacoor](https://www.hakumautocare.com/branches/bacoor/window-tint)
 - [Batangas City Studio](https://www.hakumautocare.com/branches/batangas): National Highway (PNP Highway), Brgy. Alangilan, Batangas City · Phone: +63 956 007 1028 · Accessible via STAR Tollway.
+  - [Car Wash in Batangas City](https://www.hakumautocare.com/branches/batangas/car-wash)
+  - [Ceramic Coating in Batangas City](https://www.hakumautocare.com/branches/batangas/ceramic-coating)
+  - [Paint Protection Film (PPF) in Batangas City](https://www.hakumautocare.com/branches/batangas/ppf)
+  - [Nano Ceramic Window Tint in Batangas City](https://www.hakumautocare.com/branches/batangas/window-tint)
 - [Car Wash & Detailing Near Imus, Cavite](https://www.hakumautocare.com/branches/imus): Direct coverage via Bacoor studio and upcoming Imus location.
+- [Car Wash & Detailing Near Dasmariñas, Cavite](https://www.hakumautocare.com/branches/dasmarinas): Serving Pala-Pala, Salitran, Salawag & Aguinaldo Highway via nearby Bacoor bays + upcoming Dasmariñas studio.
 - [Cavite Province Auto Detailing Hub](https://www.hakumautocare.com/branches/cavite): Bacoor, Imus, Molino, and Dasmariñas regional service hub.
 - [Branch Locator](https://www.hakumautocare.com/branches): Find nearest open bays with coordinates and direct contacts.
 
@@ -28,6 +37,7 @@
 - [Best Car Wash & Detailing in Bacoor](https://www.hakumautocare.com/blog/best-car-wash-detailing-bacoor)
 - [Best Car Wash & Ceramic Coating in Batangas City](https://www.hakumautocare.com/blog/best-car-wash-detailing-batangas-city)
 - [Car Wash & Detailing Near Imus, Cavite](https://www.hakumautocare.com/blog/best-car-wash-detailing-imus)
+- [Car Wash & Detailing Near Dasmariñas, Cavite](https://www.hakumautocare.com/blog/best-car-wash-detailing-dasmarinas)
 - [Auto Detailing, Ceramic Coating & PPF in Cavite](https://www.hakumautocare.com/blog/best-auto-detailing-ceramic-coating-ppf-cavite)
 - [Ceramic Coating vs PPF in Philippine Climate](https://www.hakumautocare.com/blog/ceramic-coating-vs-ppf-philippine-climate)
 - [Why Two-Bucket pH-Neutral Washing Matters](https://www.hakumautocare.com/blog/why-two-bucket-ph-neutral-wash-matters)

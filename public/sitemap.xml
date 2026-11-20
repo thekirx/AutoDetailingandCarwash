@@ -1,15 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-  Static sitemap for the public marketing surface. Hand-maintained: the routes
-  below are the ones in src/App.jsx that a customer can reach without an
-  account and that we want indexed. Blog posts and event share pages are
-  published from the database at runtime, so they are not listed here — they are
-  discovered through /events, which every post links back to.
-
-  Back-of-house routes (/operations/*), account routes and the shop-floor TV
-  board are deliberately absent; see public/robots.txt.
--->
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
   <url>
     <loc>https://www.hakumautocare.com/</loc>
     <changefreq>weekly</changefreq>
@@ -23,12 +13,12 @@
   <url>
     <loc>https://www.hakumautocare.com/services/ppf</loc>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://www.hakumautocare.com/services/ceramic</loc>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://www.hakumautocare.com/tint-finder</loc>
@@ -43,7 +33,7 @@
   <url>
     <loc>https://www.hakumautocare.com/services/wash-detailing</loc>
     <changefreq>monthly</changefreq>
-    <priority>0.8</priority>
+    <priority>0.9</priority>
   </url>
   <url>
     <loc>https://www.hakumautocare.com/shop</loc>
@@ -76,6 +66,51 @@
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://www.hakumautocare.com/branches/dasmarinas</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.hakumautocare.com/branches/bacoor/car-wash</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.hakumautocare.com/branches/bacoor/ceramic-coating</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.hakumautocare.com/branches/bacoor/ppf</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.hakumautocare.com/branches/bacoor/window-tint</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.hakumautocare.com/branches/batangas/car-wash</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.hakumautocare.com/branches/batangas/ceramic-coating</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.hakumautocare.com/branches/batangas/ppf</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
+    <loc>https://www.hakumautocare.com/branches/batangas/window-tint</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+  <url>
     <loc>https://www.hakumautocare.com/book</loc>
     <changefreq>weekly</changefreq>
     <priority>0.9</priority>
@@ -96,63 +131,50 @@
     <priority>0.9</priority>
   </url>
   <url>
+    <loc>https://www.hakumautocare.com/contact</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://www.hakumautocare.com/blog/best-car-wash-detailing-bacoor</loc>
+    <lastmod>2026-10-15</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://www.hakumautocare.com/blog/best-car-wash-detailing-batangas-city</loc>
+    <lastmod>2026-10-18</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://www.hakumautocare.com/blog/best-car-wash-detailing-imus</loc>
+    <lastmod>2026-10-22</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://www.hakumautocare.com/blog/best-auto-detailing-ceramic-coating-ppf-cavite</loc>
+    <lastmod>2026-10-25</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://www.hakumautocare.com/blog/best-car-wash-detailing-dasmarinas</loc>
+    <lastmod>2026-11-10</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://www.hakumautocare.com/blog/ceramic-coating-vs-ppf-philippine-climate</loc>
+    <lastmod>2026-10-28</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://www.hakumautocare.com/blog/why-two-bucket-ph-neutral-wash-matters</loc>
+    <lastmod>2026-11-02</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
-  </url>
-  <url>
-    <loc>https://www.hakumautocare.com/partnerships</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://www.hakumautocare.com/contact</loc>
-    <changefreq>monthly</changefreq>
-    <priority>0.6</priority>
-  </url>
-  <url>
-    <loc>https://www.hakumautocare.com/complaints</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.3</priority>
-  </url>
-  <url>
-    <loc>https://www.hakumautocare.com/terms</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  <url>
-    <loc>https://www.hakumautocare.com/privacy</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.2</priority>
-  </url>
-  <url>
-    <loc>https://www.hakumautocare.com/cookies</loc>
-    <changefreq>yearly</changefreq>
-    <priority>0.2</priority>
   </url>
 </urlset>

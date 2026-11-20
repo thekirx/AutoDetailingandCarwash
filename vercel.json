@@ -4,6 +4,10 @@
   "outputDirectory": "dist",
   "cleanUrls": true,
   "trailingSlash": false,
+  "redirects": [
+    { "source": "/packages", "destination": "/services", "permanent": true },
+    { "source": "/booking", "destination": "/book", "permanent": true }
+  ],
   "rewrites": [
     { "source": "/api/points-shop", "destination": "/api/bookings?operation=points-shop" },
     { "source": "/api/booking-status", "destination": "/api/bookings?operation=booking-status" },

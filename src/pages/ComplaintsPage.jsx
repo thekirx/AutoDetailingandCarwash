@@ -4,9 +4,16 @@ import { usePublicBranches } from '@/lib/branches'
 import { createPublicFormGuard, validatePublicFormGuard } from '@/lib/publicFormGuard'
 import { submitPublicInquiry } from '../lib/publicInquiryApi'
 import FormLegalNotice from '@/components/FormLegalNotice'
+import { usePageMeta } from '@/lib/pageMeta'
 import BdPageHero from '../components/public/bredesign/BdPageHero'
 
 export default function ComplaintsPage() {
+  usePageMeta({
+    title: 'Submit a Complaint',
+    description: 'Report a service or branch issue to Hakum Auto Care management.',
+    path: '/complaints',
+    noindex: true,
+  })
   const { branches, loading: branchesLoading } = usePublicBranches()
   const [status, setStatus] = useState('idle')
   const [error, setError] = useState('')

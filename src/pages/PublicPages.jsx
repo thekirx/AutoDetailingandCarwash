@@ -168,9 +168,9 @@ export function BranchesPage() {
   )
 
   usePageMeta({
-    title: 'Car Wash & Detailing Branches Near Me — Bacoor, Imus, Cavite & Batangas',
+    title: 'Car Wash & Detailing Branches Near Me — Bacoor, Imus, Dasmariñas, Cavite & Batangas',
     description:
-      'Find the nearest Hakum Auto Care automotive detailing, paint protection, and car wash studio across Bacoor, Imus, Cavite, and Batangas City. Get directions, call, or check the live queue.',
+      'Find the nearest Hakum Auto Care automotive detailing, paint protection, and car wash studio across Bacoor, Imus, Dasmariñas, Cavite, and Batangas City. Get directions, call, or check the live queue.',
     path: '/branches',
     jsonLd: branchJsonLd,
     jsonLdId: 'hakum-branches',

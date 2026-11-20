@@ -8,6 +8,7 @@ function tryAdminClient() {
   }
 }
 import { extractContentMeta } from '../src/lib/contentBlocks.js'
+import { LOCAL_BRANCH_PAGES, LOCAL_BRANCH_SERVICE_PAGES } from '../src/lib/localBranchPages.js'
 import { buildDocumentTitle } from '../src/lib/pageMeta.js'
 import {
   SEO_LOCAL_GUIDES,
@@ -20,27 +21,28 @@ const ORIGIN = 'https://www.hakumautocare.com'
 export const STATIC_SITEMAP_ROUTES = [
   { path: '/', changefreq: 'weekly', priority: '1.0' },
   { path: '/services', changefreq: 'monthly', priority: '0.9' },
-  { path: '/services/ppf', changefreq: 'monthly', priority: '0.8' },
-  { path: '/services/ceramic', changefreq: 'monthly', priority: '0.8' },
+  { path: '/services/ppf', changefreq: 'monthly', priority: '0.9' },
+  { path: '/services/ceramic', changefreq: 'monthly', priority: '0.9' },
   { path: '/tint-finder', changefreq: 'monthly', priority: '0.8' },
   { path: '/services/tint', changefreq: 'monthly', priority: '0.8' },
-  { path: '/services/wash-detailing', changefreq: 'monthly', priority: '0.8' },
+  { path: '/services/wash-detailing', changefreq: 'monthly', priority: '0.9' },
   { path: '/shop', changefreq: 'weekly', priority: '0.8' },
   { path: '/branches', changefreq: 'monthly', priority: '0.9' },
-  { path: '/branches/bacoor', changefreq: 'weekly', priority: '0.9' },
-  { path: '/branches/batangas', changefreq: 'weekly', priority: '0.9' },
-  { path: '/branches/imus', changefreq: 'monthly', priority: '0.8' },
-  { path: '/branches/cavite', changefreq: 'weekly', priority: '0.9' },
+  ...LOCAL_BRANCH_PAGES.map((city) => ({
+    path: `/branches/${city.slug}`,
+    changefreq: city.isOpen ? 'weekly' : 'monthly',
+    priority: city.isOpen ? '0.9' : '0.8',
+  })),
+  ...LOCAL_BRANCH_SERVICE_PAGES.map((bs) => ({
+    path: `/branches/${bs.citySlug}/${bs.serviceSlug}`,
+    changefreq: 'weekly',
+    priority: '0.9',
+  })),
   { path: '/book', changefreq: 'weekly', priority: '0.9' },
   { path: '/queue', changefreq: 'daily', priority: '0.8' },
   { path: '/events', changefreq: 'weekly', priority: '0.8' },
   { path: '/blog', changefreq: 'weekly', priority: '0.9' },
-  { path: '/partnerships', changefreq: 'monthly', priority: '0.6' },
-  { path: '/contact', changefreq: 'monthly', priority: '0.6' },
-  { path: '/complaints', changefreq: 'yearly', priority: '0.3' },
-  { path: '/terms', changefreq: 'yearly', priority: '0.2' },
-  { path: '/privacy', changefreq: 'yearly', priority: '0.2' },
-  { path: '/cookies', changefreq: 'yearly', priority: '0.2' },
+  { path: '/contact', changefreq: 'monthly', priority: '0.7' },
 ]
 
 function escXml(str) {

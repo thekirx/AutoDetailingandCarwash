@@ -58,6 +58,11 @@ const PAGE_META = {
     description:
       'Looking for trusted car wash, ceramic coating, or detailing near Imus, Cavite? See Hakum Auto Care upcoming Imus expansion and nearby Bacoor flagship studio.',
   },
+  '/branches/dasmarinas': {
+    title: 'Car Wash, Auto Detailing & PPF Near Dasmariñas, Cavite',
+    description:
+      'Looking for trusted car wash, ceramic coating, or ClearPro PPF near Dasmariñas, Cavite? See Hakum Auto Care Dasmariñas expansion and nearby Bacoor flagship studio.',
+  },
   '/branches/cavite': {
     title: 'Automotive Detailing, Paint Protection & Car Wash in Cavite',
     description:
@@ -88,8 +93,8 @@ const PAGE_META = {
   '/403': { title: 'Access denied', description: 'You do not have access to that Hakum Auto Care page.' },
 }
 
-// The shop floor board is a content-free display for the in-store TV, and 403/404 are error pages.
-const NOINDEX_PATHS = /^(?:\/queue\/[^/]+\/tv|\/403|\/404)\/?$/
+// The shop floor board, complaints form, /home shell alias, and 403/404 are excluded from the index.
+const NOINDEX_PATHS = /^(?:\/queue\/[^/]+\/tv|\/complaints|\/home|\/403|\/404)\/?$/
 
 /** Sets document title / OG tags / JSON-LD for public marketing pages. */
 export default function PublicPageMeta() {
@@ -98,6 +103,7 @@ export default function PublicPageMeta() {
     title: 'Hakum Auto Care',
     description: PAGE_META['/'].description,
   }
+  const canonicalRoute = pathname === '/home' ? '/' : pathname
 
   // The organisation + site graph rides on every public page; branch-level
   // nodes are added by BranchesPage under its own @id. Built once: a new
@@ -109,7 +115,8 @@ export default function PublicPageMeta() {
   useLayoutPageMeta({
     title: meta.title,
     description: meta.description,
-    path: pathname,
+    path: canonicalRoute,
+    canonical: pathname === '/home' ? '/' : undefined,
     noindex: NOINDEX_PATHS.test(pathname),
     jsonLd: siteJsonLd,
     jsonLdId: 'hakum-site',

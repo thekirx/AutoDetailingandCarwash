@@ -14,8 +14,10 @@ import { loopSlides, useLoopRail } from '../components/public/bredesign/useLoopR
 import { CeramicSection, PpfInformationSection } from '../components/public/home/HomeServiceSections'
 import PpfPackagesSection from '../components/public/home/PpfPackagesSection'
 import { SERVICE_DETAIL_CONTENT } from '../data/serviceDetailContent'
+import { LOCAL_BRANCH_PAGES, LOCAL_BRANCH_SERVICE_PAGES } from '../lib/localBranchPages'
 import { buildServicePageJsonLd, usePageMeta } from '../lib/pageMeta'
 import { WASH_CARD_SERVICE_SLUG, formatStartingPrice, useStartingPrices } from '../lib/serviceStartingPrices'
+import '@/styles/seoLocal.css'
 
 /* The colour mark, not the monochrome one used in the logo marquee: this is a
    partner credit rather than a row in a wall of suppliers. */
@@ -47,10 +49,24 @@ const HERO_OVERRIDES = {
 }
 
 const TITLES = {
-  ppf: 'Paint Protection Film',
-  ceramic: 'Ceramic Coating',
-  tint: 'Nano Ceramic Tint',
-  'wash-detailing': 'Premium Wash & Detailing',
+  ppf: 'ClearPro Paint Protection Film (PPF) — Bacoor & Batangas',
+  ceramic: 'Kisho 9H Ceramic Coating — Bacoor, Cavite & Batangas',
+  tint: 'Nano Ceramic Window Tint — Bacoor, Imus & Batangas',
+  'wash-detailing': 'Car Wash & Auto Detailing — Bacoor, Imus & Batangas',
+}
+
+const LOCAL_SERVICE_SLUG_BY_DETAIL = {
+  'wash-detailing': 'car-wash',
+  ceramic: 'ceramic-coating',
+  ppf: 'ppf',
+  tint: 'window-tint',
+}
+
+const SEO_DESCRIPTIONS = {
+  ppf: 'Self-healing ClearPro TPU Paint Protection Film (PPF) installed in dust-controlled bays in Bacoor, Cavite and Batangas City, serving Imus, Dasmariñas, and CALABARZON.',
+  ceramic: 'Multi-stage paint correction and authentic Kisho 9H Ceramic Coating in Bacoor, Cavite and Batangas City with Unlimited Recoating packages.',
+  tint: 'High heat-rejection nano ceramic window tint in Bacoor, Cavite and Batangas City — RFID-safe night clarity previewed in 3D before booking.',
+  'wash-detailing': 'Two-bucket pH-neutral car wash, interior sanitization, and swirl-free detailing in Bacoor (Molino), Batangas City (Alangilan), serving Imus and Dasmariñas.',
 }
 
 /* Where the second button in the detail row goes: straight to the packages on
@@ -326,7 +342,16 @@ export default function ServiceDetailPage() {
   const { slug } = useParams()
   const section = WHY_SECTIONS.find((s) => s.id === slug)
   const detail = SERVICE_DETAIL_CONTENT[slug]
-  const pageDescription = section ? section.points.map(([t]) => t).join(' · ') : undefined
+  const pageDescription =
+    SEO_DESCRIPTIONS[slug] || (section ? section.points.map(([t]) => t).join(' · ') : undefined)
+  const localServiceSlug = LOCAL_SERVICE_SLUG_BY_DETAIL[slug]
+  const localBranchServices = useMemo(
+    () =>
+      localServiceSlug
+        ? LOCAL_BRANCH_SERVICE_PAGES.filter((p) => p.serviceSlug === localServiceSlug)
+        : [],
+    [localServiceSlug],
+  )
   const serviceJsonLd = useMemo(
     () =>
       buildServicePageJsonLd({
@@ -392,6 +417,39 @@ export default function ServiceDetailPage() {
         <ServiceProofSection serviceId={slug} serviceName={detail.serviceName} proof={detail.proof} />
       ) : null}
       <ServiceFaqSection serviceId={slug} serviceName={detail.serviceName} faqs={detail.faqs} />
+      {localBranchServices.length ? (
+        <section className="bd-local-strip" aria-labelledby="service-locations-heading">
+          <div className="bd-shell">
+            <div className="bd-head bd-reveal">
+              <div>
+                <p className="bd-eyebrow">Branches near you</p>
+                <h2 id="service-locations-heading">Book {detail.serviceName} by branch</h2>
+              </div>
+              <p>Open studios in Bacoor and Batangas City, serving Imus, Dasmariñas, and Cavite.</p>
+            </div>
+            <div className="bd-city-directory bd-reveal">
+              {localBranchServices.map((loc) => (
+                <Link
+                  key={`${loc.citySlug}-${loc.serviceSlug}`}
+                  to={`/branches/${loc.citySlug}/${loc.serviceSlug}`}
+                  className="bd-city-tile"
+                >
+                  <strong>{detail.serviceName} in {loc.shortCity}</strong>
+                  <p>{loc.eyebrow}</p>
+                  <span>View {loc.shortCity} studio guide →</span>
+                </Link>
+              ))}
+              {LOCAL_BRANCH_PAGES.filter((c) => !c.isOpen).map((c) => (
+                <Link key={c.slug} to={`/branches/${c.slug}`} className="bd-city-tile">
+                  <strong>{detail.serviceName} Near {c.shortName}</strong>
+                  <p>{c.landmarkAddress}</p>
+                  <span>Directions from {c.shortName} →</span>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
       {slug === 'wash-detailing' ? (
         <section className="bd-service-bottom-cta bd-wash-queue-cta">
           <div className="bd-shell">

@@ -29,6 +29,7 @@ const EventSharePage = lazy(() => import('./pages/EventSharePage'))
 const BlogPage = lazy(() => import('./pages/BlogPage'))
 const BlogPostPage = lazy(() => import('./pages/BlogPostPage'))
 const BranchCityPage = lazy(() => import('./pages/BranchCityPage'))
+const BranchServicePage = lazy(() => import('./pages/BranchServicePage'))
 const CustomerBlogPage = lazy(() => import('./pages/CustomerBlogPage'))
 const CustomerEventsPage = lazy(() => import('./pages/CustomerEventsPage'))
 const PublicFormPage = lazy(() => import('./pages/PublicFormPage'))
@@ -228,6 +229,7 @@ export default function App() {
           <Route path="/queue" element={<QueuePage />} />
           <Route path="/branches" element={<BranchesPage />} />
           <Route path="/branches/:citySlug" element={<BranchCityPage />} />
+          <Route path="/branches/:citySlug/:serviceSlug" element={<BranchServicePage />} />
           <Route path="/partnerships" element={<PartnershipsPage />} />
           <Route path="/refer" element={<ReferPage />} />
           <Route path="/r/:code" element={<ReferralLinkPage />} />
