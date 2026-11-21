@@ -9,9 +9,9 @@ import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell, { CUSTOMER_AUTH_BULLETS } from '../components/HakumAuthShell'
 import { AuthLegalLinks } from '../components/FormLegalNotice'
 import { classifyIdentifier, resolveLoginEmail } from '../lib/customerAuth'
+import { canOfferPasswordEmailReset } from '../lib/uiDeadControls'
 import { describeAuthError, describeCustomerAuthFailure } from '../lib/authErrorMessage'
 import { activateSignupHref, resolveCustomerAuthIntent } from '../lib/customerAccountLifecycle'
-import { canOfferPasswordEmailReset } from '../lib/uiDeadControls'
 import { CUSTOMER_DEMO_ACCOUNT } from '../lib/demoAccounts'
 import DemoAccountChips from '../components/DemoAccountChips'
 import { usePageMeta } from '../lib/pageMeta'
@@ -73,7 +73,7 @@ export default function CustomerSignInPage() {
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
   const [setupStatus, setSetupStatus] = useState(null) // needs_password | needs_invite | ready | unknown | null
-  const [lookupEmail, setLookupEmail] = useState(null)
+  const [canEmailReset, setCanEmailReset] = useState(false)
   const [checking, setChecking] = useState(false)
   const [sendingSetup, setSendingSetup] = useState(false)
   const [sendingReset, setSendingReset] = useState(false)
@@ -108,12 +108,12 @@ export default function CustomerSignInPage() {
     else if (kind === 'phone') setIdMode('phone')
     if (raw.length < 3) {
       setSetupStatus(null)
-      setLookupEmail(null)
+      setCanEmailReset(false)
       return undefined
     }
     if (kind === 'phone' && raw.replace(/\D/g, '').length < 10) {
       setSetupStatus(null)
-      setLookupEmail(null)
+      setCanEmailReset(false)
       return undefined
     }
 
@@ -124,11 +124,11 @@ export default function CustomerSignInPage() {
         const data = await authLookup(raw, 'lookup')
         if (cancelled) return
         setSetupStatus(data.status || 'unknown')
-        setLookupEmail(data.login_email || null)
+        setCanEmailReset(Boolean(data.can_email_reset))
       } catch {
         if (!cancelled) {
           setSetupStatus(null)
-          setLookupEmail(null)
+          setCanEmailReset(false)
         }
       } finally {
         if (!cancelled) setChecking(false)
@@ -305,10 +305,10 @@ export default function CustomerSignInPage() {
   }
 
   const idKind = classifyIdentifier(identifier.trim())
-  // Plate/phone login can still receive mail when CRM has a real email (lookupEmail).
+  // Plate/phone login can still receive mail when CRM has a real email (server returns boolean only).
   const offerEmailReset =
     (idKind === 'email' && canOfferPasswordEmailReset(identifier.trim())) ||
-    canOfferPasswordEmailReset(lookupEmail)
+    Boolean(canEmailReset)
 
   return (
     <HakumAuthShell
@@ -430,7 +430,7 @@ export default function CustomerSignInPage() {
             {sendingReset ? 'Sending reset…' : 'Forgot password?'}
           </button>
         </div>
-        {(idKind === 'phone' || idKind === 'plate') && lookupEmail && !canOfferPasswordEmailReset(lookupEmail) ? (
+        {(idKind === 'phone' || idKind === 'plate') && setupStatus && setupStatus !== 'unknown' && !canEmailReset ? (
           <p className="hakum-auth-hint">This account has no real email on file, so reset mail cannot be sent. Ask the shop to add one.</p>
         ) : null}
         <button type="submit" className="hakum-auth-submit" disabled={submitting}>

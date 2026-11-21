@@ -16,6 +16,7 @@ import PpfPackagesSection from '../components/public/home/PpfPackagesSection'
 import { SERVICE_DETAIL_CONTENT } from '../data/serviceDetailContent'
 import { LOCAL_BRANCH_SERVICE_PAGES } from '../lib/localBranchPages'
 import { buildServicePageJsonLd, usePageMeta } from '../lib/pageMeta'
+import { SERVICE_SEO_BY_SLUG } from '../lib/publicSeoCatalog'
 import { WASH_CARD_SERVICE_SLUG, formatStartingPrice, useStartingPrices } from '../lib/serviceStartingPrices'
 import '@/styles/seoLocal.css'
 
@@ -48,12 +49,9 @@ const HERO_OVERRIDES = {
   tint: { eyebrow: 'Nano ceramic tint', headline: ['The right shade', 'for how you drive.'] },
 }
 
-const TITLES = {
-  ppf: 'ClearPro Paint Protection Film (PPF) — Bacoor & Batangas',
-  ceramic: 'Kisho 9H Ceramic Coating — Bacoor, Cavite & Batangas',
-  tint: 'Nano Ceramic Window Tint — Bacoor, Imus & Batangas',
-  'wash-detailing': 'Car Wash & Auto Detailing — Bacoor, Imus & Batangas',
-}
+const TITLES = Object.fromEntries(
+  Object.entries(SERVICE_SEO_BY_SLUG).map(([k, v]) => [k, v.title]),
+)
 
 const LOCAL_SERVICE_SLUG_BY_DETAIL = {
   'wash-detailing': 'car-wash',
@@ -62,12 +60,9 @@ const LOCAL_SERVICE_SLUG_BY_DETAIL = {
   tint: 'window-tint',
 }
 
-const SEO_DESCRIPTIONS = {
-  ppf: 'Self-healing ClearPro TPU Paint Protection Film (PPF) installed in enclosed bays in Bacoor & Batangas City, backed by a 10-year warranty.',
-  ceramic: 'Multi-stage paint correction and authentic Kisho 9H Ceramic Coating in Bacoor, Cavite and Batangas City with Unlimited Recoating packages.',
-  tint: 'High heat-rejection nano ceramic window tint in Bacoor, Cavite and Batangas City — RFID-safe night clarity previewed in 3D before booking.',
-  'wash-detailing': 'Two-bucket pH-neutral car wash, interior sanitization, and swirl-free detailing in Bacoor (Molino), Batangas City (Alangilan), serving Imus and Dasmariñas.',
-}
+const SEO_DESCRIPTIONS = Object.fromEntries(
+  Object.entries(SERVICE_SEO_BY_SLUG).map(([k, v]) => [k, v.description]),
+)
 
 /* Where the second button in the detail row goes: straight to the packages on
    the two pages that have them, back to the menu on the one that does not. */

@@ -100,24 +100,6 @@ async function getAuthUser(admin, id) {
   return data?.user || null
 }
 
-async function loadTeamLeadPrefill(admin, customer, user) {
-  const { data: vehicle } = await admin
-    .from('vehicles')
-    .select('plate_number')
-    .eq('customer_id', customer.id)
-    .eq('is_archived', false)
-    .order('plate_number')
-    .limit(1)
-    .maybeSingle()
-  return {
-    full_name: customer.full_name || user?.user_metadata?.full_name || '',
-    phone: customer.phone || user?.user_metadata?.phone || '',
-    plate: vehicle?.plate_number || user?.user_metadata?.plate || '',
-    email: customer.email || '',
-    date_of_birth: customer.date_of_birth || '',
-  }
-}
-
 async function statusForCustomer(admin, customer, kind) {
   if (!customer) return { status: 'unknown', kind }
 
@@ -127,18 +109,19 @@ async function statusForCustomer(admin, customer, kind) {
     return {
       status: 'needs_invite',
       kind,
-      prefill: await loadTeamLeadPrefill(admin, customer, null),
+      can_email_reset: false,
     }
   }
 
   const loginEmail = user.email || customer.email || null
   const needsPassword = Boolean(user.user_metadata?.must_set_password)
+  const canEmailReset = Boolean(loginEmail && !String(loginEmail).toLowerCase().endsWith('@customers.hakumautocare.com'))
 
   return {
     status: needsPassword ? 'needs_password' : 'ready',
     kind,
     login_email: loginEmail,
-    prefill: needsPassword ? await loadTeamLeadPrefill(admin, customer, user) : null,
+    can_email_reset: canEmailReset,
   }
 }
 

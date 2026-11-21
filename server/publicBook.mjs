@@ -7,7 +7,7 @@ import { bearer, json, readJsonBody, setCors, clientIp, rateLimit } from './http
 import { resolveBookingCustomerId } from './publicBookCustomer.mjs'
 import { friendCodeAccountError, normalizeReferral, referralRequiredError } from '../src/lib/referralSource.js'
 import { listReferralStaff } from './referralStaff.mjs'
-import { plateValidationError } from '../src/lib/customerAuth.js'
+import { canonicalPhMobile, phoneDigits, plateValidationError } from '../src/lib/customerAuth.js'
 import { isBookingBoardService } from '../src/lib/serviceKinds.js'
 import { isCustomerBookable } from '../src/lib/bookingLead.js'
 import {
@@ -41,7 +41,9 @@ export async function handlePublicBookRequest(req, res) {
     const first = String(body.customer_first_name || '').trim()
     const last = String(body.customer_last_name || '').trim()
     const customer_name = String(body.customer_name || `${first} ${last}`).trim()
-    const customer_phone = String(body.customer_phone || '').trim()
+    const rawPhone = String(body.customer_phone || '').trim()
+    const digits = phoneDigits(rawPhone)
+    const customer_phone = canonicalPhMobile(rawPhone) || rawPhone
     const vehicle_plate = String(body.vehicle_plate || '').trim().toUpperCase() || null
     let vehicle_make = String(body.vehicle_make || '').trim() || null
     let vehicle_model = String(body.vehicle_model || '').trim() || null
@@ -55,6 +57,9 @@ export async function handlePublicBookRequest(req, res) {
 
     if (!customer_name || !customer_phone || !service_id || !branch || !scheduled_start) {
       return json(res, 400, { error: 'Name, phone, service, branch, and schedule are required.' })
+    }
+    if (digits.length < 10 || digits.length > 13) {
+      return json(res, 400, { error: 'Enter a valid PH mobile number (e.g. 09171234567).' })
     }
     if (!vehicle_plate) return json(res, 400, { error: 'Plate number is required.' })
     const plateError = plateValidationError(vehicle_plate)

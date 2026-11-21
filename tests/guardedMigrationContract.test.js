@@ -49,6 +49,7 @@ const GUARDED = [
   '20261118170000_multi_month_scale_indexes.sql',
   '20261119120000_wordpress_blog_seo_and_scheduling.sql',
   '20261119140000_db_scale_cleanup_and_trigger_hardening.sql',
+  '20261121180000_security_advisor_cleanup_and_grants.sql',
 ]
 
 /** Post-2026-10-10 migrations that do not narrow live RLS (schema/RPC/feature work). */

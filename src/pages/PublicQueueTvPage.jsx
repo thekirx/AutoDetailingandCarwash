@@ -14,9 +14,6 @@ import {
 } from '../queue/queueLogic'
 import shopfront from '../assets/about/hakum-shopfront-dusk-wide.webp'
 
-const TV_FLOOR_SELECT =
-  'booking_id, visit_group_id, branch, queue_number, status, vehicle_plate, vehicle_make, vehicle_model, vehicle_type, service_name, service_pay_category, crew_names'
-const TV_FLOOR_SELECT_LEGACY = 'branch, queue_number, status, vehicle_plate, service_name, service_pay_category'
 const TV_MAX_DENSITY = 5
 
 function floorFingerprint(rows) {
@@ -116,19 +113,7 @@ export default function PublicQueueTvPage() {
 
   const loadQueue = useCallback(async () => {
     if (!branch) return
-    let floorResult = await supabase
-      .from('public_queue_floor')
-      .select(TV_FLOOR_SELECT)
-      .eq('branch', branch)
-      .order('queue_number')
-
-    if (floorResult.error) {
-      floorResult = await supabase
-        .from('public_queue_floor')
-        .select(TV_FLOOR_SELECT_LEGACY)
-        .eq('branch', branch)
-        .order('queue_number')
-    }
+    const floorResult = await supabase.rpc('get_public_queue_floor', { p_branch: branch })
 
     if (floorResult.error) {
       setError(floorResult.error.message || 'Unable to load shop TV.')

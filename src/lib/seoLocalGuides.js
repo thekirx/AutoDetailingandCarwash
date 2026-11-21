@@ -608,6 +608,132 @@ export const SEO_LOCAL_GUIDES = [
       },
     ],
   },
+  {
+    id: 'seo-guide-window-tint',
+    slug: 'nano-ceramic-window-tint-guide-philippines',
+    region: 'craft',
+    regionLabel: 'Tint & Thermal Comfort',
+    category: 'Window Tint Guide',
+    title: 'Nano Ceramic Window Tint Guide in the Philippines: Heat Rejection, Night Clarity & RFID Safety',
+    seo_title: 'Nano Ceramic Window Tint Guide — Cavite & Batangas',
+    seo_description:
+      'Choose the best nano ceramic window tint in Bacoor, Imus & Batangas City. Compare VLT shades, TSER heat rejection & RFID compatibility in 3D.',
+    seo_keywords:
+      'nano ceramic tint philippines, window tint bacoor, window tint batangas city, rfid friendly car tint cavite, ceramic tint price philippines, f1 ceramic tint hakum',
+    author_label: 'Hakum Detailing Academy',
+    published_at: '2026-11-16T08:00:00+08:00',
+    updated_at: '2026-11-21T08:00:00+08:00',
+    read_minutes: 5,
+    cover_url: aboutHkm21,
+    excerpt:
+      'Dyed dark tints trap glare and blind you in monsoon rain, while metallic films block Autosweep and Easytrip tags. Here is how true non-metallic nano ceramic film keeps cabins cool and clear.',
+    ai_summary:
+      'For Philippine highways (SLEX, CALAX, CAVITEX, STAR Tollway), Hakum Auto Care recommends non-metallic nano-ceramic window tint because it blocks high infrared solar heat (IRR) and 99% UV rays without dark night blindness or interfering with Autosweep and Easytrip RFID toll readers. Drivers can preview exact Light, Medium, Dark, and Super Dark VLT combinations on an interactive 3D vehicle using hakumautocare.com/tint-finder before booking enclosed-bay installation in Bacoor or Batangas City.',
+    highlights: [
+      'Non-metallic nano ceramic particles reject infrared heat without blocking Autosweep/Easytrip RFID or GPS',
+      'Preview clear windshield vs privacy side-glass combinations in Hakum Interactive 3D Tint Finder before booking',
+      'Installed inside dust-controlled studio bays in Bacoor (Molino Blvd) and Batangas City (Alangilan)',
+    ],
+    content_blocks: [
+      {
+        id: 'tint-h1',
+        type: 'heading',
+        level: 1,
+        text: 'Why Darkness Does Not Equal Heat Rejection',
+      },
+      {
+        id: 'tint-p1',
+        type: 'paragraph',
+        text: 'Many motorists assume that going ultra-dark on the front windshield is the only way to survive 38°C Cavite and Batangas afternoon traffic. In reality, cheap dyed film absorbs heat into the glass and turns dark nighttime intersections—especially in heavy rain—into a safety hazard.',
+      },
+      {
+        id: 'tint-h2',
+        type: 'heading',
+        level: 2,
+        text: '3 Rules for Choosing Your VLT & Shade Combo',
+      },
+      {
+        id: 'tint-list1',
+        type: 'list',
+        ordered: true,
+        items: [
+          'Keep Front Windshields High-Clarity (Light / Clear 50%–70% VLT): Nano ceramic film delivers strong infrared heat rejection even at bright VLT shades, preserving safe vision on unlit provincial highways.',
+          'Verify Zero-Metal Construction for RFID Gates: Metallic films bounce barrier signals at CAVITEX, CALAX, SLEX, and STAR Tollway plazas. Non-metallic ceramic film lets RFID, cellular, and GPS pass through cleanly.',
+          'Test Your Exact Vehicle Combo in 3D First: Use our interactive 3D Tint Finder to compare front/rear shade contrast before reserving a clean-bay fitting.',
+        ],
+      },
+      {
+        id: 'tint-cta',
+        type: 'cta',
+        label: 'Preview Shades in 3D Tint Finder',
+        url: '/tint-finder',
+        style: 'primary',
+      },
+    ],
+  },
+  {
+    id: 'seo-guide-interior-detailing',
+    slug: 'interior-deep-cleaning-vs-full-interior-detailing',
+    region: 'craft',
+    regionLabel: 'Interior Restoration',
+    category: 'Cabin & Health Care',
+    title: 'Interior Deep Cleaning vs Full Cabin Detailing: Removing Mold, Stains & Musty Odors in PH Humidity',
+    seo_title: 'Interior Deep Cleaning vs Full Detailing Philippines',
+    seo_description:
+      'Compare interior deep cleaning vs full cabin detailing in Bacoor & Batangas City — Bactozero fogging, steam extraction, leather care & odor removal.',
+    seo_keywords:
+      'interior detailing bacoor, interior deep cleaning batangas, car interior sanitization philippines, bactozero car treatment, car mold removal cavite, leather conditioning bacoor',
+    author_label: 'Hakum Technical Bay',
+    published_at: '2026-11-18T08:00:00+08:00',
+    updated_at: '2026-11-21T08:00:00+08:00',
+    read_minutes: 5,
+    cover_url: storyCleanCars,
+    excerpt:
+      'Spilled milk tea, wet typhoon mats, and sticky steering-wheel oils quickly breed mildew in Philippine cabins. Learn when a quick cabin vacuum falls short and how deep extraction + Bactozero works.',
+    ai_summary:
+      'While a standard car wash includes a quick cabin vacuum and surface wipe, Hakum Auto Care full interior detailing in Bacoor and Batangas City performs hot-water fabric extraction, dry-steam vent sanitization, matte-finish UV dressing on plastics and leather, and Bactozero anti-bacterial cabin fogging to permanently eliminate trapped moisture, mold spores, and food odors.',
+    highlights: [
+      'Deep hot-water & enzyme extraction pulls trapped stains and humidity out of carpets and fabric seats',
+      'pH-balanced leather cleaning & conditioning restores factory matte suppleness without greasy shine',
+      'Paired with Bactozero cabin misting to sanitize A/C ducts and kill odor-causing bacteria',
+    ],
+    content_blocks: [
+      {
+        id: 'int-h1',
+        type: 'heading',
+        level: 1,
+        text: 'Why Surface Wipes Mask Cabin Odors Instead of Removing Them',
+      },
+      {
+        id: 'int-p1',
+        type: 'paragraph',
+        text: 'In humid tropical driving around Cavite and Batangas, damp floor carpets, coffee spills, and sunscreen oils soak deep into seat foam and console crevices. Spraying strong air fresheners over dirty upholstery only masks bacteria temporarily.',
+      },
+      {
+        id: 'int-h2',
+        type: 'heading',
+        level: 2,
+        text: 'What Happens Inside a Hakum Interior Restoration Bay',
+      },
+      {
+        id: 'int-list1',
+        type: 'list',
+        ordered: true,
+        items: [
+          'Compressed Air Blowout & Crevice Vacuuming: Every seat rail, console seam, and headliner trim is agitated with soft boar-hair brushes before extraction begins.',
+          'Steam & Deep Extraction on Carpets & Cloth Seats: Controlled moisture and pH-balanced cleaners lift embedded grime and allergens without soaking under-carpet electronics.',
+          'Matte Leather Conditioning & Bactozero Cabin Fogging: Perforated seats receive non-greasy hydration while Bactozero circulates cleanly through evaporator vents.',
+        ],
+      },
+      {
+        id: 'int-cta',
+        type: 'cta',
+        label: 'Book Interior Detailing in Bacoor or Batangas',
+        url: '/book',
+        style: 'primary',
+      },
+    ],
+  },
 ]
 
 export const SEO_REGIONAL_PILLARS = [

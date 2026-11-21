@@ -11,9 +11,7 @@ export function usePublicQueueCounts() {
   const [updatedAt, setUpdatedAt] = useState(null)
 
   const reload = useCallback(async () => {
-    const { data, error: nextError } = await supabase
-      .from('public_queue_counts')
-      .select('branch, waiting_count, in_progress_count, final_checking_count, total_active_count')
+    const { data, error: nextError } = await supabase.rpc('get_public_queue_counts', { p_branch: null })
     if (nextError) {
       setError(nextError.message)
       setLoading(false)

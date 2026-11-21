@@ -30,6 +30,7 @@ const REGION_FILTERS = [
   { id: 'bacoor', label: 'Bacoor' },
   { id: 'batangas', label: 'Batangas City' },
   { id: 'imus', label: 'Imus' },
+  { id: 'dasmarinas', label: 'Dasmariñas' },
   { id: 'cavite', label: 'Cavite Province' },
   { id: 'craft', label: 'Paint & Ceramic Craft' },
 ]

@@ -142,17 +142,18 @@ describe('phone login email unification', () => {
 })
 
 describe('public lookup + activate href', () => {
-  it('exposes Team Lead prefill for needs_invite without login_email', () => {
+  it('signals Team Lead activation source without leaking login_email or PII prefill', () => {
     const pub = publicAuthLookupPayload({
       status: 'needs_invite',
       kind: 'phone',
       login_email: 'secret@x.com',
+      can_email_reset: false,
       prefill: { full_name: 'Ana', plate: 'ABC123', email: 'c09@customers.hakumautocare.com' },
     })
     assert.equal(pub.login_email, undefined)
     assert.equal(pub.source, 'team_lead')
-    assert.equal(pub.prefill.full_name, 'Ana')
-    assert.equal(pub.prefill.email, '')
+    assert.equal(pub.prefill, undefined)
+    assert.equal(pub.can_email_reset, false)
   })
 
   it('builds a phone-scoped signup href', () => {

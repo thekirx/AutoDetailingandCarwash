@@ -130,7 +130,7 @@ const { data: services, error: svcErr } = await admin
 assert(!svcErr && services?.length, `services: ${svcErr?.message || 'empty'}`)
 results.push(`book.services: ${services.length}`)
 
-const { data: queueView, error: qErr } = await admin.from('public_queue_counts').select('*').limit(5)
+const { data: queueView, error: qErr } = await admin.rpc('get_public_queue_counts', { p_branch: null })
 if (qErr) {
   // view may not exist in all envs — fall back to bookings count
   const { count, error: bErr } = await admin

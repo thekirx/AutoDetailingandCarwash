@@ -30,15 +30,13 @@ export const STATIC_STATS = {
  */
 export async function fetchHomeStats(client = supabase) {
   try {
-    const { data, error } = await client
-      .from('public_home_stats')
-      .select('services_done, returning_clients')
-      .maybeSingle()
+    const { data, error } = await client.rpc('get_public_home_stats')
+    const row = Array.isArray(data) ? data[0] : data
 
-    if (error || !data) return { servicesDone: null, returningClients: null }
+    if (error || !row) return { servicesDone: null, returningClients: null }
     return {
-      servicesDone: Number(data.services_done) || 0,
-      returningClients: Number(data.returning_clients) || 0,
+      servicesDone: Number(row.services_done) || 0,
+      returningClients: Number(row.returning_clients) || 0,
     }
   } catch {
     return { servicesDone: null, returningClients: null }

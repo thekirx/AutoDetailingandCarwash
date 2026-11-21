@@ -21,6 +21,7 @@ import {
   findLocalBranchServicePage,
 } from '../src/lib/localBranchPages.js'
 import { buildDocumentTitle, buildLocalBusinessJsonLd, buildServicePageJsonLd, buildSiteJsonLd } from '../src/lib/pageMeta.js'
+import { PUBLIC_ROUTE_SEO, SERVICE_SEO_BY_SLUG } from '../src/lib/publicSeoCatalog.js'
 import {
   SEO_LOCAL_GUIDES,
   buildBlogPostJsonLd,
@@ -205,13 +206,13 @@ export function buildRssXml({ dbBlogs = [], origin = ORIGIN } = {}) {
     const desc = post.seo_description || meta.seo_description || meta.ai_summary || post.excerpt || ''
     items.push(
       `    <item>\n` +
-        `      <title>${escXml(post.title)}</title>\n` +
-        `      <link>${escXml(link)}</link>\n` +
-        `      <guid isPermaLink="true">${escXml(link)}</guid>\n` +
-        `      <pubDate>${escXml(pubDate)}</pubDate>\n` +
-        `      <category>${escXml(meta.category || post.category || 'Automotive Care')}</category>\n` +
-        `      <description>${escXml(desc)}</description>\n` +
-        `    </item>`,
+      `      <title>${escXml(post.title)}</title>\n` +
+      `      <link>${escXml(link)}</link>\n` +
+      `      <guid isPermaLink="true">${escXml(link)}</guid>\n` +
+      `      <pubDate>${escXml(pubDate)}</pubDate>\n` +
+      `      <category>${escXml(meta.category || post.category || 'Automotive Care')}</category>\n` +
+      `      <description>${escXml(desc)}</description>\n` +
+      `    </item>`,
     )
     if (items.length >= 40) break
   }
@@ -294,11 +295,7 @@ export function buildArticleCrawlerHtml({ post, origin = ORIGIN, slug = '' } = {
 
 export const CORE_SERVICES_DATA = {
   ppf: {
-    slug: 'ppf',
-    name: 'ClearPro Paint Protection Film (PPF)',
-    title: 'ClearPro Paint Protection Film (PPF) — Bacoor & Batangas',
-    description:
-      'Self-healing ClearPro TPU Paint Protection Film (PPF) installed in enclosed bays in Bacoor & Batangas City, backed by a 10-year warranty.',
+    ...SERVICE_SEO_BY_SLUG.ppf,
     h1: 'ClearPro Paint Protection Film (PPF) Philippines',
     hero: 'Optical-grade TPU self-healing film installed in enclosed dust-controlled bays with wrapped edges and 10-year warranty.',
     faqs: [
@@ -320,11 +317,7 @@ export const CORE_SERVICES_DATA = {
     ],
   },
   ceramic: {
-    slug: 'ceramic',
-    name: 'Kisho 9H Ceramic Coating',
-    title: 'Kisho 9H Ceramic Coating — Bacoor, Cavite & Batangas',
-    description:
-      'Multi-stage paint correction and authentic Kisho 9H Ceramic Coating in Bacoor, Cavite and Batangas City with Unlimited Recoating packages.',
+    ...SERVICE_SEO_BY_SLUG.ceramic,
     h1: 'Kisho 9H Ceramic Coating Philippines',
     hero: 'Japanese inorganic silica ceramic protection paired with multi-stage Rupes & Menzerna machine paint correction for mirror clarity and hydrophobic rain protection.',
     faqs: [
@@ -346,11 +339,7 @@ export const CORE_SERVICES_DATA = {
     ],
   },
   tint: {
-    slug: 'tint',
-    name: 'Nano Ceramic Window Tint',
-    title: 'Nano Ceramic Window Tint — Bacoor, Imus & Batangas',
-    description:
-      'High heat-rejection nano ceramic window tint in Bacoor, Cavite and Batangas City — RFID-safe night clarity previewed in 3D before booking.',
+    ...SERVICE_SEO_BY_SLUG.tint,
     h1: 'Nano Ceramic Window Tint Philippines',
     hero: 'Advanced non-metallic nano-ceramic window films blocking infrared solar heat and UV radiation without reducing nighttime clarity or blocking Autosweep/Easytrip RFID signals.',
     faqs: [
@@ -367,11 +356,7 @@ export const CORE_SERVICES_DATA = {
     ],
   },
   'wash-detailing': {
-    slug: 'wash-detailing',
-    name: 'Car Wash & Auto Detailing',
-    title: 'Car Wash & Auto Detailing — Bacoor, Imus & Batangas',
-    description:
-      'Two-bucket pH-neutral car wash, interior sanitization, and swirl-free detailing in Bacoor (Molino), Batangas City (Alangilan), serving Imus and Dasmariñas.',
+    ...SERVICE_SEO_BY_SLUG['wash-detailing'],
     h1: 'Two-Bucket pH-Neutral Car Wash & Auto Detailing',
     hero: 'Swirl-free contact washing using dedicated grit-guard buckets, pH-neutral foam shampoos, clean microfiber per zone, and deep cabin sanitization.',
     faqs: [
@@ -390,9 +375,9 @@ export const CORE_SERVICES_DATA = {
 }
 
 export function buildHomeCrawlerHtml({ origin = ORIGIN } = {}) {
-  const fullTitle = 'Car Wash, Auto Detailing, Ceramic Coating & PPF · Hakum Auto Care'
-  const desc =
-    'Swirl-free two-bucket car wash, auto detailing, Kisho 9H ceramic coating & ClearPro PPF in Bacoor, Imus, Dasmariñas, Cavite & Batangas City.'
+  const homeSeo = PUBLIC_ROUTE_SEO['/']
+  const fullTitle = buildDocumentTitle(homeSeo.title)
+  const desc = homeSeo.description
   const canonical = `${origin}/`
   const siteLd = buildSiteJsonLd({ origin })
   const branchLinks = LOCAL_BRANCH_PAGES.map(
@@ -636,11 +621,10 @@ export function buildBranchServiceCrawlerHtml({ page, origin = ORIGIN } = {}) {
       <ol>${page.processSteps.map((s) => `<li>${escHtml(s)}</li>`).join('')}</ol>
       <h2>Local Studio Advantages</h2>
       <ul>${page.localHighlights.map((h) => `<li>${escHtml(h)}</li>`).join('')}</ul>
-      ${
-        relatedCatalog.length
-          ? `<h2>Included ${escHtml(page.serviceLabel)} Treatments</h2><ul>${relatedCatalog.map((item) => `<li><strong>${escHtml(item.name)}:</strong> ${escHtml(item.summary)}</li>`).join('')}</ul>`
-          : ''
-      }
+      ${relatedCatalog.length
+      ? `<h2>Included ${escHtml(page.serviceLabel)} Treatments</h2><ul>${relatedCatalog.map((item) => `<li><strong>${escHtml(item.name)}:</strong> ${escHtml(item.summary)}</li>`).join('')}</ul>`
+      : ''
+    }
       <h2>Certified Detailing Products &amp; Brands</h2>
       <ul>
         ${STUDIO_PRODUCTS_AND_BRANDS.map((b) => `<li><strong>${escHtml(b.brand)} (${escHtml(b.origin)}):</strong> ${escHtml(b.use)}</li>`).join('\n        ')}
@@ -707,17 +691,16 @@ export function buildCoreServiceCrawlerHtml({ serviceSlug = '', origin = ORIGIN 
       <nav aria-label="Breadcrumb"><a href="/">Home</a> · <a href="/services">Services</a>${clean ? ` · <span>${escHtml(name)}</span>` : ''}</nav>
       <h1>${escHtml(s ? s.h1 : 'Hakum Auto Care Services & Packages')}</h1>
       <p>${escHtml(s ? s.hero : desc)}</p>
-      ${
-        s
-          ? `<h2>Frequently Asked Questions</h2>${s.faqs.map((f) => `<details open><summary><strong>${escHtml(f.question)}</strong></summary><p>${escHtml(f.answer)}</p></details>`).join('')}`
-          : `<h2>Service Categories</h2>
+      ${s
+      ? `<h2>Frequently Asked Questions</h2>${s.faqs.map((f) => `<details open><summary><strong>${escHtml(f.question)}</strong></summary><p>${escHtml(f.answer)}</p></details>`).join('')}`
+      : `<h2>Service Categories</h2>
           <ul>
             <li><a href="/services/ppf">ClearPro Paint Protection Film (PPF)</a></li>
             <li><a href="/services/ceramic">Kisho 9H Ceramic Coating</a></li>
             <li><a href="/services/tint">Nano Ceramic Window Tint</a></li>
             <li><a href="/services/wash-detailing">Two-Bucket pH-Neutral Car Wash &amp; Detailing</a></li>
           </ul>`
-      }
+    }
       <h2>Available Studio Branches</h2>
       <ul>
         <li><a href="/branches/bacoor">Bacoor, Cavite Flagship Studio (RFC Molino II)</a></li>
@@ -812,14 +795,14 @@ export async function handleSeoRequest(req, res) {
     }
     const postLike = ev
       ? {
-          title: ev.title,
-          slug: ev.slug,
-          excerpt: ev.description,
-          cover_url: ev.banner_url,
-          published_at: ev.starts_at,
-          updated_at: ev.updated_at,
-          content_blocks: ev.content_blocks,
-        }
+        title: ev.title,
+        slug: ev.slug,
+        excerpt: ev.description,
+        cover_url: ev.banner_url,
+        published_at: ev.starts_at,
+        updated_at: ev.updated_at,
+        content_blocks: ev.content_blocks,
+      }
       : null
     const html = buildArticleCrawlerHtml({
       post: postLike,

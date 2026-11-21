@@ -56,9 +56,10 @@ export async function handleCustomerHistoryRequest(req, res) {
 
     const { data: staff } = await db
       .from('staff_profiles')
-      .select('id, role, is_active, branch_slug, permission_grants')
+      .select('id, role, is_active, is_archived, branch_slug, permission_grants')
       .eq('id', userData.user.id)
       .eq('is_active', true)
+      .eq('is_archived', false)
       .maybeSingle()
     if (!staff || !HISTORY_ROLES.includes(staff.role)) {
       return json(res, 403, { error: 'Forbidden' })

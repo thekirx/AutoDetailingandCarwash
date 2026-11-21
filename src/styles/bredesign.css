@@ -5467,3 +5467,196 @@
     align-items: flex-start;
   }
 }
+
+/* ==== Aftercare Shop & Legal Quick-Jump TOC ============================ */
+.bredesign .bd-shop-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+.bredesign .bd-shop-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 20px;
+  border-radius: 16px;
+  background: var(--bd-navy-2);
+  border: 1px solid var(--bd-rule);
+  box-shadow: var(--bd-lit);
+  transition: border-color 0.18s ease, transform 0.18s ease;
+}
+.bredesign .bd-shop-card:hover {
+  border-color: rgba(157, 180, 255, 0.48);
+  transform: translateY(-2px);
+}
+.bredesign .bd-shop-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.bredesign .bd-shop-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  background: rgba(157, 180, 255, 0.12);
+  color: #b7c8ff;
+}
+.bredesign .bd-shop-card h2 {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.3;
+  color: var(--bd-paper);
+}
+.bredesign .bd-shop-card p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: var(--bd-ink-2);
+}
+.bredesign .bd-shop-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--bd-rule);
+}
+.bredesign .bd-shop-card-foot strong {
+  font-size: 18px;
+  color: var(--bd-paper);
+}
+.bredesign .bd-shop-stock-note {
+  font-size: 12px;
+  color: var(--bd-ink-3);
+}
+.bredesign .bd-shop-pickup-band {
+  margin-top: 32px;
+  padding: 26px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(39, 83, 236, 0.14), rgba(157, 180, 255, 0.05));
+  border: 1px solid var(--bd-rule);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.bredesign .bd-shop-pickup-band h2 {
+  margin: 0 0 8px;
+  font-size: 22px;
+  color: var(--bd-paper);
+}
+.bredesign .bd-shop-pickup-band > div > p {
+  margin: 0 0 14px;
+  color: var(--bd-ink-2);
+}
+.bredesign .bd-shop-promises {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+.bredesign .bd-shop-promises li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--bd-ink-2);
+}
+.bredesign .bd-shop-promises svg {
+  color: var(--bd-accent);
+  flex-shrink: 0;
+}
+.bredesign .bd-shop-pickup-cards {
+  display: grid;
+  gap: 12px;
+}
+.bredesign .bd-shop-pickup-card {
+  padding: 16px;
+  border-radius: 14px;
+  background: var(--bd-navy-3);
+  border: 1px solid var(--bd-rule);
+  display: grid;
+  gap: 6px;
+}
+.bredesign .bd-shop-pickup-card strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 15px;
+  color: var(--bd-paper);
+}
+.bredesign .bd-shop-pickup-card p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--bd-ink-3);
+}
+.bredesign .bd-shop-pickup-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+.bredesign .bd-text-link {
+  color: var(--bd-accent);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.bredesign .legal-toc {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 28px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(157, 180, 255, 0.06);
+  border: 1px solid var(--bd-rule);
+}
+.bredesign .legal-toc-label {
+  width: 100%;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--bd-ink-3);
+  margin-bottom: 2px;
+}
+.bredesign .legal-toc a {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 11px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  text-decoration: none;
+  color: var(--bd-ink-2);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--bd-rule);
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+.bredesign .legal-toc a:hover {
+  border-color: var(--bd-accent);
+  color: var(--bd-paper);
+}
+@media (max-width: 960px) {
+  .bredesign .bd-shop-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .bredesign .bd-shop-pickup-band {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 640px) {
+  .bredesign .bd-shop-grid {
+    grid-template-columns: 1fr;
+  }
+}

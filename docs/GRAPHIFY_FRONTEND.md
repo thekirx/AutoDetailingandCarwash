@@ -9,7 +9,7 @@
 `/account`, `/account/blog`, `/account/events`, `/account/queue`, `/account/book`, `/account/loyalty`, `/account/more`; auth `/signin` `/signup` `/account/set-password`.
 
 ### Kiosk
-`/queue/:branch`, `/queue/:branch/tv` (DEFINER views).
+`/queue/:branch`, `/queue/:branch/tv` (narrow `SECURITY DEFINER` RPCs: `get_public_queue_counts`, `get_public_queue_floor`, `get_public_home_stats`).
 
 ### Staff (`/operations/*` + OpsRoleGate)
 | Path | allowRoute key |

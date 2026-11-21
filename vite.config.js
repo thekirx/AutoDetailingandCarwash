@@ -285,6 +285,9 @@ export default defineConfig({
         manualChunks(id) {
           if (!id.includes('node_modules')) return
           if (id.includes('react-dom') || id.includes('/react/') || id.includes('\\react\\')) return 'react-vendor'
+          if (id.includes('react-router')) return 'router'
+          if (id.includes('@radix-ui') || id.includes('cmdk') || id.includes('sonner')) return 'ui-vendor'
+          if (id.includes('papaparse')) return 'csv'
           if (id.includes('@supabase')) return 'supabase'
           if (id.includes('recharts') || id.includes('d3-')) return 'charts'
           if (id.includes('three') || id.includes('@react-three')) return 'three'

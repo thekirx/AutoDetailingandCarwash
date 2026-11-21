@@ -14,6 +14,7 @@ import PwaUpdateBanner from './components/PwaUpdateBanner'
 
 const PublicLandingPage = lazy(() => import('./pages/PublicLandingPage'))
 const ServiceDetailPage = lazy(() => import('./pages/ServiceDetailPage'))
+const PublicShopPage = lazy(() => import('./pages/PublicShopPage'))
 const TintFinderPage = lazy(() => import('./pages/TintFinderPage'))
 const RootEntry = lazy(() => import('./pages/RootEntry'))
 const AppShellGate = lazy(() => import('./pages/AppShellGate'))
@@ -222,6 +223,7 @@ export default function App() {
           <Route path="/home" element={<PublicLandingPage />} />
           <Route path="/services" element={<ServicesPage />} />
           <Route path="/services/:slug" element={<ServiceDetailPage />} />
+          <Route path="/shop" element={<PublicShopPage />} />
           <Route path="/tint-finder" element={<TintFinderPage />} />
           <Route path="/packages" element={<Navigate to="/services" replace />} />
           <Route path="/book" element={<BookingPage />} />

@@ -116,19 +116,20 @@ export default function PublicQueuePage({ mode = 'customer' }) {
       .maybeSingle()
 
     const countsQuery = supabase
-      .from('public_queue_counts')
-      .select('branch, waiting_count, in_progress_count, final_checking_count, total_active_count')
-      .eq('branch', branch)
-      .maybeSingle()
+      .rpc('get_public_queue_counts', { p_branch: branch })
+      .then((res) => ({
+        ...res,
+        data: Array.isArray(res.data) ? res.data[0] || null : res.data || null,
+      }))
 
     // Customer board: counts only. Shop TV: floor view (plate + service, no phone/name).
     const floorQuery = isTv
       ? supabase
-          .from('public_queue_floor')
-          .select('branch, queue_number, status, vehicle_plate, service_name, service_pay_category')
-          .eq('branch', branch)
-          .in('status', ACTIVE_QUEUE_STATUSES)
-          .order('queue_number')
+          .rpc('get_public_queue_floor', { p_branch: branch })
+          .then((res) => ({
+            ...res,
+            data: (res.data || []).filter((r) => ACTIVE_QUEUE_STATUSES.includes(r.status)),
+          }))
       : Promise.resolve({ data: [], error: null })
 
     const [branchResult, countsResult, floorResult] = await Promise.all([

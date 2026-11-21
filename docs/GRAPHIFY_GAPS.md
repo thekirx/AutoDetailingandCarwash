@@ -1,6 +1,6 @@
 # Graphify gap audit — principal fullstack view
 
-Updated **2026-11-21** alongside Daily Sheet cutover, 33-service catalog, Form Results Board, Full 5×5 Branch×Service Local SEO & AI Visibility Audit (`docs/seo-ai-visibility.md`), Notifications Hub CRUD + Simulator, and Web Push delivery sync (`GRAPHIFY_MEMORY`, `GRAPHIFY_WORKFLOWS`, `GRAPHIFY_SEAMS`).
+Updated **2026-11-21** alongside Daily Sheet cutover, 33-service catalog, Form Results Board, Full 5×5 Branch×Service Local SEO & AI Visibility Audit (`docs/seo-ai-visibility.md`), `/shop` & Legal Nov 2026 updates, live `20261121180000` security advisor RPC/grant cleanup, zero-PII unauthenticated lookup, `publicSeoCatalog.js`, Notifications Hub CRUD + Simulator, and Web Push delivery sync (`GRAPHIFY_MEMORY`, `GRAPHIFY_WORKFLOWS`, `GRAPHIFY_SEAMS`).
 
 ## Verdict
 

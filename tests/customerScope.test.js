@@ -33,64 +33,53 @@ describe('Customer portal active visits (CUST-H4)', () => {
   })
 })
 
-describe('Auth lookup anti-enumeration (CUST-H1)', () => {
-  it('strips login_email for email and phone', () => {
-    assert.equal(
-      publicAuthLookupPayload({
-        status: 'ready',
-        kind: 'phone',
-        login_email: 'c0917@customers.hakumautocare.com',
-      }).login_email,
-      undefined,
-    )
-    assert.equal(
-      publicAuthLookupPayload({
-        status: 'ready',
-        kind: 'email',
-        login_email: 'you@x.com',
-      }).login_email,
-      undefined,
-    )
+describe('Auth lookup anti-enumeration & strict anti-leak (CUST-H1)', () => {
+  it('strips login_email across email, phone, and plate', () => {
+    for (const kind of ['phone', 'email', 'plate']) {
+      assert.equal(
+        publicAuthLookupPayload({
+          status: 'ready',
+          kind,
+          login_email: 'c0917@customers.hakumautocare.com',
+          can_email_reset: false,
+        }).login_email,
+        undefined,
+      )
+    }
   })
 
-  it('exposes Team Lead prefill while the account still needs a password or invite', () => {
+  it('never leaks customer prefill PII (name, phone, plate, DOB, email) when account needs setup', () => {
     const pending = publicAuthLookupPayload({
       status: 'needs_password',
       kind: 'phone',
       login_email: 'secret@x.com',
-      prefill: { full_name: 'Ana', plate: 'ABC123', email: 'c09@customers.hakumautocare.com' },
+      can_email_reset: true,
+      prefill: { full_name: 'Ana', plate: 'ABC123', phone: '09171234567', date_of_birth: '1992-05-01', email: 'c09@customers.hakumautocare.com' },
     })
     assert.equal(pending.login_email, undefined)
+    assert.equal(pending.prefill, undefined)
     assert.equal(pending.source, 'team_lead')
-    assert.equal(pending.prefill.full_name, 'Ana')
-    assert.equal(pending.prefill.email, '')
+    assert.equal(pending.can_email_reset, true)
 
     const invite = publicAuthLookupPayload({
       status: 'needs_invite',
-      kind: 'phone',
+      kind: 'plate',
       login_email: 'secret@x.com',
+      can_email_reset: false,
       prefill: { full_name: 'Ana', plate: 'ABC123' },
     })
     assert.equal(invite.source, 'team_lead')
-    assert.equal(invite.prefill.full_name, 'Ana')
+    assert.equal(invite.prefill, undefined)
+    assert.equal(invite.login_email, undefined)
 
     const ready = publicAuthLookupPayload({
       status: 'ready',
       kind: 'phone',
+      can_email_reset: true,
       prefill: { full_name: 'Ana', plate: 'ABC123' },
     })
     assert.equal(ready.prefill, undefined)
-  })
-
-  it('keeps login_email for plate when ready/needs_password', () => {
-    assert.equal(
-      publicAuthLookupPayload({
-        status: 'ready',
-        kind: 'plate',
-        login_email: 'c0917@customers.hakumautocare.com',
-      }).login_email,
-      'c0917@customers.hakumautocare.com',
-    )
+    assert.equal(ready.can_email_reset, true)
   })
 })
 

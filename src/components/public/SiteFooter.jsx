@@ -155,6 +155,8 @@ export default function SiteFooter({ branches = [] }) {
           <p className="sf-quiet">
             <Link to="/contact">Contact form</Link>
             <span aria-hidden="true"> · </span>
+            <Link to="/shop">Aftercare shop</Link>
+            <span aria-hidden="true"> · </span>
             <Link to="/partnerships">Brand collabs</Link>
             <span aria-hidden="true"> · </span>
             {referral.enabled ? (

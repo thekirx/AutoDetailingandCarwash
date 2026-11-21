@@ -16,8 +16,9 @@
 | `/branches/:citySlug` (`bacoor`, `batangas`, `imus`, `cavite`, `dasmarinas`) | 5 | `index,follow` | Static build prerender + `/api/seo?operation=branch-meta` |
 | `/branches/:citySlug/:serviceSlug` (5 cities × 5 service pillars: `car-wash`, `auto-detailing`, `ceramic-coating`, `ppf`, `window-tint`) | 25 | `index,follow` | Static build prerender + `/api/seo?operation=branch-service-meta` (aliases return HTTP 301 to canonical) |
 | `/book`, `/queue`, `/events`, `/blog`, `/contact` | 5 | `index,follow` | Static build prerender (`Blog`, `ItemList`, `FAQPage`) |
-| `/blog/:slug` (7 built-in authority guides + live DB posts) | 7+ | `index,follow` (respects `noindex` & `scheduled` gates) | Static build prerender + `/api/seo?operation=blog-meta` |
+| `/blog/:slug` (9 built-in authority guides synced in `public.blogs` + live DB posts) | 9+ | `index,follow` (respects `noindex` & `scheduled` gates) | Static build prerender + `/api/seo?operation=blog-meta` |
 | `/events/:slug` (published DB events) | Dynamic | `index,follow` | `/api/seo?operation=event-meta` |
+| `/terms`, `/privacy`, `/cookies` | 3 | `noindex,follow` | Static build prerender (`noindex,follow` shells); updated Nov 21, 2026 |
 | `/home`, `/complaints`, `/403`, `/404` | 4 | `noindex,nofollow` | Excluded from `sitemap.xml`; explicit `noindex` |
 | `/api/*`, `/operations/*`, `/app/*`, `/account/*`, `/signin`, `/signup`, `/queue/*/tv` | Gated | `noindex,nofollow` (`X-Robots-Tag` + `robots.txt` disallow) | Excluded from search & AI crawlers |
 
@@ -37,7 +38,7 @@
 
 ## 3. Structured Data, Crawler Rendering & Technical Controls
 
-- **Single Source of Truth Architecture:** All 5 city hubs, 25 branch × service pages, 14-service catalog (`COMPLETE_DETAILING_CATALOG`), 6 verified brand partners (`STUDIO_PRODUCTS_AND_BRANDS`), and 5 workmanship benchmark rows (`STUDIO_COMPARISON_ROWS`) live in `src/lib/localBranchPages.js` and are consumed identically by React runtime pages, `scripts/prerender-seo.mjs`, and serverless crawler HTML generators in `server/seoApi.mjs`.
+- **Single Source of Truth Architecture:** Core static route metadata lives in `src/lib/publicSeoCatalog.js` (`PUBLIC_ROUTE_SEO`, `SERVICE_SEO_BY_SLUG`), while all 5 city hubs, 25 branch × service pages, 14-service catalog (`COMPLETE_DETAILING_CATALOG`), 6 verified brand partners (`STUDIO_PRODUCTS_AND_BRANDS`), and 5 workmanship benchmark rows (`STUDIO_COMPARISON_ROWS`) live in `src/lib/localBranchPages.js` — consumed identically by React runtime pages, `scripts/prerender-seo.mjs`, and serverless crawler HTML generators in `server/seoApi.mjs`.
 - **Schema.org JSON-LD Graphs:**
   - Every city hub emits `AutomotiveBusiness` + `AutoWash` + `OfferCatalog` (14 services) + verified `GeoCoordinates` + Google Maps `CID` (`hasMap`) + `BreadcrumbList` + `FAQPage`. No fabricated `aggregateRating` is ever emitted.
   - Every branch × service page emits `Service` + `OfferCatalog` + `AutomotiveBusiness` + `BreadcrumbList` + `FAQPage`.
@@ -58,7 +59,7 @@
 | Invalid `path-to-regexp` wildcard in `vercel.json` `X-Robots-Tag` header (`/(api\|operations\|app\|account)/.*`) | **High** | Replaced with valid `/(api\|operations\|app\|account)/(.*)` + exact `/(operations\|app\|account)` rules | Gated endpoints & admin/account shells return `X-Robots-Tag: noindex, nofollow` and deploy cleanly |
 | Missing serverless bot SSR on `/` and `/branches`, plus missing AI/audit crawler UAs | **High** | Added `home-meta` & `branches-meta` in `api/seo.js` / `server/seoApi.mjs` and expanded `has` user-agent regex in `vercel.json` | Googlebot, OAI-SearchBot, Claude-SearchBot, PerplexityBot, GPTBot & audit bots receive semantic HTML + JSON-LD |
 | 42 meta description outliers (401–835 chars on `/blog/*`) and 80–119 char titles | **High** | Separated concise 120–160 char `seo_description` from full `ai_summary` body/JSON-LD across `prerender-seo.mjs`, `BlogPostPage.jsx`, `localBranchPages.js`, `seoLocalGuides.js`, `PublicPageMeta.jsx`, and `index.html`; enforced via unit test | Full decoded `<title>` `<= 75` chars and `<meta name="description">` `120–160` chars across all 53 `dist/` HTML files |
-| Main entry chunk `index-*.js` (`520.51 kB`, `161.37 kB` gzip) above Vite 500 kB notice | **Low / Watch** | Documented baseline alongside route lazy-loading and VitePWA Workbox precaching (`488` entries) | Keep tracking bundle size; split non-critical landing modules if LCP regresses in PSI/CrUX |
+| Main entry chunk `index-*.js` above Vite 500 kB notice | **Resolved** | Added `router`, `ui-vendor`, and `csv` `manualChunks` in `vite.config.js` | `index-*.js` reduced from `520.51 kB` to `383.10 kB` (`115.61 kB` gzip) with zero `>500 kB` Vite warnings |
 
 ---
 
