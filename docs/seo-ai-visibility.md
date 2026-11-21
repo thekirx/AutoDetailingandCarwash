@@ -50,7 +50,19 @@
 
 ---
 
-## 4. Implementation Status vs. External Verification
+## 4. SEO Audit Findings, Severity & Acceptance Criteria (`2026-11-21`)
+
+| Finding | Severity | Fix Implemented | Acceptance Criteria |
+| :--- | :--- | :--- | :--- |
+| Live Vercel SPA catch-all `404` on `/queue/:branch`, `/operations/*`, `/account`, `/signin` under `cleanUrls: true` | **Critical** | Changed `vercel.json` fallback destination from `"/index.html"` to `"/index"` and updated `prodShellContract` / `vercelFunctionRouting` tests | Non-prerendered SPA routes resolve HTTP `200` on production deploy; hashed assets stay excluded from SPA fallback |
+| Invalid `path-to-regexp` wildcard in `vercel.json` `X-Robots-Tag` header (`/(api\|operations\|app\|account)/.*`) | **High** | Replaced with valid `/(api\|operations\|app\|account)/(.*)` + exact `/(operations\|app\|account)` rules | Gated endpoints & admin/account shells return `X-Robots-Tag: noindex, nofollow` and deploy cleanly |
+| Missing serverless bot SSR on `/` and `/branches`, plus missing AI/audit crawler UAs | **High** | Added `home-meta` & `branches-meta` in `api/seo.js` / `server/seoApi.mjs` and expanded `has` user-agent regex in `vercel.json` | Googlebot, OAI-SearchBot, Claude-SearchBot, PerplexityBot, GPTBot & audit bots receive semantic HTML + JSON-LD |
+| 42 meta description outliers (401–835 chars on `/blog/*`) and 80–119 char titles | **High** | Separated concise 120–160 char `seo_description` from full `ai_summary` body/JSON-LD across `prerender-seo.mjs`, `BlogPostPage.jsx`, `localBranchPages.js`, `seoLocalGuides.js`, `PublicPageMeta.jsx`, and `index.html`; enforced via unit test | Full decoded `<title>` `<= 75` chars and `<meta name="description">` `120–160` chars across all 53 `dist/` HTML files |
+| Main entry chunk `index-*.js` (`520.51 kB`, `161.37 kB` gzip) above Vite 500 kB notice | **Low / Watch** | Documented baseline alongside route lazy-loading and VitePWA Workbox precaching (`488` entries) | Keep tracking bundle size; split non-critical landing modules if LCP regresses in PSI/CrUX |
+
+---
+
+## 5. Implementation Status vs. External Verification
 
 | Layer | Status | Scope & Notes |
 | :--- | :--- | :--- |

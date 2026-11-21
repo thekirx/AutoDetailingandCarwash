@@ -9,7 +9,7 @@ const PAGE_META = {
       'Swirl-free two-bucket car wash, auto detailing, Kisho 9H ceramic coating & ClearPro PPF in Bacoor, Imus, Dasmariñas, Cavite & Batangas City.',
   },
   '/home': {
-    title: 'Hakum Auto Care — Car Wash, Detailing, Ceramic & PPF',
+    title: 'Car Wash, Detailing, Ceramic & PPF Home',
     description:
       'Swirl-free two-bucket car wash, auto detailing, Kisho 9H ceramic coating & ClearPro PPF in Bacoor, Imus, Dasmariñas, Cavite & Batangas City.',
   },
