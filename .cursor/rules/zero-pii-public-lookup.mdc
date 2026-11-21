@@ -1,0 +1,10 @@
+---
+description: Enforce zero-PII responses on unauthenticated public/customer lookup handlers
+globs: server/customerAuth*.mjs,server/publicPlateLookup.mjs,src/pages/CustomerSign*.jsx,tests/customer*.test.js
+---
+
+# Zero-PII Unauthenticated Lookup Invariant
+
+1. **Zero PII on Unauthenticated Lookups:** Public or unauthenticated lookup handlers (`customerAuthLookup.mjs`, `customerAuthPublic.mjs`, `publicPlateLookup.mjs`) must NEVER return `full_name`, `phone`, `login_email`, `date_of_birth`, or internal record identifiers.
+2. **Boolean Flag Driven Auth UX:** Drive pre-login sign-in and activation UI (`CustomerSignInPage.jsx`, `CustomerSignUpPage.jsx`) strictly from non-PII state flags (`status`, `kind`, `can_email_reset`, `source`) while resolving recipient emails and dispatching setup/reset links exclusively server-side.
+3. **Regression Assertions:** Keep `tests/customerScope.test.js` and `tests/customerAccountLifecycle.test.js` asserting explicit absence of PII keys across every unauthenticated lookup response branch.

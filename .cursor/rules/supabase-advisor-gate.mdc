@@ -1,0 +1,11 @@
+---
+description: Enforce live Supabase migration parity, narrow SECURITY DEFINER RPCs instead of public views, and clean Security/Performance Advisor checks
+globs: supabase/migrations/**/*.sql,src/**/*queue*,src/lib/homeStats.js,server/**/*.mjs
+---
+
+# Live Migration & Supabase Advisor Gate
+
+1. **Migration-to-Live Parity:** Never leave a SQL migration file under `supabase/migrations/` unapplied after schema or readiness changes — verify both live execution and `supabase_migrations.schema_migrations` registration.
+2. **Avoid Exposed `SECURITY DEFINER` Views:** Never expose `SECURITY DEFINER` PostgreSQL views (`public_*`) to PostgREST. Prefer narrow `SECURITY DEFINER` RPC functions (`SET search_path = public, pg_temp`) with explicit column projections, `REVOKE ALL` from `PUBLIC`/`anon`/`authenticated`, and explicit `GRANT EXECUTE`.
+3. **Advisor Cleanliness After Schema/RLS Changes:** Re-query Supabase Security & Performance Advisors after applying migrations or editing RLS policies, requiring `0` `security_definer_view` errors, `0` `auth_rls_initplan` lints, and `0` `multiple_permissive_policies` warnings.
+4. **Guarded Migration Contract:** Register every new migration `>= 20261010` in `tests/guardedMigrationContract.test.js` (`GUARDED` with `BEGIN`/`COMMIT` and `public.is_super_admin()` checks, or explicitly documented in `EXEMPTED`).

@@ -1,0 +1,10 @@
+---
+description: Enforce route-to-sitemap parity, single canonical SEO metadata catalog, and blog metadata/DB sync
+globs: src/App.jsx,src/lib/publicSeoCatalog.js,src/lib/seoLocalGuides.js,src/components/PublicPageMeta.jsx,src/components/public/SiteFooter.jsx,scripts/prerender-seo.mjs,server/seoApi.mjs,public/sitemap.xml,public/llms.txt
+---
+
+# Sitemap, Route & Canonical Metadata Parity
+
+1. **No Dead Public Links:** Every public route referenced in `SiteFooter`, `SiteNav`, `public/sitemap.xml`, `public/llms.txt`, or `STATIC_SITEMAP_ROUTES` MUST resolve to a mounted route in `src/App.jsx` and produce a corresponding HTML shell in `scripts/prerender-seo.mjs`.
+2. **Single SEO Source of Truth:** Maintain core static route titles and descriptions in `src/lib/publicSeoCatalog.js` (`PUBLIC_ROUTE_SEO` and `SERVICE_SEO_BY_SLUG`), imported directly by `PublicPageMeta.jsx`, `ServiceDetailPage.jsx`, `LegalPages.jsx`, `scripts/prerender-seo.mjs`, and `server/seoApi.mjs`.
+3. **Blog & Guide Limits & Parity:** Any entry added to `SEO_LOCAL_GUIDES` in `src/lib/seoLocalGuides.js` must keep `seo_title` `<= 58` characters (so `· Hakum Auto Care` stays `<= 78`), `seo_description` between `120` and `160` characters, and remain synchronized with `public/sitemap.xml`, `public/llms.txt`, and live `public.blogs`.
