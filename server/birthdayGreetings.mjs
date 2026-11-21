@@ -5,8 +5,6 @@
 import { BIRTHDAY_GIFT_LABEL, birthdayPerkExpiresAt, birthdayQueryDays, isBirthdayToday, mintBirthdayCode } from '../src/lib/birthdayPerk.js'
 import { CUSTOMER_VOUCHERS_PATH } from '../src/lib/customerAccountNav.js'
 import { applyTemplateText } from '../src/lib/notificationTemplates.js'
-import { busybeeSendSms } from './busybee.mjs'
-import { isSmsNotificationsEnabled } from './notifyBooking.mjs'
 import { loadTemplateMap, templateEnabled } from './notificationTemplatesDb.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
 import { sendWebPushToUsers } from './webPush.mjs'
@@ -22,20 +20,6 @@ async function writeInbox(db, userId, payload) {
     tag: payload.tag,
   })
   return error ? { error: error.message } : { inserted: 1 }
-}
-
-async function logSmsEvent(db, { phone, message, eventType, customerId, bookingId, status, providerResponse }) {
-  await db.from('sms_events').insert({
-    phone,
-    message,
-    event_type: eventType,
-    customer_id: customerId || null,
-    booking_id: bookingId || null,
-    provider: 'busybee',
-    status,
-    provider_response: providerResponse || null,
-    sent_at: status === 'sent' ? new Date().toISOString() : null,
-  })
 }
 
 const PERK_COLS = 'id, customer_id, perk_year, status, expires_at, greeting_sent_at, claimed_at, code'
@@ -159,19 +143,8 @@ export async function sendBirthdayGreeting(db, customer, perk, templates = {}) {
     push = { error: String(err.message || err) }
   }
 
-  let smsResult = null
-  const phone = String(customer.phone || '').trim()
-  if (phone && (await isSmsNotificationsEnabled(db))) {
-    smsResult = await busybeeSendSms({ phone, message: sms })
-    await logSmsEvent(db, {
-      phone,
-      message: sms,
-      eventType: 'birthday_greeting',
-      customerId: customer.id,
-      status: smsResult.status,
-      providerResponse: smsResult.providerResponse,
-    })
-  }
+  // BusyBee SMS is restricted to booking status updates; birthday perks deliver via Push + Inbox.
+  const smsResult = { ok: false, status: 'skipped', providerResponse: 'status_sms_only' }
 
   if (perk?.id) {
     await db
@@ -229,20 +202,8 @@ export async function sendBirthdayQueueStart(db, booking) {
   } catch (err) {
     push = { error: String(err.message || err) }
   }
-  let smsResult = null
-  const phone = String(customer.phone || '').trim()
-  if (phone && (await isSmsNotificationsEnabled(db))) {
-    smsResult = await busybeeSendSms({ phone, message: `Hakum Auto Care: ${body}` })
-    await logSmsEvent(db, {
-      phone,
-      message: `Hakum Auto Care: ${body}`,
-      eventType: 'birthday_queue_start',
-      customerId: customer.id,
-      bookingId: booking.id,
-      status: smsResult.status,
-      providerResponse: smsResult.providerResponse,
-    })
-  }
+  // BusyBee SMS is restricted to booking status updates; birthday check-in alerts deliver via Push + Inbox.
+  const smsResult = { ok: false, status: 'skipped', providerResponse: 'status_sms_only' }
   return { ok: true, inbox, push, sms: smsResult }
 }
 

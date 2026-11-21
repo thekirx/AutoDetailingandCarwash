@@ -36,11 +36,11 @@ const balKind = busybeeErrorKind(bal.json || bal.error || '')
 const report = {
   egressIp: ip,
   balanceOk: Boolean(bal.ok),
+  balanceCredits: bal.json?.Data?.[0]?.Credits ?? null,
   balanceErrorCode: bal.json?.ErrorCode ?? null,
   balanceErrorKind: balKind,
-  knownWhitelistNote:
-    'BrandTxt must allow this egressIp. Office IP drifts — re-check before live. Vercel needs Static IPs whitelisted separately.',
-  historicallyDocumentedOfficeIp: '180.190.249.189',
+  whitelistNote:
+    'BrandTxt removed IP whitelisting on HAKUM; Balance and SendSMS use BUSYBEE_API_KEY + BUSYBEE_CLIENT_ID.',
 }
 
 if (process.env.SEND_TEST_SMS === '1' && process.env.TEST_SMS_PHONE) {
@@ -72,4 +72,4 @@ if (process.env.SEND_TEST_SMS === '1' && process.env.TEST_SMS_PHONE) {
 }
 
 console.log(JSON.stringify(report, null, 2))
-process.exit(report.ok ? 0 : 1)
+process.exitCode = report.ok ? 0 : 1

@@ -67,6 +67,11 @@ export async function busybeeBalance() {
   const { apiKey, clientId, baseUrl } = cfg()
   if (!apiKey || !clientId) throw new Error('BusyBee credentials missing')
 
+  const scrub = (s) =>
+    String(s || '')
+      .replaceAll(apiKey, '[redacted]')
+      .replaceAll(clientId, '[redacted]')
+
   const tryParse = (res, text) => {
     if (res.status === 429 || /too many requests/i.test(text)) {
       return { ok: false, status: 429, json: { ErrorCode: 429, ErrorDescription: 'Too many requests' }, baseUrl }
@@ -87,21 +92,20 @@ export async function busybeeBalance() {
     try {
       json = JSON.parse(text)
     } catch {
-      json = { ErrorCode: -1, ErrorDescription: text.slice(0, 200), raw: true }
+      json = { ErrorCode: -1, ErrorDescription: scrub(text).slice(0, 200), raw: true }
     }
     return { ok: res.ok && Number(json?.ErrorCode) === 0, status: res.status, json, baseUrl }
   }
 
-  // POST body only. Never put ApiKey in the URL: query strings land in proxy and host logs.
+  // BrandTxt app.brandtxt.io exposes GET /api/v2/Balance (POST returns 404). Scrub keys on error.
   try {
-    const res = await fetch(`${baseUrl}/api/v2/Balance`, {
-      method: 'POST',
+    const qs = new URLSearchParams({ ApiKey: apiKey, ClientId: clientId }).toString()
+    const res = await fetch(`${baseUrl}/api/v2/Balance?${qs}`, {
+      method: 'GET',
       headers: {
         Accept: 'application/json',
-        'Content-Type': 'application/json',
         'User-Agent': 'HakumAutoCare/1.0',
       },
-      body: JSON.stringify({ ApiKey: apiKey, ClientId: clientId, apiKey, clientId }),
       signal: AbortSignal.timeout(20000),
     })
     return tryParse(res, await res.text())
@@ -109,7 +113,7 @@ export async function busybeeBalance() {
     return {
       ok: false,
       status: 0,
-      json: { ErrorCode: -1, ErrorDescription: String(err.message || err) },
+      json: { ErrorCode: -1, ErrorDescription: scrub(err?.message || err) },
       baseUrl,
     }
   }

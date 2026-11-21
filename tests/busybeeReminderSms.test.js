@@ -3,7 +3,7 @@ import { describe, it } from 'node:test'
 import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { normalizePhMobile, busybeeErrorKind } from '../server/busybee.mjs'
+import { normalizePhMobile, busybeeErrorKind, busybeeBalance } from '../server/busybee.mjs'
 import { brandTxtRequiresIpWhitelist, productionSmsEgressPlan, formatWhitelistRequestIps } from '../src/lib/busybeeEgressPlan.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -38,15 +38,15 @@ describe('BusyBee customer reminder SMS seams', () => {
     assert.doesNotMatch(gate, /ignoreShopToggle:\s*true/)
   })
 
-  it('production egress plan forbids bypass and requires fixed IPs for Vercel', () => {
-    assert.equal(brandTxtRequiresIpWhitelist(), true)
+  it('reflects that BrandTxt removed IP whitelisting on HAKUM while keeping status-only outbound rules', () => {
+    assert.equal(brandTxtRequiresIpWhitelist(), false)
     const plan = productionSmsEgressPlan()
     assert.equal(plan.bypassExists, false)
     assert.equal(plan.outboundOnly, true)
+    assert.equal(plan.statusUpdatesOnly, true)
     assert.equal(plan.noInboundReplies, true)
     assert.equal(plan.noOwnerSms, true)
-    assert.ok(plan.sources.some((s) => s.id === 'vercel_static' && s.required))
-    assert.ok(plan.sources.some((s) => s.id === 'office_dev' && s.required))
+    assert.equal(plan.sources.some((s) => s.required), false)
     const ips = formatWhitelistRequestIps({
       officeIps: ['180.191.244.237'],
       vercelStaticIps: ['203.0.113.10', '203.0.113.11'],
@@ -54,10 +54,48 @@ describe('BusyBee customer reminder SMS seams', () => {
     assert.deepEqual(ips.map((r) => r.ip), ['180.191.244.237', '203.0.113.10', '203.0.113.11'])
   })
 
-  it('balance check never puts the API key in the request URL', () => {
-    const src = readFileSync(join(root, 'server/busybee.mjs'), 'utf8')
-    assert.doesNotMatch(src, /Balance\?ApiKey=/)
-    assert.doesNotMatch(src, /encodeURIComponent\(apiKey\)/)
+  it('uses GET /api/v2/Balance and redacts credentials from any error output', async () => {
+    const saved = {
+      key: process.env.BUSYBEE_API_KEY,
+      cid: process.env.BUSYBEE_CLIENT_ID,
+      base: process.env.BUSYBEE_API_BASE_URL,
+    }
+    const origFetch = globalThis.fetch
+    const calls = []
+    process.env.BUSYBEE_API_KEY = 'secret-api-key-value'
+    process.env.BUSYBEE_CLIENT_ID = 'secret-client-uuid'
+    process.env.BUSYBEE_API_BASE_URL = 'https://app.brandtxt.io'
+    try {
+      globalThis.fetch = async (url, init) => {
+        calls.push({ url: String(url), method: init?.method })
+        return new Response(
+          JSON.stringify({ ErrorCode: 0, ErrorDescription: 'Success', Data: [{ Credits: 'PHP6080.250000' }] }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } },
+        )
+      }
+      const ok = await busybeeBalance()
+      assert.equal(ok.ok, true)
+      assert.equal(calls[0].method, 'GET')
+      assert.match(calls[0].url, /\/api\/v2\/Balance\?/)
+
+      globalThis.fetch = async (url) => {
+        throw new Error(`network fail calling ${url}`)
+      }
+      const errRes = await busybeeBalance()
+      assert.equal(errRes.ok, false)
+      assert.doesNotMatch(errRes.json.ErrorDescription, /secret-api-key-value/)
+      assert.doesNotMatch(errRes.json.ErrorDescription, /secret-client-uuid/)
+    } finally {
+      globalThis.fetch = origFetch
+      for (const [k, envKey] of [
+        ['key', 'BUSYBEE_API_KEY'],
+        ['cid', 'BUSYBEE_CLIENT_ID'],
+        ['base', 'BUSYBEE_API_BASE_URL'],
+      ]) {
+        if (saved[k] === undefined) delete process.env[envKey]
+        else process.env[envKey] = saved[k]
+      }
+    }
   })
 
   it('ops request email template exists for BrandTxt', () => {

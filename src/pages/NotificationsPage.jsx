@@ -307,7 +307,7 @@ function ReminderRulesPanel() {
       scope: s.scope || 'whole',
       service_id: s.service_id || '',
       branch_slug: s.branch_slug || '',
-      channel: s.channel || 'push',
+      channel: 'push',
       frequency_months: s.frequency_months || 6,
       enabled: s.enabled !== false,
       title: s.title || '',
@@ -522,21 +522,16 @@ function ReminderRulesPanel() {
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="ns-channel">Channel</Label>
                   <Select
-                    value={draft.channel}
-                    onValueChange={(v) => setDraft({ ...draft, channel: v })}
-                    items={[
-                      { value: 'push', label: 'Push' },
-                      { value: 'sms', label: 'SMS (BusyBee)' },
-                      { value: 'both', label: 'Push + SMS' },
-                    ]}
+                    value="push"
+                    disabled
+                    onValueChange={() => setDraft({ ...draft, channel: 'push' })}
+                    items={[{ value: 'push', label: 'Push + In-App Inbox' }]}
                   >
-                    <SelectTrigger id="ns-channel" className="min-h-10 w-full cursor-pointer">
+                    <SelectTrigger id="ns-channel" className="min-h-10 w-full cursor-not-allowed">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="push">Push</SelectItem>
-                      <SelectItem value="sms">SMS (BusyBee)</SelectItem>
-                      <SelectItem value="both">Push + SMS</SelectItem>
+                      <SelectItem value="push">Push + In-App Inbox</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -953,7 +948,7 @@ function BroadcastPanel({ canManageKinds = false }) {
     })
   }
 
-  const effectiveChannel = form.audience_group === 'employees' ? 'push' : form.channel
+  const effectiveChannel = 'push'
   const includesCustomers = form.audience_group !== 'employees'
   const includesEmployees = form.audience_group !== 'customers'
   const usesCustomerSms = includesCustomers && effectiveChannel !== 'push'
@@ -1110,9 +1105,9 @@ function BroadcastPanel({ canManageKinds = false }) {
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)] lg:items-start">
         <Card className="border-border/80 shadow-none">
           <CardHeader>
-            <CardTitle className="text-lg">Custom push, announcement &amp; marketing broadcast</CardTitle>
+            <CardTitle className="text-lg">Custom push &amp; announcement broadcast</CardTitle>
             <CardDescription>
-              Target customers, employees, or both. Employees always receive In-App Inbox + Web Push (zero SMS); customer SMS follows BusyBee length limits.
+              Target customers, employees, or both via In-App Inbox + Web Push only (BusyBee SMS is reserved strictly for Detailing, Services &amp; Packages booking status updates).
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -1164,30 +1159,16 @@ function BroadcastPanel({ canManageKinds = false }) {
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="bc-channel">Delivery channel</Label>
                   <Select
-                    value={effectiveChannel}
-                    disabled={form.audience_group === 'employees'}
-                    onValueChange={(v) => setForm({ ...form, channel: v })}
-                    items={
-                      form.audience_group === 'employees'
-                        ? [{ value: 'push', label: 'In-App Inbox + Web Push' }]
-                        : [
-                            { value: 'push', label: 'In-App Inbox + Web Push' },
-                            { value: 'sms', label: 'BusyBee SMS (customers only)' },
-                            { value: 'both', label: 'Push + Customer SMS' },
-                          ]
-                    }
+                    value="push"
+                    disabled
+                    onValueChange={() => setForm({ ...form, channel: 'push' })}
+                    items={[{ value: 'push', label: 'In-App Inbox + Web Push' }]}
                   >
-                    <SelectTrigger id="bc-channel" className="min-h-11 cursor-pointer">
+                    <SelectTrigger id="bc-channel" className="min-h-10 w-full cursor-not-allowed">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="push">In-App Inbox + Web Push</SelectItem>
-                      {form.audience_group !== 'employees' ? (
-                        <>
-                          <SelectItem value="sms">BusyBee SMS (customers only)</SelectItem>
-                          <SelectItem value="both">Push + Customer SMS</SelectItem>
-                        </>
-                      ) : null}
                     </SelectContent>
                   </Select>
                 </div>

@@ -74,7 +74,13 @@ export async function handleNotificationSettingsRequest(req, res) {
       }
     }
 
-    const channel = ['push', 'sms', 'both'].includes(body.channel) ? body.channel : 'push'
+    const requestedChannel = String(body.channel || 'push').trim().toLowerCase()
+    if (requestedChannel !== 'push') {
+      return json(res, 400, {
+        error: 'Reminders use Web Push & In-App Inbox only (SMS is reserved for Detailing, Services & Packages status updates).',
+      })
+    }
+    const channel = 'push'
     const tMax = titleMaxForChannel(channel)
     if (body.title && String(body.title).trim().length > tMax) {
       return json(res, 400, {
@@ -167,7 +173,12 @@ export async function handleNotificationSettingsRequest(req, res) {
     }
 
     if (body.channel || body.title !== undefined || body.message !== undefined) {
-      const channel = ['push', 'sms', 'both'].includes(body.channel) ? body.channel : existing.channel
+      if (body.channel && String(body.channel).trim().toLowerCase() !== 'push') {
+        return json(res, 400, {
+          error: 'Reminders use Web Push & In-App Inbox only (SMS is reserved for Detailing, Services & Packages status updates).',
+        })
+      }
+      const channel = 'push'
       const title = body.title !== undefined ? String(body.title).trim() : existing.title
       const message = body.message !== undefined ? String(body.message).trim() : existing.message
       const tMax = titleMaxForChannel(channel)

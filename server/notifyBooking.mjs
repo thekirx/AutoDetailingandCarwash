@@ -11,7 +11,7 @@ import { busybeeSendSms } from './busybee.mjs'
 import { loadTemplateMap, templateEnabled } from './notificationTemplatesDb.mjs'
 import { applyPaintMaintenanceOnComplete } from './paintMaintenanceSchedule.mjs'
 import { NOTIFY_EVENTS, bookingOpsEvent, branchLabel } from '../src/lib/notifyRouting.js'
-import { isBookingBoardRow } from '../src/lib/serviceKinds.js'
+import { catalogLineKind, isBookingBoardRow } from '../src/lib/serviceKinds.js'
 import { renderDetailingBookingSms } from '../src/lib/detailingBookingSms.js'
 import { adminClient as admin } from './supabaseAdmin.mjs'
 import { notifyRecipients, resolveStaffRecipients, sendWebPushToUsers } from './webPush.mjs'
@@ -177,6 +177,28 @@ export function isSilentRedoNotify(booking, status = booking?.status) {
   return Boolean(booking?.redo_at) && (status === 'in_progress' || status === 'final_checking')
 }
 
+const EXCLUDED_SMS_CATEGORIES = new Set(['merch', 'product', 'shop', 'voucher', 'coffee'])
+
+/**
+ * BusyBee SMS is strictly for customer booking status updates covering Detailing,
+ * Services, and Packages — never merch/product/voucher rows or non-service tickets.
+ */
+export function isEligibleStatusSmsBooking(booking) {
+  if (!booking) return false
+  const svc = booking.services || {}
+  const cat = String(svc.pay_category || booking.service_pay_category || '').trim().toLowerCase()
+  const slug = String(svc.slug || booking.service_slug || '').trim().toLowerCase()
+  const name = String(booking.service_name || svc.name || '').trim()
+  if (EXCLUDED_SMS_CATEGORIES.has(cat)) return false
+  if (String(svc.item_type || '').toLowerCase() === 'product') return false
+  if (cat || slug) {
+    const kind = catalogLineKind({ itemType: svc.item_type, payCategory: cat, slug })
+    if (kind === 'merch') return false
+    return kind === 'detailing' || kind === 'service' || kind === 'package' || kind === 'ppf'
+  }
+  return Boolean(booking.service_id || (name && name.toLowerCase() !== 'merch'))
+}
+
 /** Customer-facing inbox/SMS/push payload. */
 export function buildBookingNotifyPayload(booking, status, templates = null, options = {}) {
   const key = status || booking?.status
@@ -311,8 +333,9 @@ export async function notifyBookingStatus(booking, status = booking?.status) {
 
   const smsOn = await isSmsNotificationsEnabled(db)
   result.smsEnabled = smsOn
+  const smsEligible = isEligibleStatusSmsBooking(hydrated)
 
-  if (payload.phone && smsOn && customerNotifyAllowed(customerPrefs, 'sms')) {
+  if (payload.phone && smsOn && smsEligible && customerNotifyAllowed(customerPrefs, 'sms')) {
     let userSmsOk = true
     if (payload.userId) {
       const { data: authUser, error: authErr } = await db.auth.admin.getUserById(payload.userId)
@@ -343,6 +366,8 @@ export async function notifyBookingStatus(booking, status = booking?.status) {
         providerResponse: 'user_metadata.sms_opt_in=false',
       })
     }
+  } else if (payload.phone && !smsEligible) {
+    result.sms = { ok: false, status: 'skipped', providerResponse: 'status_sms_services_packages_detailing_only' }
   } else if (payload.phone && customerPrefs && !customerNotifyAllowed(customerPrefs, 'sms')) {
     result.sms = { ok: false, status: 'muted', providerResponse: 'customers.notify_sms=false or is_disabled' }
   } else if (payload.phone && !smsOn) {

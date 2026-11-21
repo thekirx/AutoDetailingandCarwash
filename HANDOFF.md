@@ -105,14 +105,13 @@ This document is the primary onboarding brief for the next AI engineer or techni
 
 ## 5. Open Items & Operational Blockers (Do Not Auto-Mark Done)
 
-1. **Search Console & External Business Listings (Owner Actions)**: Re-submit `https://www.hakumautocare.com/sitemap.xml` in Google Search Console and Bing Webmaster Tools; confirm Google Business Profile branch links point to `https://www.hakumautocare.com/branches/batangas` and `/branches/bacoor`.
-2. **BrandTxt / BusyBee SMS Egress Whitelisting (`BUG-002`)**: Production SMS calls (`app_settings.sms_notifications = true`) require whitelisting the active office egress IP (`180.190.249.28` on 2026-11-21 `npm run sms:egress` — `balanceErrorCode: -1`) and Hakum Vercel Static IPs / relay in BrandTxt (`app.brandtxt.io`).
-3. **Floor / Staff Web Push Opt-In (`BUG-062`)**: Code, `public/push-sw.js`, and `InAppNotificationListener.jsx` are proven live (`push_subscriptions`: `BossMich: 3`, `customer: 3`), while floor operational devices (Branch Admin / Team Lead / ASA) still need per-device **"Enable alerts"** opt-in (`0` enrolled).
-4. **Supabase Dashboard External / Plan Settings**:
+1. **Vercel Env Vars (`hakum-auto-cares-projects`) & External SEO Links (Owner Actions)**: Update `BUSYBEE_API_KEY` + `BUSYBEE_CLIENT_ID` (`SenderId=HAKUM`, `BUSYBEE_API_BASE_URL=https://app.brandtxt.io`) in the production Vercel project dashboard (`BrandTxt` removed IP whitelisting, `BUG-002` closed); re-submit `https://www.hakumautocare.com/sitemap.xml` in Google Search Console and Bing Webmaster Tools; confirm Google Business Profile branch links point to `https://www.hakumautocare.com/branches/batangas` and `/branches/bacoor`.
+2. **Floor / Staff Web Push Opt-In (`BUG-062`)**: Code, `public/push-sw.js`, and `InAppNotificationListener.jsx` are proven live (`push_subscriptions`: `BossMich: 3`, `customer: 3`), while floor operational devices (Branch Admin / Team Lead / ASA) still need per-device **"Enable alerts"** opt-in (`0` enrolled).
+3. **Supabase Dashboard External / Plan Settings**:
    - Configure custom SMTP (`smtp_host` currently `null`) / verify Auth password-reset & signup emails arrive in inbox (`Gate 10.1`). *(Note: Auth `site_url` + `uri_allow_list` are already fixed on `2026-11-21`.)*
    - Enable **HaveIBeenPwned Leaked Password Protection** (`password_hibp_enabled` currently `false`, requires Supabase Pro+ plan upgrade).
    - Optional: Have owner confirm and run the **BUG-061** void SQL if cleaning the 2 pre-existing 2026-09-29 test handoffs (`₱5,397.50`).
-5. **Working Tree Hygiene**: Avoid committing `tmp-*` / `*-FAIL.png` QA failure artifacts; stage files intentionally before commit.
+4. **Working Tree Hygiene**: Never commit `.env*` secrets or `tmp-*` / `*-FAIL.png` QA failure artifacts; stage files intentionally before commit.
 
 ---
 

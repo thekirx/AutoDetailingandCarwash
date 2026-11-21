@@ -1,7 +1,7 @@
 /**
  * Shared paint-maintenance reminder send (cron + ops manual send).
+ * Delivers via Web Push + In-App Inbox only (BusyBee SMS reserved for status updates).
  */
-import { busybeeSendSms } from './busybee.mjs'
 import { deliverUserNotifications, sendWebPushToUsers } from './webPush.mjs'
 import { renderNotificationMessage } from '../src/lib/notificationCopy.js'
 import { PAINT_MAINTENANCE_SLUG } from '../src/lib/paintMaintenance.js'
@@ -73,7 +73,7 @@ export async function sendPaintMaintenanceReminder({
   }
 
   const setting = settingFor(settingRows, bySlug, row.service_slug, row.branch_slug, row.program_key)
-  const channel = setting.channel || 'both'
+  const channel = 'push'
   const svc =
     bySlug.get(PAINT_MAINTENANCE_SLUG) || bySlug.get(String(row.service_slug || '').toLowerCase())
   const title =
@@ -106,21 +106,8 @@ export async function sendPaintMaintenanceReminder({
     }
   }
 
-  if (channel === 'sms' || channel === 'both') {
-    if (row.customer_phone) {
-      try {
-        await busybeeSendSms({
-          phone: row.customer_phone,
-          message: `${title}\n${message}`.slice(0, 160),
-        })
-        result.sms = { ok: true }
-      } catch (err) {
-        result.sms = { ok: false, error: String(err?.message || err) }
-      }
-    } else {
-      result.sms = { ok: false, status: 'no_phone' }
-    }
-  }
+  // BusyBee SMS is reserved exclusively for Detailing/Services/Packages status updates.
+  result.sms = { ok: false, status: 'skipped', providerResponse: 'status_sms_only' }
 
   if (markNotified) {
     const { error: upErr } = await db

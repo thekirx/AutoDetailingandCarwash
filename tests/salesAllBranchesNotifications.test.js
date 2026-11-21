@@ -95,7 +95,7 @@ describe('maintenance reminder seed on completion', () => {
     assert.match(mjs, /action === 'reset'/)
   })
 
-  it('reminder cron keeps monthly texts until the visit, then the complete path resets the clock', async () => {
+  it('reminder cron keeps monthly push alerts until the visit without sending non-status SMS', async () => {
     const mjs = await readProject('server/maintenanceReminders.mjs')
     const notify = await readProject('server/paintMaintenanceNotify.mjs')
     const script = await readProject('scripts/notify-maintenance-due.mjs')
@@ -103,7 +103,7 @@ describe('maintenance reminder seed on completion', () => {
     assert.match(mjs, /maintenanceReminderDue/)
     assert.match(script, /runMaintenanceReminders/)
     assert.match(notify, /sendWebPushToUsers/)
-    assert.match(notify, /busybeeSendSms/)
+    assert.doesNotMatch(notify, /busybeeSendSms/)
     assert.match(notify, /status: 'scheduled'/)
   })
 })

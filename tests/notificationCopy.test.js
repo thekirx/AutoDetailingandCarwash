@@ -121,9 +121,10 @@ describe('settings page + migration contract', () => {
     assert.match(sql, /notification_broadcast_kinds/)
     const api = await readFile(resolve(root, 'server/notificationBroadcastKindsApi.mjs'), 'utf8')
     assert.match(api, /Only Super Admin can manage kinds/)
-    const sms = await readFile(resolve(root, 'server/notificationBroadcastApi.mjs'), 'utf8')
-    assert.match(sms, /c\.phone/)
-    assert.match(sms, /renderNotificationMessage/)
+    const broadcastApi = await readFile(resolve(root, 'server/notificationBroadcastApi.mjs'), 'utf8')
+    assert.match(broadcastApi, /deliverUserNotifications/)
+    assert.match(broadcastApi, /resolveBroadcastDispatch/)
+    assert.doesNotMatch(broadcastApi, /busybeeSendSms/)
   })
 
   it('API requires custom message and detailing service', async () => {

@@ -73,11 +73,11 @@ export function resolveBroadcastDispatch({
     }
   }
 
-  if (group === 'employees' && channel !== 'push') {
+  if (channel !== 'push') {
     return {
       ok: false,
       status: 400,
-      error: 'Employee broadcasts use In-App Inbox and Web Push only (SMS is customer-only).',
+      error: 'Broadcasts deliver via In-App Inbox and Web Push only (SMS is reserved for Detailing, Services & Packages booking status updates).',
     }
   }
 

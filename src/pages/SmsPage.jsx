@@ -31,9 +31,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { toast } from 'sonner'
 
-const TYPES = ['promo', 'reminder', 'loyalty', 'birthday', 'booking_confirm', 'booking_remind']
+const TYPES = ['booking_confirm', 'reminder', 'loyalty', 'birthday', 'promo', 'booking_remind']
 
-const EMPTY_TEMPLATE_FORM = { id: '', name: '', template_type: 'promo', body: '', allow_multipart: false }
+const EMPTY_TEMPLATE_FORM = { id: '', name: '', template_type: 'booking_confirm', body: '', allow_multipart: false }
 
 export default function SmsPage({ embedded = false }) {
   const { profile } = useAuth()
@@ -46,23 +46,11 @@ export default function SmsPage({ embedded = false }) {
   const [form, setForm] = useState(EMPTY_TEMPLATE_FORM)
   const [tplOpen, setTplOpen] = useState(false)
   const [savingTpl, setSavingTpl] = useState(false)
-  const [send, setSend] = useState({
-    phone: '',
-    body: '',
-    template_type: 'promo',
-    template_id: '',
-    allow_multipart: false,
-  })
 
   const providerLabel = useMemo(() => busybeeProviderStatusLabel(providerHealth), [providerHealth])
-  const sendBlocked = !smsEnabled
   const formAnalysis = useMemo(
     () => analyzeBusybeeSms(form.body, { allowMultiPart: Boolean(form.allow_multipart) }),
     [form.body, form.allow_multipart],
-  )
-  const sendAnalysis = useMemo(
-    () => analyzeBusybeeSms(send.body, { allowMultiPart: Boolean(send.allow_multipart) }),
-    [send.body, send.allow_multipart],
   )
 
   const load = useCallback(async () => {
@@ -177,48 +165,6 @@ export default function SmsPage({ embedded = false }) {
     load()
   }
 
-  async function queueSms(event) {
-    event.preventDefault()
-    if (sendBlocked) {
-      toast.error('Shop SMS is off — turn automation on before sending.')
-      return
-    }
-    if (!sendAnalysis.ok) {
-      toast.error(sendAnalysis.error)
-      return
-    }
-    const token = await getAccessTokenFresh()
-    if (!token) {
-      toast.error('Sign in required')
-      return
-    }
-    const res = await fetch('/api/busybee', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ phone: send.phone.trim(), message: send.body.trim() }),
-    })
-    const body = await res.json().catch(() => ({}))
-    if (!res.ok || !body.ok) {
-      toast.error(body.providerResponse || body.error || 'BusyBee send failed')
-    } else {
-      toast.success('SMS sent via BusyBee')
-    }
-    await supabase.from('sms_events').insert({
-      phone: send.phone.trim(),
-      message: send.body.trim(),
-      event_type: send.template_type,
-      status: body.ok ? 'sent' : 'failed',
-      provider: 'busybee',
-      provider_response: body.providerResponse || null,
-      sent_at: body.ok ? new Date().toISOString() : null,
-    })
-    setSend({ phone: '', body: '', template_type: 'promo', template_id: '', allow_multipart: false })
-    load()
-  }
-
   const statusPanel = (
     <div
       className={cn(
@@ -236,9 +182,12 @@ export default function SmsPage({ embedded = false }) {
             Status SMS automation
           </p>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            When on, customers get BusyBee SMS on booking received, queue status, payment ready, and
-            completed. BrandTxt has whitelisted office egress <code>180.190.249.189</code> —
-            keep this on for local/status SMS; Vercel production still needs its own static IPs.
+            When on, customers receive BusyBee SMS strictly for live booking &amp; queue status
+            updates covering <strong>Detailing</strong>, <strong>Services</strong>, and{' '}
+            <strong>Packages</strong> (received, confirmed, waiting, in bay, final check, payment
+            ready, completed, cancelled, photos ready). BrandTxt IP whitelisting is no longer
+            required on account <code>HAKUM</code>. Broadcasts, reminders, birthday perks, and staff
+            alerts use Web Push &amp; In-App Inbox only.
           </p>
           <p className="text-sm">
             Shop gate:{' '}
@@ -365,129 +314,20 @@ export default function SmsPage({ embedded = false }) {
         </DialogContent>
       </Dialog>
 
-      <div className="grid gap-6">
-        <Card
-          className={cn(
-            'border-border/80 shadow-none',
-            sendBlocked && 'opacity-90',
-          )}
-        >
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Send / queue SMS</CardTitle>
-            <CardDescription>
-              {sendBlocked
-                ? 'Sending is locked while shop SMS automation is off.'
-                : 'One-off BusyBee send (still uses live provider).'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={queueSms} className="flex flex-col gap-4">
-              <fieldset disabled={sendBlocked} className="flex flex-col gap-4 disabled:opacity-60">
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="sms-send-phone">Phone</Label>
-                  <Input
-                    id="sms-send-phone"
-                    required
-                    className="min-h-11"
-                    inputMode="tel"
-                    autoComplete="tel"
-                    value={send.phone}
-                    onChange={(e) => setSend({ ...send, phone: e.target.value })}
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label>Use template</Label>
-                  <Select
-                    value={send.template_id || '__none__'}
-                    onValueChange={(v) => {
-                      if (v === '__none__') {
-                        setSend((s) => ({ ...s, template_id: '', body: s.body }))
-                        return
-                      }
-                      const t = templates.find((row) => row.id === v)
-                      if (!t) return
-                      setSend((s) => ({
-                        ...s,
-                        template_id: t.id,
-                        template_type: t.template_type || s.template_type,
-                        body: t.body || '',
-                      }))
-                    }}
-                  >
-                    <SelectTrigger className="min-h-11">
-                      <SelectValue placeholder="Optional template" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__none__">None — write custom</SelectItem>
-                      {templates.map((t) => (
-                        <SelectItem key={t.id} value={t.id}>
-                          {t.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label>Type</Label>
-                  <Select value={send.template_type} onValueChange={(v) => setSend({ ...send, template_type: v })}>
-                    <SelectTrigger className="min-h-11">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TYPES.map((t) => (
-                        <SelectItem key={t} value={t}>
-                          {t}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <Label htmlFor="sms-send-body">Message</Label>
-                    <span
-                      className={`text-xs tabular-nums ${
-                        sendAnalysis.ok ? 'text-muted-foreground' : 'font-semibold text-destructive'
-                      }`}
-                    >
-                      {sendAnalysis.length}/{sendAnalysis.maxChars} · {sendAnalysis.encoding} · {sendAnalysis.credits} credit{sendAnalysis.credits === 1 ? '' : 's'}
-                    </span>
-                  </div>
-                  <Textarea
-                    id="sms-send-body"
-                    required
-                    className="min-h-28"
-                    maxLength={BUSYBEE_SMS_MULTIPART_MAX + 40}
-                    value={send.body}
-                    onChange={(e) => setSend({ ...send, body: e.target.value, template_id: '' })}
-                  />
-                  <label className="flex min-h-10 cursor-pointer items-center gap-2 text-xs text-muted-foreground">
-                    <input
-                      type="checkbox"
-                      checked={Boolean(send.allow_multipart)}
-                      onChange={(e) => setSend({ ...send, allow_multipart: e.target.checked })}
-                    />
-                    Allow multi-part SMS up to {BUSYBEE_SMS_MULTIPART_MAX} chars (2 credits)
-                  </label>
-                  {sendAnalysis.error ? (
-                    <p className="flex items-center gap-1.5 text-xs font-medium text-destructive" role="alert">
-                      <AlertTriangle className="size-3.5 shrink-0" aria-hidden />
-                      {sendAnalysis.error}
-                    </p>
-                  ) : null}
-                </div>
-              </fieldset>
-              <Button type="submit" className="min-h-11 w-full sm:w-auto" disabled={sendBlocked || !sendAnalysis.ok}>
-                {sendBlocked ? 'SMS off — send locked' : 'Queue SMS'}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="border-border/80 shadow-none">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg">Manual &amp; promo SMS disabled</CardTitle>
+          <CardDescription>
+            BusyBee SMS credits are reserved strictly for automated customer status updates across
+            Detailing, Services, and Packages. Use Notifications &rarr; Broadcast for customer Push
+            &amp; In-App announcements.
+          </CardDescription>
+        </CardHeader>
+      </Card>
 
       <Card className="border-border/80 shadow-none">
         <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 pb-3">
-          <CardTitle className="text-lg">Templates</CardTitle>
+          <CardTitle className="text-lg">Reference SMS templates</CardTitle>
           {canEditTemplates ? (
             <Button type="button" className="min-h-11" onClick={() => { setForm(EMPTY_TEMPLATE_FORM); setTplOpen(true) }}>
               <Plus size={16} className="mr-1.5" aria-hidden />
@@ -514,24 +354,6 @@ export default function SmsPage({ embedded = false }) {
                     <TableCell className="max-w-[14rem] truncate sm:max-w-md">{t.body}</TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          className="min-h-10"
-                          disabled={sendBlocked}
-                          onClick={() =>
-                            setSend((s) => ({
-                              ...s,
-                              template_id: t.id,
-                              template_type: t.template_type || 'promo',
-                              body: t.body || '',
-                              allow_multipart: Boolean(t.allow_multipart),
-                            }))
-                          }
-                        >
-                          Use
-                        </Button>
                         {canEditTemplates ? (
                           <>
                             <Button
@@ -544,7 +366,7 @@ export default function SmsPage({ embedded = false }) {
                                 setForm({
                                   id: t.id,
                                   name: t.name || '',
-                                  template_type: t.template_type || 'promo',
+                                  template_type: t.template_type || 'booking_confirm',
                                   body: t.body || '',
                                   allow_multipart: Boolean(t.allow_multipart),
                                 })
@@ -627,7 +449,7 @@ export default function SmsPage({ embedded = false }) {
   if (embedded) {
     return (
       <section className="flex flex-col gap-4" aria-label="SMS">
-        <p className="text-sm text-muted-foreground">Templates, BusyBee send, and SMS event log.</p>
+        <p className="text-sm text-muted-foreground">Status SMS switch, BusyBee balance, and SMS delivery log.</p>
         {body}
       </section>
     )
@@ -635,10 +457,10 @@ export default function SmsPage({ embedded = false }) {
 
   return (
     <OpsPageShell
-      eyebrow="Marketing"
-      title="SMS campaigns"
+      eyebrow="Notifications"
+      title="Status SMS &amp; log"
       icon={MessageSquareWarning}
-      description="Shop kill switch, BusyBee health, templates, and send log — aligned with Notifications ops chrome."
+      description="Shop kill switch, BusyBee balance health, and automated Detailing/Services/Packages status SMS log."
       meta={
         <span className="tabular-nums">
           Gate {smsEnabled ? 'ON' : 'OFF'}

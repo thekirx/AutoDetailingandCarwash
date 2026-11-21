@@ -1,0 +1,18 @@
+---
+description: Hakum BusyBee / BrandTxt SMS scope, gitignore secret hygiene, and Vercel rollout policy.
+alwaysApply: true
+---
+
+# Hakum · BusyBee BrandTxt SMS Policy
+
+1. **Strict Customer Status-Updates-Only Scope**:
+   - BusyBee BrandTxt SMS (`SenderId: HAKUM`, `https://app.brandtxt.io`) is used **exclusively** for automated customer booking and queue **status updates** (`notifyBookingStatus` in `server/notifyBooking.mjs`) covering **Detailing, Services, and Packages** (`pending`, `confirmed`, `waiting`, `in_progress`, `final_checking`, `for_payment`, `completed`, `cancelled`, `photos_ready`, skipping internal QA redos and merch/non-service rows).
+   - **No SMS** may be sent for promos/broadcasts (`notificationBroadcastApi.mjs`), 7/3/1-day booking reminders (`bookingReminders.mjs`), 6-month maintenance reminders (`paintMaintenanceNotify.mjs`), reschedule acks (`bookingReschedule.mjs`), birthday greetings (`birthdayGreetings.mjs`), lifecycle/loyalty messages (`lifecycleSms.mjs`), manual/promo sends (`POST /api/busybee`), merch/shop inquiries, or staff notifications — those channels use **Web Push + In-App Inbox only**.
+
+2. **BrandTxt / IP Whitelisting & Balance Endpoint**:
+   - BrandTxt removed IP whitelisting for the active `HAKUM` account (`GET /api/v2/Balance` works directly from both local/office machines and dynamic serverless IPs).
+   - Balance checks in `server/busybee.mjs` must use `GET /api/v2/Balance` (`POST /api/v2/Balance` returns `404`), and must always scrub `apiKey` / `clientId` from returned error strings or logs.
+
+3. **Credential Memory & `.gitignore` Hygiene**:
+   - Never commit `BUSYBEE_API_KEY` or `BUSYBEE_CLIENT_ID` into git-tracked files, docs, rules, or tests.
+   - Local credentials live strictly in gitignored `.env` / `.env.local` (`.gitignore` matches `.env*`), and production credentials (`BUSYBEE_API_KEY`, `BUSYBEE_CLIENT_ID`, `BUSYBEE_SENDER_ID=HAKUM`, `BUSYBEE_API_BASE_URL=https://app.brandtxt.io`) live in Vercel Project Environment Variables under `hakum-auto-cares-projects`.

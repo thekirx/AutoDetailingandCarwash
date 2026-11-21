@@ -1,13 +1,10 @@
 /**
- * Customer lifecycle SMS (BusyBee): welcome, loyalty thanks, visit rewards
- * at 6, 12, 18, 24, and 30 completed visits, and a rate-your-visit text.
- * Sends respect the shop SMS toggle and sms_opt_in, and are idempotent via sms_events.
+ * Customer lifecycle message builders and milestone helpers.
+ * Note: BusyBee SMS is now strictly limited to booking status updates for Detailing,
+ * Services, and Packages — lifecycle SMS dispatch stays disabled here.
  */
 import { applyTemplateText } from '../src/lib/notificationTemplates.js'
 import { VISIT_REWARDS } from '../src/lib/rewardsCatalog.js'
-import { busybeeSendSms } from './busybee.mjs'
-import { isSmsNotificationsEnabled } from './notifyBooking.mjs'
-import { loadTemplateMap, templateEnabled } from './notificationTemplatesDb.mjs'
 import { adminClient as adminDb } from './supabaseAdmin.mjs'
 
 export { adminDb }
@@ -81,96 +78,12 @@ export async function countCompletedVisits(db, customerId) {
   return visits.size
 }
 
-async function alreadySent(db, { customerId, eventType }) {
-  const { data } = await db
-    .from('sms_events')
-    .select('id')
-    .eq('customer_id', customerId)
-    .eq('event_type', eventType)
-    .eq('status', 'sent')
-    .limit(1)
-  return Boolean(data?.length)
-}
-
-async function logEvent(db, { phone, message, eventType, bookingId, customerId, status, providerResponse }) {
-  await db.from('sms_events').insert({
-    phone,
-    message,
-    event_type: eventType,
-    booking_id: bookingId || null,
-    customer_id: customerId || null,
-    provider: 'busybee',
-    status,
-    provider_response: providerResponse || null,
-    sent_at: status === 'sent' ? new Date().toISOString() : null,
-  })
-}
-
-async function userOptedOut(db, customerId) {
-  if (!customerId) return false
-  const { data, error } = await db.auth.admin.getUserById(customerId)
-  return !error && data?.user?.user_metadata?.sms_opt_in === false
-}
-
-/**
- * Idempotent lifecycle send. eventType doubles as the dedupe key
- * (pass resolveVisitMilestone().dedupeKey for milestones so each 10-visit
- * cycle re-arms).
- */
-export async function sendLifecycleSms(db, { kind, eventType = kind, customerId, phone, bookingId = null, appUrl = '', name = '', ignoreShopToggle = false } = {}) {
-  let templates = null
-  try {
-    templates = await loadTemplateMap(db)
-  } catch {
-    templates = null
-  }
-  if (templates && !templateEnabled(templates, `lifecycle.${kind}`)) {
-    return { ok: false, status: 'disabled' }
-  }
-  const message = buildLifecycleSms(kind, { appUrl, name, templates })
-  if (!message) return { ok: false, status: 'unknown_kind' }
-  if (!customerId) return { ok: false, status: 'missing_customer' }
-
-  let target = String(phone || '').trim()
-  if (!target) {
-    const { data: customer } = await db
-      .from('customers')
-      .select('phone')
-      .eq('id', customerId)
-      .maybeSingle()
-    target = String(customer?.phone || '').trim()
-  }
-  if (!target) return { ok: false, status: 'missing_phone' }
-
-  if (await alreadySent(db, { customerId, eventType })) {
-    return { ok: true, status: 'duplicate', skipped: true }
-  }
-
-  if (!ignoreShopToggle && !(await isSmsNotificationsEnabled(db))) {
-    await logEvent(db, {
-      phone: target, message, eventType, bookingId, customerId,
-      status: 'disabled', providerResponse: 'sms_notifications.enabled=false',
-    })
-    return { ok: false, status: 'disabled' }
-  }
-
-  if (await userOptedOut(db, customerId)) {
-    await logEvent(db, {
-      phone: target, message, eventType, bookingId, customerId,
-      status: 'opted_out', providerResponse: 'user_metadata.sms_opt_in=false',
-    })
-    return { ok: false, status: 'opted_out' }
-  }
-
-  const sms = await busybeeSendSms({ phone: target, message })
-  await logEvent(db, {
-    phone: target, message, eventType, bookingId, customerId,
-    status: sms.status, providerResponse: sms.providerResponse,
-  })
+export async function sendLifecycleSms() {
   return {
-    ...sms,
-    errorKind: sms.errorKind || null,
-    errorCode: sms.errorCode ?? null,
+    ok: false,
+    status: 'skipped',
+    reason: 'status_sms_only',
+    providerResponse: 'SMS is restricted to Detailing, Services & Packages booking status updates.',
   }
 }
 

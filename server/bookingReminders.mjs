@@ -1,14 +1,12 @@
 /**
  * 7 / 3 / 1 day reminders for detailing booked ahead (landing page or a confirmed date).
- * One send per offset per booking, via SMS, in-app, and push.
+ * One send per offset per booking, via in-app inbox and Web Push (SMS reserved for live status updates).
  */
-import { busybeeSendSms } from './busybee.mjs'
 import { sendWebPushToUsers } from './webPush.mjs'
 import { isBookingBoardRow } from '../src/lib/serviceKinds.js'
 import { manilaDayOf, manilaTodayISO } from '../src/lib/bookingLead.js'
 import { daysUntilDue } from '../src/lib/paintMaintenance.js'
 import { DETAILING_REMINDER_DAYS, renderDetailingReminderSms } from '../src/lib/detailingBookingSms.js'
-import { smsNotificationsEnabledFromSetting } from '../src/lib/smsNotificationsToggle.js'
 
 export function reminderOffset(scheduledStart, today = manilaTodayISO()) {
   const day = manilaDayOf(scheduledStart)
@@ -29,8 +27,6 @@ export async function runDetailingBookingReminders(db, today = manilaTodayISO())
     .limit(400)
   if (error) throw new Error(error.message)
 
-  const { data: smsSetting } = await db.from('app_settings').select('value').eq('key', 'sms_notifications').maybeSingle()
-  const smsOn = smsNotificationsEnabledFromSetting(smsSetting?.value)
   const due = (data || []).filter((row) => isBookingBoardRow(row) && reminderOffset(row.scheduled_start, today))
   const sent = []
 
@@ -84,11 +80,8 @@ export async function runDetailingBookingReminders(db, today = manilaTodayISO())
       }
     }
 
-    let smsStatus = 'skipped'
-    if (booking.customer_phone && smsOn) {
-      const sms = await busybeeSendSms({ phone: booking.customer_phone, message })
-      smsStatus = sms.status || (sms.ok ? 'sent' : 'failed')
-    }
+    // BusyBee SMS is restricted to live booking status updates; reminders deliver via Push + Inbox only.
+    const smsStatus = 'skipped'
     await db.from('sms_events').insert({
       phone: booking.customer_phone || '',
       message,
@@ -97,7 +90,8 @@ export async function runDetailingBookingReminders(db, today = manilaTodayISO())
       customer_id: booking.customer_id || null,
       provider: 'busybee',
       status: smsStatus,
-      sent_at: smsStatus === 'sent' ? new Date().toISOString() : null,
+      provider_response: 'status_sms_only',
+      sent_at: null,
     })
     sent.push({ id: booking.id, days, smsStatus })
   }

@@ -23,7 +23,7 @@ export function busybeeProviderStatusLabel(health) {
   if (code === 11) {
     return {
       tone: 'warn',
-      text: 'IP not whitelisted on BrandTxt — ask BusyBee to add this machine’s egress IP (or keep shop SMS off).',
+      text: 'IP not whitelisted on BrandTxt (ErrorCode 11) — check BrandTxt account settings.',
     }
   }
   if (code === 429 || health.status === 429 || health.http === 429) {

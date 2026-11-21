@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { buildBookingNotifyPayload, buildOpsNotifyCopy, buildOpsNotifyRule, isSilentRedoNotify, notifyBookingStatus } from '../server/notifyBooking.mjs'
+import { buildBookingNotifyPayload, buildOpsNotifyCopy, buildOpsNotifyRule, isEligibleStatusSmsBooking, isSilentRedoNotify, notifyBookingStatus } from '../server/notifyBooking.mjs'
 import { normalizePhMobile } from '../server/busybee.mjs'
 
 assert.equal(normalizePhMobile('09171234567'), '639171234567')
@@ -101,5 +101,14 @@ assert.doesNotMatch(walkIn.sms, /Walk-in/)
 const opsCopy = buildOpsNotifyCopy(booking, 'waiting')
 assert.equal(opsCopy.url, '/operations/queue')
 assert.match(opsCopy.body, /ABC1234/)
+
+// Strict SMS eligibility: Detailing, Services, and Packages only; merch/products excluded.
+assert.equal(isEligibleStatusSmsBooking({ service_name: 'Bacoor Wash', services: { pay_category: 'wash', slug: 'wash' } }), true)
+assert.equal(isEligibleStatusSmsBooking({ service_name: 'Wash + Wax Package', services: { pay_category: 'package', slug: 'wash-wax' } }), true)
+assert.equal(isEligibleStatusSmsBooking({ service_name: 'Ceramic Coating', services: { pay_category: 'detailing', slug: 'ceramic-coating' } }), true)
+assert.equal(isEligibleStatusSmsBooking({ service_name: 'ClearPro PPF', services: { pay_category: 'ppf', slug: 'paint-protection-film' } }), true)
+assert.equal(isEligibleStatusSmsBooking({ service_name: 'Hakum Keychain', services: { pay_category: 'merch', item_type: 'product', slug: 'hakum-keychain' } }), false)
+assert.equal(isEligibleStatusSmsBooking({ service_name: 'Latte', services: { pay_category: 'coffee', slug: 'caffe-latte' } }), false)
+assert.equal(isEligibleStatusSmsBooking({}), false)
 
 console.log('notifyBooking + busybee normalize: ok')

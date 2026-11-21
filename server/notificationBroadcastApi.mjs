@@ -1,11 +1,6 @@
-import { busybeeSendSms } from './busybee.mjs'
 import { deliverUserNotifications } from './webPush.mjs'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
-import {
-  renderNotificationMessage,
-  validateNotificationCopy,
-} from '../src/lib/notificationCopy.js'
-import { isSmsNotificationsEnabled } from './notifyBooking.mjs'
+import { validateNotificationCopy } from '../src/lib/notificationCopy.js'
 import { safeNotificationPath } from './notificationTargetUrl.mjs'
 import { resolveBroadcastAudience, resolveBroadcastDispatch } from './broadcastAudience.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
@@ -17,12 +12,6 @@ const BROADCAST_SELECT_EXTENDED =
   'id, kind, channel, title, body, url, target_audience, audience_group, employee_scope, employee_roles, allow_multipart, branch_slug, sent_count, failed_count, sent_at, updated_at'
 const BROADCAST_SELECT_LEGACY =
   'id, kind, channel, title, body, url, target_audience, branch_slug, sent_count, failed_count, sent_at'
-
-function firstName(fullName) {
-  const raw = String(fullName || '').trim()
-  if (!raw) return 'there'
-  return raw.split(/\s+/)[0]
-}
 
 async function loadStaff(db, token) {
   const { data: userData, error: userErr } = await db.auth.getUser(token)
@@ -257,12 +246,6 @@ export async function handleNotificationBroadcastRequest(req, res) {
   const targetAudience = dispatch.audienceGroup === 'employees' ? 'all' : resolved.audience
   const branchSlug = dispatch.branchSlug
 
-  const wantsSms =
-    (channel === 'sms' || channel === 'both') && dispatch.audienceGroup !== 'employees'
-  if (wantsSms && !(await isSmsNotificationsEnabled(db))) {
-    return json(res, 400, { error: 'Shop SMS is turned off. Enable SMS notifications first.' })
-  }
-
   let sent = 0
   let failed = 0
   let skipped = 0
@@ -346,64 +329,9 @@ export async function handleNotificationBroadcastRequest(req, res) {
         failed += delivered.push?.failed || 0
       }
     }
-
-    if (audience.length && wantsSms) {
-      const plateByCustomer = new Map()
-      const audienceIds = audience.map((c) => c.id).filter(Boolean)
-      for (let i = 0; i < audienceIds.length; i += 200) {
-        const chunk = audienceIds.slice(i, i + 200)
-        const { data: vehicles } = await db
-          .from('vehicles')
-          .select('customer_id, plate_number, updated_at')
-          .in('customer_id', chunk)
-          .eq('is_archived', false)
-          .order('updated_at', { ascending: false })
-          .limit(1000)
-        for (const v of vehicles || []) {
-          if (!plateByCustomer.has(v.customer_id) && v.plate_number) {
-            plateByCustomer.set(v.customer_id, v.plate_number)
-          }
-        }
-      }
-
-      const smsTargets = []
-      for (const c of audience) {
-        if (c.notify_sms === false || !c.phone) {
-          skipped += 1
-          continue
-        }
-        smsTargets.push(c)
-      }
-
-      const SMS_CONCURRENCY = 4
-      for (let i = 0; i < smsTargets.length; i += SMS_CONCURRENCY) {
-        const batch = smsTargets.slice(i, i + SMS_CONCURRENCY)
-        const settled = await Promise.allSettled(
-          batch.map((c) => {
-            const personalized = renderNotificationMessage(
-              `${title}\n${message}`,
-              {
-                name: firstName(c.full_name),
-                plate: plateByCustomer.get(c.id) || 'your car',
-              },
-              { keepMissing: true },
-            )
-            return busybeeSendSms({ phone: c.phone, message: personalized })
-          }),
-        )
-        for (const resItem of settled) {
-          if (resItem.status === 'fulfilled' && resItem.value?.ok !== false) {
-            sent += 1
-            customerSent += 1
-          } else {
-            failed += 1
-          }
-        }
-      }
-    }
   }
 
-  // Employees strictly receive In-App Inbox + Web Push — NEVER BusyBee SMS.
+  // Employees & customers receive In-App Inbox + Web Push only — NEVER BusyBee SMS.
   if (dispatch.audienceGroup === 'employees' || dispatch.audienceGroup === 'both') {
     const empRes = await resolveEmployeeIds(db, dispatch)
     if (empRes.error) return json(res, 400, { error: empRes.error })

@@ -9,28 +9,19 @@ import {
   renderRescheduleAckSms,
   rescheduleRequestDecision,
 } from '../src/lib/bookingReschedule.js'
-import { busybeeSendSms } from './busybee.mjs'
-import { isSmsNotificationsEnabled } from './notifyBooking.mjs'
 import { notifyStaffEvent } from './notifyOpsEvent.mjs'
 import { sendWebPushToUsers } from './webPush.mjs'
 
 const SELECT =
   'id, customer_id, customer_name, customer_phone, branch, status, vehicle_plate, vehicle_make, vehicle_model, scheduled_start, reschedule_requested_at, services(name, slug, pay_category), customers(full_name)'
 
-async function logSms(db, row) {
-  const { error } = await db.from('sms_events').insert(row)
-  if (!error) return
-  await db.from('sms_events').insert({
-    to_phone: row.phone,
-    body: row.message,
-    template_type: row.event_type,
-    status: row.status,
-  })
-}
-
 async function tellCustomer(db, booking, sms) {
   const userId = booking.customer_id
-  const result = { sms: null, inbox: null, push: null }
+  const result = {
+    sms: { ok: false, status: 'skipped', providerResponse: 'status_sms_only' },
+    inbox: null,
+    push: null,
+  }
   let prefs = null
   if (userId) {
     const { data } = await db
@@ -39,22 +30,6 @@ async function tellCustomer(db, booking, sms) {
       .eq('id', userId)
       .maybeSingle()
     prefs = data
-  }
-  const smsOn = await isSmsNotificationsEnabled(db)
-  if (booking.customer_phone && smsOn && customerNotifyAllowed(prefs, 'sms')) {
-    const sent = await busybeeSendSms({ phone: booking.customer_phone, message: sms })
-    result.sms = sent
-    await logSms(db, {
-      phone: booking.customer_phone,
-      message: sms,
-      event_type: 'booking_reschedule',
-      booking_id: booking.id,
-      customer_id: userId,
-      provider: 'busybee',
-      status: sent.status,
-      provider_response: sent.providerResponse || null,
-      sent_at: sent.status === 'sent' ? new Date().toISOString() : null,
-    })
   }
   if (userId && customerNotifyAllowed(prefs, 'push')) {
     const notice = {

@@ -2,12 +2,12 @@
  * Production SMS egress plan for BrandTxt (BusyBee).
  * Pure: no network. Used by docs + ops scripts.
  *
- * Permanent rule: BrandTxt requires the HTTP caller egress IP on their whitelist.
- * Vercel Functions use rotating public IPs unless Static IPs are enabled.
- * There is no client-side or API-key-only bypass in our stack.
+ * BrandTxt removed IP whitelisting on the HAKUM account (direct API key + ClientId
+ * auth from local and dynamic serverless hosts). Keep bypassExists = false and
+ * outbound-only / status-updates-only customer SMS rules intact.
  */
 export function brandTxtRequiresIpWhitelist() {
-  return true
+  return false
 }
 
 /** @typedef {'office_dev' | 'vercel_static' | 'dedicated_relay'} EgressSource */
@@ -16,6 +16,7 @@ export function brandTxtRequiresIpWhitelist() {
  * @returns {{
  *   product: string,
  *   outboundOnly: true,
+ *   statusUpdatesOnly: true,
  *   noOwnerSms: true,
  *   noInboundReplies: true,
  *   bypassExists: false,
@@ -27,25 +28,26 @@ export function productionSmsEgressPlan() {
   return {
     product: 'Hakum Auto Care',
     outboundOnly: true,
+    statusUpdatesOnly: true,
     noOwnerSms: true,
     noInboundReplies: true,
     bypassExists: false,
     permanentFix:
-      'Whitelist every fixed egress IP that will call app.brandtxt.io (office/dev + Vercel Static IPs, or a dedicated SMS relay with a static IP).',
+      'IP whitelisting is no longer required on account HAKUM; keep BUSYBEE_API_KEY and BUSYBEE_CLIENT_ID set in .env and Vercel Environment Variables.',
     sources: [
       {
         id: 'office_dev',
-        purpose: 'Local npm scripts / QA (IP drifts — re-check with check-busybee-egress.mjs)',
-        required: true,
+        purpose: 'Local npm scripts / QA balance check (direct BrandTxt HTTPS)',
+        required: false,
       },
       {
         id: 'vercel_static',
-        purpose: 'Production + Preview serverless SendSMS from the Hakum Vercel project',
-        required: true,
+        purpose: 'Production + Preview serverless SendSMS from Hakum Vercel project',
+        required: false,
       },
       {
         id: 'dedicated_relay',
-        purpose: 'Optional: small always-on host with static IP if Static IPs are unavailable',
+        purpose: 'Optional: dedicated SMS relay if egress pinning is ever re-enabled',
         required: false,
       },
     ],

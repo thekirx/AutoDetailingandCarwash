@@ -162,6 +162,10 @@ describe('Employee / Customer / Both broadcast dispatch & UI wiring contracts', 
     assert.equal(saEmpSms.ok, false)
     assert.equal(saEmpSms.status, 400)
 
+    const custSmsBroadcast = resolveBroadcastDispatch({ audience_group: 'customers', target_audience: 'all', channel: 'sms', staffRole: 'BossMich' })
+    assert.equal(custSmsBroadcast.ok, false)
+    assert.equal(custSmsBroadcast.status, 400)
+
     const saRoles = resolveBroadcastDispatch({
       audience_group: 'employees',
       employee_scope: 'roles',
@@ -191,5 +195,11 @@ describe('Employee / Customer / Both broadcast dispatch & UI wiring contracts', 
     const smsPage = read('src/pages/SmsPage.jsx')
     assert.match(smsPage, /\/api\/notifications\?operation=sms-templates/)
     assert.match(smsPage, /analyzeBusybeeSms/)
+    assert.match(smsPage, /Manual &amp; promo SMS disabled/)
+
+    const lifecycle = read('server/lifecycleSms.mjs')
+    assert.match(lifecycle, /status_sms_only/)
+    const busybeeApi = read('server/busybeeApi.mjs')
+    assert.match(busybeeApi, /Manual and promo SMS sending is disabled/)
   })
 })

@@ -1,10 +1,10 @@
-import { busybeeBalance, busybeeSendSms } from './busybee.mjs'
-import { bearer, clientIp, json, rateLimit, readJsonBody, setCors } from './httpUtil.mjs'
+import { busybeeBalance } from './busybee.mjs'
+import { bearer, clientIp, json, rateLimit, setCors } from './httpUtil.mjs'
 import { resolveActiveStaff } from './staffAuth.mjs'
 import { adminClient } from './supabaseAdmin.mjs'
 
 export async function handleBusybeeRequest(req, res) {
-  setCors(res, 'GET, POST, OPTIONS')
+  setCors(res, 'GET, OPTIONS')
   if (req.method === 'OPTIONS') {
     res.statusCode = 204
     res.end()
@@ -27,9 +27,9 @@ export async function handleBusybeeRequest(req, res) {
         return json(res, balance.ok ? 200 : 502, balance)
       }
 
-      const body = await readJsonBody(req)
-      const result = await busybeeSendSms({ phone: body.phone, message: body.message })
-      return json(res, result.ok ? 200 : 502, result)
+      return json(res, 403, {
+        error: 'Manual and promo SMS sending is disabled — BusyBee SMS is restricted to automated Detailing, Services & Packages booking status updates.',
+      })
     }
 
     return json(res, 405, { error: 'Method not allowed' })
