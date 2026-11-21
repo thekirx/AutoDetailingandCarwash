@@ -33,30 +33,56 @@ describe('Local branch SEO hubs, nearest locator, and blog SEO', () => {
     assert.equal(crumbs.itemListElement.length, 3)
   })
 
-  it('publishes all 8 open Branch × Service pages and resolves city/service aliases cleanly', async () => {
+  it('publishes all 25 Branch × Service pages across 5 cities and resolves city/service aliases cleanly', async () => {
     const {
+      COMPLETE_DETAILING_CATALOG,
       LOCAL_BRANCH_SERVICE_PAGES,
+      STUDIO_PRODUCTS_AND_BRANDS,
+      buildBranchCityJsonLd,
       buildBranchServiceJsonLd,
+      findLocalBranchPage,
       findLocalBranchServicePage,
     } = await import('../src/lib/localBranchPages.js')
 
-    assert.equal(LOCAL_BRANCH_SERVICE_PAGES.length, 8)
+    assert.equal(LOCAL_BRANCH_SERVICE_PAGES.length, 25)
+    assert.equal(COMPLETE_DETAILING_CATALOG.length, 14)
+    assert.equal(STUDIO_PRODUCTS_AND_BRANDS.length, 6)
 
     const bacoorPpf = findLocalBranchServicePage('bacoor', 'ppf')
     assert.equal(bacoorPpf?.redirected, false)
     assert.match(bacoorPpf?.page.seoTitle, /PPF Bacoor/i)
 
-    const aliasImusCeramic = findLocalBranchServicePage('imus', 'ceramic')
-    assert.equal(aliasImusCeramic?.redirected, true)
-    assert.equal(aliasImusCeramic?.canonicalCitySlug, 'bacoor')
-    assert.equal(aliasImusCeramic?.canonicalServiceSlug, 'ceramic-coating')
+    const batangasWash = findLocalBranchServicePage('batangas', 'car-wash')
+    assert.equal(batangasWash?.redirected, false)
+    assert.match(batangasWash?.page.seoTitle, /Batangas Car Wash/i)
+    assert.match(batangasWash?.page.aiSummary || '', /Batangas City/)
+
+    const imusCeramic = findLocalBranchServicePage('imus', 'ceramic-coating')
+    assert.equal(imusCeramic?.redirected, false)
+    assert.equal(imusCeramic?.canonicalCitySlug, 'imus')
+
+    const aliasMolinoCeramic = findLocalBranchServicePage('molino', 'ceramic')
+    assert.equal(aliasMolinoCeramic?.redirected, true)
+    assert.equal(aliasMolinoCeramic?.canonicalCitySlug, 'bacoor')
+    assert.equal(aliasMolinoCeramic?.canonicalServiceSlug, 'ceramic-coating')
+
+    const aliasBatangasTint = findLocalBranchServicePage('alangilan', 'tint')
+    assert.equal(aliasBatangasTint?.redirected, true)
+    assert.equal(aliasBatangasTint?.canonicalCitySlug, 'batangas')
+    assert.equal(aliasBatangasTint?.canonicalServiceSlug, 'window-tint')
 
     const ld = buildBranchServiceJsonLd(bacoorPpf.page)
     const types = ld['@graph'].map((n) => n['@type'])
     assert.ok(types.includes('Service'))
     assert.ok(types.includes('BreadcrumbList'))
     assert.ok(types.includes('FAQPage'))
+    const serviceNode = ld['@graph'].find((n) => n['@type'] === 'Service')
+    assert.ok(serviceNode?.hasOfferCatalog?.itemListElement?.length >= 1)
     assert.equal(JSON.stringify(ld).includes('aggregateRating'), false)
+
+    const batangasCityLd = buildBranchCityJsonLd(findLocalBranchPage('batangas'))
+    const batangasStudio = batangasCityLd['@graph'].find((n) => n['@type'] === 'AutomotiveBusiness')
+    assert.equal(batangasStudio?.hasOfferCatalog?.itemListElement?.length, 14)
   })
 
   it('ranks open branches accurately for Bacoor, Imus, and Batangas City queries', async () => {
@@ -108,28 +134,18 @@ describe('Local branch SEO hubs, nearest locator, and blog SEO', () => {
     assert.ok(Array.isArray(ld.spatialCoverage) && ld.spatialCoverage.length >= 2)
   })
 
-  it('includes /blog, 5 city hubs, 8 local service pages, AI bots, and excludes low-value legal/form routes from sitemap', () => {
+  it('includes /blog, 5 city hubs, all 25 branch×service pages, AI bots, and excludes low-value legal/form routes from sitemap', () => {
     const app = read('src/App.jsx')
     assert.match(app, /path="\/branches\/:citySlug\/:serviceSlug"/)
 
     const sitemap = read('public/sitemap.xml')
-    for (const p of [
-      '/blog',
-      '/branches/bacoor',
-      '/branches/batangas',
-      '/branches/imus',
-      '/branches/dasmarinas',
-      '/branches/cavite',
-      '/branches/bacoor/car-wash',
-      '/branches/bacoor/ceramic-coating',
-      '/branches/bacoor/ppf',
-      '/branches/bacoor/window-tint',
-      '/branches/batangas/car-wash',
-      '/branches/batangas/ceramic-coating',
-      '/branches/batangas/ppf',
-      '/branches/batangas/window-tint',
-      '/blog/best-car-wash-detailing-dasmarinas',
-    ]) {
+    for (const city of ['bacoor', 'batangas', 'imus', 'dasmarinas', 'cavite']) {
+      assert.match(sitemap, new RegExp(`https://www\\.hakumautocare\\.com/branches/${city}<`))
+      for (const svc of ['car-wash', 'auto-detailing', 'ceramic-coating', 'ppf', 'window-tint']) {
+        assert.match(sitemap, new RegExp(`https://www\\.hakumautocare\\.com/branches/${city}/${svc}<`))
+      }
+    }
+    for (const p of ['/blog', '/blog/best-car-wash-detailing-dasmarinas', '/blog/best-car-wash-detailing-batangas-city']) {
       assert.match(sitemap, new RegExp(`https://www\\.hakumautocare\\.com${p.replace(/\//g, '\\/')}<`))
     }
     for (const excluded of ['/complaints', '/terms', '/privacy', '/cookies']) {

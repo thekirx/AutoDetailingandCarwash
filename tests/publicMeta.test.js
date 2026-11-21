@@ -323,10 +323,11 @@ test('regional SEO guides cover Bacoor, Batangas City, Imus, and Cavite separate
   assert.ok(slugs.includes('best-car-wash-detailing-bacoor'), 'Bacoor dedicated guide must exist')
   assert.ok(slugs.includes('best-car-wash-detailing-batangas-city'), 'Batangas City dedicated guide must exist')
   assert.ok(slugs.includes('best-car-wash-detailing-imus'), 'Imus dedicated guide must exist')
+  assert.ok(slugs.includes('best-car-wash-detailing-dasmarinas'), 'Dasmariñas dedicated guide must exist')
   assert.ok(slugs.includes('best-auto-detailing-ceramic-coating-ppf-cavite'), 'Cavite province guide must exist')
 
   const pillarIds = SEO_REGIONAL_PILLARS.map((p) => p.id)
-  assert.deepEqual(pillarIds, ['seo-bacoor', 'seo-batangas-city', 'seo-imus', 'seo-cavite'])
+  assert.deepEqual(pillarIds, ['seo-bacoor', 'seo-batangas-city', 'seo-imus', 'seo-dasmarinas', 'seo-cavite'])
   assert.ok(SEO_COMPARISON_ROWS.length >= 5, 'competitor comparison matrix must include core criteria')
   assert.ok(SEO_LOCAL_FAQS.length >= 4, 'local SEO FAQ list must include core questions')
 

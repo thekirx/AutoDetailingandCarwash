@@ -9,8 +9,12 @@ function tryAdminClient() {
 }
 import { extractContentMeta } from '../src/lib/contentBlocks.js'
 import {
+  COMPLETE_DETAILING_CATALOG,
   LOCAL_BRANCH_PAGES,
   LOCAL_BRANCH_SERVICE_PAGES,
+  LOCAL_SERVICE_PILLARS,
+  STUDIO_COMPARISON_ROWS,
+  STUDIO_PRODUCTS_AND_BRANDS,
   buildBranchCityJsonLd,
   buildBranchServiceJsonLd,
   findLocalBranchPage,
@@ -391,6 +395,7 @@ export function buildBranchCityCrawlerHtml({ cityPage, origin = ORIGIN } = {}) {
   const fullTitle = buildDocumentTitle(cityPage.seoTitle)
   const canonical = `${origin}/branches/${cityPage.slug}`
   const jsonLd = buildBranchCityJsonLd(cityPage, { origin })
+  const keywordsStr = Array.isArray(cityPage.keywords) ? cityPage.keywords.join(', ') : ''
 
   return `<!doctype html>
 <html lang="en">
@@ -399,6 +404,7 @@ export function buildBranchCityCrawlerHtml({ cityPage, origin = ORIGIN } = {}) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${escHtml(fullTitle)}</title>
     <meta name="description" content="${escHtml(cityPage.seoDescription)}" />
+    ${keywordsStr ? `<meta name="keywords" content="${escHtml(keywordsStr)}" />` : ''}
     <meta name="robots" content="index,follow,max-image-preview:large" />
     <link rel="canonical" href="${escHtml(canonical)}" />
     <link rel="alternate" hreflang="en-PH" href="${escHtml(canonical)}" />
@@ -421,19 +427,34 @@ export function buildBranchCityCrawlerHtml({ cityPage, origin = ORIGIN } = {}) {
       <nav aria-label="Breadcrumb"><a href="/">Home</a> · <a href="/branches">Branches</a> · <span>${escHtml(cityPage.cityName)}</span></nav>
       <h1>${escHtml(cityPage.h1)}</h1>
       <p><strong>${escHtml(cityPage.eyebrow)}</strong></p>
+      ${cityPage.aiSummary ? `<p><strong>Executive Summary:</strong> ${escHtml(cityPage.aiSummary)}</p>` : ''}
       <p>${escHtml(cityPage.heroSummary)}</p>
       <h2>Studio Address &amp; Service Corridors</h2>
       <p>${escHtml(cityPage.landmarkAddress)}</p>
       <p><strong>Corridors Served:</strong> ${escHtml(cityPage.corridors.join(', '))}</p>
       <h2>Studio Highlights</h2>
       <ul>${cityPage.highlights.map((h) => `<li>${escHtml(h)}</li>`).join('')}</ul>
-      <h2>Specialized Local Services</h2>
+      <h2>Specialized Local Services in ${escHtml(cityPage.shortName)}</h2>
       <ul>
-        <li><a href="/branches/${cityPage.slug}/car-wash">Car Wash &amp; Auto Detailing in ${escHtml(cityPage.shortName)}</a></li>
-        <li><a href="/branches/${cityPage.slug}/ceramic-coating">Ceramic Coating (Kisho 9H) in ${escHtml(cityPage.shortName)}</a></li>
-        <li><a href="/branches/${cityPage.slug}/ppf">Paint Protection Film (ClearPro PPF) in ${escHtml(cityPage.shortName)}</a></li>
-        <li><a href="/branches/${cityPage.slug}/window-tint">Nano Ceramic Window Tint in ${escHtml(cityPage.shortName)}</a></li>
+        ${LOCAL_SERVICE_PILLARS.map((svc) => `<li><a href="/branches/${cityPage.slug}/${svc.slug}">${escHtml(svc.label)} in ${escHtml(cityPage.shortName)}</a></li>`).join('\n        ')}
       </ul>
+      <h2>Complete 14-Service Detailing &amp; Paint Protection Menu</h2>
+      <ul>
+        ${COMPLETE_DETAILING_CATALOG.map((item) => `<li><strong>${escHtml(item.name)}:</strong> ${escHtml(item.summary)}</li>`).join('\n        ')}
+      </ul>
+      <h2>Certified Detailing Products &amp; Equipment Brands</h2>
+      <ul>
+        ${STUDIO_PRODUCTS_AND_BRANDS.map((b) => `<li><strong>${escHtml(b.brand)} (${escHtml(b.origin)}):</strong> ${escHtml(b.use)}</li>`).join('\n        ')}
+      </ul>
+      <h2>Workmanship Comparison: Hakum vs. Roadside Car Wash vs. Dealership</h2>
+      <table>
+        <thead>
+          <tr><th>Criterion</th><th>Hakum Auto Care (${escHtml(cityPage.shortName)})</th><th>Typical Roadside Car Wash</th><th>Dealership Package</th></tr>
+        </thead>
+        <tbody>
+          ${STUDIO_COMPARISON_ROWS.map((r) => `<tr><td>${escHtml(r.criteria)}</td><td>${escHtml(r.hakum)}</td><td>${escHtml(r.roadside)}</td><td>${escHtml(r.dealership)}</td></tr>`).join('\n          ')}
+        </tbody>
+      </table>
       <h2>Frequently Asked Questions</h2>
       ${cityPage.qa.map((qa) => `<details open><summary><strong>${escHtml(qa.q)}</strong></summary><p>${escHtml(qa.a)}</p></details>`).join('')}
       <nav aria-label="Call to action">
@@ -453,6 +474,8 @@ export function buildBranchServiceCrawlerHtml({ page, origin = ORIGIN } = {}) {
   const fullTitle = buildDocumentTitle(page.seoTitle)
   const canonical = `${origin}/branches/${page.citySlug}/${page.serviceSlug}`
   const jsonLd = buildBranchServiceJsonLd(page, { origin })
+  const keywordsStr = Array.isArray(page.keywords) ? page.keywords.join(', ') : ''
+  const relatedCatalog = COMPLETE_DETAILING_CATALOG.filter((item) => item.pillarSlug === page.serviceSlug)
 
   return `<!doctype html>
 <html lang="en">
@@ -461,6 +484,7 @@ export function buildBranchServiceCrawlerHtml({ page, origin = ORIGIN } = {}) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>${escHtml(fullTitle)}</title>
     <meta name="description" content="${escHtml(page.seoDescription)}" />
+    ${keywordsStr ? `<meta name="keywords" content="${escHtml(keywordsStr)}" />` : ''}
     <meta name="robots" content="index,follow,max-image-preview:large" />
     <link rel="canonical" href="${escHtml(canonical)}" />
     <link rel="alternate" hreflang="en-PH" href="${escHtml(canonical)}" />
@@ -488,11 +512,21 @@ export function buildBranchServiceCrawlerHtml({ page, origin = ORIGIN } = {}) {
       </nav>
       <h1>${escHtml(page.h1)}</h1>
       <p><strong>${escHtml(page.eyebrow)}</strong></p>
+      ${page.aiSummary ? `<p><strong>Quick Answer:</strong> ${escHtml(page.aiSummary)}</p>` : ''}
       <p>${escHtml(page.heroSummary)}</p>
       <h2>Service Process &amp; Standards</h2>
       <ol>${page.processSteps.map((s) => `<li>${escHtml(s)}</li>`).join('')}</ol>
       <h2>Local Studio Advantages</h2>
       <ul>${page.localHighlights.map((h) => `<li>${escHtml(h)}</li>`).join('')}</ul>
+      ${
+        relatedCatalog.length
+          ? `<h2>Included ${escHtml(page.serviceLabel)} Treatments</h2><ul>${relatedCatalog.map((item) => `<li><strong>${escHtml(item.name)}:</strong> ${escHtml(item.summary)}</li>`).join('')}</ul>`
+          : ''
+      }
+      <h2>Certified Detailing Products &amp; Brands</h2>
+      <ul>
+        ${STUDIO_PRODUCTS_AND_BRANDS.map((b) => `<li><strong>${escHtml(b.brand)} (${escHtml(b.origin)}):</strong> ${escHtml(b.use)}</li>`).join('\n        ')}
+      </ul>
       <h2>Frequently Asked Questions</h2>
       ${page.qa.map((qa) => `<details open><summary><strong>${escHtml(qa.q)}</strong></summary><p>${escHtml(qa.a)}</p></details>`).join('')}
       <nav aria-label="Actions">

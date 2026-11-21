@@ -1,44 +1,59 @@
-# Hakum Auto Care — SEO & AI Search Visibility Playbook
+# SEO & AI Visibility Architecture — Hakum Auto Care (`www.hakumautocare.com`)
 
-Verified baseline and implementation record for `https://www.hakumautocare.com`.
+**Last Updated:** 2026-11-21  
+**Canonical Origin:** `https://www.hakumautocare.com`  
+**Target Market / Locale:** Philippines (`en-PH`) — Cavite (Bacoor, Imus, Dasmariñas, General Trias, Kawit, Tagaytay) & Batangas (Batangas City, Alangilan, Kumintang, Pallocan, Balagtas, Bauan, Lipa)
 
-## Brand Positioning (Implemented)
-> "Hakum Auto Care is one of the fastest-growing and most trusted automotive detailing, paint protection (PPF & ceramic coating), and car wash studios in the Philippines, serving Bacoor, Imus, Cavite, and Batangas."
+---
 
-No fabricated aggregate ratings, unverified store addresses, or unverified awards are emitted in metadata or JSON-LD.
+## 1. Public URL Inventory & Indexation Policy
 
-## Public Indexable URL Inventory (Sitemap + Pre-rendered Static Route Shells)
-- `/` (`index.html`) — Flagship homepage (`Organization` + `WebSite` JSON-LD, semantic hero copy & studio links)
-- `/services` — Car Wash, Detailing, Ceramic Coating, ClearPro PPF & Ceramic Tint catalog
-- `/services/ppf`, `/services/ceramic`, `/services/tint`, `/services/wash-detailing`, `/tint-finder`
-- `/branches` — Branches overview + interactive "Find nearest car wash / detailing studio near me" (`NearestBranchFinder`) using GPS geolocation or quick-city presets (`Bacoor`, `Imus`, `Dasmariñas`, `Cavite`, `Batangas City`)
-- `/branches/bacoor` — Bacoor, Cavite flagship (`RFC Molino II, Molino Boulevard, Bacoor, Cavite`, `0915 629 6096`, Maps CID `38179785010672017`)
-- `/branches/batangas` — Batangas City flagship (`National Highway, Brgy. Alangilan, Batangas City`, `0956 007 1028`, Maps CID `9079854389115198830`)
-- `/branches/imus` — Imus, Cavite landing page routing Imus drivers to Bacoor flagship & upcoming Imus expansion
-- `/branches/dasmarinas` — Dasmariñas, Cavite landing page serving Pala-Pala, Salitran, Salawag & Aguinaldo Highway via nearby Bacoor bays & upcoming Dasmariñas expansion
-- `/branches/cavite` — Cavite province hub (Bacoor, Imus, Molino, Dasmariñas)
-- Branch × Service Local Intent Matrix (`8` dedicated studio pages with unique local road/weather craft copy, live starting prices, verified branch customer quotes, `Service` + `AutoWash` + `FAQPage` + `BreadcrumbList` JSON-LD):
-  - `/branches/bacoor/car-wash`, `/branches/bacoor/ceramic-coating`, `/branches/bacoor/ppf`, `/branches/bacoor/window-tint`
-  - `/branches/batangas/car-wash`, `/branches/batangas/ceramic-coating`, `/branches/batangas/ppf`, `/branches/batangas/window-tint`
-- `/book`, `/queue`, `/shop`, `/events`, `/contact` (`/complaints`, `/home`, `/queue/*/tv`, `/403`, `/404` set `noindex,nofollow`; legacy `/packages` -> `/services` and `/booking` -> `/book` use permanent `308` redirects in `vercel.json`)
-- `/blog` — Dedicated indexable blog hub (`best-car-wash-detailing-bacoor`, `batangas-city`, `imus`, `dasmarinas`, `cavite`, plus live Supabase CMS posts)
-- `/blog/:slug` — Built-in authority guides + live Supabase CMS posts with custom `seo_title`, `seo_description`, `seo_keywords`, `ai_summary`, and enhanced `BlogPosting` JSON-LD
+| Route Pattern | Count | Intended Index Status | Prerender & Crawler Rendering |
+| :--- | :---: | :--- | :--- |
+| `/` | 1 | `index,follow` (canonical) | `dist/index.html` |
+| `/services`, `/services/ppf`, `/services/ceramic`, `/services/tint`, `/services/wash-detailing`, `/tint-finder`, `/shop` | 7 | `index,follow` | Static build prerender + `/api/seo?operation=service-meta` |
+| `/branches` | 1 | `index,follow` | Static build prerender (`LocalBusiness` / `AutomotiveBusiness`) |
+| `/branches/:citySlug` (`bacoor`, `batangas`, `imus`, `cavite`, `dasmarinas`) | 5 | `index,follow` | Static build prerender + `/api/seo?operation=branch-meta` |
+| `/branches/:citySlug/:serviceSlug` (5 cities × 5 service pillars: `car-wash`, `auto-detailing`, `ceramic-coating`, `ppf`, `window-tint`) | 25 | `index,follow` | Static build prerender + `/api/seo?operation=branch-service-meta` (aliases return HTTP 301 to canonical) |
+| `/book`, `/queue`, `/events`, `/blog`, `/contact` | 5 | `index,follow` | Static build prerender (`Blog`, `ItemList`, `FAQPage`) |
+| `/blog/:slug` (7 built-in authority guides + live DB posts) | 7+ | `index,follow` (respects `noindex` & `scheduled` gates) | Static build prerender + `/api/seo?operation=blog-meta` |
+| `/events/:slug` (published DB events) | Dynamic | `index,follow` | `/api/seo?operation=event-meta` |
+| `/home`, `/complaints`, `/403`, `/404` | 4 | `noindex,nofollow` | Excluded from `sitemap.xml`; explicit `noindex` |
+| `/api/*`, `/operations/*`, `/app/*`, `/account/*`, `/signin`, `/signup`, `/queue/*/tv` | Gated | `noindex,nofollow` (`X-Robots-Tag` + `robots.txt` disallow) | Excluded from search & AI crawlers |
 
-## Gated / Non-Indexable Routes (`robots.txt`) & AI Crawler Policy
-Disallowed across crawlers: `/api/`, `/operations`, `/app`, `/account`, `/signin`, `/signup`, `/queue/*/tv`, `/403`, `/404` (plus `noindex,nofollow` enforced in `NotFoundPage.jsx` & `PublicPageMeta.jsx`, and `X-Robots-Tag: noindex, nofollow` in `vercel.json`).
-Explicitly allowed for Search & AI Citation crawlers: `Googlebot`, `Bingbot`, `Applebot`, `OAI-SearchBot`, `ChatGPT-User`, `Claude-SearchBot`, `PerplexityBot`, and `Google-Extended`.
-Selectively disallowed bulk scraper-only crawlers: `Bytespider`, `CCBot`.
-Discovery files: `https://www.hakumautocare.com/sitemap.xml` (dynamic live DB + static), `https://www.hakumautocare.com/rss.xml` (RSS 2.0), and `https://www.hakumautocare.com/llms.txt`.
+---
 
-## Optional Env-Gated Integrations (Operator Keys Required Outside Repo)
-- `INDEXNOW_KEY`: enables `/api/seo?operation=indexnow-key` verification and automatic IndexNow search-engine pings on blog publish in `server/provisionStaff.mjs`.
-- **Google Search Console / PageSpeed / GA4**: Not yet connected in `~/.config/claude-seo/google-api.json`; add Google credentials locally when ready for live GSC, CrUX, PageSpeed, and organic traffic telemetry.
+## 2. Keyword & Local Search Intent Map (Bacoor, Batangas & Regional Expansion)
 
-## Status Separation (Implemented vs Validated vs Submitted / Observed)
-- **Implemented in repo**:
-  - Updated copy, titles, canonicals, `hreflang` (`en-PH` & `x-default`), Open Graph (`og:type="article"` + `article:*` tags on posts), Twitter cards, and `WebSite` `SearchAction` across `index.html`, `PublicPageMeta.jsx`, `pageMeta.js`, `ServiceDetailPage.jsx`, `BlogPostPage.jsx`, and `NotFoundPage.jsx`.
-  - Pre-rendered 35 enriched static route HTML shells (`dist/<route>.html`, including `dist/home.html` as canonical `/` + `noindex,nofollow` and `dist/complaints.html` `noindex,nofollow` plus `dist/sitemap.xml` synced with `STATIC_SITEMAP_ROUTES`) generated by `scripts/prerender-seo.mjs` post-`vite build`.
-  - Applied live Supabase migrations `20261118170000`, `20261119120000` (WordPress blog taxonomy/SEO/scheduling schema), and `20261119140000` (index cleanup, trigger hardening, RLS policy consolidation).
-  - Submitted / External (Operator action required outside repo):
-    - In Google Search Console for `sc-domain:hakumautocare.com`, submit/resubmit `https://www.hakumautocare.com/sitemap.xml` and click **Validate Fix** once production deploys the enriched prerendered shells, `/home` fix, and focused sitemap.
-    - Optionally configure `INDEXNOW_KEY` in Vercel environment variables.
+| Target City / Hub | Primary & Inverted Keyword Permutations Covered | Canonical URL(s) |
+| :--- | :--- | :--- |
+| **Batangas City** *(Open Studio · National / PNP Hwy, Brgy. Alangilan)* | `batangas car wash`, `car wash batangas`, `batangas city car wash`, `car wash batangas city`, `best car wash in batangas city`, `car wash alangilan batangas`, `auto detailing batangas`, `interior detailing batangas`, `ceramic coating batangas`, `ppf batangas`, `ppf batangas city`, `window tint batangas`, `acid rain removal batangas`, `watermark removal batangas`, `engine wash batangas`, `bactozero batangas` | `/branches/batangas`, `/branches/batangas/car-wash`, `/branches/batangas/auto-detailing`, `/branches/batangas/ceramic-coating`, `/branches/batangas/ppf`, `/branches/batangas/window-tint`, `/blog/best-car-wash-detailing-batangas-city` |
+| **Bacoor, Cavite** *(Open Flagship · RFC Molino II, Molino Blvd)* | `bacoor car wash`, `car wash bacoor`, `best car wash in bacoor`, `car wash molino bacoor`, `auto detailing bacoor`, `interior detailing bacoor`, `ppf bacoor`, `bacoor ppf`, `ppf bacoor near me`, `paint protection film bacoor`, `clearpro ppf bacoor`, `ceramic coating bacoor`, `kisho ceramic coating bacoor`, `window tint bacoor`, `paint correction bacoor`, `watermark removal bacoor`, `bactozero bacoor`, `engine wash bacoor` | `/branches/bacoor`, `/branches/bacoor/car-wash`, `/branches/bacoor/auto-detailing`, `/branches/bacoor/ceramic-coating`, `/branches/bacoor/ppf`, `/branches/bacoor/window-tint`, `/blog/best-car-wash-detailing-bacoor` |
+| **Cavite Regional** *(All Corridors + Tagaytay / GenTri / Kawit)* | `cavite car wash`, `car wash cavite`, `auto detailing cavite`, `ceramic coating cavite`, `ppf cavite`, `clearpro ppf cavite`, `window tint cavite`, `paint correction cavite` | `/branches/cavite`, `/branches/cavite/*`, `/blog/best-auto-detailing-ceramic-coating-ppf-cavite` |
+| **Imus, Cavite** *(Vermosa, Buhay na Tubig, Aguinaldo Hwy + Upcoming Bay)* | `imus car wash`, `car wash imus`, `car wash imus cavite`, `auto detailing imus`, `ceramic coating imus`, `ppf imus`, `window tint imus`, `car wash near vermosa` | `/branches/imus`, `/branches/imus/*`, `/blog/best-car-wash-detailing-imus` |
+| **Dasmariñas, Cavite** *(Salawag, Paliparan, Salitran, Pala-Pala + Upcoming Bay)* | `dasmarinas car wash`, `car wash dasmarinas`, `dasma car wash`, `auto detailing dasmarinas`, `ceramic coating dasmarinas`, `ppf dasmarinas`, `window tint dasmarinas` | `/branches/dasmarinas`, `/branches/dasmarinas/*`, `/blog/best-car-wash-detailing-dasmarinas` |
+
+---
+
+## 3. Structured Data, Crawler Rendering & Technical Controls
+
+- **Single Source of Truth Architecture:** All 5 city hubs, 25 branch × service pages, 14-service catalog (`COMPLETE_DETAILING_CATALOG`), 6 verified brand partners (`STUDIO_PRODUCTS_AND_BRANDS`), and 5 workmanship benchmark rows (`STUDIO_COMPARISON_ROWS`) live in `src/lib/localBranchPages.js` and are consumed identically by React runtime pages, `scripts/prerender-seo.mjs`, and serverless crawler HTML generators in `server/seoApi.mjs`.
+- **Schema.org JSON-LD Graphs:**
+  - Every city hub emits `AutomotiveBusiness` + `AutoWash` + `OfferCatalog` (14 services) + verified `GeoCoordinates` + Google Maps `CID` (`hasMap`) + `BreadcrumbList` + `FAQPage`. No fabricated `aggregateRating` is ever emitted.
+  - Every branch × service page emits `Service` + `OfferCatalog` + `AutomotiveBusiness` + `BreadcrumbList` + `FAQPage`.
+- **AI Search & Answer Engine Readiness (GEO):**
+  - Front-loaded self-contained executive summary / quick answer callouts (`bd-ai-callout`) on every city hub and branch × service page.
+  - Structured HTML comparison tables (`bd-comparison-table`) and factual specifications (ClearPro Polyoptico TPU 10-year warranty, Kisho Japan Si-811/Si-901 9H ceramic, Rupes BigFoot, Menzerna Germany, ClearPro & F1 Nano-Ceramic Tint, Sonax/Meguiar's/Microtex).
+  - Full HTML delivery to crawlers that do not execute client JS (`OAI-SearchBot`, `ChatGPT-User`, `Claude-SearchBot`, `PerplexityBot`, `Googlebot`, `Bingbot`, `Applebot`) via both build-time pre-rendering (`dist/**/*.html`) and Vercel header-matched `/api/seo` crawler rewrites.
+  - Consolidated `public/robots.txt` (single `User-agent: *` block, explicit allow for search/AI-search bots, disallow for `Bytespider`/`CCBot` training scrapers).
+  - Updated `public/llms.txt` as an optional curated map for LLMs that inspect it (no ranking or AI inclusion guarantee implied).
+
+---
+
+## 4. Implementation Status vs. External Verification
+
+| Layer | Status | Scope & Notes |
+| :--- | :--- | :--- |
+| **Implemented in Code** | Done | 5 city hubs, 25 branch × service routes, 14-service catalog, 6 verified product brands, comparison tables, executive summary blocks, `OfferCatalog` + `FAQPage` JSON-LD, crawler SSR (`server/seoApi.mjs`), pre-renderer (`scripts/prerender-seo.mjs`), `public/sitemap.xml`, `public/llms.txt`, `vercel.json` 301s & bot rewrites |
+| **Validated Locally** | Verified | `npm test` (unit assertions on all 25 routes, aliases, schemas, crawler responses), `npm run lint`, `npm run audit:api-auth`, `npm run check`, `npm run build` |
+| **Submitted / Observed (Off-Repo Owner Actions)** | Pending Owner Action | 1) Re-submit `https://www.hakumautocare.com/sitemap.xml` in Google Search Console & Bing Webmaster Tools; 2) Verify Google Business Profile categories & website link on the Batangas City listing (`cid: 9079854389115198830`) point directly to `/branches/batangas` and encourage local Batangas City customer reviews naming specific services (car wash, ceramic coating, PPF) |

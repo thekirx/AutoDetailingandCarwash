@@ -14,7 +14,7 @@ import { loopSlides, useLoopRail } from '../components/public/bredesign/useLoopR
 import { CeramicSection, PpfInformationSection } from '../components/public/home/HomeServiceSections'
 import PpfPackagesSection from '../components/public/home/PpfPackagesSection'
 import { SERVICE_DETAIL_CONTENT } from '../data/serviceDetailContent'
-import { LOCAL_BRANCH_PAGES, LOCAL_BRANCH_SERVICE_PAGES } from '../lib/localBranchPages'
+import { LOCAL_BRANCH_SERVICE_PAGES } from '../lib/localBranchPages'
 import { buildServicePageJsonLd, usePageMeta } from '../lib/pageMeta'
 import { WASH_CARD_SERVICE_SLUG, formatStartingPrice, useStartingPrices } from '../lib/serviceStartingPrices'
 import '@/styles/seoLocal.css'
@@ -345,13 +345,12 @@ export default function ServiceDetailPage() {
   const pageDescription =
     SEO_DESCRIPTIONS[slug] || (section ? section.points.map(([t]) => t).join(' · ') : undefined)
   const localServiceSlug = LOCAL_SERVICE_SLUG_BY_DETAIL[slug]
-  const localBranchServices = useMemo(
-    () =>
-      localServiceSlug
-        ? LOCAL_BRANCH_SERVICE_PAGES.filter((p) => p.serviceSlug === localServiceSlug)
-        : [],
-    [localServiceSlug],
-  )
+  const localBranchServices = useMemo(() => {
+    if (!localServiceSlug) return []
+    const targetSlugs =
+      slug === 'wash-detailing' ? ['car-wash', 'auto-detailing'] : [localServiceSlug]
+    return LOCAL_BRANCH_SERVICE_PAGES.filter((p) => targetSlugs.includes(p.serviceSlug))
+  }, [localServiceSlug, slug])
   const serviceJsonLd = useMemo(
     () =>
       buildServicePageJsonLd({
@@ -434,16 +433,9 @@ export default function ServiceDetailPage() {
                   to={`/branches/${loc.citySlug}/${loc.serviceSlug}`}
                   className="bd-city-tile"
                 >
-                  <strong>{detail.serviceName} in {loc.shortCity}</strong>
+                  <strong>{loc.serviceLabel} in {loc.shortCity}</strong>
                   <p>{loc.eyebrow}</p>
                   <span>View {loc.shortCity} studio guide →</span>
-                </Link>
-              ))}
-              {LOCAL_BRANCH_PAGES.filter((c) => !c.isOpen).map((c) => (
-                <Link key={c.slug} to={`/branches/${c.slug}`} className="bd-city-tile">
-                  <strong>{detail.serviceName} Near {c.shortName}</strong>
-                  <p>{c.landmarkAddress}</p>
-                  <span>Directions from {c.shortName} →</span>
                 </Link>
               ))}
             </div>

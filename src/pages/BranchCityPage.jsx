@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
-import { ArrowUpRight, CheckCircle2, MapPin, Phone } from 'lucide-react'
+import { ArrowUpRight, CheckCircle2, MapPin, Phone, Sparkles } from 'lucide-react'
 import BdPageHero from '../components/public/bredesign/BdPageHero'
 import useReveal from '../components/public/bredesign/useReveal'
 import NearestBranchFinder from '../components/public/NearestBranchFinder'
@@ -9,8 +9,11 @@ import { branchDirections } from '../lib/homeBranches'
 import { formatHoursSummary, openNowLabel } from '../lib/branchOperatingHours'
 import {
   BRAND_POSITIONING,
+  COMPLETE_DETAILING_CATALOG,
   LOCAL_BRANCH_PAGES,
   LOCAL_SERVICE_PILLARS,
+  STUDIO_COMPARISON_ROWS,
+  STUDIO_PRODUCTS_AND_BRANDS,
   buildBranchCityJsonLd,
   findLocalBranchPage,
 } from '../lib/localBranchPages'
@@ -62,6 +65,7 @@ export default function BranchCityPage() {
           title: cityPage.seoTitle,
           description: cityPage.seoDescription,
           path: `/branches/${cityPage.slug}`,
+          keywords: (cityPage.keywords || []).join(', '),
           jsonLd,
           jsonLdId: `hakum-city-${cityPage.slug}`,
         }
@@ -115,6 +119,17 @@ export default function BranchCityPage() {
       </BdPageHero>
 
       <section aria-labelledby="city-overview-heading">
+        <div className="bd-shell">
+          {cityPage.aiSummary ? (
+            <aside className="bd-ai-callout bd-reveal" aria-label={`At a glance in ${cityPage.cityName}`}>
+              <p className="bd-ai-callout-label">
+                <Sparkles size={13} aria-hidden="true" /> Studio executive summary · {cityPage.cityName}
+              </p>
+              <p>{cityPage.aiSummary}</p>
+            </aside>
+          ) : null}
+        </div>
+
         <div className="bd-shell bd-city-grid">
           <article className="bd-city-panel bd-reveal">
             <p className="bd-eyebrow">Studio overview</p>
@@ -127,7 +142,7 @@ export default function BranchCityPage() {
             </ul>
 
             <p className="bd-eyebrow" style={{ marginTop: 22 }}>
-              Nearby areas we serve
+              Nearby areas &amp; corridors we serve in {cityPage.shortName}
             </p>
             <div className="bd-corridor-list">
               {cityPage.corridors.map((c) => (
@@ -180,6 +195,102 @@ export default function BranchCityPage() {
         </div>
       </section>
 
+      <section aria-labelledby="city-complete-catalog-heading">
+        <div className="bd-shell">
+          <div className="bd-head bd-reveal">
+            <div>
+              <p className="bd-eyebrow">Complete service &amp; product lineup</p>
+              <h2 id="city-complete-catalog-heading">
+                All Car Wash, Auto Detailing, Ceramic Coating &amp; PPF Services in {cityPage.shortName}
+              </h2>
+            </div>
+          </div>
+
+          <div className="bd-city-directory bd-reveal">
+            {LOCAL_SERVICE_PILLARS.map((svc) => (
+              <Link
+                key={svc.slug}
+                to={`/branches/${cityPage.slug}/${svc.slug}`}
+                className="bd-city-tile"
+              >
+                <strong>
+                  {svc.label} — {cityPage.shortName}
+                </strong>
+                <p>
+                  Available at Hakum {cityPage.branchSlug === 'batangas' ? 'Batangas City' : 'Bacoor'}
+                  {cityPage.isOpen ? '' : ` (serving ${cityPage.shortName})`}
+                </p>
+                <span>Open {cityPage.shortName} {svc.shortLabel} guide →</span>
+              </Link>
+            ))}
+          </div>
+
+          <div className="bd-catalog-grid bd-reveal">
+            {COMPLETE_DETAILING_CATALOG.map((item) => (
+              <article key={item.id} className="bd-city-tile">
+                <span className="bd-eyebrow">{item.category}</span>
+                <strong>{item.name}</strong>
+                <p>{item.summary}</p>
+                <Link to={`/branches/${cityPage.slug}/${item.pillarSlug}`}>
+                  Explore in {cityPage.shortName} →
+                </Link>
+              </article>
+            ))}
+          </div>
+
+          <div className="bd-head bd-reveal" style={{ marginTop: 32 }}>
+            <div>
+              <p className="bd-eyebrow">Certified studio chemistry &amp; hardware</p>
+              <h3>Detailing Products &amp; Protection Brands Used at Hakum {cityPage.shortName}</h3>
+            </div>
+          </div>
+          <div className="bd-catalog-grid bd-reveal">
+            {STUDIO_PRODUCTS_AND_BRANDS.map((b) => (
+              <article key={b.brand} className="bd-city-tile">
+                <span className="bd-eyebrow">{b.origin}</span>
+                <strong>{b.brand}</strong>
+                <p>{b.use}</p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="city-comparison-heading">
+        <div className="bd-shell">
+          <div className="bd-head bd-reveal">
+            <div>
+              <p className="bd-eyebrow">Workmanship benchmark</p>
+              <h2 id="city-comparison-heading">
+                Hakum Auto Care {cityPage.shortName} vs. Ordinary Roadside Car Wash &amp; Dealerships
+              </h2>
+            </div>
+          </div>
+          <div className="bd-comparison-table-wrap bd-reveal">
+            <table className="bd-comparison-table">
+              <thead>
+                <tr>
+                  <th scope="col">Detailing Standard</th>
+                  <th scope="col">Hakum Auto Care ({cityPage.shortName})</th>
+                  <th scope="col">Typical Roadside Car Wash</th>
+                  <th scope="col">Dealership Add-On Package</th>
+                </tr>
+              </thead>
+              <tbody>
+                {STUDIO_COMPARISON_ROWS.map((row) => (
+                  <tr key={row.criteria}>
+                    <td>{row.criteria}</td>
+                    <td>{row.hakum}</td>
+                    <td>{row.roadside}</td>
+                    <td>{row.dealership}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
       <section aria-labelledby="city-faq-heading">
         <div className="bd-shell">
           <div className="bd-head bd-reveal">
@@ -199,22 +310,18 @@ export default function BranchCityPage() {
             ))}
           </div>
 
-          <div className="bd-city-directory bd-reveal">
-            {LOCAL_SERVICE_PILLARS.map((svc) => (
-              <Link
-                key={svc.slug}
-                to={`/branches/${cityPage.branchSlug}/${svc.slug}`}
-                className="bd-city-tile"
-              >
-                <strong>{svc.label}</strong>
-                <p>
-                  Available at Hakum {cityPage.branchSlug === 'batangas' ? 'Batangas City' : 'Bacoor'}
-                  {cityPage.isOpen ? '' : ` (serving ${cityPage.shortName})`}
-                </p>
-                <span>Open {svc.shortLabel} guide →</span>
-              </Link>
-            ))}
-          </div>
+          {Array.isArray(cityPage.keywords) && cityPage.keywords.length ? (
+            <div className="bd-city-panel bd-reveal" style={{ marginTop: 22 }}>
+              <p className="bd-eyebrow">Popular local searches in {cityPage.cityName}</p>
+              <div className="bd-corridor-list">
+                {cityPage.keywords.map((kw) => (
+                  <span key={kw} className="bd-corridor-pill">
+                    {kw}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
 
           <div className="bd-city-directory bd-reveal">
             {LOCAL_BRANCH_PAGES.map((peer) => (

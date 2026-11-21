@@ -275,3 +275,70 @@
   color: var(--bd-ink-2);
   line-height: 1.6;
 }
+
+.bredesign .bd-comparison-table-wrap {
+  margin-top: 18px;
+  overflow-x: auto;
+  border-radius: 14px;
+  border: 1px solid var(--bd-rule);
+  background: var(--bd-navy-2);
+}
+
+.bredesign .bd-comparison-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--bd-ink-2);
+}
+
+.bredesign .bd-comparison-table th,
+.bredesign .bd-comparison-table td {
+  padding: 13px 16px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--bd-rule);
+}
+
+.bredesign .bd-comparison-table th {
+  background: var(--bd-navy);
+  color: var(--bd-paper);
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.bredesign .bd-comparison-table td:first-child {
+  font-weight: 600;
+  color: var(--bd-paper);
+  min-width: 170px;
+}
+
+.bredesign .bd-comparison-table td:nth-child(2) {
+  color: var(--bd-paper);
+  background: rgba(56, 114, 255, 0.06);
+}
+
+.bredesign .bd-comparison-table tr:last-child td {
+  border-bottom: none;
+}
+
+.bredesign .bd-catalog-grid {
+  margin-top: 18px;
+  display: grid;
+  gap: 14px;
+}
+
+@media (min-width: 760px) {
+  .bredesign .bd-catalog-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1080px) {
+  .bredesign .bd-catalog-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+

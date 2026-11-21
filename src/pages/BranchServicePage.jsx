@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
-import { ArrowUpRight, CheckCircle2, MapPin, Phone, ShieldCheck } from 'lucide-react'
+import { ArrowUpRight, CheckCircle2, MapPin, Phone, ShieldCheck, Sparkles } from 'lucide-react'
 import BdPageHero from '../components/public/bredesign/BdPageHero'
 import useReveal from '../components/public/bredesign/useReveal'
 import { fetchPublicBranchHours } from '../lib/branches'
 import { formatHoursSummary, openNowLabel } from '../lib/branchOperatingHours'
 import { branchDirections, branchPhone, MAIN_LINE } from '../lib/homeBranches'
 import {
+  COMPLETE_DETAILING_CATALOG,
   LOCAL_BRANCH_PAGES,
   LOCAL_BRANCH_SERVICE_PAGES,
   LOCAL_SERVICE_PILLARS,
+  STUDIO_COMPARISON_ROWS,
+  STUDIO_PRODUCTS_AND_BRANDS,
   buildBranchServiceJsonLd,
   findLocalBranchPage,
   findLocalBranchServicePage,
@@ -22,10 +25,11 @@ import { usePublicQueueCounts } from '../lib/usePublicQueueCounts'
 import '@/styles/seoLocal.css'
 
 const SERVICE_STARTING_HINT = {
-  'car-wash': 'Two-bucket pH-neutral wash, microfiber dry, and cabin vacuum',
-  'ceramic-coating': 'Includes iron/clay prep, Rupes correction & Kisho 9H curing',
-  ppf: 'Self-healing ClearPro optical TPU film · 10-year manufacturer warranty',
-  'window-tint': 'High heat-rejection non-metallic ceramic film · RFID friendly',
+  'car-wash': 'Two-bucket pH-neutral hand wash, snow-foam pre-soak, microfiber dry, engine wash & cabin vacuum',
+  'auto-detailing': 'Multi-stage Rupes + Menzerna paint correction, 1-day or 3–4 day interior detailing, acid-rain glass detailing & Bactozero',
+  'ceramic-coating': 'Includes iron/clay prep, digital micron gauge inspection, Rupes correction & Kisho 9H indoor curing',
+  ppf: 'Self-healing ClearPro optical TPU film (95 GU High Gloss, UltraSatin Matte, Cosmoblack) · 10-year manufacturer warranty',
+  'window-tint': 'High IR heat-rejection non-metallic F1 nano-ceramic film · 100% RFID/GPS friendly & 3D Tint Finder preview',
 }
 
 export default function BranchServicePage() {
@@ -70,6 +74,7 @@ export default function BranchServicePage() {
           title: page.seoTitle,
           description: page.seoDescription,
           path: `/branches/${page.citySlug}/${page.serviceSlug}`,
+          keywords: (page.keywords || cityPage?.keywords || []).join(', '),
           jsonLd,
           jsonLdId: `hakum-branch-service-${page.citySlug}-${page.serviceSlug}`,
         }
@@ -98,6 +103,7 @@ export default function BranchServicePage() {
   const siblingCitySameService = LOCAL_BRANCH_SERVICE_PAGES.filter(
     (s) => s.serviceSlug === page.serviceSlug && s.citySlug !== page.citySlug,
   )
+  const relatedCatalog = COMPLETE_DETAILING_CATALOG.filter((item) => item.pillarSlug === page.serviceSlug)
 
   return (
     <>
@@ -115,11 +121,12 @@ export default function BranchServicePage() {
         <nav className="bd-cta-row bd-page-hero-links" aria-label="Service actions">
           {page.mode === 'queue' ? (
             <Link className="bd-btn bd-btn-primary" to={`/queue/${page.branchSlug}`}>
-              Live {page.shortCity} queue{queueTotal != null ? ` (${queueTotal} waiting)` : ''}
+              Live {page.branchSlug === 'batangas' ? 'Batangas City' : 'Bacoor'} queue
+              {queueTotal != null ? ` (${queueTotal} waiting)` : ''}
             </Link>
           ) : (
             <Link className="bd-btn bd-btn-primary" to={`/book?branch=${encodeURIComponent(page.branchSlug)}`}>
-              Book at {page.shortCity}
+              Book at {page.branchSlug === 'batangas' ? 'Batangas City' : 'Bacoor'}
             </Link>
           )}
           <a className="bd-btn bd-btn-quiet" href={phone.href}>
@@ -134,6 +141,17 @@ export default function BranchServicePage() {
       </BdPageHero>
 
       <section aria-labelledby="branch-service-overview">
+        <div className="bd-shell">
+          {page.aiSummary ? (
+            <aside className="bd-ai-callout bd-reveal" aria-label={`${page.serviceLabel} summary in ${page.cityName}`}>
+              <p className="bd-ai-callout-label">
+                <Sparkles size={13} aria-hidden="true" /> Quick answer · {page.serviceLabel} in {page.cityName}
+              </p>
+              <p>{page.aiSummary}</p>
+            </aside>
+          ) : null}
+        </div>
+
         <div className="bd-shell bd-city-grid">
           <article className="bd-city-panel bd-reveal">
             <p className="bd-eyebrow">Studio process in {page.shortCity}</p>
@@ -202,6 +220,64 @@ export default function BranchServicePage() {
         </div>
       </section>
 
+      <section aria-labelledby="branch-service-packages-heading">
+        <div className="bd-shell">
+          <div className="bd-head bd-reveal">
+            <div>
+              <p className="bd-eyebrow">Included Treatments &amp; Chemistry</p>
+              <h2 id="branch-service-packages-heading">
+                {page.serviceLabel} Lineup &amp; Studio Brands in {page.shortCity}
+              </h2>
+            </div>
+          </div>
+
+          {relatedCatalog.length ? (
+            <div className="bd-catalog-grid bd-reveal">
+              {relatedCatalog.map((item) => (
+                <article key={item.id} className="bd-city-tile">
+                  <span className="bd-eyebrow">{item.category}</span>
+                  <strong>{item.name}</strong>
+                  <p>{item.summary}</p>
+                </article>
+              ))}
+            </div>
+          ) : null}
+
+          <div className="bd-catalog-grid bd-reveal" style={{ marginTop: 18 }}>
+            {STUDIO_PRODUCTS_AND_BRANDS.map((b) => (
+              <article key={b.brand} className="bd-city-tile">
+                <span className="bd-eyebrow">{b.origin}</span>
+                <strong>{b.brand}</strong>
+                <p>{b.use}</p>
+              </article>
+            ))}
+          </div>
+
+          <div className="bd-comparison-table-wrap bd-reveal" style={{ marginTop: 24 }}>
+            <table className="bd-comparison-table">
+              <thead>
+                <tr>
+                  <th scope="col">Quality Criterion</th>
+                  <th scope="col">Hakum Auto Care ({page.shortCity})</th>
+                  <th scope="col">Typical Roadside Car Wash</th>
+                  <th scope="col">Dealership Package</th>
+                </tr>
+              </thead>
+              <tbody>
+                {STUDIO_COMPARISON_ROWS.map((row) => (
+                  <tr key={row.criteria}>
+                    <td>{row.criteria}</td>
+                    <td>{row.hakum}</td>
+                    <td>{row.roadside}</td>
+                    <td>{row.dealership}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
       {reviews.length ? (
         <section aria-labelledby="branch-reviews-heading">
           <div className="bd-shell">
@@ -249,6 +325,19 @@ export default function BranchServicePage() {
             ))}
           </div>
 
+          {Array.isArray(page.keywords) && page.keywords.length ? (
+            <div className="bd-city-panel bd-reveal" style={{ marginTop: 22 }}>
+              <p className="bd-eyebrow">Related searches for {page.serviceLabel} in {page.cityName}</p>
+              <div className="bd-corridor-list">
+                {page.keywords.map((kw) => (
+                  <span key={kw} className="bd-corridor-pill">
+                    {kw}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <div className="bd-city-directory bd-reveal">
             {siblingServices.map((peer) => (
               <Link
@@ -274,11 +363,11 @@ export default function BranchServicePage() {
                 <span>Switch branch →</span>
               </Link>
             ))}
-            {LOCAL_BRANCH_PAGES.filter((c) => !c.isOpen).map((c) => (
+            {LOCAL_BRANCH_PAGES.map((c) => (
               <Link key={c.slug} to={`/branches/${c.slug}`} className="bd-city-tile">
-                <strong>Near {c.cityName}</strong>
+                <strong>{c.cityName} Studio Hub</strong>
                 <p>{c.landmarkAddress}</p>
-                <span>View {c.shortName} directions →</span>
+                <span>View {c.shortName} studio →</span>
               </Link>
             ))}
           </div>

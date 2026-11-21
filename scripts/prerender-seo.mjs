@@ -6,8 +6,11 @@ import { SERVICE_DETAIL_CONTENT } from '../src/data/serviceDetailContent.js'
 import { SEO_LOCAL_GUIDES, SEO_LOCAL_FAQS, buildBlogPostJsonLd, buildEventsBlogSeoJsonLd } from '../src/lib/seoLocalGuides.js'
 import { BRANCH_MAP_LISTINGS, MAIN_LINE, branchPhone } from '../src/lib/homeBranches.js'
 import {
+  COMPLETE_DETAILING_CATALOG,
   LOCAL_BRANCH_PAGES,
   LOCAL_BRANCH_SERVICE_PAGES,
+  STUDIO_COMPARISON_ROWS,
+  STUDIO_PRODUCTS_AND_BRANDS,
   buildBranchCityJsonLd,
   buildBranchServiceJsonLd,
 } from '../src/lib/localBranchPages.js'
@@ -263,11 +266,16 @@ function buildStaticRoutes() {
       jsonLdId: `hakum-city-${city.slug}`,
       h1: city.h1,
       bodyHtml: `
+        ${city.aiSummary ? `<p><strong>Executive Summary:</strong> ${esc(city.aiSummary)}</p>` : ''}
         <p>${esc(city.heroSummary)}</p>
         <p><strong>Location:</strong> ${esc(city.landmarkAddress)} · <strong>Phone:</strong> ${esc(city.phone?.display || MAIN_LINE.display)}</p>
         <ul>${city.highlights.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>
-        <h2>Popular Services in ${esc(city.shortName)}</h2>
-        <ul>${LOCAL_BRANCH_SERVICE_PAGES.filter((bs) => bs.citySlug === city.branchSlug).map((bs) => `<li><a href="/branches/${esc(bs.citySlug)}/${esc(bs.serviceSlug)}">${esc(bs.serviceLabel)} in ${esc(bs.cityName)}</a></li>`).join('')}</ul>
+        <h2>Services in ${esc(city.shortName)}</h2>
+        <ul>${LOCAL_BRANCH_SERVICE_PAGES.filter((bs) => bs.citySlug === city.slug).map((bs) => `<li><a href="/branches/${esc(bs.citySlug)}/${esc(bs.serviceSlug)}">${esc(bs.serviceLabel)} in ${esc(bs.cityName)}</a></li>`).join('')}</ul>
+        <h2>Complete 14-Service Detailing &amp; Protection Catalog</h2>
+        <ul>${COMPLETE_DETAILING_CATALOG.map((item) => `<li><strong>${esc(item.name)}:</strong> ${esc(item.summary)}</li>`).join('')}</ul>
+        <h2>Certified Studio Brands &amp; Chemistry</h2>
+        <ul>${STUDIO_PRODUCTS_AND_BRANDS.map((b) => `<li><strong>${esc(b.brand)} (${esc(b.origin)}):</strong> ${esc(b.use)}</li>`).join('')}</ul>
         <p>Serving: ${esc(city.corridors.join(', '))}.</p>
         ${faqHtml(`Questions in ${city.cityName}`, city.qa || [])}
       `,
@@ -275,6 +283,7 @@ function buildStaticRoutes() {
     ...LOCAL_BRANCH_SERVICE_PAGES.map((bs) => {
       const city = LOCAL_BRANCH_PAGES.find((c) => c.slug === bs.citySlug)
       const phone = branchPhone(bs.branchSlug) || MAIN_LINE
+      const relatedCatalog = COMPLETE_DETAILING_CATALOG.filter((item) => item.pillarSlug === bs.serviceSlug)
       return {
         path: `/branches/${bs.citySlug}/${bs.serviceSlug}`,
         title: bs.seoTitle,
@@ -283,12 +292,16 @@ function buildStaticRoutes() {
         jsonLdId: `hakum-branch-service-${bs.citySlug}-${bs.serviceSlug}`,
         h1: bs.h1,
         bodyHtml: `
+          ${bs.aiSummary ? `<p><strong>Quick Answer:</strong> ${esc(bs.aiSummary)}</p>` : ''}
           <p>${esc(bs.heroSummary)}</p>
           <p><strong>Studio:</strong> ${esc(city?.landmarkAddress || bs.cityName)} · <strong>Direct Phone:</strong> ${esc(phone.display)}</p>
           <h2>How We Deliver ${esc(bs.serviceLabel)} in ${esc(bs.shortCity)}</h2>
           <ol>${bs.processSteps.map((step) => `<li>${esc(step)}</li>`).join('')}</ol>
           <h2>Local Advantages</h2>
           <ul>${bs.localHighlights.map((item) => `<li>${esc(item)}</li>`).join('')}</ul>
+          ${relatedCatalog.length ? `<h2>Included Treatments</h2><ul>${relatedCatalog.map((item) => `<li><strong>${esc(item.name)}:</strong> ${esc(item.summary)}</li>`).join('')}</ul>` : ''}
+          <h2>Workmanship Comparison</h2>
+          <ul>${STUDIO_COMPARISON_ROWS.map((r) => `<li><strong>${esc(r.criteria)}:</strong> Hakum: ${esc(r.hakum)} (vs. Roadside: ${esc(r.roadside)})</li>`).join('')}</ul>
           <p>Areas served: ${esc((city?.corridors || []).join(', '))}.</p>
           ${faqHtml(`${bs.serviceLabel} in ${bs.shortCity} FAQ`, bs.qa || [])}
           <p><a href="/branches/${esc(bs.citySlug)}">All services in ${esc(bs.shortCity)}</a> · <a href="${esc(bs.serviceDetailRoute)}">National ${esc(bs.serviceLabel)} overview</a></p>

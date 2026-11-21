@@ -161,15 +161,17 @@ describe('Technical SEO & AI Visibility setup', () => {
   it('renders rich crawler HTML for branch cities, local services, and core services with Schema.org graph', async () => {
     const bacoorPage = findLocalBranchPage('bacoor')
     const cityHtml = buildBranchCityCrawlerHtml({ cityPage: bacoorPage })
-    assert.match(cityHtml, /<title>Best Car Wash, Auto Detailing, Ceramic Coating &amp; PPF in Bacoor, Cavite · Hakum Auto Care<\/title>/)
+    assert.match(cityHtml, /<title>Bacoor Car Wash &amp; Auto Detailing \| Ceramic Coating &amp; PPF Bacoor, Cavite · Hakum Auto Care<\/title>/)
     assert.match(cityHtml, /"@type":"AutomotiveBusiness"/)
+    assert.match(cityHtml, /"@type":"OfferCatalog"/)
     assert.match(cityHtml, /"@type":"FAQPage"/)
     assert.match(cityHtml, /href="https:\/\/www\.hakumautocare\.com\/branches\/bacoor"/)
     assert.match(cityHtml, /RFC Molino II/)
+    assert.match(cityHtml, /Executive Summary:/)
 
     const ppfMatch = findLocalBranchServicePage('bacoor', 'ppf')
     const serviceHtml = buildBranchServiceCrawlerHtml({ page: ppfMatch.page })
-    assert.match(serviceHtml, /<title>PPF Bacoor Near Me — ClearPro Self-Healing Paint Protection Film Bacoor, Cavite · Hakum Auto Care<\/title>/)
+    assert.match(serviceHtml, /<title>PPF Bacoor &amp; Bacoor PPF Near Me — ClearPro Self-Healing Paint Protection Film · Hakum Auto Care<\/title>/)
     assert.match(serviceHtml, /"@type":"Service"/)
     assert.match(serviceHtml, /"@type":"FAQPage"/)
     assert.match(serviceHtml, /ClearPro/)
@@ -196,10 +198,11 @@ describe('Technical SEO & AI Visibility setup', () => {
     await new Promise((resolve) => {
       const res = fakeRes((r) => {
         assert.equal(r.status, 200)
-        assert.match(r.body, /Bacoor/)
+        assert.match(r.body, /Batangas Car Wash/)
+        assert.match(r.body, /PNP Highway/)
         resolve()
       })
-      handleSeoRequest({ method: 'GET', url: '/api/seo?operation=branch-meta&citySlug=bacoor' }, res)
+      handleSeoRequest({ method: 'GET', url: '/api/seo?operation=branch-meta&citySlug=batangas' }, res)
     })
 
     await new Promise((resolve) => {
@@ -208,7 +211,7 @@ describe('Technical SEO & AI Visibility setup', () => {
         assert.equal(r.headers.Location, '/branches/bacoor/ceramic-coating')
         resolve()
       })
-      handleSeoRequest({ method: 'GET', url: '/api/seo?operation=branch-service-meta&citySlug=imus&serviceSlug=ceramic' }, res)
+      handleSeoRequest({ method: 'GET', url: '/api/seo?operation=branch-service-meta&citySlug=molino&serviceSlug=ceramic' }, res)
     })
   })
 })
