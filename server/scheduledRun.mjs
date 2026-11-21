@@ -1,4 +1,5 @@
 import { bearer } from './httpUtil.mjs'
+import { resolveActiveStaff } from './staffAuth.mjs'
 
 const RUN_ROLES = new Set(['BossMich', 'assistant_super_admin'])
 
@@ -20,12 +21,10 @@ export async function scheduledRunGate(req, db) {
   if (!token) return { status: 401, error: 'Unauthorized' }
   const { data: userData, error } = await db.auth.getUser(token)
   if (error || !userData?.user) return { status: 401, error: 'Unauthorized' }
-  const { data: staff } = await db
-    .from('staff_profiles')
-    .select('role, is_active')
-    .eq('id', userData.user.id)
-    .eq('is_active', true)
-    .maybeSingle()
+  const staff = await resolveActiveStaff(db, null, {
+    userId: userData.user.id,
+    select: 'role, is_active',
+  })
   if (!staff || !RUN_ROLES.has(staff.role)) return { status: 403, error: 'Forbidden' }
   return null
 }

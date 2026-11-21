@@ -1,9 +1,9 @@
 # Hakum Auto Care — Engineering & Operations Handoff Guide
 
-**Date:** 2026-11-18 (Asia/Manila)  
+**Date:** 2026-11-21 (Asia/Manila)  
 **Repository:** `https://github.com/thekirx/AutoDetailingandCarwash.git` (Branch: `main`)  
 **Production Domain:** `https://www.hakumautocare.com` (Vercel + Supabase `lybxhpzzqqyqswvuwpxv`)  
-**Current Baseline:** `main` with sidebar/routing consolidation + server staff auth & customer CRUD hardening (`server/staffAuth.mjs`, `server/customerAdminApi.mjs`, `server/vehicleTransferApi.mjs`, `server/smartSearchApi.mjs`, `tests/customerAdminCrud.test.js`)  
+**Current Baseline:** `main` with full-stack security/advisor hardening (`20261121180000`, `20261121190000` applied live), centralized `server/staffAuth.mjs` (`requireActiveStaff` + `resolveActiveStaff`), zero-PII unauthenticated customer lookup, live DB-backed `/shop` + `shop_inquiry` reservation funnel, Nov 2026 Legal pages, `9` built-in + `2` studio guides synced in live `public.blogs`, canonical `publicSeoCatalog.js`, and bundle splitting (`index-*.js` ~`383 kB`).  
 
 This document is the primary onboarding brief for the next AI engineer or technical lead picking up Hakum Auto Care. Read this together with the persistent Graphify knowledge graph before modifying code.
 
@@ -32,8 +32,8 @@ This document is the primary onboarding brief for the next AI engineer or techni
 | Layer | Technology & Entrypoints | Key Rules |
 |---|---|---|
 | **Frontend SPA / PWA** | React 19 + Vite 6 + Tailwind v4 (`src/App.jsx`, `vite.config.js`) | PWA via `vite-plugin-pwa` (`public/manifest.webmanifest`, `public/push-sw.js`) + `PwaUpdateBanner.jsx` (`/version.json` drift detection + safe auto-reload). |
-| **Static SEO Prerender** | `scripts/prerender-seo.mjs` (runs automatically in `npm run build`) | Writes 23 static HTML shells under `dist/` (`services`, local city hubs `/near-me/*`, `/branches/*`, `/blog/*`, etc.) with canonical tags, OpenGraph, and Schema.org JSON-LD. |
-| **API Gateway (`/api/*`)** | Thin Vercel serverless handlers in `api/*.js` delegating to `server/*.mjs` (mirrored locally in Vite dev) | **Strict contract**: Every `/api/*` call in the client must map to a handler/rewrite (`tests/apiRouteContract.test.js`), and every handler must authenticate or be explicitly exempted (`npm run audit:api-auth` scans 36 handlers). |
+| **Static SEO Prerender** | `scripts/prerender-seo.mjs` (runs automatically in `npm run build`) | Writes `57` static HTML shells under `dist/` (`services`, `shop`, `branches/*`, `blog/*`, `terms`, `privacy`, `cookies`, etc.) synced with canonical `src/lib/publicSeoCatalog.js`, OpenGraph, and Schema.org JSON-LD. |
+| **API Gateway (`/api/*`)** | Thin Vercel serverless handlers in `api/*.js` delegating to `server/*.mjs` (mirrored locally in Vite dev) | **Strict contract**: Every `/api/*` call in the client must map to a handler/rewrite (`tests/apiRouteContract.test.js`), staff endpoints delegate to `server/staffAuth.mjs`, and every handler must pass `npm run audit:api-auth` (`40` handlers scanned). |
 | **Database & Auth** | Supabase Postgres (`supabase/migrations/*`), PostgREST, Realtime (`supabase_realtime`), Auth (`PKCE` + `localStorage`) | Never touch historical migrations or fabricate RLS bypasses. Money calculations live in shared pure helpers (`src/lib/sheetFormulas.js`, `src/lib/dailySheet.js`, `src/lib/posSale.js`) aligned with SQL RPCs (`complete_pos_sale`, `submit_shift_close`, `review_shift_close`). |
 | **Domain Split** | Queue (`src/queue/`, `/operations/queue`) vs Bookings (`src/pages/BookingBoardPage.jsx`, `/operations/bookings`) | **Queue** = same-day wash / add-ons / wash packages. **Bookings** = multi-day detailing (`ceramic`, `tint`, `ppf`, `paint_maintenance`) enforced by `catalog_line_kind` and SQL triggers (`20261115223000`). |
 | **Branches** | `bacoor` & `batangas` = Active & Public; `dasmarinas` & `imus` = `coming_soon = true, is_active = false, is_public = true` | Operational branch dropdowns filter via `filterFormBranchSlugs` (so public/staff ops forms only show active branches), while SEO/local discovery highlights Bacoor, Cavite/Dasmariñas, Imus, and Batangas. |
@@ -97,7 +97,7 @@ This document is the primary onboarding brief for the next AI engineer or techni
 
 All code/test checks ran against the current working tree after the final code/test edit:
 - `npm run lint` (`0`), `npm test` (`2715/2715` across `608` suites), `npm run check` (`ok`), `npm run audit:api-auth` (`ok`), `npm run build` (`485` SW precache entries + `23` static SEO HTML shells), `npm run test:browser` (`41/41`), and live headless Chromium verification (`72/72` checks across all 17 BossMich sidebar routes, redirects, `?tab=recon` sync, `?q=` pre-fill & clearing, `boss`, `admin`, `investor`, `opslead`, `0` console/page/HTTP `>=400` errors).
-- Live Supabase (`lybxhpzzqqyqswvuwpxv`) already has all migrations through `20261116190000` applied cleanly (`20261116120000`, `20261116180000`, `20261116190000`), with `0` unindexed FKs and `0` redundant prefix indexes.
+- Live Supabase (`lybxhpzzqqyqswvuwpxv`) has migrations through `20261121190000` applied cleanly (`20261120200000`, `20261121180000`, `20261121190000`), `0` `security_definer_view` errors, `0` `auth_rls_initplan`/`multiple_permissive_policies` warnings, `0` unindexed FKs, `11` published blog posts synced in `public.blogs`, `0` placeholder product descriptions, and verified Google Review URLs populated for `bacoor` and `batangas`.
 
 > **Note on Production & Vercel:** Commit/push `main` to deploy to `www.hakumautocare.com` / `hakumauto.vercel.app`.
 

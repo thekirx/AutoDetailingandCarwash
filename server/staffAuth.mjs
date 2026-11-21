@@ -5,6 +5,40 @@
 import { getBranchScopeList } from '../src/auth/permissions.js'
 
 /**
+ * Resolve an active, non-archived `staff_profiles` row without throwing on
+ * missing/unauthenticated callers (returns `null` when invalid/inactive/archived).
+ */
+export async function resolveActiveStaff(
+  admin,
+  accessToken,
+  {
+    select = 'id, role, is_active, permission_grants, branch_slug',
+    userId = null,
+  } = {},
+) {
+  let resolvedUserId = userId
+  if (!resolvedUserId) {
+    if (!accessToken) return null
+    const { data: userRes, error: authErr } = await admin.auth.getUser(accessToken)
+    if (authErr || !userRes?.user?.id) return null
+    resolvedUserId = userRes.user.id
+  }
+
+  const { data: staff, error: staffErr } = await admin
+    .from('staff_profiles')
+    .select(select)
+    .eq('id', resolvedUserId)
+    .eq('is_active', true)
+    .eq('is_archived', false)
+    .maybeSingle()
+
+  if (staffErr) {
+    throw Object.assign(new Error(staffErr.message), { status: 500 })
+  }
+  return staff || null
+}
+
+/**
  * Verify a Supabase JWT, load the active non-archived `staff_profiles` row, run
  * an optional role/capability predicate, and hydrate assigned branch slugs.
  */

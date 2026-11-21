@@ -3,6 +3,7 @@
  * Branch Admin / TL: scoped to their branch(es). SA / ASA / Sales / Marketing: all branches.
  */
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
+import { resolveActiveStaff } from './staffAuth.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
 import {
   HISTORY_ROLES,
@@ -54,13 +55,10 @@ export async function handleCustomerHistoryRequest(req, res) {
     const { data: userData, error: userErr } = await db.auth.getUser(token)
     if (userErr || !userData?.user) return json(res, 401, { error: 'Unauthorized' })
 
-    const { data: staff } = await db
-      .from('staff_profiles')
-      .select('id, role, is_active, is_archived, branch_slug, permission_grants')
-      .eq('id', userData.user.id)
-      .eq('is_active', true)
-      .eq('is_archived', false)
-      .maybeSingle()
+    const staff = await resolveActiveStaff(db, null, {
+      userId: userData.user.id,
+      select: 'id, role, is_active, is_archived, branch_slug, permission_grants',
+    })
     if (!staff || !HISTORY_ROLES.includes(staff.role)) {
       return json(res, 403, { error: 'Forbidden' })
     }

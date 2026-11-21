@@ -5,6 +5,7 @@
  */
 import { adminDb, sendLifecycleSms } from './lifecycleSms.mjs'
 import { bearer, json, readJsonBody, setCors, clientIp, rateLimit } from './httpUtil.mjs'
+import { resolveActiveStaff } from './staffAuth.mjs'
 
 const POS_ROLES = new Set(['admin', 'BossMich', 'assistant_super_admin'])
 
@@ -77,12 +78,7 @@ export async function handleLifecycleSmsRequest(req, res) {
     }
 
     if (kind === 'loyalty_claim') {
-      const { data: staff } = await db
-        .from('staff_profiles')
-        .select('role, is_active')
-        .eq('id', user.id)
-        .eq('is_active', true)
-        .maybeSingle()
+      const staff = await resolveActiveStaff(db, null, { userId: user.id, select: 'role, is_active' })
       if (!staff || !POS_ROLES.has(staff.role)) return json(res, 403, { error: 'Forbidden' })
 
       const customerId = String(body.customer_id || '').trim()

@@ -16,7 +16,9 @@ Short vocabulary for audits and architecture reviews. Expand as seams deepen.
 | Handoff | Queue → POS payment transfer (`pos_handoffs` / sale) |
 | ASA | `assistant_super_admin` with `permission_grants` toggles |
 | Branch scope | `getBranchScopeList` / `user_has_branch_access` — null = all sites |
-| Public queue | DEFINER views projecting only branch/queue_number/status |
+| Public queue | Narrow `SECURITY DEFINER` RPCs (`get_public_queue_counts`, `get_public_queue_floor`, `get_public_home_stats`) projecting branch/queue/status counts |
+| Public shop catalog | Narrow `SECURITY DEFINER` RPC `get_public_shop_catalog()` exposing resellable merch/coffee items and boolean branch availability to `/shop`; reservations submit `shop_inquiry` → `contact_inquiries` via `/api/public-inquiry` |
+| Staff API auth | Shared `server/staffAuth.mjs` (`requireActiveStaff` and `resolveActiveStaff`) enforcing `is_active = true` AND `is_archived = false` across all server API handlers |
 | Cars catalog | Super Admin `/operations/cars` — `vehicle_catalog` make/model + `size_slug` (`small` \| `medium` \| `large` \| `extra_large`). Active rows feed the floor/book picker. Size auto-fills `bookings.vehicle_type` for service/package prices; TL/customer may override |
 | Car size | Bay/pricing tier from body footprint. Small = sedans/hatchbacks · Medium = crossovers · Large = SUVs/pickups/larger MPVs · Extra Large = full-size vans/people movers. Same slugs as `service_size_prices`. Legacy `sedan`→small, `suv`/`pickup`→large, `van`→extra_large, `motorcycle`→small |
 | Data Center | Super Admin only. Catalog/CRM importable; floor/finance export-only (PITR). Standard purge: archived tickets/vehicles/customers (FK-safe) + 90d logs / 365d audit |

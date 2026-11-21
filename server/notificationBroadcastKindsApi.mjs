@@ -1,4 +1,5 @@
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
+import { resolveActiveStaff } from './staffAuth.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
 
 const READ_ROLES = new Set(['BossMich', 'assistant_super_admin', 'marketing'])
@@ -8,15 +9,7 @@ const SELECT_COLS =
   'id, slug, label, description, default_title, default_body, display_order, is_active, created_at, updated_at'
 
 async function loadStaff(db, token) {
-  const { data: userData, error: userErr } = await db.auth.getUser(token)
-  if (userErr || !userData?.user) return null
-  const { data: staff } = await db
-    .from('staff_profiles')
-    .select('id, role, is_active')
-    .eq('id', userData.user.id)
-    .eq('is_active', true)
-    .maybeSingle()
-  return staff
+  return resolveActiveStaff(db, token, { select: 'id, role, is_active' })
 }
 
 function slugify(raw) {

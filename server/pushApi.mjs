@@ -1,6 +1,7 @@
 import { resolvePushTargets, sendWebPushToUsers } from './webPush.mjs'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
 import { safeNotificationPath } from './notificationTargetUrl.mjs'
+import { resolveActiveStaff } from './staffAuth.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
 
 /**
@@ -70,17 +71,9 @@ export async function handleSendPushRequest(req, res) {
     let staffRole = null
     if (token && !isService) {
       const db = admin()
-      const { data: userData } = await db.auth.getUser(token)
-      if (userData?.user) {
-        const { data: staff } = await db
-          .from('staff_profiles')
-          .select('role, is_active')
-          .eq('id', userData.user.id)
-          .eq('is_active', true)
-          .maybeSingle()
-        staffOk = Boolean(staff)
-        staffRole = staff?.role || null
-      }
+      const staff = await resolveActiveStaff(db, token, { select: 'role, is_active' })
+      staffOk = Boolean(staff)
+      staffRole = staff?.role || null
     }
 
     if (!isService && !staffOk) {
@@ -158,8 +151,8 @@ export async function handlePushSubscribeRequest(req, res) {
 
     let role = null
     let branch_slug = null
-    const { data: staff } = await db.from('staff_profiles').select('role, branch_slug, is_active').eq('id', userId).maybeSingle()
-    if (staff && staff.is_active !== false) {
+    const staff = await resolveActiveStaff(db, null, { userId, select: 'role, branch_slug, is_active' })
+    if (staff) {
       role = staff.role
       branch_slug = staff.branch_slug
     } else {

@@ -2,6 +2,7 @@
  * Send finance quotation email via Resend REST (no SDK dep).
  * Env: RESEND_API_KEY, RESEND_FROM (optional, defaults to onboarding@resend.dev)
  */
+import { resolveActiveStaff } from './staffAuth.mjs'
 import { adminClient } from './supabaseAdmin.mjs'
 
 const WRITE_ROLES = new Set(['BossMich', 'admin', 'assistant_super_admin'])
@@ -12,12 +13,10 @@ export async function sendFinanceQuote({ accessToken, body }) {
   const { data: userData, error: userErr } = await admin.auth.getUser(accessToken)
   if (userErr || !userData?.user) throw Object.assign(new Error('Unauthorized'), { status: 401 })
 
-  const { data: staff } = await admin
-    .from('staff_profiles')
-    .select('id, role, permission_grants, is_active')
-    .eq('id', userData.user.id)
-    .eq('is_active', true)
-    .maybeSingle()
+  const staff = await resolveActiveStaff(admin, null, {
+    userId: userData.user.id,
+    select: 'id, role, permission_grants, is_active',
+  })
 
   if (!staff || !WRITE_ROLES.has(staff.role)) {
     throw Object.assign(new Error('Forbidden'), { status: 403 })

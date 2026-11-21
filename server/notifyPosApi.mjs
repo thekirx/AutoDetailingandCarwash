@@ -5,6 +5,7 @@
 import { canAccessPos } from '../src/auth/permissions.js'
 import { notifyPosEvent } from './notifyPos.mjs'
 import { bearer, json, readJsonBody, setCors, clientIp, rateLimit } from './httpUtil.mjs'
+import { resolveActiveStaff } from './staffAuth.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
 
 const EVENTS = new Set(['sale', 'expense'])
@@ -26,12 +27,10 @@ export async function handleNotifyPosRequest(req, res) {
     const { data: userData } = await db.auth.getUser(token)
     if (!userData?.user) return json(res, 401, { error: 'Unauthorized' })
 
-    const { data: staff } = await db
-      .from('staff_profiles')
-      .select('id, role, is_active, permission_grants, branch_slug')
-      .eq('id', userData.user.id)
-      .eq('is_active', true)
-      .maybeSingle()
+    const staff = await resolveActiveStaff(db, null, {
+      userId: userData.user.id,
+      select: 'id, role, is_active, permission_grants, branch_slug',
+    })
     if (!canAccessPos(staff)) return json(res, 403, { error: 'Forbidden' })
 
     const body = await readJsonBody(req)

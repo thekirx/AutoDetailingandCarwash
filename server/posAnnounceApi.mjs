@@ -11,6 +11,7 @@ import { createHash } from 'node:crypto'
 import { canAccessPos, getBranchScopeList } from '../src/auth/permissions.js'
 import { buildPaymentAnnouncement } from '../src/lib/paymentAnnouncement.js'
 import { bearer, json, readJsonBody, setCors, clientIp, rateLimit } from './httpUtil.mjs'
+import { resolveActiveStaff } from './staffAuth.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
@@ -336,12 +337,10 @@ export async function handlePosAnnounceRequest(req, res) {
     const { data: userData } = await db.auth.getUser(token)
     if (!userData?.user) return json(res, 401, { error: 'Unauthorized' }, req)
 
-    const { data: staff } = await db
-      .from('staff_profiles')
-      .select('id, role, is_active, permission_grants, branch_slug')
-      .eq('id', userData.user.id)
-      .eq('is_active', true)
-      .maybeSingle()
+    const staff = await resolveActiveStaff(db, null, {
+      userId: userData.user.id,
+      select: 'id, role, is_active, permission_grants, branch_slug',
+    })
     if (!canAccessPos(staff)) return json(res, 403, { error: 'Forbidden' }, req)
 
     const body = await readJsonBody(req)

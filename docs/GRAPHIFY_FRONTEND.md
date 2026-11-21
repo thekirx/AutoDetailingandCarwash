@@ -57,7 +57,7 @@ Detailer is on queue **viewer** capabilities for floor visibility / Failed QA co
 
 Vite `attachHakumApis` + Vercel `api/{bookings,customer,data-center,demo-login,finance,health,notifications,public-inquiry,seo,staff}.js` (`10` functions under Hobby `12` cap) → `server/*.mjs`.
 
-Paths: provision-customer/staff, update-staff, smart-search, customer-portal/signup/auth-lookup/history, public-book/inquiry, plate-lookup, booking-status, maintenance-schedules, push-subscribe/send-push, notify-* (booking, ops-form, planner, pos, shift-close, ops-lab), lifecycle-sms, busybee, notification-*, notification-templates, notification-broadcast-kinds, birthday-greetings, send-finance-quote, data-center, `seo` (`sitemap`, `rss`, `home-meta`, `branches-meta`, `branch-meta`, `branch-service-meta`, `service-meta`, `blog-meta`, `event-meta`, `indexnow-key`).
+Paths: provision-customer/staff (`server/staffAuth.mjs`), update-staff, smart-search, customer-portal/signup/auth-lookup/history, public-book/inquiry (`partnership`, `complaint`, `tint_finder`, `ops_form`, `shop_inquiry`), plate-lookup, booking-status, maintenance-schedules, push-subscribe/send-push, notify-* (booking, ops-form, planner, pos, shift-close, ops-lab), lifecycle-sms, busybee, notification-*, notification-templates, notification-broadcast-kinds, birthday-greetings, send-finance-quote, data-center, `seo` (`sitemap`, `rss`, `home-meta`, `branches-meta`, `branch-meta`, `branch-service-meta`, `service-meta`, `blog-meta`, `event-meta`, `indexnow-key`). Public `/shop` calls RPC `get_public_shop_catalog()`.
 
 **Floor money stays PostgREST RPC**, not these routes.
 

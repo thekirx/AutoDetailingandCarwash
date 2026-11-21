@@ -127,7 +127,7 @@ export function TermsPage() {
       <h2 id="loyalty-shop">5. Loyalty points, vouchers, and Aftercare Shop reservations</h2>
       <p>
         Wash stamps, milestone rewards, Points Shop items, and promo vouchers follow the validity dates, branch rules, and
-        single-visit redemption conditions displayed in your <Link to="/customer/loyalty">Customer Loyalty</Link> view.
+        single-visit redemption conditions displayed in your <Link to="/account/loyalty">Customer Loyalty</Link> view.
         Vouchers and points carry no cash value and are non-transferable unless expressly enabled for referral rewards.{' '}
         <Link to="/shop">Aftercare Shop</Link> reservations are fulfilled for branch pickup in Bacoor or Batangas City or
         dispatched via arranged courier once staff confirm physical branch stock.
@@ -311,7 +311,7 @@ export function CookiesPage() {
       <ul>
         <li>
           <strong>Customer &amp; staff authentication:</strong> keeps your signed-in Supabase session token active across
-          customer portal pages (`/customer/*`), loyalty passes, and queue tracking.
+          customer portal pages (`/account/*`), loyalty passes, and queue tracking.
         </li>
         <li>
           <strong>Security &amp; form protection:</strong> safeguards booking intake, public inquiry submission, and sign-in

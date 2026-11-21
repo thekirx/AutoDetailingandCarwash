@@ -1,5 +1,6 @@
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
 import { analyzeBusybeeSms } from '../src/lib/notificationCopy.js'
+import { resolveActiveStaff } from './staffAuth.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
 
 export const SMS_TEMPLATE_TYPES = new Set([
@@ -23,15 +24,7 @@ const READ_ROLES = new Set([
 const WRITE_ROLES = new Set(['BossMich', 'assistant_super_admin', 'marketing'])
 
 async function loadStaff(db, token) {
-  const { data: userData, error: userErr } = await db.auth.getUser(token)
-  if (userErr || !userData?.user) return null
-  const { data: staff } = await db
-    .from('staff_profiles')
-    .select('id, role, is_active')
-    .eq('id', userData.user.id)
-    .eq('is_active', true)
-    .maybeSingle()
-  return staff
+  return resolveActiveStaff(db, token, { select: 'id, role, is_active' })
 }
 
 /**

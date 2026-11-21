@@ -6,20 +6,13 @@ import {
   resolveNotificationScope,
   titleMaxForChannel,
 } from '../src/lib/notificationCopy.js'
+import { resolveActiveStaff } from './staffAuth.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
 
 const ALLOWED = new Set(['BossMich', 'assistant_super_admin'])
 
 async function loadStaff(db, token) {
-  const { data: userData, error: userErr } = await db.auth.getUser(token)
-  if (userErr || !userData?.user) return null
-  const { data: staff } = await db
-    .from('staff_profiles')
-    .select('id, role, is_active')
-    .eq('id', userData.user.id)
-    .eq('is_active', true)
-    .maybeSingle()
-  return staff
+  return resolveActiveStaff(db, token, { select: 'id, role, is_active' })
 }
 
 const SELECT_COLS =

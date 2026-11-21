@@ -5,6 +5,7 @@
 import { canEditPlanning } from '../src/auth/permissions.js'
 import { notifyPlannerAssignees } from './notifyPlanner.mjs'
 import { bearer, json, readJsonBody, setCors, clientIp, rateLimit } from './httpUtil.mjs'
+import { resolveActiveStaff } from './staffAuth.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
 
 export async function handleNotifyPlannerRequest(req, res) {
@@ -24,12 +25,10 @@ export async function handleNotifyPlannerRequest(req, res) {
     const { data: userData } = await db.auth.getUser(token)
     if (!userData?.user) return json(res, 401, { error: 'Unauthorized' })
 
-    const { data: staff } = await db
-      .from('staff_profiles')
-      .select('id, role, is_active, permission_grants')
-      .eq('id', userData.user.id)
-      .eq('is_active', true)
-      .maybeSingle()
+    const staff = await resolveActiveStaff(db, null, {
+      userId: userData.user.id,
+      select: 'id, role, is_active, permission_grants',
+    })
     if (!canEditPlanning(staff)) return json(res, 403, { error: 'Forbidden' })
 
     const body = await readJsonBody(req)

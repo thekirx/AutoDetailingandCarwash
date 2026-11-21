@@ -2,6 +2,7 @@ import { buildTintLead, validateTintConfig } from '../src/lib/tintFinder.js'
 import { bearer, json, readJsonBody, setCors, clientIp, rateLimit } from './httpUtil.mjs'
 import { notifyStaffEvent } from './notifyOpsEvent.mjs'
 import { submitPublicOpsFormAndSync } from './publicOpsForm.mjs'
+import { resolveActiveStaff } from './staffAuth.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
 
 const text = (value) => String(value ?? '').trim()
@@ -73,6 +74,45 @@ const builders = {
       },
     }
   },
+
+  shop_inquiry(body) {
+    const name = text(body.name)
+    const phoneRaw = text(body.phone)
+    const phoneDigits = phoneRaw.replace(/\D/g, '')
+    const email = text(body.email).toLowerCase()
+    const productName = text(body.productName || body.product)
+    const branchRaw = text(body.branch).toLowerCase()
+    const branch = branchRaw === 'batangas' ? 'batangas' : 'bacoor'
+    const branchLabel = branch === 'batangas' ? 'Batangas City' : 'Bacoor'
+    const note = text(body.note || body.message)
+    if (!name || !phoneDigits || !productName) {
+      return { error: 'Name, mobile number, and product selection are required.' }
+    }
+    if (phoneDigits.length < 10 || phoneDigits.length > 13) {
+      return { error: 'Enter a valid Philippine mobile number (e.g. 09171234567).' }
+    }
+    if (email && !EMAIL_PATTERN.test(email)) {
+      return { error: 'Enter a valid email address or leave it blank.' }
+    }
+    return {
+      table: 'contact_inquiries',
+      row: {
+        name: name.slice(0, 120),
+        phone: phoneRaw.slice(0, 32),
+        email: email || null,
+        subject: `Shop inquiry: ${productName.slice(0, 80)} (${branchLabel})`,
+        message: note
+          ? note.slice(0, 2000)
+          : `Requested branch pickup / stock confirmation for ${productName} at ${branchLabel}.`,
+        status: 'new',
+      },
+    }
+  },
+}
+
+export function buildPublicInquiryRow(kind, body) {
+  const fn = builders[kind]
+  return fn ? fn(body) : { error: 'Unknown inquiry type.' }
 }
 
 /**
@@ -109,16 +149,8 @@ export async function handlePublicInquiryRequest(req, res) {
     let cachedDb = null
     const getDb = () => (cachedDb ||= admin())
     if (kind === 'ops_form' && text(body.source) === 'staff' && token) {
-      const { data: userData } = await getDb().auth.getUser(token)
-      if (userData?.user?.id) {
-        const { data: staff } = await getDb()
-          .from('staff_profiles')
-          .select('id, is_active')
-          .eq('id', userData.user.id)
-          .eq('is_active', true)
-          .maybeSingle()
-        if (staff?.is_active) staffId = staff.id
-      }
+      const staff = await resolveActiveStaff(getDb(), token, { select: 'id, is_active' })
+      if (staff?.is_active) staffId = staff.id
     }
 
     if (staffId) {
@@ -172,9 +204,16 @@ export async function handlePublicInquiryRequest(req, res) {
     const { data: saved, error } = await db.from(table).insert(row).select('id').single()
     if (error) return json(res, 500, { error: 'We could not send that just now. Please try again.' })
 
-    if (kind === 'partnership' || kind === 'complaint') {
+    if (kind === 'partnership' || kind === 'complaint' || kind === 'shop_inquiry') {
       try {
-        await notifyStaffEvent(db, 'inquiry', { id: saved.id, kind, name: row.name || row.customer_name, category: row.category, branch: row.branch, city: row.city })
+        await notifyStaffEvent(db, 'inquiry', {
+          id: saved.id,
+          kind,
+          name: row.name || row.customer_name,
+          category: row.category || row.subject,
+          branch: row.branch || (kind === 'shop_inquiry' ? body.branch : undefined),
+          city: row.city,
+        })
       } catch {
         /* ponytail: submission is saved; staff alert is best-effort */
       }

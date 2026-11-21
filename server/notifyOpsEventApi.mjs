@@ -4,6 +4,7 @@
  */
 import { OPS_EVENTS, notifyOpsEvent } from './notifyOpsEvent.mjs'
 import { bearer, json, readJsonBody, setCors, clientIp, rateLimit } from './httpUtil.mjs'
+import { resolveActiveStaff } from './staffAuth.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
 
 const UUID = /^[0-9a-f-]{36}$/i
@@ -25,12 +26,10 @@ export async function handleNotifyOpsEventRequest(req, res) {
     const { data: userData } = await db.auth.getUser(token)
     if (!userData?.user) return json(res, 401, { error: 'Unauthorized' })
 
-    const { data: actor } = await db
-      .from('staff_profiles')
-      .select('id, role, full_name, is_active, permission_grants, branch_slug')
-      .eq('id', userData.user.id)
-      .eq('is_active', true)
-      .maybeSingle()
+    const actor = await resolveActiveStaff(db, null, {
+      userId: userData.user.id,
+      select: 'id, role, full_name, is_active, permission_grants, branch_slug',
+    })
     if (!actor) return json(res, 403, { error: 'Forbidden' })
 
     const body = await readJsonBody(req)

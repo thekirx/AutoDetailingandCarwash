@@ -1,5 +1,6 @@
 import { busybeeBalance, busybeeSendSms } from './busybee.mjs'
 import { bearer, clientIp, json, rateLimit, readJsonBody, setCors } from './httpUtil.mjs'
+import { resolveActiveStaff } from './staffAuth.mjs'
 import { adminClient } from './supabaseAdmin.mjs'
 
 export async function handleBusybeeRequest(req, res) {
@@ -16,13 +17,7 @@ export async function handleBusybeeRequest(req, res) {
       const token = bearer(req)
       if (!token) return json(res, 401, { error: 'Unauthorized' })
       const db = adminClient()
-      const { data: userData } = await db.auth.getUser(token)
-      const { data: staff } = await db
-        .from('staff_profiles')
-        .select('role')
-        .eq('id', userData?.user?.id)
-        .eq('is_active', true)
-        .maybeSingle()
+      const staff = await resolveActiveStaff(db, token, { select: 'role' })
       if (!staff || !['admin', 'BossMich', 'assistant_super_admin', 'marketing'].includes(staff.role)) {
         return json(res, 403, { error: 'Forbidden' })
       }

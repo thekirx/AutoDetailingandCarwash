@@ -32,6 +32,7 @@ export async function listStaffBirthdaysToday(db, today = new Date()) {
     .from('staff_profiles')
     .select('id, full_name, date_of_birth, is_active, home_branch')
     .eq('is_active', true)
+    .eq('is_archived', false)
     .not('date_of_birth', 'is', null)
   if (error) throw new Error(error.message)
   const staff = (data || []).filter((row) => isBirthdayToday(row.date_of_birth, today))
