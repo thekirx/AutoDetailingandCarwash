@@ -93,24 +93,24 @@ This document is the primary onboarding brief for the next AI engineer or techni
 
 ---
 
-## 4. Verification Baseline (Current as of 2026-11-18 Latest Pass)
+## 4. Verification Baseline (Current as of 2026-11-21)
 
-All code/test checks ran against the current working tree after the final code/test edit:
-- `npm run lint` (`0`), `npm test` (`2715/2715` across `608` suites), `npm run check` (`ok`), `npm run audit:api-auth` (`ok`), `npm run build` (`485` SW precache entries + `23` static SEO HTML shells), `npm run test:browser` (`41/41`), and live headless Chromium verification (`72/72` checks across all 17 BossMich sidebar routes, redirects, `?tab=recon` sync, `?q=` pre-fill & clearing, `boss`, `admin`, `investor`, `opslead`, `0` console/page/HTTP `>=400` errors).
-- Live Supabase (`lybxhpzzqqyqswvuwpxv`) has migrations through `20261121190000` applied cleanly (`20261120200000`, `20261121180000`, `20261121190000`), `0` `security_definer_view` errors, `0` `auth_rls_initplan`/`multiple_permissive_policies` warnings, `0` unindexed FKs, `11` published blog posts synced in `public.blogs`, `0` placeholder product descriptions, and verified Google Review URLs populated for `bacoor` and `batangas`.
-
-> **Note on Production & Vercel:** Commit/push `main` to deploy to `www.hakumautocare.com` / `hakumauto.vercel.app`.
+- Live production (`https://www.hakumautocare.com`) and Vercel test link (`https://hakumauto.vercel.app`) are both live and verified via HTTP, Googlebot UA SSR, and headless Puppeteer:
+  - **Easy Login split:** Visible + working (`200` on `/api/demo-login`) on `https://hakumauto.vercel.app`; strictly hidden (`0` chips, even with `?qa=`) and blocked (`404`) on `https://www.hakumautocare.com`.
+  - **Public / SEO / Legal / Shop routes:** HTTP `200` across `/`, `/shop` (`21` cards with live ₱ pricing), `/terms`, `/branches/batangas/car-wash`, `/branches/bacoor/ppf`, `/queue/batangas`, `/sitemap.xml` (`53` `<loc>` URLs), `/llms.txt`, `/robots.txt`, `/rss.xml`; `X-Robots-Tag: noindex, nofollow` verified on `/operations/login` and `/account`.
+- Live Supabase (`lybxhpzzqqyqswvuwpxv`) has migrations through `20261121190000` applied cleanly (`20261120200000`, `20261121180000`, `20261121190000`), `0` `security_definer_view` errors, `0` `auth_rls_initplan`/`multiple_permissive_policies` warnings, `0` unindexed FKs, `11` published blog posts synced in `public.blogs`, `0` placeholder product descriptions, verified Google Review URLs populated for `bacoor` and `batangas`, and Auth `site_url` set to `https://www.hakumautocare.com` with full custom/Vercel `uri_allow_list` coverage.
+- Local verification suite (`npm run lint`, `npm run audit:api-auth`, `npm run check`, `npm test`, `npm run build` + `npm run test:browser` `41/41`) is executed after every batch of changes on `main`.
 
 ---
 
 ## 5. Open Items & Operational Blockers (Do Not Auto-Mark Done)
 
-1. **Deploy `main` & Verify Vercel Production Env Vars**: Commit/push to deploy to Vercel (`www.hakumautocare.com`, plus test domain `hakumauto.vercel.app` where Easy Login chips remain visible). Verify `.env.example` / Vercel keys: `VITE_VAPID_PUBLIC_KEY`/`VAPID_*`, `SUPABASE_SERVICE_ROLE_KEY`, `CRON_SECRET`, `BUSYBEE_*` (and optional `BUSYBEE_RELAY_*`).
-2. **BrandTxt / BusyBee SMS Egress Whitelisting (`BUG-002`)**: Production SMS calls (`app_settings.sms_notifications = true`) require outgoing IP (Vercel Static IPs / relay) whitelisted by BrandTxt (`app.brandtxt.io`).
-3. **Floor / Staff Web Push Opt-In (`BUG-062`)**: Code, `public/push-sw.js`, and `InAppNotificationListener.jsx` are wired, but live staff devices must still click **"Enable alerts"** in the portal/browser (`0 / 34` active staff subscriptions in live DB audit).
-4. **Supabase Dashboard Ops**:
-   - Configure custom SMTP (`smtp_host` currently `null`) / verify Auth password-reset & signup emails arrive in inbox (`Gate 10.1`).
-   - Enable **HaveIBeenPwned Leaked Password Protection** (`password_hibp_enabled` currently `false`) in Supabase Auth settings.
+1. **Search Console & External Business Listings (Owner Actions)**: Re-submit `https://www.hakumautocare.com/sitemap.xml` in Google Search Console and Bing Webmaster Tools; confirm Google Business Profile branch links point to `https://www.hakumautocare.com/branches/batangas` and `/branches/bacoor`.
+2. **BrandTxt / BusyBee SMS Egress Whitelisting (`BUG-002`)**: Production SMS calls (`app_settings.sms_notifications = true`) require whitelisting the active office egress IP (`180.190.249.28` on 2026-11-21 `npm run sms:egress` — `balanceErrorCode: -1`) and Hakum Vercel Static IPs / relay in BrandTxt (`app.brandtxt.io`).
+3. **Floor / Staff Web Push Opt-In (`BUG-062`)**: Code, `public/push-sw.js`, and `InAppNotificationListener.jsx` are proven live (`push_subscriptions`: `BossMich: 3`, `customer: 3`), while floor operational devices (Branch Admin / Team Lead / ASA) still need per-device **"Enable alerts"** opt-in (`0` enrolled).
+4. **Supabase Dashboard External / Plan Settings**:
+   - Configure custom SMTP (`smtp_host` currently `null`) / verify Auth password-reset & signup emails arrive in inbox (`Gate 10.1`). *(Note: Auth `site_url` + `uri_allow_list` are already fixed on `2026-11-21`.)*
+   - Enable **HaveIBeenPwned Leaked Password Protection** (`password_hibp_enabled` currently `false`, requires Supabase Pro+ plan upgrade).
    - Optional: Have owner confirm and run the **BUG-061** void SQL if cleaning the 2 pre-existing 2026-09-29 test handoffs (`₱5,397.50`).
 5. **Working Tree Hygiene**: Avoid committing `tmp-*` / `*-FAIL.png` QA failure artifacts; stage files intentionally before commit.
 

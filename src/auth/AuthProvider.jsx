@@ -39,6 +39,7 @@ export function AuthProvider({ children }) {
       .select('id, full_name, role, branch_slug, phone, is_active, permission_grants, attendance_enabled, geofence_enabled, employment_type, custom_role_key, date_of_birth, date_of_birth_locked_at, role_definitions(role_key, label, baseline_template, grants, is_active)')
       .eq('id', user.id)
       .eq('is_active', true)
+      .eq('is_archived', false)
       .maybeSingle()
 
     if (staffError) throw staffError

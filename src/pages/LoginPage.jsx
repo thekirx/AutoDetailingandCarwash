@@ -96,6 +96,7 @@ export default function LoginPage() {
       .select('role, is_active')
       .eq('id', data.user.id)
       .eq('is_active', true)
+      .eq('is_archived', false)
       .maybeSingle()
 
     if (profileError) {

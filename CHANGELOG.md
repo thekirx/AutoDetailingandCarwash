@@ -1,3 +1,9 @@
+## 2026-11-21 (Live Dual-Domain Easy Login Verification, Supabase Auth Alignment & Client Archived-Staff Parity)
+
+- **Client Archived-Staff Auth Parity (`src/pages/LoginPage.jsx`, `src/auth/AuthProvider.jsx`, `tests/serverStaffAuthConsolidation.test.js`)**: Added `.eq('is_archived', false)` alongside `.eq('is_active', true)` in client `staff_profiles` login and session hydration queries to match `server/staffAuth.mjs`.
+- **Easy Login Domain Lock Matrix (`tests/demoLoginQaKey.test.js`)**: Expanded unit coverage across `handleDemoLoginRequest`, `isDemoLoginEnabled`, `isDemoLoginVisible`, and `DemoAccountChips.jsx` confirming Easy Login remains enabled on `*.vercel.app` / `localhost` and hidden + `404` on `hakumautocare.com`, `www.hakumautocare.com`, `ops.hakumautocare.com`, and arbitrary custom domains even with `?qa=` or stale `localStorage`.
+- **Live Supabase Auth & Production/Vercel Reconciliation (`lybxhpzzqqyqswvuwpxv`, `PROJECT_STATUS.md`, `HANDOFF.md`, `docs/seo-ai-visibility.md`, `docs/qa/BUGS.md`)**: Updated live Supabase Auth `site_url` to `https://www.hakumautocare.com` with explicit custom/Vercel `uri_allow_list` entries, reconciled live deployment & push telemetry (`BossMich: 3`, `customer: 3`) in operational docs, and verified both `https://www.hakumautocare.com` and `https://hakumauto.vercel.app` live via HTTP, Googlebot SSR, and Puppeteer.
+
 ## 2026-11-21 (Staff Auth Deepening, Live `/shop` Catalog + Inquiry Funnel & Data Polish)
 
 - **Staff Auth Deepening & Archived-Staff Blocking (`server/staffAuth.mjs`, all `18` server API modules + `server/staffBirthdayGreetings.mjs`, `tests/serverStaffAuthConsolidation.test.js`)**:

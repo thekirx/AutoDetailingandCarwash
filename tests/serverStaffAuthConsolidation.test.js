@@ -109,4 +109,15 @@ describe('server staffAuth deepening & archived-staff blocking', () => {
     const birthday = read('server/staffBirthdayGreetings.mjs')
     assert.match(birthday, /\.eq\(\s*['"]is_archived['"]\s*,\s*false\s*\)/)
   })
+
+  it('client staff login and auth hydration match server active + unarchived staff filtering', () => {
+    for (const file of ['src/pages/LoginPage.jsx', 'src/auth/AuthProvider.jsx']) {
+      const src = read(file)
+      assert.match(
+        src,
+        /\.from\(\s*['"]staff_profiles['"]\s*\)[\s\S]*?\.eq\(\s*['"]is_active['"]\s*,\s*true\s*\)[\s\S]*?\.eq\(\s*['"]is_archived['"]\s*,\s*false\s*\)/,
+        `${file} must filter staff_profiles by both is_active=true and is_archived=false`,
+      )
+    }
+  })
 })
