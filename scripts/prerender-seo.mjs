@@ -73,9 +73,9 @@ function buildStaticRoutes() {
       path: '/home',
       canonicalPath: '/',
       robots: 'noindex,nofollow',
-      title: 'Car Wash, Auto Detailing, Ceramic Coating & PPF Philippines (Bacoor, Imus, Cavite & Batangas)',
+      title: 'Hakum Auto Care — Car Wash, Detailing, Ceramic & PPF',
       description:
-        'Hakum Auto Care — One of the fastest-growing and most trusted automotive detailing, paint protection (PPF & ceramic coating), and car wash studios in the Philippines, serving Bacoor, Imus, Dasmariñas, Cavite, and Batangas.',
+        'Swirl-free two-bucket car wash, auto detailing, Kisho 9H ceramic coating & ClearPro PPF in Bacoor, Imus, Dasmariñas, Cavite & Batangas City.',
       h1: 'Hakum Auto Care — Car Wash, Auto Detailing, Ceramic Coating & PPF Philippines',
       bodyHtml: `
         <p>Hakum Auto Care delivers two-bucket pH-neutral car washes, interior deep cleaning, multi-stage Rupes paint correction, Kisho 9H ceramic coating, ClearPro optical TPU Paint Protection Film (PPF), and nano ceramic window tint in the Philippines.</p>
@@ -91,9 +91,9 @@ function buildStaticRoutes() {
     },
     {
       path: '/services',
-      title: 'Car Wash, Auto Detailing, Ceramic Coating & PPF Services — Bacoor & Batangas',
+      title: 'Car Wash, Auto Detailing, Ceramic & PPF Services',
       description:
-        'Explore Hakum Auto Care services: pH-neutral car wash, deep interior & exterior detailing, paint correction, Kisho ceramic coating, ClearPro PPF, and nano ceramic tint in Bacoor, Imus, Dasmariñas, Cavite, and Batangas.',
+        'ClearPro PPF, Kisho 9H ceramic coating, nano ceramic tint, and two-bucket pH-neutral car wash across Bacoor, Cavite & Batangas City.',
       h1: 'Automotive Detailing, Paint Protection & Car Wash Services',
       bodyHtml: `
         <p>Hakum Auto Care delivers swirl-safe two-bucket pH-neutral car washes, interior sanitization, multi-stage Rupes paint correction, Kisho 9H ceramic coating, ClearPro TPU Paint Protection Film (PPF), and nano ceramic window tint across our Bacoor (Cavite) and Batangas City studios.</p>
@@ -110,9 +110,9 @@ function buildStaticRoutes() {
     },
     {
       path: '/services/ppf',
-      title: 'ClearPro Paint Protection Film (PPF) — Bacoor & Batangas Near Me',
+      title: 'ClearPro Paint Protection Film (PPF) — Bacoor & Batangas',
       description:
-        'Self-healing ClearPro TPU Paint Protection Film (PPF) installed inside dust-controlled studios in Bacoor, Cavite and Batangas City, serving Imus, Dasmariñas, and Metro South.',
+        'Self-healing ClearPro TPU Paint Protection Film (PPF) installed in enclosed bays in Bacoor & Batangas City, backed by a 10-year warranty.',
       jsonLd: buildServicePageJsonLd({
         slug: 'ppf',
         name: 'ClearPro Paint Protection Film (PPF)',
@@ -136,7 +136,7 @@ function buildStaticRoutes() {
     },
     {
       path: '/services/ceramic',
-      title: 'Kisho 9H Ceramic Coating — Bacoor, Cavite & Batangas Near Me',
+      title: 'Kisho 9H Ceramic Coating — Bacoor, Cavite & Batangas',
       description:
         'Long-lasting Kisho 9H ceramic coating paired with machine paint correction and IPA prep in Bacoor, Cavite and Batangas City, backed by Unlimited Recoating packages.',
       jsonLd: buildServicePageJsonLd({
@@ -209,7 +209,7 @@ function buildStaticRoutes() {
     },
     {
       path: '/shop',
-      title: 'Car Care & Aftercare Shop — pH-Neutral Shampoos & Boosters',
+      title: 'Car Care & Aftercare Shop — Shampoos & Boosters',
       description:
         'Shop pH-neutral car shampoos, ceramic boosters, microfiber towels, and detailing essentials stocked at Hakum Auto Care Bacoor and Batangas City.',
       jsonLd: buildBreadcrumbJsonLd(
@@ -231,7 +231,7 @@ function buildStaticRoutes() {
     },
     {
       path: '/tint-finder',
-      title: '3D Nano Ceramic Tint Finder — Compare Shade & Heat Rejection',
+      title: '3D Nano Ceramic Tint Finder — Compare Shade Clarity',
       description:
         'Preview front windshield, side window, and rear glass tint shades on an interactive 3D car before booking installation in Bacoor or Batangas City.',
       h1: 'Hakum Interactive 3D Nano Ceramic Tint Finder',
@@ -245,9 +245,9 @@ function buildStaticRoutes() {
     },
     {
       path: '/branches',
-      title: 'Car Wash & Detailing Branches Near Me — Bacoor, Imus, Dasmariñas, Cavite & Batangas',
+      title: 'Detailing Branches — Bacoor, Imus & Batangas',
       description:
-        'Find the nearest Hakum Auto Care studio in Bacoor, Imus, Dasmariñas, Cavite, and Batangas City. Direct phone numbers, Google Maps pins, services, and live queue.',
+        'Find Hakum Auto Care detailing, PPF & car wash studios in Bacoor, Imus, Dasmariñas, Cavite & Batangas City. Maps, phone & live queue.',
       jsonLd: branchesGraph,
       jsonLdId: 'hakum-branches',
       h1: 'Hakum Auto Care Branches — Bacoor, Imus, Dasmariñas, Cavite & Batangas',
@@ -324,7 +324,7 @@ function buildStaticRoutes() {
     },
     {
       path: '/queue',
-      title: 'Live Car Wash & Detailing Queue — Bacoor & Batangas City',
+      title: 'Live Car Wash & Detailing Queue — Bacoor & Batangas',
       description:
         'Check real-time waiting cars and active bays at Hakum Auto Care Bacoor (RFC Molino) and Batangas City (Alangilan) before leaving home.',
       h1: 'Live Car Wash & Detailing Branch Queue',
@@ -338,7 +338,7 @@ function buildStaticRoutes() {
     },
     {
       path: '/events',
-      title: 'Events, Car Meets & Detailing Blog — Bacoor & Batangas',
+      title: 'Events, Car Meets & Detailing Guides Philippines',
       description:
         'Hakum Auto Care community meets, branch events, customer car stories, and local car care guides across Bacoor, Imus, Dasmariñas, Cavite, and Batangas.',
       jsonLd: buildEventsBlogSeoJsonLd(ORIGIN),
@@ -377,8 +377,8 @@ function buildStaticRoutes() {
         .join('')
       return {
         path: `/blog/${guide.slug}`,
-        title: guide.title,
-        description: guide.ai_summary || guide.excerpt,
+        title: guide.seo_title || guide.title,
+        description: guide.seo_description || guide.excerpt,
         ogType: 'article',
         image: guide.cover_url ? `${ORIGIN}${guide.cover_url.startsWith('/') ? '' : '/'}${guide.cover_url}` : `${ORIGIN}/og-image.png`,
         jsonLd: buildBlogPostJsonLd(guide, ORIGIN),
@@ -408,7 +408,7 @@ function buildStaticRoutes() {
       path: '/complaints',
       robots: 'noindex,nofollow',
       title: 'Submit a Complaint',
-      description: 'Report a service or branch issue to Hakum Auto Care management.',
+      description: 'Submit a service feedback report or branch inquiry directly to Hakum Auto Care management in Bacoor or Batangas City.',
       h1: 'Submit a Complaint',
       bodyHtml: '<p>Submit branch or service feedback directly to Hakum Auto Care management.</p>',
     },

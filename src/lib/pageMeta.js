@@ -4,7 +4,7 @@ import { BRANCH_MAP_LISTINGS } from './homeBranches.js'
 const SITE = 'Hakum Auto Care'
 const PRODUCTION_ORIGIN = 'https://www.hakumautocare.com'
 const DEFAULT_DESCRIPTION =
-  'Hakum Auto Care — One of the fastest-growing and most trusted automotive detailing, paint protection (PPF & ceramic coating), and car wash studios in the Philippines, serving Bacoor, Imus, Cavite, and Batangas.'
+  'Swirl-free two-bucket car wash, auto detailing, Kisho 9H ceramic coating & ClearPro PPF in Bacoor, Imus, Dasmariñas, Cavite & Batangas City.'
 
 const VERIFIED_SOCIAL_PROFILES = [
   'https://www.facebook.com/share/1GHerg8pxV/',

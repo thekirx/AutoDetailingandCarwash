@@ -161,7 +161,7 @@ describe('Technical SEO & AI Visibility setup', () => {
   it('renders rich crawler HTML for branch cities, local services, and core services with Schema.org graph', async () => {
     const bacoorPage = findLocalBranchPage('bacoor')
     const cityHtml = buildBranchCityCrawlerHtml({ cityPage: bacoorPage })
-    assert.match(cityHtml, /<title>Bacoor Car Wash &amp; Auto Detailing \| Ceramic Coating &amp; PPF Bacoor, Cavite · Hakum Auto Care<\/title>/)
+    assert.match(cityHtml, /<title>Bacoor Car Wash &amp; Auto Detailing \| Ceramic &amp; PPF · Hakum Auto Care<\/title>/)
     assert.match(cityHtml, /"@type":"AutomotiveBusiness"/)
     assert.match(cityHtml, /"@type":"OfferCatalog"/)
     assert.match(cityHtml, /"@type":"FAQPage"/)
@@ -171,7 +171,7 @@ describe('Technical SEO & AI Visibility setup', () => {
 
     const ppfMatch = findLocalBranchServicePage('bacoor', 'ppf')
     const serviceHtml = buildBranchServiceCrawlerHtml({ page: ppfMatch.page })
-    assert.match(serviceHtml, /<title>PPF Bacoor &amp; Bacoor PPF Near Me — ClearPro Self-Healing Paint Protection Film · Hakum Auto Care<\/title>/)
+    assert.match(serviceHtml, /<title>PPF Bacoor Near Me — ClearPro Paint Protection Film · Hakum Auto Care<\/title>/)
     assert.match(serviceHtml, /"@type":"Service"/)
     assert.match(serviceHtml, /"@type":"FAQPage"/)
     assert.match(serviceHtml, /ClearPro/)
@@ -212,6 +212,27 @@ describe('Technical SEO & AI Visibility setup', () => {
         resolve()
       })
       handleSeoRequest({ method: 'GET', url: '/api/seo?operation=branch-service-meta&citySlug=molino&serviceSlug=ceramic' }, res)
+    })
+
+    await new Promise((resolve) => {
+      const res = fakeRes((r) => {
+        assert.equal(r.status, 200)
+        assert.match(r.body, /"@type":"WebSite"/)
+        assert.match(r.body, /SearchAction/)
+        assert.match(r.body, /National Highway/)
+        resolve()
+      })
+      handleSeoRequest({ method: 'GET', url: '/api/seo?operation=home-meta' }, res)
+    })
+
+    await new Promise((resolve) => {
+      const res = fakeRes((r) => {
+        assert.equal(r.status, 200)
+        assert.match(r.body, /"@type":"AutomotiveBusiness"/)
+        assert.match(r.body, /\/branches\/batangas\/car-wash/)
+        resolve()
+      })
+      handleSeoRequest({ method: 'GET', url: '/api/seo?operation=branches-meta' }, res)
     })
   })
 })

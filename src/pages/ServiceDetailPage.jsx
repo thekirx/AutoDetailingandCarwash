@@ -63,7 +63,7 @@ const LOCAL_SERVICE_SLUG_BY_DETAIL = {
 }
 
 const SEO_DESCRIPTIONS = {
-  ppf: 'Self-healing ClearPro TPU Paint Protection Film (PPF) installed in dust-controlled bays in Bacoor, Cavite and Batangas City, serving Imus, Dasmariñas, and CALABARZON.',
+  ppf: 'Self-healing ClearPro TPU Paint Protection Film (PPF) installed in enclosed bays in Bacoor & Batangas City, backed by a 10-year warranty.',
   ceramic: 'Multi-stage paint correction and authentic Kisho 9H Ceramic Coating in Bacoor, Cavite and Batangas City with Unlimited Recoating packages.',
   tint: 'High heat-rejection nano ceramic window tint in Bacoor, Cavite and Batangas City — RFID-safe night clarity previewed in 3D before booking.',
   'wash-detailing': 'Two-bucket pH-neutral car wash, interior sanitization, and swirl-free detailing in Bacoor (Molino), Batangas City (Alangilan), serving Imus and Dasmariñas.',

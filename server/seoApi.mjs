@@ -20,7 +20,7 @@ import {
   findLocalBranchPage,
   findLocalBranchServicePage,
 } from '../src/lib/localBranchPages.js'
-import { buildDocumentTitle, buildServicePageJsonLd } from '../src/lib/pageMeta.js'
+import { buildDocumentTitle, buildLocalBusinessJsonLd, buildServicePageJsonLd, buildSiteJsonLd } from '../src/lib/pageMeta.js'
 import {
   SEO_LOCAL_GUIDES,
   buildBlogPostJsonLd,
@@ -239,7 +239,8 @@ export function buildArticleCrawlerHtml({ post, origin = ORIGIN, slug = '' } = {
 
   const meta = extractContentMeta(post)
   const fullTitle = buildDocumentTitle(meta.seo_title || post.seo_title || post.title)
-  const desc = String(meta.seo_description || post.seo_description || meta.ai_summary || post.excerpt || '').trim()
+  const desc = String(meta.seo_description || post.seo_description || post.excerpt || meta.ai_summary || '').trim()
+  const summaryText = String(meta.ai_summary || post.ai_summary || post.excerpt || desc).trim()
   const canonical = String(meta.canonical_url || post.canonical_url || `${origin}/blog/${cleanSlug}`).trim()
   const img = absUrl(meta.og_image_url || post.og_image_url || post.cover_url, origin)
   const noindex = Boolean(post.noindex ?? meta.noindex)
@@ -283,7 +284,7 @@ export function buildArticleCrawlerHtml({ post, origin = ORIGIN, slug = '' } = {
   <body>
     <main style="max-width:860px;margin:0 auto;padding:32px 20px;font-family:system-ui,sans-serif;line-height:1.6">
       <h1>${escHtml(post.title)}</h1>
-      ${desc ? `<p><strong>Summary:</strong> ${escHtml(desc)}</p>` : ''}
+      ${summaryText ? `<p><strong>Summary:</strong> ${escHtml(summaryText)}</p>` : ''}
       ${blocksHtml}
       <nav aria-label="Blog navigation"><a href="/blog">All Hakum Guides</a> · <a href="/book">Book a Slot</a></nav>
     </main>
@@ -297,7 +298,7 @@ export const CORE_SERVICES_DATA = {
     name: 'ClearPro Paint Protection Film (PPF)',
     title: 'ClearPro Paint Protection Film (PPF) — Bacoor & Batangas',
     description:
-      'Self-healing ClearPro TPU Paint Protection Film (PPF) installed in dust-controlled bays in Bacoor, Cavite and Batangas City, serving Imus, Dasmariñas, and CALABARZON.',
+      'Self-healing ClearPro TPU Paint Protection Film (PPF) installed in enclosed bays in Bacoor & Batangas City, backed by a 10-year warranty.',
     h1: 'ClearPro Paint Protection Film (PPF) Philippines',
     hero: 'Optical-grade TPU self-healing film installed in enclosed dust-controlled bays with wrapped edges and 10-year warranty.',
     faqs: [
@@ -386,6 +387,123 @@ export const CORE_SERVICES_DATA = {
       },
     ],
   },
+}
+
+export function buildHomeCrawlerHtml({ origin = ORIGIN } = {}) {
+  const fullTitle = 'Car Wash, Auto Detailing, Ceramic Coating & PPF · Hakum Auto Care'
+  const desc =
+    'Swirl-free two-bucket car wash, auto detailing, Kisho 9H ceramic coating & ClearPro PPF in Bacoor, Imus, Dasmariñas, Cavite & Batangas City.'
+  const canonical = `${origin}/`
+  const siteLd = buildSiteJsonLd({ origin })
+  const branchLinks = LOCAL_BRANCH_PAGES.map(
+    (c) =>
+      `<li><a href="/branches/${c.slug}">${escHtml(c.cityName)}</a> — ${escHtml(c.landmarkAddress)} (${escHtml(c.phone?.display || '+639156296096')})</li>`,
+  ).join('\n        ')
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${escHtml(fullTitle)}</title>
+    <meta name="description" content="${escHtml(desc)}" />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <link rel="canonical" href="${escHtml(canonical)}" />
+    <link rel="alternate" hreflang="en-PH" href="${escHtml(canonical)}" />
+    <link rel="alternate" hreflang="x-default" href="${escHtml(canonical)}" />
+    <meta property="og:site_name" content="Hakum Auto Care" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="en_PH" />
+    <meta property="og:title" content="${escHtml(fullTitle)}" />
+    <meta property="og:description" content="${escHtml(desc)}" />
+    <meta property="og:url" content="${escHtml(canonical)}" />
+    <meta property="og:image" content="${origin}/og-image.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${escHtml(fullTitle)}" />
+    <meta name="twitter:description" content="${escHtml(desc)}" />
+    <meta name="twitter:image" content="${origin}/og-image.png" />
+    <script type="application/ld+json">${JSON.stringify(siteLd).replace(/</g, '\\u003c')}</script>
+  </head>
+  <body>
+    <main style="max-width:920px;margin:0 auto;padding:32px 20px;font-family:system-ui,sans-serif;line-height:1.6">
+      <h1>Hakum Auto Care — Car Wash, Auto Detailing, Ceramic Coating &amp; PPF Philippines</h1>
+      <p>Hakum Auto Care operates enclosed automotive detailing, ClearPro Paint Protection Film (PPF), Kisho 9H ceramic coating, F1 nano-ceramic window tint, and swirl-free two-bucket pH-neutral car wash studios in Bacoor (Cavite) and Batangas City, serving Imus, Dasmariñas, and Southern Luzon.</p>
+      <h2>Studio Locations &amp; Service Hubs</h2>
+      <ul>
+        ${branchLinks}
+      </ul>
+      <h2>Complete 14-Service Detailing &amp; Protection Catalog</h2>
+      <ul>
+        ${COMPLETE_DETAILING_CATALOG.map((item) => `<li><a href="${escHtml(item.route)}"><strong>${escHtml(item.name)}</strong></a>: ${escHtml(item.summary)}</li>`).join('\n        ')}
+      </ul>
+      <h2>Certified Products &amp; Chemistry</h2>
+      <ul>
+        ${STUDIO_PRODUCTS_AND_BRANDS.map((b) => `<li><strong>${escHtml(b.brand)} (${escHtml(b.origin)}):</strong> ${escHtml(b.use)}</li>`).join('\n        ')}
+      </ul>
+      <h2>Regional Guides &amp; FAQ</h2>
+      <ul>
+        ${SEO_LOCAL_GUIDES.map((g) => `<li><a href="/blog/${escHtml(g.slug)}">${escHtml(g.title)}</a></li>`).join('\n        ')}
+      </ul>
+      <nav aria-label="Actions"><a href="/services">All Services</a> · <a href="/branches">Find Nearest Branch</a> · <a href="/book">Book Online</a> · <a href="/queue">Live Queue</a> · <a href="/blog">Detailing Guides</a></nav>
+    </main>
+  </body>
+</html>`
+}
+
+export function buildBranchesIndexCrawlerHtml({ origin = ORIGIN } = {}) {
+  const fullTitle = buildDocumentTitle('Detailing Branches — Bacoor, Imus & Batangas')
+  const desc =
+    'Find Hakum Auto Care detailing, PPF & car wash studios in Bacoor, Imus, Dasmariñas, Cavite & Batangas City. Maps, phone & live queue.'
+  const canonical = `${origin}/branches`
+  const jsonLd = buildLocalBusinessJsonLd({
+    branches: [
+      { slug: 'bacoor', name: 'Bacoor', address: 'RFC Molino II, Molino Boulevard, Bacoor, Cavite', phone: '+639156296096' },
+      { slug: 'batangas', name: 'Batangas', address: 'National Highway, Brgy. Alangilan, Batangas City', phone: '+639560071028' },
+    ],
+    origin,
+  })
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>${escHtml(fullTitle)}</title>
+    <meta name="description" content="${escHtml(desc)}" />
+    <meta name="robots" content="index,follow,max-image-preview:large" />
+    <link rel="canonical" href="${escHtml(canonical)}" />
+    <link rel="alternate" hreflang="en-PH" href="${escHtml(canonical)}" />
+    <link rel="alternate" hreflang="x-default" href="${escHtml(canonical)}" />
+    <meta property="og:site_name" content="Hakum Auto Care" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="en_PH" />
+    <meta property="og:title" content="${escHtml(fullTitle)}" />
+    <meta property="og:description" content="${escHtml(desc)}" />
+    <meta property="og:url" content="${escHtml(canonical)}" />
+    <meta property="og:image" content="${origin}/og-image.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${escHtml(fullTitle)}" />
+    <meta name="twitter:description" content="${escHtml(desc)}" />
+    <meta name="twitter:image" content="${origin}/og-image.png" />
+    <script type="application/ld+json">${JSON.stringify(jsonLd).replace(/</g, '\\u003c')}</script>
+  </head>
+  <body>
+    <main style="max-width:900px;margin:0 auto;padding:32px 20px;font-family:system-ui,sans-serif;line-height:1.6">
+      <nav aria-label="Breadcrumb"><a href="/">Home</a> · <span>Branches</span></nav>
+      <h1>Hakum Auto Care Branches — Bacoor, Imus, Dasmariñas, Cavite &amp; Batangas</h1>
+      <p>${escHtml(desc)}</p>
+      <h2>City Hubs</h2>
+      <ul>
+        ${LOCAL_BRANCH_PAGES.map((c) => `<li><a href="/branches/${c.slug}">${escHtml(c.cityName)}</a> — ${escHtml(c.landmarkAddress)} (${escHtml(c.phone?.display || '+639156296096')})</li>`).join('\n        ')}
+      </ul>
+      <h2>Branch × Service Studios</h2>
+      <ul>
+        ${LOCAL_BRANCH_SERVICE_PAGES.map((bs) => `<li><a href="/branches/${bs.citySlug}/${bs.serviceSlug}">${escHtml(bs.serviceLabel)} in ${escHtml(bs.cityName)}</a></li>`).join('\n        ')}
+      </ul>
+      <nav aria-label="Actions"><a href="/book">Book Online</a> · <a href="/queue">Live Queue</a> · <a href="/services">All Services</a></nav>
+    </main>
+  </body>
+</html>`
 }
 
 export function buildBranchCityCrawlerHtml({ cityPage, origin = ORIGIN } = {}) {
@@ -622,6 +740,26 @@ export async function handleSeoRequest(req, res) {
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     res.writeHead(405, { 'Content-Type': 'application/json' })
     res.end(JSON.stringify({ error: 'Method not allowed' }))
+    return
+  }
+
+  if (op === 'home-meta') {
+    const html = buildHomeCrawlerHtml({ origin: ORIGIN })
+    res.writeHead(200, {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=1200',
+    })
+    res.end(html)
+    return
+  }
+
+  if (op === 'branches-meta') {
+    const html = buildBranchesIndexCrawlerHtml({ origin: ORIGIN })
+    res.writeHead(200, {
+      'Content-Type': 'text/html; charset=utf-8',
+      'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=1200',
+    })
+    res.end(html)
     return
   }
 

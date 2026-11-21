@@ -58,12 +58,34 @@
     { "source": "/rss.xml", "destination": "/api/seo?operation=rss" },
     { "source": "/feed.xml", "destination": "/api/seo?operation=rss" },
     {
+      "source": "/",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|Google-Extended|Bingbot|bingbot|Applebot|OAI-SearchBot|ChatGPT-User|GPTBot|Claude-SearchBot|PerplexityBot|Perplexity-User|DuckAssistBot|SemrushBot|SiteAuditBot|AhrefsBot|meta-externalagent|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Viber|TelegramBot|Discordbot|Slackbot).*"
+        }
+      ],
+      "destination": "/api/seo?operation=home-meta"
+    },
+    {
+      "source": "/branches",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(Googlebot|Google-Extended|Bingbot|bingbot|Applebot|OAI-SearchBot|ChatGPT-User|GPTBot|Claude-SearchBot|PerplexityBot|Perplexity-User|DuckAssistBot|SemrushBot|SiteAuditBot|AhrefsBot|meta-externalagent|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Viber|TelegramBot|Discordbot|Slackbot).*"
+        }
+      ],
+      "destination": "/api/seo?operation=branches-meta"
+    },
+    {
       "source": "/blog/:slug",
       "has": [
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(Googlebot|Bingbot|bingbot|Applebot|OAI-SearchBot|ChatGPT-User|Claude-SearchBot|PerplexityBot|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Viber|TelegramBot|Discordbot|Slackbot).*"
+          "value": ".*(Googlebot|Google-Extended|Bingbot|bingbot|Applebot|OAI-SearchBot|ChatGPT-User|GPTBot|Claude-SearchBot|PerplexityBot|Perplexity-User|DuckAssistBot|SemrushBot|SiteAuditBot|AhrefsBot|meta-externalagent|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Viber|TelegramBot|Discordbot|Slackbot).*"
         }
       ],
       "destination": "/api/seo?operation=blog-meta&slug=:slug"
@@ -74,7 +96,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(Googlebot|Bingbot|bingbot|Applebot|OAI-SearchBot|ChatGPT-User|Claude-SearchBot|PerplexityBot|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Viber|TelegramBot|Discordbot|Slackbot).*"
+          "value": ".*(Googlebot|Google-Extended|Bingbot|bingbot|Applebot|OAI-SearchBot|ChatGPT-User|GPTBot|Claude-SearchBot|PerplexityBot|Perplexity-User|DuckAssistBot|SemrushBot|SiteAuditBot|AhrefsBot|meta-externalagent|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Viber|TelegramBot|Discordbot|Slackbot).*"
         }
       ],
       "destination": "/api/seo?operation=event-meta&slug=:slug"
@@ -85,7 +107,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(Googlebot|Bingbot|bingbot|Applebot|OAI-SearchBot|ChatGPT-User|Claude-SearchBot|PerplexityBot|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Viber|TelegramBot|Discordbot|Slackbot).*"
+          "value": ".*(Googlebot|Google-Extended|Bingbot|bingbot|Applebot|OAI-SearchBot|ChatGPT-User|GPTBot|Claude-SearchBot|PerplexityBot|Perplexity-User|DuckAssistBot|SemrushBot|SiteAuditBot|AhrefsBot|meta-externalagent|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Viber|TelegramBot|Discordbot|Slackbot).*"
         }
       ],
       "destination": "/api/seo?operation=branch-service-meta&citySlug=:citySlug&serviceSlug=:serviceSlug"
@@ -96,7 +118,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(Googlebot|Bingbot|bingbot|Applebot|OAI-SearchBot|ChatGPT-User|Claude-SearchBot|PerplexityBot|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Viber|TelegramBot|Discordbot|Slackbot).*"
+          "value": ".*(Googlebot|Google-Extended|Bingbot|bingbot|Applebot|OAI-SearchBot|ChatGPT-User|GPTBot|Claude-SearchBot|PerplexityBot|Perplexity-User|DuckAssistBot|SemrushBot|SiteAuditBot|AhrefsBot|meta-externalagent|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Viber|TelegramBot|Discordbot|Slackbot).*"
         }
       ],
       "destination": "/api/seo?operation=branch-meta&citySlug=:citySlug"
@@ -107,7 +129,7 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(Googlebot|Bingbot|bingbot|Applebot|OAI-SearchBot|ChatGPT-User|Claude-SearchBot|PerplexityBot|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Viber|TelegramBot|Discordbot|Slackbot).*"
+          "value": ".*(Googlebot|Google-Extended|Bingbot|bingbot|Applebot|OAI-SearchBot|ChatGPT-User|GPTBot|Claude-SearchBot|PerplexityBot|Perplexity-User|DuckAssistBot|SemrushBot|SiteAuditBot|AhrefsBot|meta-externalagent|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Viber|TelegramBot|Discordbot|Slackbot).*"
         }
       ],
       "destination": "/api/seo?operation=service-meta&serviceSlug=:serviceSlug"
@@ -118,12 +140,12 @@
         {
           "type": "header",
           "key": "user-agent",
-          "value": ".*(Googlebot|Bingbot|bingbot|Applebot|OAI-SearchBot|ChatGPT-User|Claude-SearchBot|PerplexityBot|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Viber|TelegramBot|Discordbot|Slackbot).*"
+          "value": ".*(Googlebot|Google-Extended|Bingbot|bingbot|Applebot|OAI-SearchBot|ChatGPT-User|GPTBot|Claude-SearchBot|PerplexityBot|Perplexity-User|DuckAssistBot|SemrushBot|SiteAuditBot|AhrefsBot|meta-externalagent|facebookexternalhit|Facebot|Twitterbot|LinkedInBot|WhatsApp|Viber|TelegramBot|Discordbot|Slackbot).*"
         }
       ],
       "destination": "/api/seo?operation=service-meta"
     },
-    { "source": "/((?!api/|assets/).*)", "destination": "/index.html" }
+    { "source": "/((?!api/|assets/).*)", "destination": "/index" }
   ],
   "headers": [
     {
@@ -142,7 +164,13 @@
       ]
     },
     {
-      "source": "/(api|operations|app|account)/.*",
+      "source": "/(api|operations|app|account)/(.*)",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
+      ]
+    },
+    {
+      "source": "/(operations|app|account)",
       "headers": [
         { "key": "X-Robots-Tag", "value": "noindex, nofollow" }
       ]

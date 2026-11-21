@@ -21,9 +21,9 @@ export const SEO_LOCAL_GUIDES = [
     regionLabel: 'Bacoor, Cavite',
     category: 'Regional Authority Guide',
     title: 'Why Hakum Auto Care Is the Best Car Wash, Auto Detailing & PPF Studio in Bacoor',
-    seo_title: 'Bacoor Car Wash & Best Car Wash in Bacoor, Cavite | Auto Detailing, Ceramic Coating & PPF',
+    seo_title: 'Bacoor Car Wash, Detailing, Ceramic & PPF Guide',
     seo_description:
-      'Looking for the best Bacoor car wash or car wash in Bacoor? Hakum Auto Care at RFC Molino II (Molino Blvd) delivers swirl-free two-bucket pH-neutral car washing, interior detailing, Rupes paint correction, Kisho 9H ceramic coating, ClearPro PPF & ceramic tint.',
+      'Looking for the best Bacoor car wash? Visit Hakum RFC Molino II for two-bucket pH-neutral car washing, Rupes paint correction, Kisho 9H & ClearPro PPF.',
     seo_keywords:
       'bacoor car wash, car wash bacoor, best car wash in bacoor, car wash molino bacoor, ppf bacoor, bacoor ppf, ppf bacoor near me, ceramic coating bacoor, bacoor ceramic coating, auto detailing bacoor, interior detailing bacoor, window tint bacoor, paint correction bacoor, watermark removal bacoor, bactozero bacoor, engine wash bacoor',
     author_label: 'Hakum Technical Bay · Bacoor',
@@ -128,9 +128,9 @@ export const SEO_LOCAL_GUIDES = [
     regionLabel: 'Batangas City',
     category: 'Regional Authority Guide',
     title: 'Batangas Car Wash, Ceramic Coating & Auto Detailing in Batangas City: Complete Studio Guide',
-    seo_title: 'Batangas Car Wash & Best Car Wash in Batangas City | Auto Detailing, Ceramic Coating & PPF',
+    seo_title: 'Batangas Car Wash, Ceramic Coating & PPF Guide',
     seo_description:
-      'Searching for the best Batangas car wash or car wash in Batangas City? Hakum Auto Care (National / PNP Highway, Brgy. Alangilan) delivers swirl-free two-bucket pH-neutral car washing, interior detailing, Rupes paint correction, Kisho 9H ceramic coating & ClearPro PPF.',
+      'Looking for the best Batangas car wash in Batangas City? Hakum Alangilan delivers two-bucket pH-neutral washing, Kisho 9H ceramic & ClearPro PPF.',
     seo_keywords:
       'batangas car wash, car wash batangas, batangas city car wash, car wash batangas city, best car wash in batangas, best car wash in batangas city, car wash alangilan batangas, auto detailing batangas, batangas auto detailing, ceramic coating batangas, batangas ceramic coating, ppf batangas, ppf batangas city, window tint batangas, interior detailing batangas, acid rain removal batangas, watermark removal batangas, engine wash batangas, bactozero batangas',
     author_label: 'Hakum Technical Bay · Batangas City',
@@ -237,9 +237,9 @@ export const SEO_LOCAL_GUIDES = [
     regionLabel: 'Imus, Cavite',
     category: 'Regional Authority Guide',
     title: 'Best Car Wash & Auto Detailing in Imus, Cavite: Why Discerning Drivers Choose Hakum',
-    seo_title: 'Imus Car Wash & Car Wash Imus, Cavite | Auto Detailing, Ceramic Coating & PPF',
+    seo_title: 'Imus Car Wash, Detailing, Ceramic & PPF Guide',
     seo_description:
-      'Searching for the best Imus car wash or auto detailing near Imus, Cavite (Vermosa, Buhay na Tubig, Aguinaldo Hwy)? Hakum Auto Care delivers two-bucket pH-neutral car washing, interior detailing, Kisho 9H ceramic coating & ClearPro PPF.',
+      'Best Imus car wash & detailing near Vermosa and Aguinaldo Hwy. Swirl-free pH-neutral washing, Kisho 9H ceramic & ClearPro PPF minutes away in Bacoor.',
     seo_keywords:
       'imus car wash, car wash imus, car wash imus cavite, best car wash in imus, auto detailing imus, imus auto detailing, ceramic coating imus, ppf imus, window tint imus, interior detailing imus, watermark removal imus, car wash near vermosa',
     author_label: 'Hakum Technical Bay · Imus & Cavite',
@@ -315,9 +315,9 @@ export const SEO_LOCAL_GUIDES = [
     regionLabel: 'Cavite Province',
     category: 'Provincial Buyer’s Guide',
     title: 'Best Auto Detailing, Ceramic Coating & PPF in Cavite: Studio Comparison & Buyer’s Guide',
-    seo_title: 'Cavite Car Wash & Auto Detailing | Best Ceramic Coating & PPF in Cavite',
+    seo_title: 'Cavite Car Wash, Detailing, Ceramic & PPF Guide',
     seo_description:
-      'Comparing car wash, auto detailing, ceramic coating, and Paint Protection Film (PPF) studios across Cavite (Bacoor, Imus, Dasmariñas, General Trias, Tagaytay)? Discover Hakum Auto Care’s Rupes, Menzerna, Kisho 9H & ClearPro PPF standard.',
+      'Comparing car wash, detailing, Kisho 9H ceramic coating & ClearPro PPF across Cavite? See Hakum Auto Care studio standards serving Bacoor to Tagaytay.',
     seo_keywords:
       'cavite car wash, car wash cavite, auto detailing cavite, best auto detailing in cavite, ceramic coating cavite, ppf cavite, paint protection film cavite, clearpro ppf cavite, kisho ceramic coating cavite, window tint cavite, paint correction cavite',
     author_label: 'Hakum Master Detailing Team',
@@ -394,9 +394,9 @@ export const SEO_LOCAL_GUIDES = [
     regionLabel: 'Dasmariñas, Cavite',
     category: 'Regional Authority Guide',
     title: 'Best Car Wash, Ceramic Coating & PPF Near Dasmariñas, Cavite: Complete Studio Guide',
-    seo_title: 'Dasmariñas Car Wash & Car Wash Dasmariñas, Cavite | Auto Detailing, Ceramic & PPF',
+    seo_title: 'Dasmariñas Car Wash, Ceramic Coating & PPF Guide',
     seo_description:
-      'Looking for the best Dasmariñas car wash, auto detailing, ceramic coating, or ClearPro PPF near Dasmariñas, Cavite (Salawag, Paliparan, Salitran, Pala-Pala)? Reach Hakum Auto Care via Molino-Paliparan Rd or Daang Hari.',
+      'Searching for a Dasmariñas car wash, ceramic coating or ClearPro PPF near Salawag and Pala-Pala? Visit nearby Hakum Bacoor via Molino-Paliparan Rd.',
     seo_keywords:
       'dasmarinas car wash, car wash dasmarinas, dasma car wash, car wash dasma, auto detailing dasmarinas, ceramic coating dasmarinas, ppf dasmarinas, window tint dasmarinas, interior detailing dasmarinas, car wash salawag dasmarinas',
     author_label: 'Hakum Technical Bay · Dasmariñas & Cavite',
@@ -472,9 +472,9 @@ export const SEO_LOCAL_GUIDES = [
     regionLabel: 'Paint & Ceramic Craft',
     category: 'Technical Comparison',
     title: 'Ceramic Coating vs. PPF in Philippine Heat & Monsoon Rain: Which Does Your Car Need?',
-    seo_title: 'Ceramic Coating vs PPF Philippines (Bacoor & Batangas) — ClearPro PPF & Kisho 9H Guide',
+    seo_title: 'Ceramic Coating vs PPF Philippines Buyer Guide',
     seo_description:
-      'Compare Kisho 9H Ceramic Coating vs. ClearPro Self-Healing TPU Paint Protection Film (PPF) for Philippine expressways, monsoon acid rain, and UV heat at Hakum Auto Care Bacoor and Batangas City.',
+      'Compare Kisho 9H Ceramic Coating vs ClearPro Self-Healing TPU PPF for Philippine highways, monsoon acid rain & UV heat in Bacoor and Batangas City.',
     seo_keywords:
       'ceramic coating vs ppf philippines, ppf bacoor, ceramic coating bacoor, ppf batangas, ceramic coating batangas, clearpro ppf philippines, kisho 9h ceramic coating',
     author_label: 'Hakum Paint Protection Specialists',
@@ -551,9 +551,9 @@ export const SEO_LOCAL_GUIDES = [
     regionLabel: 'Paint & Ceramic Craft',
     category: 'Detailing Science',
     title: 'Why Roadside Car Washes Cause Swirl Marks (And How Two-Bucket pH-Neutral Washing Saves Your Paint)',
-    seo_title: 'Two-Bucket pH-Neutral Car Wash Guide — Swirl-Free Car Wash in Bacoor & Batangas City',
+    seo_title: 'Two-Bucket pH-Neutral Car Wash Guide Philippines',
     seo_description:
-      'Learn why ordinary roadside car washes cause swirl marks and how Hakum Auto Care’s two-bucket grit-guard pH-neutral snow-foam car wash in Bacoor and Batangas City protects clear coats.',
+      'Learn why ordinary car washes cause swirl marks and how Hakum Auto Care two-bucket grit-guard pH-neutral washing in Bacoor & Batangas protects paint.',
     seo_keywords:
       'two bucket car wash philippines, ph neutral car wash bacoor, ph neutral car wash batangas, swirl free car wash, bacoor car wash, batangas car wash',
     author_label: 'Hakum Detailing Academy',

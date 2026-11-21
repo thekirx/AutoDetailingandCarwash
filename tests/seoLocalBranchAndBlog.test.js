@@ -157,4 +157,28 @@ describe('Local branch SEO hubs, nearest locator, and blog SEO', () => {
     const pkg = JSON.parse(read('package.json'))
     assert.match(pkg.scripts.build, /prerender-seo\.mjs/)
   })
+
+  it('keeps all local city, branch-service, and blog meta titles <= 78 chars and descriptions between 120 and 160 chars', async () => {
+    const { LOCAL_BRANCH_PAGES, LOCAL_BRANCH_SERVICE_PAGES } = await import('../src/lib/localBranchPages.js')
+    const { SEO_LOCAL_GUIDES } = await import('../src/lib/seoLocalGuides.js')
+    const { buildDocumentTitle } = await import('../src/lib/pageMeta.js')
+
+    for (const p of [...LOCAL_BRANCH_PAGES, ...LOCAL_BRANCH_SERVICE_PAGES]) {
+      const fullTitle = buildDocumentTitle(p.seoTitle)
+      assert.ok(fullTitle.length <= 78, `Title too long (${fullTitle.length}): ${fullTitle}`)
+      assert.ok(
+        p.seoDescription.length >= 120 && p.seoDescription.length <= 160,
+        `Description out of range (${p.seoDescription.length}) for ${p.slug || `${p.citySlug}/${p.serviceSlug}`}`,
+      )
+    }
+
+    for (const g of SEO_LOCAL_GUIDES) {
+      const fullTitle = buildDocumentTitle(g.seo_title || g.title)
+      assert.ok(fullTitle.length <= 78, `Blog title too long (${fullTitle.length}): ${fullTitle}`)
+      assert.ok(
+        g.seo_description.length >= 120 && g.seo_description.length <= 160,
+        `Blog description out of range (${g.seo_description.length}) for ${g.slug}`,
+      )
+    }
+  })
 })

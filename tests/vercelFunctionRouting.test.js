@@ -67,7 +67,7 @@ describe('Vercel API rewrite contract', () => {
   it('keeps the SPA fallback after all exact API rewrites', () => {
     assert.deepEqual(config.rewrites.at(-1), {
       source: '/((?!api/|assets/).*)',
-      destination: '/index.html',
+      destination: '/index',
     })
   })
 

@@ -4,19 +4,19 @@ import { buildSiteJsonLd, useLayoutPageMeta } from '@/lib/pageMeta'
 
 const PAGE_META = {
   '/': {
-    title: 'Car Wash, Auto Detailing, Ceramic Coating & PPF Philippines (Bacoor, Imus, Cavite & Batangas)',
+    title: 'Car Wash, Auto Detailing, Ceramic Coating & PPF',
     description:
-      'Hakum Auto Care — One of the fastest-growing and most trusted automotive detailing, paint protection (PPF & ceramic coating), and car wash studios in the Philippines, serving Bacoor, Imus, Cavite, and Batangas.',
+      'Swirl-free two-bucket car wash, auto detailing, Kisho 9H ceramic coating & ClearPro PPF in Bacoor, Imus, Dasmariñas, Cavite & Batangas City.',
   },
   '/home': {
-    title: 'Car Wash, Auto Detailing, Ceramic Coating & PPF Philippines (Bacoor, Imus, Cavite & Batangas)',
+    title: 'Hakum Auto Care — Car Wash, Detailing, Ceramic & PPF',
     description:
-      'Hakum Auto Care — One of the fastest-growing and most trusted automotive detailing, paint protection (PPF & ceramic coating), and car wash studios in the Philippines, serving Bacoor, Imus, Cavite, and Batangas.',
+      'Swirl-free two-bucket car wash, auto detailing, Kisho 9H ceramic coating & ClearPro PPF in Bacoor, Imus, Dasmariñas, Cavite & Batangas City.',
   },
   '/services': {
-    title: 'Car Wash, Auto Detailing, Ceramic Coating & PPF Services Philippines',
+    title: 'Car Wash, Auto Detailing, Ceramic & PPF Services',
     description:
-      'Explore Hakum Auto Care services: pH-neutral car wash, deep detailing, paint correction, Kisho ceramic coating, ClearPro PPF, and nano ceramic tint in Bacoor, Imus, Cavite, and Batangas.',
+      'ClearPro PPF, Kisho 9H ceramic coating, nano ceramic tint, and two-bucket pH-neutral car wash across Bacoor, Cavite & Batangas City.',
   },
   '/shop': {
     title: 'Car Care & Aftercare Shop',
@@ -39,34 +39,34 @@ const PAGE_META = {
       'Check live queue counts at Hakum Auto Care branches in Bacoor (Cavite) and Batangas City before driving in.',
   },
   '/branches': {
-    title: 'Car Wash & Detailing Branches Near Me — Bacoor, Imus, Cavite & Batangas',
+    title: 'Detailing Branches — Bacoor, Imus & Batangas',
     description:
-      'Find the nearest Hakum Auto Care car wash and detailing studio in Bacoor, Imus, Cavite, and Batangas City. Directions, live queue, and direct branch contacts.',
+      'Find Hakum Auto Care detailing, PPF & car wash studios in Bacoor, Imus, Dasmariñas, Cavite & Batangas City. Maps, phone & live queue.',
   },
   '/branches/bacoor': {
-    title: 'Best Car Wash, Auto Detailing & PPF in Bacoor, Cavite',
+    title: 'Bacoor Car Wash & Auto Detailing | Ceramic & PPF',
     description:
-      'Visit Hakum Auto Care Bacoor (RFC Molino II, Molino Boulevard) for pH-neutral car wash, detailing, ceramic coating, ClearPro PPF, and nano ceramic tint.',
+      'Visit Hakum Auto Care Bacoor (RFC Molino II, Molino Blvd) for pH-neutral car wash, detailing, Kisho 9H ceramic coating & ClearPro PPF.',
   },
   '/branches/batangas': {
-    title: 'Best Car Wash, Auto Detailing & PPF in Batangas City',
+    title: 'Batangas Car Wash & Batangas City Auto Detailing',
     description:
-      'Visit Hakum Auto Care Batangas City (National Highway, Brgy. Alangilan) for swirling-free car wash, paint correction, ceramic coating, and PPF.',
+      'Hakum Auto Care Batangas City (Alangilan Highway): swirl-free car wash, interior detailing, Kisho 9H ceramic coating & ClearPro PPF.',
   },
   '/branches/imus': {
-    title: 'Car Wash & Auto Detailing Near Imus, Cavite',
+    title: 'Imus Car Wash & Auto Detailing Near Me, Cavite',
     description:
-      'Looking for trusted car wash, ceramic coating, or detailing near Imus, Cavite? See Hakum Auto Care upcoming Imus expansion and nearby Bacoor flagship studio.',
+      'Imus car wash, auto detailing, ceramic coating & ClearPro PPF near Vermosa and Aguinaldo Hwy — open nearby in Bacoor; Imus opening soon.',
   },
   '/branches/dasmarinas': {
-    title: 'Car Wash, Auto Detailing & PPF Near Dasmariñas, Cavite',
+    title: 'Dasmariñas Car Wash & Auto Detailing Near Me',
     description:
-      'Looking for trusted car wash, ceramic coating, or ClearPro PPF near Dasmariñas, Cavite? See Hakum Auto Care Dasmariñas expansion and nearby Bacoor flagship studio.',
+      'Dasmariñas car wash, auto detailing, ceramic coating & PPF near Salawag and Pala-Pala — open nearby in Bacoor; Dasmariñas opening soon.',
   },
   '/branches/cavite': {
-    title: 'Automotive Detailing, Paint Protection & Car Wash in Cavite',
+    title: 'Cavite Car Wash, Auto Detailing & PPF Studio',
     description:
-      'Hakum Auto Care serves Cavite drivers across Bacoor, Imus, Molino, and Dasmariñas with trusted car wash, detailing, ceramic coating, and PPF.',
+      'Hakum Auto Care serves Cavite drivers across Bacoor, Imus & Dasmariñas with pH-neutral car wash, Rupes correction, Kisho ceramic & PPF.',
   },
   '/partnerships': {
     title: 'Brand Collabs & Automotive Events',

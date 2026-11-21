@@ -131,7 +131,7 @@ export default function BlogPostPage() {
   // them scraped as the homepage (BUG-051).
   usePageMeta({
     title: post?.seo_title || post?.title || 'Article not found',
-    description: post?.seo_description || post?.ai_summary || post?.excerpt,
+    description: post?.seo_description || post?.excerpt || post?.ai_summary,
     path: slug ? `/blog/${slug}` : '/blog',
     image: post?.og_image_url || post?.cover_url || '/og-image.png',
     ogType: post ? 'article' : 'website',
@@ -139,11 +139,11 @@ export default function BlogPostPage() {
     canonical: post?.canonical_url || '',
     article: post
       ? {
-          publishedTime: post.published_at || '',
-          modifiedTime: post.updated_at || post.published_at || '',
-          section: post.category || '',
-          author: post.author_label || 'Hakum Auto Care',
-        }
+        publishedTime: post.published_at || '',
+        modifiedTime: post.updated_at || post.published_at || '',
+        section: post.category || '',
+        author: post.author_label || 'Hakum Auto Care',
+      }
       : null,
     noindex: Boolean((error && !post) || post?.noindex),
     jsonLd: articleJsonLd,

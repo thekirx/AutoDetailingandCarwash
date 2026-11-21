@@ -4,6 +4,8 @@ import { handleSeoRequest } from '../server/seoApi.mjs'
 export const operations = Object.freeze({
   sitemap: handleSeoRequest,
   rss: handleSeoRequest,
+  'home-meta': handleSeoRequest,
+  'branches-meta': handleSeoRequest,
   'blog-meta': handleSeoRequest,
   'event-meta': handleSeoRequest,
   'indexnow-key': handleSeoRequest,

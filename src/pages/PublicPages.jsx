@@ -95,9 +95,9 @@ export function ServicesPage() {
   const prices = useStartingPrices()
 
   usePageMeta({
-    title: 'Services',
+    title: 'Car Wash & Detailing Services',
     description:
-      'Paint protection film, ceramic coating, nano ceramic tint, and every Hakum wash and detailing service in one place.',
+      'ClearPro PPF, Kisho 9H ceramic coating, nano ceramic tint, and two-bucket pH-neutral car wash across Bacoor, Cavite & Batangas City.',
     path: '/services',
   })
 
@@ -168,9 +168,9 @@ export function BranchesPage() {
   )
 
   usePageMeta({
-    title: 'Car Wash & Detailing Branches Near Me — Bacoor, Imus, Dasmariñas, Cavite & Batangas',
+    title: 'Detailing Branches — Bacoor, Imus & Batangas',
     description:
-      'Find the nearest Hakum Auto Care automotive detailing, paint protection, and car wash studio across Bacoor, Imus, Dasmariñas, Cavite, and Batangas City. Get directions, call, or check the live queue.',
+      'Find Hakum Auto Care detailing, PPF & car wash studios in Bacoor, Imus, Dasmariñas, Cavite & Batangas City. Maps, phone & live queue.',
     path: '/branches',
     jsonLd: branchJsonLd,
     jsonLdId: 'hakum-branches',

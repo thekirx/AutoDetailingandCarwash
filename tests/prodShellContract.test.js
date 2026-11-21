@@ -13,9 +13,9 @@ const indexHtml = readFileSync(join(root, 'index.html'), 'utf8')
 const manifest = JSON.parse(readFileSync(join(root, 'public/manifest.webmanifest'), 'utf8'))
 
 describe('Production shell contract (CSP + stale chunks)', () => {
-  it('does not SPA-fallback hashed assets to index.html', () => {
+  it('does not SPA-fallback hashed assets to index shell', () => {
     const spa = vercel.rewrites.at(-1)
-    assert.equal(spa.destination, '/index.html')
+    assert.equal(spa.destination, '/index')
     assert.match(spa.source, /assets/)
     assert.doesNotMatch(spa.source, /^\(\(\?!api\/\)\.\*\)$/)
   })

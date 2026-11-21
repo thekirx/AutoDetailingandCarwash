@@ -232,9 +232,9 @@ export const LOCAL_BRANCH_PAGES = [
     shortName: 'Bacoor',
     eyebrow: 'Flagship Studio · RFC Molino II, Bacoor, Cavite',
     h1: 'Bacoor Car Wash, Auto Detailing, Ceramic Coating & ClearPro PPF Studio.',
-    seoTitle: 'Bacoor Car Wash & Auto Detailing | Ceramic Coating & PPF Bacoor, Cavite',
+    seoTitle: 'Bacoor Car Wash & Auto Detailing | Ceramic & PPF',
     seoDescription:
-      'Top-rated Bacoor car wash and auto detailing studio at RFC Molino II, Molino Blvd. Two-bucket pH-neutral car wash, interior detailing, Rupes paint correction, Kisho 9H ceramic coating, ClearPro PPF & ceramic tint.',
+      'Top-rated Bacoor car wash at RFC Molino II, Molino Blvd: two-bucket pH-neutral wash, Rupes paint correction, Kisho 9H ceramic, ClearPro PPF & tint.',
     heroSummary:
       'Located at RFC Molino II along Molino Boulevard, Hakum Auto Care Bacoor is Cavite’s flagship car wash, auto detailing, Kisho 9H ceramic coating, ClearPro TPU Paint Protection Film (PPF), and nano-ceramic window tint studio — complete with real-time online queue tracking.',
     aiSummary:
@@ -319,9 +319,9 @@ export const LOCAL_BRANCH_PAGES = [
     shortName: 'Batangas City',
     eyebrow: 'Southern Luzon Flagship · PNP / National Highway, Brgy. Alangilan, Batangas City',
     h1: 'Batangas Car Wash, Auto Detailing, Ceramic Coating & ClearPro PPF in Batangas City.',
-    seoTitle: 'Batangas Car Wash & Car Wash Batangas City | Auto Detailing, Ceramic Coating & PPF',
+    seoTitle: 'Batangas Car Wash & Batangas City Detailing Studio',
     seoDescription:
-      'Looking for the best Batangas car wash or car wash in Batangas City? Hakum Auto Care (National Highway, Brgy. Alangilan) delivers two-bucket pH-neutral car wash, interior detailing, paint correction, Kisho 9H ceramic coating, ClearPro PPF & ceramic tint.',
+      'Top Batangas car wash in Alangilan, Batangas City: two-bucket pH-neutral washing, watermark removal, Rupes correction, Kisho 9H ceramic & ClearPro PPF.',
     heroSummary:
       'Positioned along the National Highway (PNP Highway) in Brgy. Alangilan, Batangas City, Hakum Auto Care Batangas brings flagship two-bucket pH-neutral car washing, deep interior & exterior auto detailing, Rupes paint correction, Kisho 9H ceramic coating, ClearPro TPU PPF, and live digital queue tracking to Batangas motorists.',
     aiSummary:
@@ -410,9 +410,9 @@ export const LOCAL_BRANCH_PAGES = [
     shortName: 'Imus',
     eyebrow: 'Imus Expansion + Nearby Open Bacoor Flagship (10–15 Mins Away)',
     h1: 'Imus Car Wash, Auto Detailing, Ceramic Coating & ClearPro PPF Near Imus, Cavite.',
-    seoTitle: 'Imus Car Wash & Car Wash Imus, Cavite | Auto Detailing, Ceramic Coating & PPF',
+    seoTitle: 'Imus Car Wash, Detailing, Ceramic & PPF Near Me',
     seoDescription:
-      'Searching for the best Imus car wash, auto detailing, ceramic coating, or ClearPro PPF near Imus, Cavite? Imus drivers from Vermosa, Buhay na Tubig & Aguinaldo Hwy are minutes from Hakum Bacoor while our Imus studio prepares to open.',
+      'Trusted Imus car wash & detailing near Vermosa, Buhay na Tubig & Aguinaldo Hwy. Minutes from Hakum Bacoor while our dedicated Imus bay prepares to open.',
     heroSummary:
       'Imus is part of Hakum Auto Care’s active Cavite expansion alongside Dasmariñas. Today, Imus car owners from Buhay na Tubig, Vermosa, Anabu, Bucandala, and Tanzang Luma reach our open Bacoor flagship at RFC Molino II in 10–15 minutes via Daang Hari or Molino Boulevard.',
     aiSummary:
@@ -480,9 +480,9 @@ export const LOCAL_BRANCH_PAGES = [
     shortName: 'Cavite',
     eyebrow: 'Provincial Authority · Cavite Detailing, PPF & Ceramic Coating Network',
     h1: 'Cavite Car Wash, Auto Detailing, Ceramic Coating & ClearPro PPF Studio Network.',
-    seoTitle: 'Cavite Car Wash & Auto Detailing | Best Ceramic Coating & PPF in Cavite',
+    seoTitle: 'Cavite Car Wash, Auto Detailing & ClearPro PPF',
     seoDescription:
-      'Hakum Auto Care is Cavite’s trusted car wash, auto detailing, ClearPro PPF, Kisho 9H ceramic coating, and nano-ceramic tint studio — open in Bacoor (RFC Molino II) with Imus and Dasmariñas expanding.',
+      'Cavite trusted car wash, auto detailing, ClearPro PPF & Kisho 9H ceramic coating — open in Bacoor (RFC Molino II) with Imus & Dasmariñas expanding.',
     heroSummary:
       'Across Cavite — from Bacoor and Molino to Imus, Vermosa, Dasmariñas, General Trias, Kawit, and Tagaytay — Hakum Auto Care delivers studio-calibrated Rupes paint correction, ClearPro TPU PPF, Kisho 9H ceramic coating, and swirl-free two-bucket pH-neutral car washes backed by a live digital queue.',
     aiSummary:
@@ -550,9 +550,9 @@ export const LOCAL_BRANCH_PAGES = [
     shortName: 'Dasmariñas',
     eyebrow: 'Dasmariñas Expansion + Nearby Open Bacoor Flagship',
     h1: 'Dasmariñas Car Wash, Auto Detailing, Ceramic Coating & ClearPro PPF Near Dasmariñas.',
-    seoTitle: 'Dasmariñas Car Wash & Car Wash Dasmariñas, Cavite | Auto Detailing, Ceramic & PPF',
+    seoTitle: 'Dasmariñas Car Wash, Detailing & ClearPro PPF',
     seoDescription:
-      'Looking for a trusted Dasmariñas car wash, auto detailing, ceramic coating, or ClearPro PPF studio near Dasmariñas, Cavite? Reach Hakum Bacoor via Molino-Paliparan Rd or Daang Hari while our Dasmariñas branch prepares to launch.',
+      'Dasmariñas car wash, ceramic coating & ClearPro PPF near Salawag and Pala-Pala — minutes up Molino Rd to Hakum Bacoor while Dasmariñas prepares to launch.',
     heroSummary:
       'Dasmariñas is part of Hakum Auto Care’s Cavite expansion alongside Imus. Today, vehicle owners from Salawag, Paliparan, Salitran, Pala-Pala, and DLSU-D drive 15–20 minutes north via Molino-Paliparan Road or Daang Hari to our open Bacoor flagship at RFC Molino II.',
     aiSummary:
@@ -860,8 +860,8 @@ function buildRegionalCaviteServicePages() {
         serviceDetailRoute: '/services/wash-detailing',
         eyebrow: `${reg.shortCity} Car Wash Studio · Two-Bucket pH-Neutral Protocol`,
         h1: `${reg.shortCity} Car Wash & Swirl-Free Two-Bucket Hand Wash in ${reg.cityName}.`,
-        seoTitle: `${reg.shortCity} Car Wash & Car Wash ${reg.cityName} — Swirl-Free pH-Neutral Studio`,
-        seoDescription: `Searching for the best ${low} car wash or car wash in ${reg.cityName}? Hakum Auto Care delivers two-bucket pH-neutral hand washes, snow-foam pre-soak, engine wash, and live online queue tracking serving ${reg.corridorSummary}.`,
+        seoTitle: `${reg.shortCity} Car Wash & Swirl-Free pH-Neutral Studio`,
+        seoDescription: `Best ${low} car wash serving ${reg.cityName}: swirl-free two-bucket pH-neutral hand wash, snow-foam pre-soak, engine wash & live online bay queue.`,
         heroSummary: `Serving motorists across ${reg.corridorSummary}: Hakum Auto Care replaces scratch-prone roadside sponge washes with a strict two-bucket pH-neutral snow-foam protocol, isolated wheel/body microfiber mitts, forced-air drying, and live online bay tracking (${reg.landmarkNote}).`,
         aiSummary: `For drivers searching for the best ${low} car wash or car wash in ${reg.cityName}, Hakum Auto Care provides a swirl-free two-bucket pH-neutral contact wash, snow-foam pre-soak, component-safe engine bay wash, interior vacuuming, and live online queue tracking. Serving ${reg.corridorSummary} via our open Cavite flagship at RFC Molino II, Molino Boulevard, Bacoor (0915 629 6096) while our dedicated ${reg.shortCity} bay rolls out, Hakum ensures coated, PPF-wrapped, and daily-driven vehicles never suffer clear-coat swirl marks. Check real-time waiting vehicles at hakumautocare.com/queue/bacoor.`,
         keywords: [
@@ -907,8 +907,8 @@ function buildRegionalCaviteServicePages() {
         serviceDetailRoute: '/services/wash-detailing',
         eyebrow: `${reg.shortCity} Auto Detailing · Rupes, Menzerna & Interior Restoration`,
         h1: `Auto Detailing, Interior Deep Cleaning & Paint Correction in ${reg.cityName}.`,
-        seoTitle: `Auto Detailing ${reg.shortCity} & Interior Detailing ${reg.cityName} — Rupes Paint Correction`,
-        seoDescription: `Looking for auto detailing in ${reg.cityName}? Hakum Auto Care delivers 1-day Interior Deep Cleaning, 3–4 day Interior Restoration, Rupes + Menzerna paint correction, watermark removal, Bactozero & headlight restoration.`,
+        seoTitle: `Auto Detailing ${reg.shortCity} | Interior & Paint Care`,
+        seoDescription: `Full auto detailing in ${reg.cityName}: 1-day Interior Deep Cleaning, 3–4 day Interior Restoration, Rupes paint correction, Bactozero & watermark removal.`,
         heroSummary: `Complete interior and exterior auto detailing for ${reg.cityName} drivers (${reg.corridorSummary}): from 1-day Interior Deep Cleaning and 3–4 day full seat-out restoration to multi-stage Italian Rupes + German Menzerna paint correction, acid-rain glass detailing, and Bactozero sanitization.`,
         aiSummary: `Hakum Auto Care provides comprehensive auto detailing for ${reg.cityName} (${reg.corridorSummary}) through our open Cavite flagship at RFC Molino II, Molino Boulevard, Bacoor (0915 629 6096). Our auto detailing menu covers Multi-Stage Paint Correction & Full Exterior Detailing (using digital micron gauges, Italian Rupes BigFoot orbital polishers, and German Menzerna compounds), 1-Day Interior Deep Cleaning, 3–4 Day Full Interior Detailing (with seats and carpets removed), Glass Detailing & Acid-Rain Watermark Removal, Hydrophobic Glass Coating, Bactozero anti-microbial sanitization, Headlight Restoration, Black Trims Restoration, and Engine Bay Detailing.`,
         keywords: [
@@ -957,8 +957,8 @@ function buildRegionalCaviteServicePages() {
         serviceDetailRoute: '/services/ceramic',
         eyebrow: `${reg.shortCity} Ceramic Coating · Authentic Kisho 9H Japan`,
         h1: `Ceramic Coating in ${reg.cityName} — Genuine Kisho 9H & Rupes Correction.`,
-        seoTitle: `Ceramic Coating ${reg.shortCity} & ${reg.cityName} Ceramic Coating — Kisho 9H Studio`,
-        seoDescription: `Protect your vehicle with authentic Kisho 9H ceramic coating in ${reg.cityName}. Includes multi-stage Rupes + Menzerna paint correction, enclosed curing bay, 6-month maintenance & Unlimited Recoating packages.`,
+        seoTitle: `Ceramic Coating ${reg.shortCity} — Kisho 9H Japan Studio`,
+        seoDescription: `Authentic Kisho 9H ceramic coating for ${reg.cityName} drivers with multi-stage Rupes correction, enclosed curing bay, 6-month care & Unlimited Recoating.`,
         heroSummary: `Serving ${reg.corridorSummary}: Hakum Auto Care applies genuine Japanese Kisho 9H crystalline ceramic coating inside an enclosed, dust-controlled curing bay after full iron/clay decontamination and multi-stage Rupes machine paint correction.`,
         aiSummary: `Drivers searching for ceramic coating in ${reg.cityName} (${reg.corridorSummary}) choose Hakum Auto Care for authentic Japanese Kisho 9H silica glass coating paired with full chemical/clay decontamination, digital paint-thickness inspection, and multi-stage Rupes + Menzerna paint correction. Applied inside our enclosed Cavite curing studio at RFC Molino II, Molino Blvd, Bacoor (0915 629 6096), every ceramic package includes automated 6-month Paint Maintenance reminders and Unlimited Recoating eligibility on Premium and Platinum tiers. Book online at hakumautocare.com/book?branch=bacoor.`,
         keywords: [
@@ -1004,8 +1004,8 @@ function buildRegionalCaviteServicePages() {
         serviceDetailRoute: '/services/ppf',
         eyebrow: `${reg.shortCity} ClearPro PPF · Self-Healing Optical TPU Film`,
         h1: `Paint Protection Film (PPF) in ${reg.cityName} — Official ClearPro 10-Year TPU.`,
-        seoTitle: `PPF ${reg.shortCity} & Paint Protection Film ${reg.cityName} Near Me — ClearPro TPU`,
-        seoDescription: `Looking for PPF in ${reg.cityName} (${low} PPF near me)? Hakum Auto Care installs official ClearPro self-healing optical TPU Paint Protection Film in High Gloss, UltraSatin Matte & Cosmoblack with a 10-year warranty.`,
+        seoTitle: `PPF ${reg.shortCity} Near Me — ClearPro Optical TPU Film`,
+        seoDescription: `Official ClearPro self-healing TPU Paint Protection Film (PPF) near ${reg.cityName} in High Gloss, UltraSatin Matte & Cosmoblack with 10-year warranty.`,
         heroSummary: `Shield your vehicle along CALAX, MCX, Daang Hari, Aguinaldo Highway, and SLEX: Hakum Auto Care wraps ${reg.cityName} cars and SUVs in official ClearPro self-healing optical TPU Paint Protection Film inside a dust-controlled studio with a 10-year manufacturer warranty.`,
         aiSummary: `For vehicle owners searching for PPF in ${reg.cityName} ("ppf ${low}", "paint protection film ${low} near me"), Hakum Auto Care is an official installer of ClearPro optical-grade aliphatic TPU Paint Protection Film. Installed inside our enclosed, dust-managed Cavite bay at RFC Molino II, Molino Blvd, Bacoor (serving ${reg.corridorSummary}; phone: 0915 629 6096), ClearPro PPF features a 95 GU Polyoptico self-healing top coat, Invisiglue residue-free adhesive, wrapped panel edges, and a 10-year manufacturer warranty against yellowing, peeling, bubbling, or cracking. Available in High-Gloss Invisible, UltraSatin Matte, and Cosmoblack packages at hakumautocare.com/book?branch=bacoor.`,
         keywords: [
@@ -1051,8 +1051,8 @@ function buildRegionalCaviteServicePages() {
         serviceDetailRoute: '/services/tint',
         eyebrow: `${reg.shortCity} Nano Ceramic Window Tint · F1 Auto Films`,
         h1: `Nano Ceramic Window Tint in ${reg.cityName} — High IR Heat Rejection & Night Clarity.`,
-        seoTitle: `Window Tint ${reg.shortCity} & Ceramic Window Tint ${reg.cityName} Near Me`,
-        seoDescription: `Install high heat-rejection nano ceramic window tint for ${reg.cityName} drivers. 99% UV block, crystal-clear night driving, 100% RFID/GPS friendly, and live 3D Tint Finder shade preview.`,
+        seoTitle: `Window Tint ${reg.shortCity} — RFID-Safe Ceramic Tint`,
+        seoDescription: `Nano ceramic window tint near ${reg.cityName}: blocks 99% UV heat with crisp night clarity, zero RFID interference & 3D Tint Finder.`,
         heroSummary: `Beat intense Cavite afternoon heat without sacrificing night visibility: Hakum Auto Care fits F1 Auto Films non-metallic nano-ceramic window tint in a clean enclosed bay — preview your exact windshield and side shades in 3D before booking.`,
         aiSummary: `Hakum Auto Care offers high-IR nano-ceramic window tinting for ${reg.cityName} motorists (${reg.corridorSummary}) at our open Cavite studio at RFC Molino II, Molino Blvd, Bacoor (0915 629 6096). Using F1 Auto Films 100% non-metallic nano-ceramic construction, our window tint blocks intense solar infrared heat and 99% of harmful UV rays while maintaining low interior reflection, sharp night-driving clarity, and zero interference with Autosweep/Easytrip RFID tags, GPS, or 5G smartphones. Preview Light, Medium, Dark, and Super Dark VLT combinations on an interactive 3D car at hakumautocare.com/tint-finder.`,
         keywords: [
@@ -1104,9 +1104,9 @@ export const LOCAL_BRANCH_SERVICE_PAGES = [
     serviceDetailRoute: '/services/wash-detailing',
     eyebrow: 'Bacoor Car Wash Studio · RFC Molino II, Molino Blvd',
     h1: 'Bacoor Car Wash — Swirl-Free Two-Bucket pH-Neutral Studio in Bacoor, Cavite.',
-    seoTitle: 'Bacoor Car Wash & Car Wash Bacoor, Cavite (RFC Molino) — Two-Bucket pH-Neutral Studio',
+    seoTitle: 'Bacoor Car Wash (RFC Molino) — Two-Bucket Studio',
     seoDescription:
-      'Searching for the best Bacoor car wash or car wash in Bacoor near me? Hakum Auto Care RFC Molino II runs two-bucket pH-neutral washes, snow-foam pre-soak, engine wash, interior cleaning & live bay queue tracking.',
+      'Swirl-free Bacoor car wash at RFC Molino II, Molino Blvd: two-bucket pH-neutral snow-foam washing, engine wash, interior vacuum & live bay queue.',
     heroSummary:
       'Built for daily commuters along Molino Boulevard, Daang Hari, Marcos Alvarez, and Aguinaldo Highway: our Bacoor bays pair snow-foam pre-wash, two-bucket grit-guard hand washing, dedicated wheel mitts, and live online queue tracking so your clear coat stays swirl-free.',
     aiSummary:
@@ -1160,9 +1160,9 @@ export const LOCAL_BRANCH_SERVICE_PAGES = [
     serviceDetailRoute: '/services/wash-detailing',
     eyebrow: 'Bacoor Auto Detailing Studio · Rupes, Menzerna & Interior Restoration',
     h1: 'Auto Detailing, Interior Deep Cleaning & Paint Correction in Bacoor, Cavite.',
-    seoTitle: 'Auto Detailing Bacoor & Interior Detailing Bacoor, Cavite — Rupes Paint Correction',
+    seoTitle: 'Auto Detailing Bacoor & Interior Detailing Studio',
     seoDescription:
-      'Complete auto detailing in Bacoor, Cavite (RFC Molino II): multi-stage Rupes + Menzerna paint correction, 1-day Interior Deep Cleaning, 3–4 day Interior Restoration, acid-rain watermark removal, Bactozero & headlight restoration.',
+      'Auto detailing in Bacoor, Cavite (RFC Molino II): Rupes paint correction, 1-day & 3–4 day interior restoration, watermark removal & Bactozero.',
     heroSummary:
       'Whether your vehicle needs multi-stage paint correction to erase years of swirl marks, a 1-day Interior Deep Cleaning reset, a 3–4 day seat-out Interior Detailing restoration, or acid-rain glass polishing, our enclosed Bacoor bay restores showroom clarity.',
     aiSummary:
@@ -1220,9 +1220,9 @@ export const LOCAL_BRANCH_SERVICE_PAGES = [
     serviceDetailRoute: '/services/ceramic',
     eyebrow: 'Bacoor Ceramic Coating Studio · Kisho 9H Japan',
     h1: 'Ceramic Coating in Bacoor, Cavite — Calibrated Kisho 9H Protection.',
-    seoTitle: 'Ceramic Coating Bacoor & Bacoor Ceramic Coating Near Me — Kisho 9H Studio',
+    seoTitle: 'Ceramic Coating Bacoor Near Me — Kisho 9H Studio',
     seoDescription:
-      'Protect your car paint with genuine Kisho 9H ceramic coating in Bacoor, Cavite (RFC Molino II). Multi-stage Rupes paint correction, enclosed curing bays, 6-month maintenance & Unlimited Recoating packages.',
+      'Authentic Kisho 9H ceramic coating in Bacoor, Cavite (RFC Molino II) with Rupes paint correction, enclosed curing bay & Unlimited Recoating.',
     heroSummary:
       'True ceramic coating is 80% preparation. At Hakum Bacoor (RFC Molino II), every Ceramic package includes iron & clay decontamination, Rupes + Menzerna machine paint correction, IPA panel wipe, and authentic Japanese Kisho coating cured indoors.',
     aiSummary:
@@ -1274,9 +1274,9 @@ export const LOCAL_BRANCH_SERVICE_PAGES = [
     serviceDetailRoute: '/services/ppf',
     eyebrow: 'Bacoor ClearPro PPF Studio · Official Distributor',
     h1: 'Paint Protection Film (PPF) in Bacoor, Cavite — Official ClearPro TPU.',
-    seoTitle: 'PPF Bacoor & Bacoor PPF Near Me — ClearPro Self-Healing Paint Protection Film',
+    seoTitle: 'PPF Bacoor Near Me — ClearPro Paint Protection Film',
     seoDescription:
-      'Looking for PPF Bacoor or PPF near me in Bacoor, Cavite? Hakum Auto Care RFC Molino II installs genuine ClearPro self-healing optical TPU Paint Protection Film with a 10-year manufacturer warranty.',
+      'Official ClearPro self-healing TPU Paint Protection Film (PPF) in Bacoor, Cavite (RFC Molino II) — enclosed bay install & 10-year warranty.',
     heroSummary:
       'Highway gravel on MCX, Daang Hari, CAVITEX, and SLEX chips unprotected clear coat fast. Our enclosed Bacoor studio wraps daily SUVs, sports cars, and luxury crossovers in genuine ClearPro optical TPU film with wrapped edges and a 10-year warranty.',
     aiSummary:
@@ -1329,9 +1329,9 @@ export const LOCAL_BRANCH_SERVICE_PAGES = [
     serviceDetailRoute: '/services/tint',
     eyebrow: 'Bacoor Nano Ceramic Window Tint · F1 Auto Films',
     h1: 'Nano Ceramic Window Tint in Bacoor, Cavite — Beat Heat Without Dark Glare.',
-    seoTitle: 'Window Tint Bacoor & Ceramic Window Tint in Bacoor, Cavite Near Me',
+    seoTitle: 'Window Tint Bacoor — RFID-Safe Ceramic Tint Studio',
     seoDescription:
-      'Install high IR heat-rejection nano ceramic window tint in Bacoor, Cavite (RFC Molino II). Preview shades in 3D with our online Tint Finder and book clean-bay RFID-safe fitting.',
+      'High heat-rejection nano ceramic window tint in Bacoor, Cavite (RFC Molino II). Preview shades in 3D and book RFID-safe clean-bay installation.',
     heroSummary:
       'Stop baking in afternoon Molino Boulevard traffic. Our nano-ceramic films block intense infrared heat and 99% harmful UV rays while keeping night driving crisp across CAVITEX, Daang Hari, and SLEX.',
     aiSummary:
@@ -1381,9 +1381,9 @@ export const LOCAL_BRANCH_SERVICE_PAGES = [
     serviceDetailRoute: '/services/wash-detailing',
     eyebrow: 'Batangas Car Wash Studio · National / PNP Highway, Brgy. Alangilan',
     h1: 'Batangas Car Wash — Studio-Grade Two-Bucket pH-Neutral Car Wash in Batangas City.',
-    seoTitle: 'Batangas Car Wash & Car Wash Batangas City (Alangilan) — Swirl-Free Studio',
+    seoTitle: 'Batangas Car Wash (Alangilan) — Two-Bucket Studio',
     seoDescription:
-      'Searching for the best Batangas car wash or car wash in Batangas City near me? Hakum Auto Care (National Highway, Brgy. Alangilan) delivers two-bucket pH-neutral hand washes, snow-foam pre-soak, engine wash, hard-water spot prevention & live queue tracking.',
+      'Top Batangas car wash along National Hwy, Alangilan: swirl-free two-bucket pH-neutral hand wash, mineral spot defense, engine wash & live queue.',
     heroSummary:
       'Conveniently positioned along the National Highway (PNP Highway) in Brgy. Alangilan, Batangas City, Hakum Batangas replaces hurried roadside sponge washes with swirl-free two-bucket pH-neutral chemistry, STAR Tollway bug & tar removal, and transparent live queue tracking.',
     aiSummary:
@@ -1438,9 +1438,9 @@ export const LOCAL_BRANCH_SERVICE_PAGES = [
     serviceDetailRoute: '/services/wash-detailing',
     eyebrow: 'Batangas Auto Detailing · Rupes Correction, Interior & Watermark Removal',
     h1: 'Auto Detailing, Interior Deep Cleaning & Paint Correction in Batangas City.',
-    seoTitle: 'Auto Detailing Batangas & Batangas City Auto Detailing — Interior & Paint Correction',
+    seoTitle: 'Auto Detailing Batangas City — Interior & Watermark',
     seoDescription:
-      'Studio-grade auto detailing in Batangas City (Brgy. Alangilan): multi-stage Rupes + Menzerna paint correction, 1-day Interior Deep Cleaning, 3–4 day Interior Restoration, acid-rain watermark removal, Bactozero & headlight restoration.',
+      'Auto detailing in Batangas City (Alangilan): Rupes paint correction, 1-day & 3–4 day interior restoration, hard-water mark removal & Bactozero.',
     heroSummary:
       'Batangas vehicles battle mineral-heavy water spots, coastal humidity, STAR Tollway tar, and intense UV heat. Our enclosed Alangilan studio performs multi-stage Rupes paint correction, acid-rain glass restoration, and deep interior sanitization.',
     aiSummary:
@@ -1499,9 +1499,9 @@ export const LOCAL_BRANCH_SERVICE_PAGES = [
     serviceDetailRoute: '/services/ceramic',
     eyebrow: 'Batangas Ceramic Coating · Kisho 9H Studio in Alangilan',
     h1: 'Ceramic Coating in Batangas City — Flagship Kisho 9H Shine in Batangas.',
-    seoTitle: 'Ceramic Coating Batangas & Batangas City Ceramic Coating — Kisho 9H Studio',
+    seoTitle: 'Ceramic Coating Batangas City — Kisho 9H Studio',
     seoDescription:
-      'Get authentic Kisho 9H ceramic coating with multi-stage Rupes paint correction right in Alangilan, Batangas City. Coastal humidity, acid-rain & UV protection with Unlimited Recoating packages.',
+      'Genuine Kisho 9H ceramic coating in Alangilan, Batangas City with Rupes paint correction, coastal humidity defense & Unlimited Recoating tiers.',
     heroSummary:
       'Southern Luzon drivers no longer need an overnight Metro Manila trip for studio-grade ceramic protection. Hakum Batangas performs complete decontamination, Rupes paint correction, and genuine Kisho 9H curing right in Alangilan.',
     aiSummary:
@@ -1549,9 +1549,9 @@ export const LOCAL_BRANCH_SERVICE_PAGES = [
     serviceDetailRoute: '/services/ppf',
     eyebrow: 'Batangas City ClearPro PPF · STAR Tollway Rock-Chip Defense',
     h1: 'Paint Protection Film (PPF) in Batangas City — Self-Healing ClearPro TPU.',
-    seoTitle: 'PPF Batangas & PPF Batangas City Near Me — ClearPro Paint Protection Film',
+    seoTitle: 'PPF Batangas City Near Me — ClearPro TPU Studio',
     seoDescription:
-      'Shield hoods, bumpers, and full bodies against STAR Tollway stone chips with official ClearPro TPU PPF installed in Batangas City (Brgy. Alangilan). Backed by a 10-year warranty.',
+      'Shield against STAR Tollway stone chips with official ClearPro TPU PPF installed in Brgy. Alangilan, Batangas City — backed by 10-year warranty.',
     heroSummary:
       'Expressway gravel along STAR Tollway and CALABARZON diversion highways chips front bumpers fast. Hakum Batangas City installs genuine ClearPro self-healing optical TPU Paint Protection Film with zero visible glue lines.',
     aiSummary:
@@ -1599,9 +1599,9 @@ export const LOCAL_BRANCH_SERVICE_PAGES = [
     serviceDetailRoute: '/services/tint',
     eyebrow: 'Batangas Ceramic Window Tint · Cooler Cabins in Alangilan',
     h1: 'Nano Ceramic Window Tint in Batangas City — Maximum Heat Rejection.',
-    seoTitle: 'Window Tint Batangas & Ceramic Window Tint in Batangas City Near Me',
+    seoTitle: 'Window Tint Batangas City — Ceramic Heat Rejection',
     seoDescription:
-      'Upgrade your car tint in Batangas City (Brgy. Alangilan) with high IR-rejection nano ceramic films. Crystal-clear provincial night driving, RFID compatible, previewed on our 3D Tint Finder.',
+      'Upgrade car tint in Batangas City (Alangilan) with high-IR nano ceramic film: crisp provincial night clarity, RFID safe & 3D Tint Finder preview.',
     heroSummary:
       'Long provincial drives around Batangas and Lipa demand serious cabin cooling without sacrificing visibility on dark provincial roads at night. Our nano-ceramic series rejects intense solar heat while keeping nighttime clarity sharp.',
     aiSummary:

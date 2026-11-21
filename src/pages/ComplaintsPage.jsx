@@ -10,7 +10,7 @@ import BdPageHero from '../components/public/bredesign/BdPageHero'
 export default function ComplaintsPage() {
   usePageMeta({
     title: 'Submit a Complaint',
-    description: 'Report a service or branch issue to Hakum Auto Care management.',
+    description: 'Submit a service feedback report or branch inquiry directly to Hakum Auto Care management in Bacoor or Batangas City.',
     path: '/complaints',
     noindex: true,
   })
