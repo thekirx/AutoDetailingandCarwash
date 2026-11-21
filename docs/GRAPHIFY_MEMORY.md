@@ -1,6 +1,6 @@
 # Hakum Auto Care — principal memory (Graphify seed)
 
-Last verified live: **2026-11-16** (reconciled with Daily Sheet cutover, 33-service catalog, Permanent Form Results Board, Local SEO/PWA, and Web Push/deep-link fixes). Product: Hakum Auto Care. Repo: `thekirx/AutoDetailingandCarwash`. Stack: Vite + React SPA, PostgREST + `/api/*`, Supabase Auth + RLS. Live API: `https://lybxhpzzqqyqswvuwpxv.supabase.co`. Do not store service_role, `sbp_` tokens, or `.env` in this graph.
+Last verified live: **2026-11-21** (reconciled with Daily Sheet cutover, 33-service catalog, Permanent Form Results Board, Full 5×5 Branch×Service SEO & AI Search Visibility (`51` sitemap URLs, `52` prerendered HTML shells, `home-meta`/`branches-meta` bot SSR), Notifications Hub CRUD + Simulator, Web Push/deep-link fixes, and Nov 19 DB RLS/index hardening). Product: Hakum Auto Care. Repo: `thekirx/AutoDetailingandCarwash`. Stack: Vite + React SPA, PostgREST + `/api/*`, Supabase Auth + RLS. Live API: `https://lybxhpzzqqyqswvuwpxv.supabase.co`. Do not store service_role, `sbp_` tokens, or `.env` in this graph.
 
 This file is the session-durable principal dump: domain rules, live schema, money path, RBAC, routes, and how agents should work. Pair with `CONTEXT.md`, `docs/OPS/MONEY-CONTRACT.md`, `docs/POS/`, `docs/PAYROLL/`.
 
@@ -16,7 +16,7 @@ This file is the session-durable principal dump: domain rules, live schema, mone
 - **Client:** `src/` React 19 + React Router 7 + Tailwind 4. Public site + customer portal + staff `/operations/*`.
 - **Auth:** `@supabase/supabase-js`. Staff roles live in `staff_profiles.role` (and `app_metadata` — never `user_metadata` for authz). Customers are a separate portal.
 - **Data:** Supabase Postgres. Floor & daily close writes go through SECURITY DEFINER RPCs (`complete_pos_sale`, `assign_daily_queue_number`, `send_queue_ticket_to_payment`, `save_daily_sheet`, `submit_daily_sheet`, `review_daily_sheet`, `reopen_daily_sheet`). Legacy `run_payroll`, `submit_shift_close`, `review_shift_close`, and `complete_payment` are retired/revoked. Direct table writes are RLS-gated.
-- **API gateway:** `server/*.mjs` + `api/*.js` (`audit:api-auth` scans 36 handlers) for SMS (BusyBee), customer provision, public book, unified Web Push (`deliverUserNotifications` + `resolvePushTargets`), form results, data center, BrandTxt, etc. Vite proxies `/api` in `npm run dev` & `vite preview`.
+- **API gateway:** `server/*.mjs` + `api/*.js` (`10` functions, `audit:api-auth` scans `40` handlers) for SMS (BusyBee), customer provision, public book, unified Web Push (`deliverUserNotifications` + `resolvePushTargets`), notification templates CRUD (`custom_notification_templates`), form results, smart search, SEO crawler SSR/sitemap (`server/seoApi.mjs`), data center, BrandTxt, etc. Vite proxies `/api` in `npm run dev` & `vite preview`.
 - **Migrations:** `supabase/migrations/` — apply via CLI/MCP; never invent filenames; use `supabase migration new`.
 - **Money is integer minor units** (centavos). Display as pesos in UI.
 

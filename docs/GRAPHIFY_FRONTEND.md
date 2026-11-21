@@ -3,7 +3,7 @@
 ## Route map (`src/App.jsx`)
 
 ### Public
-`/home`, `/services`, `/services/:slug`, `/book` (detailing), `/queue`, `/branches`, `/partnerships`, `/contact`, `/complaints`, `/events`, `/events/:slug`, `/blog`, `/blog/:slug`, `/f/:slug`, legal (`/terms` `/privacy` `/cookies`), `/403` `/404`.
+`/home` (`noindex`), `/services`, `/services/:slug` (`ppf`, `ceramic`, `tint`, `wash-detailing`), `/tint-finder`, `/shop`, `/book` (detailing), `/queue`, `/branches`, `/branches/:citySlug` (`bacoor`, `batangas`, `imus`, `cavite`, `dasmarinas`), `/branches/:citySlug/:serviceSlug` (`car-wash`, `auto-detailing`, `ceramic-coating`, `ppf`, `window-tint`), `/partnerships`, `/contact`, `/complaints` (`noindex`), `/events`, `/events/:slug`, `/blog`, `/blog/:slug`, `/f/:slug`, legal (`/terms` `/privacy` `/cookies`), `/403` `/404`.
 
 ### Customer (ProtectedRoute role=customer)
 `/account`, `/account/blog`, `/account/events`, `/account/queue`, `/account/book`, `/account/loyalty`, `/account/more`; auth `/signin` `/signup` `/account/set-password`.
@@ -55,9 +55,9 @@ Detailer is on queue **viewer** capabilities for floor visibility / Failed QA co
 
 ## `/api/*` gateway
 
-Vite `attachHakumApis` + Vercel `api/{bookings,customer,data-center,finance,notifications,public-inquiry,staff}.js` → `server/*.mjs`.
+Vite `attachHakumApis` + Vercel `api/{bookings,customer,data-center,demo-login,finance,health,notifications,public-inquiry,seo,staff}.js` (`10` functions under Hobby `12` cap) → `server/*.mjs`.
 
-Paths: provision-customer/staff, update-staff, customer-portal/signup/auth-lookup/history, public-book/inquiry, plate-lookup, booking-status, maintenance-schedules, push-subscribe/send-push, notify-* (booking, ops-form, planner, pos, shift-close, ops-lab), lifecycle-sms, busybee, notification-*, birthday-greetings, send-finance-quote, data-center.
+Paths: provision-customer/staff, update-staff, smart-search, customer-portal/signup/auth-lookup/history, public-book/inquiry, plate-lookup, booking-status, maintenance-schedules, push-subscribe/send-push, notify-* (booking, ops-form, planner, pos, shift-close, ops-lab), lifecycle-sms, busybee, notification-*, notification-templates, notification-broadcast-kinds, birthday-greetings, send-finance-quote, data-center, `seo` (`sitemap`, `rss`, `home-meta`, `branches-meta`, `branch-meta`, `branch-service-meta`, `service-meta`, `blog-meta`, `event-meta`, `indexnow-key`).
 
 **Floor money stays PostgREST RPC**, not these routes.
 

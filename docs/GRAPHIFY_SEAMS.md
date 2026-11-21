@@ -23,7 +23,9 @@ Ops still required outside git: Auth SMTP templates, Vercel↔local name parity,
 
 ## Vercel / Vite `/api` entrypoints
 
-Disk `api/*.js` gateways: `bookings`, `customer`, `data-center`, `finance`, `notifications`, `public-inquiry`, `staff`. Impl lives mainly in `server/*.mjs`; Vite `attachHakumApis` mirrors in dev.
+Disk `api/*.js` gateways (`10` total, under Hobby `12` cap): `bookings`, `customer`, `data-center`, `demo-login`, `finance`, `health`, `notifications`, `public-inquiry`, `seo`, `staff`. Impl lives mainly in `server/*.mjs`; Vite `attachHakumApis` mirrors in dev. `npm run audit:api-auth` scans `40` handlers.
+
+Note on Vercel `vercel.json`: `"cleanUrls": true` is paired with SPA fallback `"destination": "/index"` (not `"/index.html"`), plus bot SSR rewrites to `/api/seo` and `"/(api|operations|app|account)/(.*)"` `X-Robots-Tag: noindex, nofollow`.
 
 ## Critical money RPC signatures (live)
 
