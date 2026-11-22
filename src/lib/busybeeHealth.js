@@ -1,21 +1,38 @@
 /**
- * Map BusyBee /api/busybee health JSON into UI copy (CRM SMS panel).
+ * Map BusyBee /api/busybee health JSON into UI copy (CRM SMS panel & Super Admin Notifications).
  * Never dump raw provider blobs into the primary status line.
  */
+
+export function extractBusybeeCredits(health) {
+  if (!health?.ok) return null
+  const raw =
+    health.json?.Data?.[0]?.Credits ??
+    health.json?.data?.[0]?.credits ??
+    health.credits
+  if (raw == null || String(raw).trim() === '') return null
+  return String(raw).trim()
+}
+
+export function formatBusybeeBalance(health) {
+  const raw = extractBusybeeCredits(health)
+  if (!raw) return null
+  const phpMatch = /^(?:PHP|₱)\s*([0-9]+(?:\.[0-9]+)?)$/i.exec(raw)
+  if (phpMatch) {
+    const amount = Number(phpMatch[1])
+    if (Number.isFinite(amount)) {
+      return `₱${amount.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    }
+  }
+  return `${raw} credits`
+}
 
 export function busybeeProviderStatusLabel(health) {
   if (!health) return null
   if (health.ok) {
-    const credits =
-      health.json?.Data?.[0]?.Credits ??
-      health.json?.data?.[0]?.credits ??
-      health.credits
+    const formatted = formatBusybeeBalance(health)
     return {
       tone: 'ok',
-      text:
-        credits != null && credits !== ''
-          ? `Connected · ${credits} credits`
-          : 'Connected · balance ok',
+      text: formatted ? `Connected · ${formatted}` : 'Connected · balance ok',
     }
   }
 

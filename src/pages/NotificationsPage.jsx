@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Navigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import {
   AlertTriangle,
   Bell,
@@ -9,11 +9,13 @@ import {
   Megaphone,
   Pencil,
   Plus,
+  RefreshCw,
   Search,
   ShieldCheck,
   Smartphone,
   Trash2,
   Users,
+  Wallet,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
@@ -22,8 +24,11 @@ import {
   canAccessNotifications,
   canManageNotifications,
   canSendBroadcast,
+  isSuperAdmin,
 } from '@/auth/permissions'
+import { getSmsNotificationsEnabled } from '@/lib/adminApi'
 import { getAccessTokenFresh } from '@/lib/authToken'
+import { busybeeProviderStatusLabel, formatBusybeeBalance } from '@/lib/busybeeHealth'
 import {
   BUSYBEE_SMS_MULTIPART_MAX,
   BUSYBEE_SMS_SINGLE_MAX,
@@ -87,10 +92,41 @@ export default function NotificationsPage() {
   const [params, setParams] = useSearchParams()
   const canReminders = canManageNotifications(profile)
   const canBroadcast = canSendBroadcast(profile)
+  const showSuperAdminBalance = isSuperAdmin(profile)
+  const [smsHealth, setSmsHealth] = useState(null)
+  const [smsGateOn, setSmsGateOn] = useState(null)
+  const [loadingSmsHealth, setLoadingSmsHealth] = useState(false)
+
+  const loadSuperAdminSmsBalance = useCallback(async () => {
+    if (!showSuperAdminBalance) return
+    setLoadingSmsHealth(true)
+    try {
+      const token = await getAccessTokenFresh().catch(() => null)
+      const [health, gate] = await Promise.all([
+        fetch('/api/busybee', {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        })
+          .then(async (r) => ({ http: r.status, ...(await r.json().catch(() => ({}))) }))
+          .catch((err) => ({ ok: false, error: err.message })),
+        getSmsNotificationsEnabled().catch(() => null),
+      ])
+      setSmsHealth(health)
+      if (typeof gate === 'boolean') setSmsGateOn(gate)
+    } finally {
+      setLoadingSmsHealth(false)
+    }
+  }, [showSuperAdminBalance])
+
+  useEffect(() => {
+    loadSuperAdminSmsBalance()
+  }, [loadSuperAdminSmsBalance])
 
   if (!canAccessNotifications(profile)) {
     return <Navigate to="/operations/access-denied" replace />
   }
+
+  const smsBalanceText = formatBusybeeBalance(smsHealth)
+  const smsProviderStatus = busybeeProviderStatusLabel(smsHealth)
 
   const tabParam = params.get('tab')
   const tab =
@@ -114,8 +150,54 @@ export default function NotificationsPage() {
       eyebrow="Operations"
       title="Notifications"
       icon={Bell}
-      description="All shop push and SMS copy, paint-maintenance reminders, and customer broadcasts. Super Admin can edit every template."
+      description="All shop push and status SMS copy, paint-maintenance reminders, and push broadcasts. Super Admin can monitor BusyBee SMS balance and edit every template."
     >
+      {showSuperAdminBalance ? (
+        <aside
+          className="rounded-2xl border border-border bg-card px-4 py-3.5 text-sm shadow-xs"
+          aria-label="BusyBee SMS Balance"
+        >
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="flex items-center gap-1.5 font-semibold text-foreground">
+                  <Wallet className="size-4 text-primary" aria-hidden />
+                  BusyBee BrandTxt SMS Balance:
+                </span>
+                <span className="text-base font-bold tabular-nums text-emerald-700 dark:text-emerald-400">
+                  {loadingSmsHealth && !smsHealth
+                    ? 'Checking…'
+                    : smsBalanceText || smsProviderStatus?.text || 'Unavailable'}
+                </span>
+                {smsGateOn !== null ? (
+                  <Badge variant={smsGateOn ? 'default' : 'secondary'}>
+                    Status SMS {smsGateOn ? 'ON' : 'OFF'}
+                  </Badge>
+                ) : null}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Customer BusyBee SMS is restricted strictly to Detailing, Services &amp; Packages booking status updates. All other alerts deliver via Web Push &amp; In-App Inbox.
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="min-h-9 cursor-pointer"
+                disabled={loadingSmsHealth}
+                onClick={loadSuperAdminSmsBalance}
+              >
+                <RefreshCw className={cn('mr-1.5 size-3.5', loadingSmsHealth && 'animate-spin')} aria-hidden />
+                Refresh
+              </Button>
+              <Button asChild size="sm" variant="secondary" className="min-h-9">
+                <Link to="/operations/crm?tab=sms">Status SMS &amp; Log</Link>
+              </Button>
+            </div>
+          </div>
+        </aside>
+      ) : null}
       {canReminders ? (
         <aside className="rounded-2xl border border-primary/25 bg-primary/[0.06] px-4 py-3 text-sm leading-relaxed">
           <p className="flex items-start gap-2 font-medium text-foreground">

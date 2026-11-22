@@ -9,7 +9,15 @@
  * Body: { phone, message, secret }
  * BusyBee API keys stay on the relay host only.
  */
+import { timingSafeEqual } from 'node:crypto'
 import { busybeeSendSmsDirect } from './busybee.mjs'
+
+function secretMatches(provided, expected) {
+  if (typeof provided !== 'string' || !provided || !expected) return false
+  const a = Buffer.from(provided)
+  const b = Buffer.from(expected)
+  return a.length === b.length && timingSafeEqual(a, b)
+}
 
 function json(res, status, body) {
   res.statusCode = status
@@ -59,7 +67,7 @@ export async function handleBusybeeRelayRequest(req, res) {
     return json(res, 400, { ok: false, status: 'failed', providerResponse: 'Invalid JSON' })
   }
 
-  if (!body?.secret || body.secret !== expected) {
+  if (!secretMatches(body?.secret, expected)) {
     return json(res, 401, { ok: false, status: 'failed', providerResponse: 'Unauthorized' })
   }
 

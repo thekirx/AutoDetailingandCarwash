@@ -5,7 +5,7 @@ import { useAuth } from '@/auth/AuthProvider'
 import { canSendCustomerSms, isAdmin } from '@/auth/permissions'
 import { getSmsNotificationsEnabled, setSmsNotificationsEnabled } from '@/lib/adminApi'
 import { getAccessTokenFresh } from '@/lib/authToken'
-import { busybeeProviderStatusLabel } from '@/lib/busybeeHealth'
+import { busybeeProviderStatusLabel, formatBusybeeBalance } from '@/lib/busybeeHealth'
 import {
   BUSYBEE_SMS_MULTIPART_MAX,
   BUSYBEE_SMS_SINGLE_MAX,
@@ -48,6 +48,7 @@ export default function SmsPage({ embedded = false }) {
   const [savingTpl, setSavingTpl] = useState(false)
 
   const providerLabel = useMemo(() => busybeeProviderStatusLabel(providerHealth), [providerHealth])
+  const balanceText = useMemo(() => formatBusybeeBalance(providerHealth), [providerHealth])
   const formAnalysis = useMemo(
     () => analyzeBusybeeSms(form.body, { allowMultiPart: Boolean(form.allow_multipart) }),
     [form.body, form.allow_multipart],
@@ -194,6 +195,11 @@ export default function SmsPage({ embedded = false }) {
             <strong className={smsEnabled ? 'text-emerald-700 dark:text-emerald-400' : 'text-amber-800 dark:text-amber-300'}>
               {smsEnabled ? 'Enabled' : 'Disabled'}
             </strong>
+            {balanceText ? (
+              <span className="ml-3 font-semibold tabular-nums text-emerald-700 dark:text-emerald-400">
+                · BusyBee Balance: {balanceText}
+              </span>
+            ) : null}
             {!isAdmin(profile) ? (
               <span className="text-muted-foreground"> · Only Admin / Super Admin can change this.</span>
             ) : null}

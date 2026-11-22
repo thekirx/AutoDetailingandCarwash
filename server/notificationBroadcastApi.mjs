@@ -3,6 +3,7 @@ import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
 import { validateNotificationCopy } from '../src/lib/notificationCopy.js'
 import { safeNotificationPath } from './notificationTargetUrl.mjs'
 import { resolveBroadcastAudience, resolveBroadcastDispatch } from './broadcastAudience.mjs'
+import { resolveActiveStaff } from './staffAuth.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
 
 const ALLOWED = new Set(['BossMich', 'assistant_super_admin', 'marketing'])
@@ -14,15 +15,7 @@ const BROADCAST_SELECT_LEGACY =
   'id, kind, channel, title, body, url, target_audience, branch_slug, sent_count, failed_count, sent_at'
 
 async function loadStaff(db, token) {
-  const { data: userData, error: userErr } = await db.auth.getUser(token)
-  if (userErr || !userData?.user) return null
-  const { data: staff } = await db
-    .from('staff_profiles')
-    .select('id, role, is_active, branch_slug')
-    .eq('id', userData.user.id)
-    .eq('is_active', true)
-    .maybeSingle()
-  return staff
+  return resolveActiveStaff(db, token, { select: 'id, role, is_active, branch_slug' })
 }
 
 async function selectBroadcastHistory(db, staffRole) {
@@ -52,6 +45,7 @@ async function resolveEmployeeIds(db, { employeeScope, employeeRoles, branchSlug
     .from('staff_profiles')
     .select('id, full_name, role, branch_slug, is_active')
     .eq('is_active', true)
+    .eq('is_archived', false)
 
   if (employeeScope === 'roles' && employeeRoles.length) {
     q = q.in('role', employeeRoles)

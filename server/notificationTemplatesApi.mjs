@@ -92,8 +92,14 @@ export async function handleNotificationTemplatesRequest(req, res) {
     }
 
     const label = String(body.label || '').trim() || 'Custom notification'
-    const channel = ['push', 'sms', 'both'].includes(body.channel) ? body.channel : 'both'
-    const allowMultiPart = Boolean(body.allow_multipart)
+    const requestedChannel = String(body.channel || 'push').trim().toLowerCase()
+    if (requestedChannel !== 'push') {
+      return json(res, 400, {
+        error: 'Custom templates deliver via Web Push & In-App Inbox only (SMS is restricted to Detailing, Services & Packages status updates).',
+      })
+    }
+    const channel = 'push'
+    const allowMultiPart = false
     const title = trimNullable(body.title)
     const pushBody = trimNullable(body.body)
     const smsBody = trimNullable(body.sms_body)
@@ -186,8 +192,13 @@ export async function handleNotificationTemplatesRequest(req, res) {
     if (findErr) return json(res, 400, { error: findErr.message })
     if (!customRow) return json(res, 404, { error: 'Template not found.' })
 
-    const channel = ['push', 'sms', 'both'].includes(body.channel) ? body.channel : (customRow.channel || 'both')
-    const allowMultiPart = typeof body.allow_multipart === 'boolean' ? body.allow_multipart : Boolean(customRow.allow_multipart)
+    if (body.channel && String(body.channel).trim().toLowerCase() !== 'push') {
+      return json(res, 400, {
+        error: 'Custom templates deliver via Web Push & In-App Inbox only (SMS is restricted to Detailing, Services & Packages status updates).',
+      })
+    }
+    const channel = 'push'
+    const allowMultiPart = false
     const title = body.title !== undefined ? trimNullable(body.title) : customRow.title
     const pushBody = body.body !== undefined ? trimNullable(body.body) : customRow.body
     const smsBody = body.sms_body !== undefined ? trimNullable(body.sms_body) : customRow.sms_body

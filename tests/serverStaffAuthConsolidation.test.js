@@ -45,9 +45,11 @@ const DELEGATING_AUTH_MODULES = [
   'server/customerAdminApi.mjs',
   'server/customerHistoryApi.mjs',
   'server/lifecycleSmsApi.mjs',
+  'server/notificationBroadcastApi.mjs',
   'server/notificationBroadcastKindsApi.mjs',
   'server/notificationSettingsApi.mjs',
   'server/notificationTemplatesApi.mjs',
+  'server/notifyBookingApi.mjs',
   'server/notifyOpsEventApi.mjs',
   'server/notifyPlannerApi.mjs',
   'server/notifyPosApi.mjs',
@@ -97,6 +99,9 @@ describe('server staffAuth deepening & archived-staff blocking', () => {
       assert.match(src, /from '\.\/staffAuth\.mjs'/, `${file} must import staffAuth.mjs`)
       if (file === 'server/smartSearchApi.mjs') {
         assert.match(src, /requireActiveStaff/)
+      } else if (file === 'server/notificationBroadcastApi.mjs') {
+        assert.match(src, /resolveActiveStaff/)
+        assert.match(src, /\.eq\(\s*['"]is_archived['"]\s*,\s*false\s*\)/)
       } else {
         assert.doesNotMatch(
           src,

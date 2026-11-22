@@ -86,7 +86,7 @@ const EMPTY_CUSTOM_TEMPLATE = {
   label: '',
   description: '',
   category: 'custom',
-  channel: 'both',
+  channel: 'push',
   title: '',
   body: '',
   sms_body: '',
@@ -917,16 +917,15 @@ export default function NotificationTemplatesPanel() {
                   <div className="grid gap-2">
                     <Label htmlFor="new-tpl-channel">Channel</Label>
                     <Select
-                      value={newTemplate.channel}
-                      onValueChange={(v) => setNewTemplate({ ...newTemplate, channel: v })}
+                      value="push"
+                      disabled
+                      onValueChange={() => setNewTemplate({ ...newTemplate, channel: 'push' })}
                     >
-                      <SelectTrigger id="new-tpl-channel" className="min-h-10 cursor-pointer">
+                      <SelectTrigger id="new-tpl-channel" className="min-h-10 cursor-not-allowed">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="both">Push + SMS</SelectItem>
-                        <SelectItem value="sms">SMS only</SelectItem>
-                        <SelectItem value="push">Push only</SelectItem>
+                        <SelectItem value="push">Push + In-App only</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

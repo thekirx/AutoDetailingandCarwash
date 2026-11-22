@@ -8,13 +8,13 @@ import { BIRTHDAY_GIFT_LABEL } from './birthdayPerk.js'
 import { VISIT_REWARDS } from './rewardsCatalog.js'
 
 export const TEMPLATE_CATEGORIES = [
-  { id: 'booking_status', label: 'Service status', hint: 'Customer texts when a visit moves' },
-  { id: 'ops_status', label: 'Ops status', hint: 'Staff push when a visit moves' },
-  { id: 'birthday', label: 'Birthday', hint: 'Greeting and free-service perk' },
-  { id: 'lifecycle', label: 'Lifecycle', hint: 'Welcome, loyalty, visit milestones' },
-  { id: 'ops_forms', label: 'Ops forms', hint: 'Complaint and form alerts' },
-  { id: 'reminder', label: 'Reminders', hint: 'Default paint-maintenance copy' },
-  { id: 'custom', label: 'Custom templates', hint: 'Custom shop promotions, alerts, and recurring messages' },
+  { id: 'booking_status', label: 'Service status', hint: 'Customer Push & BusyBee SMS (Detailing, Services & Packages status updates only)' },
+  { id: 'ops_status', label: 'Ops status', hint: 'Staff Push & Inbox when a visit moves' },
+  { id: 'birthday', label: 'Birthday', hint: 'Push & In-App Inbox greeting + free-service perk' },
+  { id: 'lifecycle', label: 'Lifecycle', hint: 'Push & In-App Inbox welcome, loyalty & visit milestones' },
+  { id: 'ops_forms', label: 'Ops forms', hint: 'Staff Push & Inbox complaint and form alerts' },
+  { id: 'reminder', label: 'Reminders', hint: 'Push & In-App Inbox paint-maintenance copy' },
+  { id: 'custom', label: 'Custom templates', hint: 'Push & In-App Inbox promotions and branch alerts' },
 ]
 
 const BOOKING_TOKENS = ['name', 'plate', 'service', 'branch', 'when']
@@ -37,19 +37,19 @@ function row(partial) {
 }
 
 const TRIGGER_META_BY_KEY = {
-  'booking.pending.customer': { trigger_event: 'Booking submitted (/book or detailing form)', trigger_route: '/account', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS)' },
-  'booking.confirmed.customer': { trigger_event: 'Staff confirms booking', trigger_route: '/account', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS)' },
-  'booking.waiting.customer': { trigger_event: 'Car checked into bay queue', trigger_route: '/account/queue', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS)' },
-  'booking.in_progress.customer': { trigger_event: 'Detailing / wash started', trigger_route: '/account/queue', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS)' },
-  'booking.final_checking.customer': { trigger_event: 'Bay marks Final QC', trigger_route: '/account/queue', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS)' },
-  'booking.for_payment.customer': { trigger_event: 'Bay sends car to POS cashier', trigger_route: '/account/queue', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS)' },
-  'booking.completed.customer': { trigger_event: 'POS payment completed', trigger_route: '/account', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS)' },
-  'booking.cancelled.customer': { trigger_event: 'Booking cancelled', trigger_route: '/account', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS)' },
-  'booking.photos_ready.customer': { trigger_event: 'After-photos uploaded for booking', trigger_route: '/account', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS)' },
-  'birthday.greeting': { trigger_event: 'Daily 08:00 Manila birthday scan', trigger_route: '/account/vouchers', recipient_summary: 'Birthday customers (Push, Inbox & BusyBee SMS)' },
-  'lifecycle.welcome_app': { trigger_event: 'First customer account signup', trigger_route: '/account', recipient_summary: 'New customer (BusyBee SMS)' },
-  'lifecycle.loyalty_claim': { trigger_event: 'Loyalty reward redeemed at POS', trigger_route: '/account/vouchers', recipient_summary: 'Customer (BusyBee SMS)' },
-  'lifecycle.rate_visit': { trigger_event: '15 mins after completed visit', trigger_route: '/account', recipient_summary: 'Customer (BusyBee SMS)' },
+  'booking.pending.customer': { trigger_event: 'Booking submitted (/book or detailing form)', trigger_route: '/account', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS — Detailing, Services & Packages)' },
+  'booking.confirmed.customer': { trigger_event: 'Staff confirms booking', trigger_route: '/account', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS — Detailing, Services & Packages)' },
+  'booking.waiting.customer': { trigger_event: 'Car checked into bay queue', trigger_route: '/account/queue', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS — Detailing, Services & Packages)' },
+  'booking.in_progress.customer': { trigger_event: 'Detailing / wash started', trigger_route: '/account/queue', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS — Detailing, Services & Packages)' },
+  'booking.final_checking.customer': { trigger_event: 'Bay marks Final QC', trigger_route: '/account/queue', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS — Detailing, Services & Packages)' },
+  'booking.for_payment.customer': { trigger_event: 'Bay sends car to POS cashier', trigger_route: '/account/queue', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS — Detailing, Services & Packages)' },
+  'booking.completed.customer': { trigger_event: 'POS payment completed', trigger_route: '/account', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS — Detailing, Services & Packages)' },
+  'booking.cancelled.customer': { trigger_event: 'Booking cancelled', trigger_route: '/account', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS — Detailing, Services & Packages)' },
+  'booking.photos_ready.customer': { trigger_event: 'After-photos uploaded for booking', trigger_route: '/account', recipient_summary: 'Customer (Push, Inbox & BusyBee SMS — Detailing, Services & Packages)' },
+  'birthday.greeting': { trigger_event: 'Daily 08:00 Manila birthday scan', trigger_route: '/account/vouchers', recipient_summary: 'Birthday customers (In-App Inbox & Web Push)' },
+  'lifecycle.welcome_app': { trigger_event: 'First customer account signup', trigger_route: '/account', recipient_summary: 'New customer (In-App Inbox & Web Push)' },
+  'lifecycle.loyalty_claim': { trigger_event: 'Loyalty reward redeemed at POS', trigger_route: '/account/vouchers', recipient_summary: 'Customer (In-App Inbox & Web Push)' },
+  'lifecycle.rate_visit': { trigger_event: '15 mins after completed visit', trigger_route: '/account', recipient_summary: 'Customer (In-App Inbox & Web Push)' },
   'ops.crew_assigned': { trigger_event: 'Crew member assigned to queue car', trigger_route: '/operations/my-tasks', recipient_summary: 'Assigned Detailer / Staff / TL (In-App + Push)' },
   'ops.sheet_submitted': { trigger_event: 'Branch daily sheet submitted', trigger_route: '/operations/finance?tab=sheets', recipient_summary: 'BossMich & ASA Finance (In-App + Push)' },
   'ops.sheet_reviewed': { trigger_event: 'Owner approves or returns daily sheet', trigger_route: '/operations/pos?tab=sheet', recipient_summary: 'Submitting Branch Admin (In-App + Push)' },
@@ -59,7 +59,7 @@ const TRIGGER_META_BY_KEY = {
   'ops.booking_reschedule': { trigger_event: 'Customer requests booking reschedule', trigger_route: '/operations/bookings', recipient_summary: 'Admin, TL, Sales, ASA & BossMich (In-App + Push)' },
   'ops.complaint': { trigger_event: 'Customer complaint form submitted', trigger_route: '/operations/forms/results', recipient_summary: 'BossMich, ASA & Branch Admin (In-App + Push)' },
   'ops.review': { trigger_event: 'Customer visit feedback submitted', trigger_route: '/operations/forms/results', recipient_summary: 'BossMich, ASA, Ops Lead & Admin (In-App + Push)' },
-  'reminder.paint_maintenance': { trigger_event: '6-month Ceramic/PPF maintenance schedule', trigger_route: '/book', recipient_summary: 'Detailing customers (Push & BusyBee SMS)' },
+  'reminder.paint_maintenance': { trigger_event: '6-month Ceramic/PPF maintenance schedule', trigger_route: '/book', recipient_summary: 'Detailing customers (In-App Inbox & Web Push)' },
 }
 
 export function templateTriggerMeta(sys) {
@@ -69,7 +69,7 @@ export function templateTriggerMeta(sys) {
     return {
       trigger_event: 'Completed visit hits loyalty milestone',
       trigger_route: '/account/vouchers',
-      recipient_summary: 'Customer (BusyBee SMS)',
+      recipient_summary: 'Customer (In-App Inbox & Web Push)',
     }
   }
   if (sys.audience === 'ops' || sys.key?.endsWith('.ops')) {
@@ -281,8 +281,9 @@ export const SYSTEM_TEMPLATES = [
   row({
     key: 'birthday.greeting',
     category: 'birthday',
+    channel: 'push',
     label: 'Birthday greeting',
-    description: `Push + SMS on the customer birthday. Mentions the ${BIRTHDAY_GIFT_LABEL} perk.`,
+    description: `Push + Inbox on the customer birthday. Mentions the ${BIRTHDAY_GIFT_LABEL} perk.`,
     kind: 'birthday_greeting',
     tokens: ['name', 'code'],
     title: 'Happy birthday from Hakum',
@@ -295,11 +296,13 @@ export const SYSTEM_TEMPLATES = [
   row({
     key: 'lifecycle.welcome_app',
     category: 'lifecycle',
-    channel: 'sms',
+    channel: 'push',
     label: 'Welcome / download app',
-    description: 'First-account SMS after signup',
+    description: 'First-account alert after signup (In-App + Push only)',
     kind: 'welcome_app',
     tokens: APP_TOKENS,
+    title: 'Welcome to Hakum Auto Care',
+    body: 'Track your vehicle queue live, book detailing visits, and earn loyalty rewards in your Hakum account.',
     sms_body:
       'Welcome to Hakum Auto Care! Thank you for joining us. Download our app at {appUrl} to book visits, track your car live, and earn loyalty rewards. Enjoy the full Hakum experience!',
     display_order: 210,
@@ -307,11 +310,13 @@ export const SYSTEM_TEMPLATES = [
   row({
     key: 'lifecycle.loyalty_claim',
     category: 'lifecycle',
-    channel: 'sms',
+    channel: 'push',
     label: 'Loyalty claim thanks',
-    description: 'SMS after a loyalty free line is redeemed at POS',
+    description: 'In-App + Push thank-you after a loyalty reward is redeemed at POS',
     kind: 'loyalty_claim',
     tokens: NAME_TOKENS,
+    title: 'Loyalty reward claimed',
+    body: 'Thank you for claiming your loyalty reward! Your next reward progress is live in your account.',
     sms_body:
       'Hakum Auto Care: Thank you for claiming your loyalty reward! Keep those visits coming, your next treat is already on the way.',
     display_order: 220,
@@ -319,22 +324,26 @@ export const SYSTEM_TEMPLATES = [
   ...VISIT_REWARDS.map((reward, index) => row({
     key: `lifecycle.visit_reward_${reward.visit}`,
     category: 'lifecycle',
-    channel: 'sms',
+    channel: 'push',
     label: `Visit ${reward.visit} reward`,
-    description: `SMS when completed visits reach ${reward.visit}, any car`,
+    description: `In-App + Push alert when completed visits reach ${reward.visit}, any car`,
     kind: `visit_reward_${reward.visit}`,
     tokens: NAME_TOKENS,
+    title: `Visit ${reward.visit} reward unlocked`,
+    body: `That's visit ${reward.visit}! Your reward is ready: ${reward.label}. Ask the branch on your next visit.`,
     sms_body: `Hakum Auto Care: That's visit ${reward.visit}. Your reward is ready: ${reward.label}. Ask the branch.`,
     display_order: 230 + index,
   })),
   row({
     key: 'lifecycle.rate_visit',
     category: 'lifecycle',
-    channel: 'sms',
+    channel: 'push',
     label: 'Rate your visit',
-    description: 'SMS ~15 minutes after a completed wash or detailing visit',
+    description: 'In-App + Push feedback prompt after a completed wash or detailing visit',
     kind: 'rate_visit',
     tokens: [...NAME_TOKENS, 'appUrl'],
+    title: 'How was your Hakum visit?',
+    body: 'Open your Hakum account to rate your visit or share feedback with our team.',
     sms_body:
       'Hakum Auto Care: How was your visit? Open your account ({appUrl}/account) to rate it — thumbs up or tell us what went wrong.',
     display_order: 245,
@@ -461,8 +470,9 @@ export const SYSTEM_TEMPLATES = [
   row({
     key: 'reminder.paint_maintenance',
     category: 'reminder',
+    channel: 'push',
     label: 'Paint maintenance default',
-    description: 'Default copy for new paint-maintenance reminder rules',
+    description: 'Default Push + Inbox copy for paint-maintenance reminder rules',
     kind: 'paint_maintenance',
     title: 'Hakum Auto Care: Time for paint maintenance',
     body: 'Hi {name}, {plate} is due for paint maintenance. Book your next visit at hakumautocare.com/book.',
@@ -510,7 +520,7 @@ export function mergeNotificationTemplates(dbRows = []) {
   const customRows = (dbRows || [])
     .filter((r) => r && (r.is_custom === true || (typeof r.key === 'string' && r.key.startsWith('custom.'))))
     .map((db) => {
-      const channel = ['push', 'sms', 'both'].includes(db.channel) ? db.channel : 'both'
+      const channel = 'push'
       return {
         key: db.key,
         category: db.category || 'custom',

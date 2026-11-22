@@ -201,5 +201,13 @@ describe('Employee / Customer / Both broadcast dispatch & UI wiring contracts', 
     assert.match(lifecycle, /status_sms_only/)
     const busybeeApi = read('server/busybeeApi.mjs')
     assert.match(busybeeApi, /Manual and promo SMS sending is disabled/)
+
+    assert.match(notifPage, /isSuperAdmin\(profile\)/)
+    assert.match(notifPage, /\/api\/busybee/)
+    assert.match(notifPage, /BusyBee BrandTxt SMS Balance/)
+    assert.equal(templateByKey('birthday.greeting')?.channel, 'push')
+    assert.equal(templateByKey('lifecycle.welcome_app')?.channel, 'push')
+    assert.equal(templateByKey('reminder.paint_maintenance')?.channel, 'push')
+    assert.equal(templateByKey('booking.confirmed.customer')?.channel, 'both')
   })
 })

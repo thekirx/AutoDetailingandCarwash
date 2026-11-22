@@ -1,17 +1,17 @@
-# Graph Report - AutoDetailingandCarwash  (2026-11-21)
+# Graph Report - AutoDetailingandCarwash  (2026-11-22)
 
 ## Corpus Check
-- 1744 files · ~1,933,140 words
+- 1744 files · ~1,934,022 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 32 file(s) not represented in the graph (top: .css 20, .mdc 6, (none) 4)
 
 ## Summary
-- 11654 nodes · 31951 edges · 920 communities (443 shown, 477 thin omitted)
+- 11657 nodes · 31980 edges · 919 communities (441 shown, 478 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 862 edges (avg confidence: 0.89)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `44bd14aa`
+- Built from commit: `7b04eef3`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -19,28 +19,28 @@
 - DailySheetPanel.jsx
 - ref_node_assert
 - homeStats.js
-- queueApi.js
-- BranchServicePage.jsx
+- QueueTicketEditor.jsx
+- PublicPages.jsx
 - salesSummary.js
-- contentBlocks.js
-- src/lib/adminApi.js
+- BookingBoardPage
+- MembershipsPage
 - adminClient
 - usePageMeta
 - dailySheet.js
 - App.jsx
 - pageMeta.js
 - LegalPages.jsx
-- CustomerQueuePage.jsx
-- OperationsLayout.jsx
-- notifyOpsEvent.mjs
+- BranchLocationPicker.jsx
+- e2e-role-qa-wave.mjs
+- PublicUtilityPage.jsx
 - dataCenter.mjs
-- masterTestPlanVerification.test.js
-- Roles Matrix
-- financeData.js
-- branches.js
-- Sir Michi notes — cross-check and build plan
-- opsForms.js
-- FloorAppShell
+- inventoryCategoriesRbac.test.js
+- Shop Day Money Path
+- authRedirect.js
+- PublicQueuePage.jsx
+- normalizeReferralProgram
+- 4. File-by-file changes
+- Detailer
 - CustomerBookPage.jsx
 - ContentAdminPage.jsx
 - notificationCopy.js
@@ -49,45 +49,44 @@
 - fullTimelinePlan.mjs
 - Branch Admin
 - ServiceDetailPage.jsx
-- ProductsManagePage.jsx
+- BranchInventoryPage
 - CustomerMorePage.jsx
 - cn
-- Shop day (morning to checkout)
+- Team Lead
 - auditFixtures.js
-- lifecycleSms.mjs
+- referral.mjs
 - Ultimate Readiness Checklist
-- formResults.js
+- PlanningFormsSmartPanel.jsx
 - opsValidation.js
-- FinancePLTab.jsx
+- financeBooks.js
 - paintMaintenance.js
-- posAnnouncer.js
-- Hakum Payroll Documentation Index
-- CrmPage.jsx
+- PosCounterPage
+- daily-sheet/README.md
+- react
 - 20260915150000_db_advisor_harden.sql
 - complete_pos_sale RPC
 - scripts
 - probe-session-scrub-401.mjs
-- fetchOperationsSnapshot
-- CrmSmartGroupsPanel.jsx
+- CrewAttendancePanels.jsx
+- crmSmartGroups.js
 - Roles and Users Inventory
 - queueLogic.js
-- Hakum POS Documentation Index
-- BookingBoardPage.jsx
+- Locked POS Payroll Finance Money Contract
+- InventoryPage.jsx
 - posAnnounceApi.mjs
-- liveQueuePath.js
-- floorBoardLanes.js
+- payslip.js
+- leftoverUxSeam.test.js
 - OperationsPages.jsx
-- generate-owner-stories.py
 - verify-september-2026.mjs
 - september2026Plan.mjs
 - run_payroll
 - posSale.test.js
 - FinancePage.jsx
-- e2e-role-qa.mjs
+- Investor
 - ROLES
-- requestBriefE2e.test.js
+- kpiPart8.js
 - CustomerAccountPage.jsx
-- normalizePricingSize
+- Marketing
 - _dead-button-crawl.mjs
 - provisionCustomer.mjs
 - complete_pos_sale
@@ -97,53 +96,53 @@
 - bookingStatus.mjs
 - Full-System UAT & Cleanup Implementation Plan
 - pwaUpdatesAndNotifications.test.js
-- _gen-role-sheets.mjs
+- publicInquiry.test.js
 - Staff Deep Audit
 - bacoorDailyReport.js
 - e2e-rbac-matrix.mjs
-- compensation.js
-- notifyRouting.js
+- payroll.js
+- sidebarConsolidation.test.js
 - Detailing SKUs Stay on Bookings
 - birthdayPerk.js
-- paymentMethods.js
-- My Tasks
+- e2e-request-brief.mjs
+- Video Editor
 - PeopleManagePage.jsx
 - _september-shots.mjs
 - bookingTable.js
 - 20260720130000_phase1_to_4_platform_schema.sql
 - Money Path Principal Audit 2026-09
-- Detailer
+- Pay rules (pool, late, detailing, advances)
 - 20260820250000_remaining_fk_indexes.sql
-- e2e-real-customer-status-sms.mjs
+- Cars Catalog
 - BookingFloorBoard.jsx
 - CUST-H2 Phone-Only Password Reset
-- servicePricing.js
+- ServicesManagePage.jsx
 - Preferred Homepage Section Order
-- CustomerLoyaltyPage.jsx
-- InstallGuide.jsx
-- teamLeadStatusScenarios.test.js
+- dailyOpsNetwork.test.js
+- Size Slugs
+- Shop-day readiness Implementation Plan
 - tintFinder.js
-- Pass 2 Toward 100%
+- P0 Backlog Status Post-Fix Pass
 - package.json
 - dependencies
 - CustomerSignInPage.jsx
 - e2e-push-real.mjs
-- e2e-money-path-ui.mjs
-- Admin Full-System Pack
+- generate-owner-stories.py
+- Admin Defects and Fixes
 - 20260715153235_crew_kpi_dynamic_branches.sql
 - Team Lead Open Defects
-- customerAuth.js
+- customerSignup.mjs
 - 20261001090000_daily_sheet.sql
 - _pos-deep-shots.mjs
-- referral.mjs
+- referral.test.js
 - check-portal-actions.mjs
-- PointsShop.jsx
-- PublicLandingPage.jsx
+- ProductsManagePage
+- homepageOfferSections.test.js
 - LoadingScreen
 - plannerBoard.js
-- ContentBlockEditor
+- Bookings and Maintenance
 - marketing-regression-check.mjs
-- Role QA Progress Log
+- Customer Portal
 - _finance-deep-shots.mjs
 - VehicleMakeModelFields
 - _pos-voice-check.mjs
@@ -158,17 +157,17 @@
 - PlanningConfigurePanel.jsx
 - components.json
 - Assistant Super Admin
-- responsive-validation.mjs
+- PublicLandingPage.jsx
 - schema.sql
 - build-hakum-map.mjs
 - check-audit-p2.mjs
-- Hakum Phase 2 — internal system backlog
+- dailySheetApprovalLadder.test.js
 - Super Admin Open Defects
 - Handoff — Birthday greeting · Profile progress · Refer a friend
 - POS App
 - Hakum Design System
 - Hub table policies (USING / WITH CHECK gist)
-- P0 Backlog Status Post-Fix Pass
+- Customer App
 - Role-by-role System QA 2026-09
 - Owner
 - PublicLandingPage
@@ -179,7 +178,7 @@
 - profileCompletion.js
 - ASA-M1 Expenses RLS Ignores finance_write
 - Branch Admin POS Day Path
-- Cars Catalog
+- Attendance
 - normalizeFields
 - PlanningBoardPage.jsx
 - Epic: Late Absent CA Detailer Commission
@@ -188,13 +187,13 @@
 - revert-prove-db-audit.mjs
 - TaskModal.jsx
 - Hakum Auto Care — Customer Notifications Template Review (App & SMS)
-- ownerRevisionsPhase7.js
+- inventoryBranchStock.test.js
 - inferPhPricingSize
-- e2e-lifecycle-walk.mjs
-- e2e-ui-money.mjs
+- rewardsCatalog.js
+- PosSheetHistory.jsx
 - canStaffUpdateBookingStatus
-- probe-transactions.mjs
-- _qa-live-writes.mjs
+- test-ops-crud.mjs
+- compensation.js
 - Daily Sheet — owner and Branch Admin guide
 - multiBranchCustomerNotes.test.js
 - Customer
@@ -211,39 +210,39 @@
 - 20260707142650_staff_pool_daily_attendance.sql
 - 20260824110000_ops_lab_catalog_audit.sql
 - 20261017150000_friend_referral_vouchers.sql
-- customerPortalClient.js
+- bookingStatusTransitions.test.js
 - complete_pos_sale Paid Sale Write
-- export-user-stories-pdf.mjs
+- shiftClose.js
 - check-crm-insights-days.mjs
-- check-planner-tabs.mjs
-- isOpsAuthedUrl
-- customer.js
+- defaultWeekHours
+- e2e-role-qa.mjs
+- customerHistoryApi.mjs
 - publicHomeContent.js
 - 20261018120000_refer_a_friend.sql
-- planningPart6.js
-- probe-demo-login.mjs
+- e2e-queue-sms-pos.mjs
+- ownerRevisionsPhase2.test.js
 - devDependencies
-- provisionStaff.mjs
+- demoLoginApi.mjs
 - posTicketCustomer.js
-- busybeeSendSmsDirect
+- teamLeadQueueManager.test.js
 - tintFilmPhotos.js
-- dailySheetApprovalLadder.test.js
+- assistantGrantsEditor.test.js
 - audit-api-auth.mjs
 - public.get_public_queue_floor
 - 202607070001_queue_system_mvp.sql
 - 20260819100000_payroll_runs.sql
 - Marketing Full-System Pack
-- publicOpsForm.mjs
+- Transfer a car
 - Hakum Auto Care — Master System Test Plan & Quality Assurance Specification
 - Handoff: Points shop (merch for points) — build it
 - Remaining work — principal PM audit (2026-10-05, re-audited 2026-10-07)
-- check-opslead-crm-notes.mjs
-- smoke-busybee.mjs
-- ref_node_child_process
-- inventoryCrudLock.test.js
-- check-audit-security.mjs
-- Investor
 - check-session.mjs
+- generate-graphify-full-dumps.py
+- ref_node_child_process
+- src/lib/adminApi.js
+- check-audit-security.mjs
+- Night close, finance accept, books
+- publicQueueKiosk.test.js
 - publicCatalog.js
 - check-user-settings-auth.mjs
 - 20260817061825_plate_lookup_indexes.sql
@@ -253,19 +252,19 @@
 - public.redeem_accessory
 - Team Lead Capability Set
 - Team Portal redesign — Option B "Daylight" (frontend only)
-- phVehicles.js
+- e2e-plate-vehicle-queue.mjs
 - audit-db-deep.mjs
 - Finance: the Xero Profit and Loss
 - 20260721160000_admin_audit_log.sql
 - Admin shop-day friction log
-- check-crm-smart-groups.mjs
-- TeamLeadQueuePage.jsx
+- CustomerNotesPanel.jsx
+- clearVehicleCatalogCache
 - 20260707100820_bossmich_queue_rbac_payment_handoff.sql
 - 20260727020000_smart_ops_forms.sql
 - public.stamp_sale_line_kind
 - public.guard_inventory_crud_lock
 - 20261026210000_inventory_categories.sql
-- formResultsStore.mjs
+- provisionStaff.mjs
 - Payroll Four Jobs Floor Ceramic Salary CA
 - Critical RLS policies
 - Hakum Auto Care Legacy SPA
@@ -277,30 +276,30 @@
 - customerPortal.mjs
 - check-investor-readonly.mjs
 - Principal progress — 2026-09-26
-- verify-vehicle-catalog-parity.mjs
+- phVehicles.js
 - public.complete_payment
 - 20260827140000_finance_vendors_quotes_corporate.sql
 - designTokenConsistency.test.js
 - planningUi.test.js
 - Graphify frontend + API seams
 - assign_daily_queue_number RPC
-- 4. File-by-file changes
+- Wizard form template — implementation plan
 - Responsive Validation Report
 - PinnedCarStory
 - public.assert_pos_sale_integrity
 - 20260819140000_concurrency_hot_path.sql
 - public.assert_pos_sale_integrity
 - September 2026 test data (Bacoor + Batangas)
-- Daily sheet formulas
+- fullWidthAndStamps.test.js
 - e2e-newrequest.mjs
 - public.bookings Hub Table
-- import-ceramic-coatings.mjs
+- tlQueueUxFixes.test.js
 - ForbiddenPage.jsx
 - sync-real-staff.mjs
 - Button
 - probe-remount-blast-radius.mjs
 - branchWeather.js
-- bookingFloorBoard.test.js
+- maintenanceSchedulesApi.mjs
 - e2e-daily-sheet-money.mjs
 - 20260726010000_planning_board.sql
 - public.complete_pos_sale
@@ -312,27 +311,27 @@
 - refer_a_friend/stub.sql
 - dailySheetServerTotalsBoundary.test.js
 - Hakum Functionality and Readiness Audit
-- posPayrollSettings.test.js
+- Paint Maintenance Schedules
 - busybee-sms Edge Function
 - Hakum Phase 1 implementation report
 - get_branch_throughput
 - publicHomeContent
-- busybeeReminderSms.test.js
+- financeDrilldown.js
 - June 2025 – November 2026 Full-System Seed & Multi-Month Scale Guide
-- Hakum Engineering & Ops Handoff Guide
-- US-QA-04 Night Close → Finance → Payroll
+- guardedMigrationContract.test.js
+- passwordUpdateErrorHonesty.test.js
 - crewDayCard.test.js
 - Hakum Principal Graphify Memory
-- PosPage.jsx
+- posSale.js
 - 20260730160000_staff_scope_harden.sql
 - public.complete_pos_sale
 - 20260810160000_customer_history_indexes.sql
 - public.complete_pos_sale
 - 20260821010000_shift_close_reports.sql
 - public.complete_pos_sale
-- probe-salary-account-invariant.mjs
+- sheetPostedExpenseProtection.test.js
 - prodShellContract.test.js
-- probe-stranded-customers.mjs
+- Queue Ticket
 - 20261119120000_wordpress_blog_seo_and_scheduling.sql
 - Graphify seams — machine facts principals re-ask for
 - Car Data Model
@@ -344,7 +343,7 @@
 - Owner User Stories HTML Pack
 - 20261028150000_payroll_period_calendar.sql
 - _daily-sheet-sql-check.mjs
-- CrmInsightsPanel.jsx
+- CrmPage
 - @supabase/supabase-js
 - branchHours.js
 - 20260715153848_add_advisor_foreign_key_indexes.sql
@@ -362,21 +361,21 @@
 - probe-tl-crew-scope.mjs
 - 4. Workflow 2: Loyalty, Rewards & Points Shop
 - 6. Workflow 4: Team Lead Floor Operations (`team_lead`)
-- customerAdminCrud.test.js
+- attendance-heatmap.jsx
 - Hakum RBAC matrix (19 Oct 2026)
-- Slice U Finance Loyalty Catalog RLS
-- Role × story × evidence (2026-10-05)
+- Roles Matrix
+- main
 - Production Ops Gaps
 - 20261115233000_blogs_events_realtime_grants_and_optimization.sql
 - pushSwClick.test.js
 - 20261116120000_retire_events_rsvp_and_detailing_form_sync.sql
-- generate-brand-meta-assets.mjs
+- rolePersonaCoverage.test.js
 - Vercel Static IPs — Hakum production SMS egress
-- daysUntilDue
+- detailingBookingNotices.test.js
 - PosTileGrid
 - permissions.js
 - heroTier.js
-- financeAudit.test.js
+- cashAdvanceCode.test.js
 - 20260721190000_loyalty_membership_smart.sql
 - 20260723190000_push_notifications_sms.sql
 - 20260726020000_rbac_assistant_super_admin.sql
@@ -384,19 +383,21 @@
 - public.service_reviews
 - public.visit_has_present_crew
 - 20261019100000_birthday_perk_code.sql
-- exportSlip
+- posCustomerAutoFill.test.js
 - markdownTableIntegrity.test.js
 - Push notification checklist
 - seedCleanupReferentialSafety.test.js
 - apiRouteContract.test.js
 - Service Package Bundle
-- supabaseConfig.test.js
+- Bookings Calendar
 - splitWashPool
 - 25 Oct shop notes — handoff
 - Readiness gap map — 2026-10-16
 - Team Portal Daylight Implementation Plan
+- Branch Stock
 - public.run_payroll
 - 20261118170000_multi_month_scale_indexes.sql
+- seed-vehicle-catalog.mjs
 - check-planning.mjs
 - ppfScrollStory.test.js
 - public.complete_pos_sale
@@ -491,10 +492,8 @@
 - public.sync_product_total_stock_qty
 - 20261115103500_referral_sale_fk_indexes.sql
 - customer-regression-check.mjs
-- Architecture diagrams (Archify)
 - Admin daily-ops tracker (no redesign)
 - Auth SMTP — proof checklist (Gate 10.1)
-- BrandTxt (BusyBee) — whitelist follow-up (copy/paste email)
 - B-21 Orphan branch_operating_hours Migration
 - ensureFreshAccessToken
 - Benzin Gilmer Typography
@@ -699,10 +698,9 @@
 - Favicon and Social Preview Brand Update
 - Vercel Function Consolidation Design
 - PPF Scroll Copy Design
-- publicServiceRoutes.test.js
 
 ## God Nodes (most connected - your core abstractions)
-1. `Button()` - 212 edges
+1. `Button()` - 213 edges
 2. `react` - 190 edges
 3. `cn()` - 182 edges
 4. `useAuth()` - 155 edges
@@ -711,19 +709,19 @@
 7. `Input()` - 132 edges
 8. `react-router-dom` - 123 edges
 9. `Label()` - 116 edges
-10. `isSuperAdmin()` - 110 edges
+10. `isSuperAdmin()` - 112 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Role Team Lead` --semantically_similar_to--> `Role — Team Lead Paper`  [INFERRED] [semantically similar]
-  audit/roles-users.md → docs/user-stories/pdf/role-tl.pdf
 - `Role Sales` --semantically_similar_to--> `Role — Sales Paper`  [INFERRED] [semantically similar]
   audit/roles-users.md → docs/user-stories/pdf/role-sales.pdf
+- `Role Team Lead` --semantically_similar_to--> `Role — Team Lead Paper`  [INFERRED] [semantically similar]
+  audit/roles-users.md → docs/user-stories/pdf/role-tl.pdf
 - `Assistant Super Admin` --semantically_similar_to--> `Assistant Super Admin`  [INFERRED] [semantically similar]
   CONTEXT.md → docs/user-stories/pdf/role-asa.pdf
-- `Role Video Editor` --semantically_similar_to--> `Role — Video Editor Paper`  [INFERRED] [semantically similar]
-  audit/roles-users.md → docs/user-stories/pdf/role-video.pdf
 - `Operations Lead` --semantically_similar_to--> `Operations Lead`  [INFERRED] [semantically similar]
   CONTEXT.md → docs/user-stories/pdf/role-ops.pdf
+- `Role Video Editor` --semantically_similar_to--> `Role — Video Editor Paper`  [INFERRED] [semantically similar]
+  audit/roles-users.md → docs/user-stories/pdf/role-video.pdf
 
 ## Import Cycles
 - None detected.
@@ -731,299 +729,295 @@
 ## Hyperedges (group relationships)
 - **Hakum 2026-11-16 Release & Handoff Documentation** — handoff_hakum_handoff_guide, project_status_latest_snapshot, changelog_release_log, docs_system_audit_baseline, docs_seo_ai_visibility_playbook [EXTRACTED 1.00]
 
-## Communities (920 total, 477 thin omitted)
+## Communities (919 total, 478 thin omitted)
 
 ### Community 0 - "DailySheetPanel.jsx"
 Cohesion: 0.10
-Nodes (48): calculateProjectedCashAdvance(), cashAdvanceBalanceLabel(), cashAdvanceBalances(), cashAdvanceRowsForBalance(), remainingForStaff(), canApproveSheet(), mergeSalarySuggestions(), toSheetPayloadLines() (+40 more)
+Nodes (49): calculateProjectedCashAdvance(), cashAdvanceBalanceLabel(), cashAdvanceBalances(), cashAdvanceRowsForBalance(), remainingForStaff(), canApproveSheet(), canEditDailySheet(), canReviewDailySheet() (+41 more)
 
 ### Community 1 - "ref_node_assert"
 Cohesion: 0.01
-Nodes (206): bin, result, db, root, CUSTOMER_REFERENCING_TABLES, buildPublicInquiryRow(), busybeeProviderStatusLabel(), applyPlateSuggestion() (+198 more)
+Nodes (187): LEGACY_MARKETING_REDIRECTS, PUBLIC_NAV_ITEMS, brandTxtRequiresIpWhitelist(), formatWhitelistRequestIps(), productionSmsEgressPlan(), detailingAmountMinor(), serviceHeroProgress(), resolveSupabaseConfig() (+179 more)
 
-### Community 3 - "queueApi.js"
+### Community 3 - "QueueTicketEditor.jsx"
 Cohesion: 0.09
-Nodes (55): ActionButton(), CrewPicker(), Fact(), Info(), Panel(), QueueTicketEditor(), PLATE_SUGGEST_LIMIT, PLATE_SUGGEST_MIN (+47 more)
+Nodes (48): HAK-01 — Rename Floor Board to Floor Insight, HAK-02 — First Come, First Served Queue, HAK-03 — Restrict Admin POS to retail, HAK-04 — Team Lead job order ownership, HAK-05 — Service-specific vouchers, HAK-06 — Fixed amount discounts, Hakum Phase 2 — internal system backlog, Scheduling and release boundary (+40 more)
 
-### Community 4 - "BranchServicePage.jsx"
-Cohesion: 0.09
-Nodes (45): fetchPublicBranchHours(), formatClock(), formatHoursSummary(), isOpenNow(), manilaParts(), normalizeTimeInput(), normalizeWeekHours(), openNowLabel() (+37 more)
+### Community 4 - "PublicPages.jsx"
+Cohesion: 0.06
+Nodes (66): fetchPublicBranchHours(), usePublicBranches(), formatClock(), formatHoursSummary(), isOpenNow(), manilaParts(), normalizeTimeInput(), normalizeWeekHours() (+58 more)
 
 ### Community 5 - "salesSummary.js"
-Cohesion: 0.12
-Nodes (32): floorCompareWindow(), loadSalesBetween(), addDays(), addMonths(), clockLabel(), COUNTED, fmt(), formatDay() (+24 more)
+Cohesion: 0.09
+Nodes (38): aggregateSalesFinancials(), ALIASES, classifyFloorSaleBucket(), DETAILING_POS_BUCKETS, drawerPaymentBucket(), normalizePaymentMethod(), PAYMENT_BUCKETS, PAYMENT_OPTIONS (+30 more)
 
-### Community 6 - "contentBlocks.js"
-Cohesion: 0.11
-Nodes (30): BlogArticlePreview(), formatPublishDate(), REGION_LABELS, CALLOUT_LABELS, addTagsFromInput(), applyBlogTemplate(), updateDraft(), InlineRichText() (+22 more)
-
-### Community 7 - "src/lib/adminApi.js"
+### Community 6 - "BookingBoardPage"
 Cohesion: 0.05
-Nodes (102): save(), clearVehicleCatalogCache(), onCreate(), useUrlQueryState(), archiveBranch(), archiveProduct(), archiveService(), assignCustomerMembership() (+94 more)
+Nodes (45): admin, callBookingStatus(), client, mockRes(), payload, results, canStaffUpdateBookingStatus(), hasAsaGrant() (+37 more)
+
+### Community 7 - "MembershipsPage"
+Cohesion: 0.08
+Nodes (44): save(), archiveProduct(), archiveService(), assignCustomerMembership(), createLoyaltyMilestone(), createMembershipTier(), deactivateVehicleSize(), getLoyaltyProgramSettings() (+36 more)
 
 ### Community 8 - "adminClient"
 Cohesion: 0.08
-Nodes (84): canAssignAccessoryPoints(), handleAccessoryPointsRequest(), handleBirthdayGreetingsRequest(), handleBookingRemindersRequest(), handleBusybeeRequest(), handleCustomerPortalRequest(), bearer(), clientIp() (+76 more)
+Nodes (87): canAssignAccessoryPoints(), handleAccessoryPointsRequest(), handleBirthdayGreetingsRequest(), handleBookingRemindersRequest(), handleBusybeeRequest(), handleCustomerPortalRequest(), bearer(), clientIp() (+79 more)
 
 ### Community 9 - "usePageMeta"
-Cohesion: 0.12
-Nodes (31): ContentBlockRenderer(), Pills(), Row(), SectionHead(), Skeleton(), TONES, CustomerAppFrame(), enterKind() (+23 more)
+Cohesion: 0.07
+Nodes (61): Badge(), Row(), SectionHead(), Skeleton(), Stat(), TONES, PointsShop(), claim() (+53 more)
 
 ### Community 10 - "dailySheet.js"
-Cohesion: 0.09
-Nodes (45): amount(), closeOfDaySlip(), computeSheetTotals(), expensePaidFrom(), FAMILY_LABELS, FAMILY_OF_BUCKET, filterSheets(), floorMoneyBreakdown() (+37 more)
+Cohesion: 0.08
+Nodes (48): amount(), closeOfDaySlip(), computeSheetTotals(), expensePaidFrom(), FAMILY_LABELS, FAMILY_OF_BUCKET, filterSheets(), floorCompareWindow() (+40 more)
 
 ### Community 11 - "App.jsx"
 Cohesion: 0.04
-Nodes (83): AccessDeniedPage, App(), ApprovalsPage, AttendancePage, AuditLogPage, BlogPage, BlogPostPage, BookingBoardPage (+75 more)
+Nodes (81): AccessDeniedPage, App(), ApprovalsPage, AttendancePage, AuditLogPage, BlogPage, BlogPostPage, BookingBoardPage (+73 more)
 
 ### Community 12 - "pageMeta.js"
-Cohesion: 0.07
-Nodes (62): buildStaticRoutes(), distDir, distIndexPath, esc(), escJsonLd(), faqHtml(), root, routes (+54 more)
+Cohesion: 0.08
+Nodes (55): operations, buildStaticRoutes(), distDir, distIndexPath, esc(), escJsonLd(), faqHtml(), root (+47 more)
 
 ### Community 13 - "LegalPages.jsx"
 Cohesion: 0.24
 Nodes (10): CookiesPage, PrivacyPage, TermsPage, COOKIES_TOC, CookiesPage(), LegalShell(), PRIVACY_TOC, PrivacyPage() (+2 more)
 
-### Community 14 - "CustomerQueuePage.jsx"
-Cohesion: 0.12
-Nodes (32): useMyLocation(), CustomerPinControl(), commit(), pinHere(), QueueStats(), BRANCH_GEO, branchDistanceKm(), coordsForBranch() (+24 more)
+### Community 14 - "BranchLocationPicker.jsx"
+Cohesion: 0.33
+Nodes (9): BranchLocationPicker(), useMyLocation(), markerIcon, pinHere(), PH_DEFAULT_CENTER, readBrowserLocation(), reverseGeocodePh(), searchPhilippinesPlaces() (+1 more)
 
-### Community 15 - "OperationsLayout.jsx"
+### Community 15 - "e2e-role-qa-wave.mjs"
 Cohesion: 0.05
-Nodes (65): 4. The shells (`src/layouts/OperationsLayout.jsx`), 4a. FloorAppShell (phone-first: team lead, crew, sales, marketing, video editor, detailer), 4b. CommandShell (desktop: super admin, assistant super admin, branch admin, investor), byRole, clearSession(), customerLogin(), dismissCookieBanner(), dockFor() (+57 more)
+Nodes (49): 4. The shells (`src/layouts/OperationsLayout.jsx`), 4b. CommandShell (desktop: super admin, assistant super admin, branch admin, investor), byRole, clearSession(), customerLogin(), dismissCookieBanner(), dockFor(), failed (+41 more)
 
-### Community 16 - "notifyOpsEvent.mjs"
-Cohesion: 0.07
-Nodes (47): What already exists (reuse it), web-push, ACCOUNTS, admin, b64url(), endpoints, mockReq(), mockRes() (+39 more)
+### Community 16 - "PublicUtilityPage.jsx"
+Cohesion: 0.10
+Nodes (32): Bars(), pct(), ReferralRank(), accountNote(), EmployeeChoice(), FriendCode(), ReferralSourceFields(), useReferralStaff() (+24 more)
 
 ### Community 17 - "dataCenter.mjs"
-Cohesion: 0.14
-Nodes (35): buildStatus(), countExact(), fetchBlockingIds(), fetchIds(), fetchTable(), handleDataCenterRequest(), logEvent(), previewPurge() (+27 more)
+Cohesion: 0.13
+Nodes (36): buildStatus(), countExact(), fetchBlockingIds(), fetchIds(), fetchTable(), handleDataCenterRequest(), logEvent(), previewPurge() (+28 more)
 
-### Community 18 - "masterTestPlanVerification.test.js"
+### Community 18 - "inventoryCategoriesRbac.test.js"
+Cohesion: 0.24
+Nodes (12): computeProductTotalOnHand(), evaluateStockStatus(), LOW_STOCK_THRESHOLD, MATERIAL_ROLES, materialRoleLabel(), productShowsOnPos(), RESTOCK_POLICY_NOTICE, STOCK_CATEGORIES (+4 more)
+
+### Community 19 - "Shop Day Money Path"
 Cohesion: 0.05
-Nodes (45): BOOKING_STATUS_LIVE, canHandOffToPayment(), canTransitionBookingStatus(), PAYMENT_HANDOFF_FROM, transitionAllowedForRole(), cashAdvanceReleaseError(), normalizeCashAdvanceCode(), BOOKING_STATUS_TRANSITIONS (+37 more)
+Nodes (60): POS Shell Tabs checkout pending expenses dashboard, Detailing Bookings Pipeline, Epic: Daily Floor Operations, US-DOPS-01 Crew Clock-In, US-DOPS-02 Team Lead Queue Tickets, US-DOPS-03 Sales Detailing Bookings, US-DOPS-04 Branch Admin POS Checkout, Wash-Only Queue (+52 more)
 
-### Community 19 - "Roles Matrix"
-Cohesion: 0.03
-Nodes (114): B-03 Branch Admin URL Bypass Finance CRM, B-25 ASA Grant UI Flat Checklist, Role Branch Admin, DEFAULT_ASSISTANT_GRANTS, Role Investor, Role Sales, Role Crew Staff, Role Team Lead (+106 more)
+### Community 20 - "authRedirect.js"
+Cohesion: 0.19
+Nodes (15): blocked, db, pairs, roleById, root, routeKeyFor(), allowedRoleHome(), AUTH_LOOP_PATHS (+7 more)
 
-### Community 20 - "financeData.js"
+### Community 21 - "PublicQueuePage.jsx"
 Cohesion: 0.10
-Nodes (38): RFC-4180, COMPARE_PRESETS, DATE_PRESETS, dateInFinanceRange(), downloadBlob(), downloadExcel(), escapeHtml(), FINANCE_DEFAULT_PERIOD (+30 more)
+Nodes (25): APPROVAL_BRANCHES, isApprovalPreview, attachHours(), branchLabel(), branchQuery(), fetchPublicBranches(), requireBranchSlug(), createCoalescedReload() (+17 more)
 
-### Community 21 - "branches.js"
-Cohesion: 0.09
-Nodes (32): APPROVAL_BRANCHES, isApprovalPreview, attachHours(), branchLabel(), branchQuery(), fetchPublicBranches(), usePublicBranches(), requireBranchSlug() (+24 more)
+### Community 22 - "normalizeReferralProgram"
+Cohesion: 0.14
+Nodes (19): A. Already done — do not rebuild, B. Sir Michi — 18 Oct evening (build these), Birthday, queue, vouchers, C. Earlier notes in the same file — still open, Crew app, D. Build order, E. Out of scope until Sir says otherwise, F. Honesty — checklist Done, but not “fully finished shop” (+11 more)
 
-### Community 22 - "Sir Michi notes — cross-check and build plan"
-Cohesion: 0.18
-Nodes (10): A. Already done — do not rebuild, B. Sir Michi — 18 Oct evening (build these), Birthday, queue, vouchers, Crew app, D. Build order, E. Out of scope until Sir says otherwise, F. Honesty — checklist Done, but not “fully finished shop”, Nav (18 Oct 10:11–10:35) (+2 more)
+### Community 23 - "4. File-by-file changes"
+Cohesion: 0.24
+Nodes (10): 4.2 `src/lib/formWizard.js` (new, pure, no React), 4.5 `src/pages/PublicFormPage.jsx`, 4.6 `src/pages/planning/PlanningFormsSmartPanel.jsx` (the Forms tab), 4.7 `src/auth/permissions.js`, 4.8 Anything else that switches on kind, 4. File-by-file changes, defaultFormSettings(), formKindSingular() (+2 more)
 
-### Community 23 - "opsForms.js"
-Cohesion: 0.12
-Nodes (24): 4.6 `src/pages/planning/PlanningFormsSmartPanel.jsx` (the Forms tab), qrcode, downloadPng(), COMPLAINT_CATEGORIES, DEFAULT_FORM_LOGO, defaultFormSettings(), extractComplaintBranch(), FIELD_TYPES (+16 more)
-
-### Community 24 - "FloorAppShell"
+### Community 24 - "Detailer"
 Cohesion: 0.04
-Nodes (60): Role Video Editor, Wave D Specialty QA, getDetailerDock, Marketing CRM Home, getMarketingDock, getSalesDock, Sales, Staff Attendance Home (+52 more)
+Nodes (55): Role QA Progress Log, LoadingScreen VERIFYING ACCESS Race, Detailer QUEUE_VIEWER_ROLES P0, e2e-role-qa waitSettled, Wave A Scaffold and P0 Gate, Wave B TL BA Staff QA, Wave D Specialty QA, Wave E Customer PWA QA (+47 more)
 
 ### Community 25 - "CustomerBookPage.jsx"
-Cohesion: 0.05
-Nodes (61): accountNote(), EmployeeChoice(), FriendCode(), ReferralSourceFields(), useReferralStaff(), BookingCalendar(), isoOf(), monthOf() (+53 more)
+Cohesion: 0.06
+Nodes (52): commit(), QueueStats(), assessmentServiceFor(), BOOKING_FAMILIES, bookingFamilyOf(), bookingFamilySteps(), COATED_CHOICES, familyPickItems() (+44 more)
 
 ### Community 26 - "ContentAdminPage.jsx"
-Cohesion: 0.11
-Nodes (56): ContentStudioModal(), handleDelete(), persistWithStatus(), listBranches(), BLOG_CATEGORY_OPTIONS, slugifyContentTitle(), autosaveStorageKey(), BLOG_SELECT_COLS (+48 more)
+Cohesion: 0.05
+Nodes (123): canManageSiteContent(), BlogArticlePreview(), formatPublishDate(), REGION_LABELS, ContentBlockEditor(), add(), commit(), duplicate() (+115 more)
 
 ### Community 27 - "notificationCopy.js"
 Cohesion: 0.05
-Nodes (50): admin, envPath, EMPLOYEE_BROADCAST_ROLES, EMPLOYEE_NOTIFY_ROLES, resolveBroadcastAudience(), resolveBroadcastDispatch(), VALID_EMPLOYEE_ROLES, runMaintenanceReminders() (+42 more)
+Nodes (54): admin, CUSTOMER, DETAILING_STATUSES, ensureCustomer(), ensureVehicle(), fail(), failed, messageStatus() (+46 more)
 
 ### Community 28 - "notifyBooking.mjs"
-Cohesion: 0.05
-Nodes (59): admin, results, arg, db, shopOn, reminderOffset(), runDetailingBookingReminders(), buildBookingNotifyPayload() (+51 more)
+Cohesion: 0.03
+Nodes (111): web-push, admin, results, ACCOUNTS, admin, b64url(), endpoints, mockReq() (+103 more)
 
 ### Community 29 - "attendanceApi.js"
 Cohesion: 0.11
-Nodes (31): admin, matrix, range, results, today, attendanceDateRange(), attendanceStatusCount(), buildAttendanceHeatmap() (+23 more)
+Nodes (33): admin, matrix, range, results, today, attendanceDateRange(), attendanceStatusCount(), buildAttendanceHeatmap() (+25 more)
 
 ### Community 30 - "fullTimelinePlan.mjs"
-Cohesion: 0.07
-Nodes (54): buildExtraOperatingDaysList(), EXTRA_DAYS_PER_MONTH, EXTRA_NOV_DAYS, lineKindForService(), loadEnv(), main(), uniform(), upsertRows() (+46 more)
+Cohesion: 0.09
+Nodes (41): buildExtraOperatingDaysList(), EXTRA_DAYS_PER_MONTH, EXTRA_NOV_DAYS, lineKindForService(), loadEnv(), main(), uniform(), upsertRows() (+33 more)
 
 ### Community 31 - "Branch Admin"
-Cohesion: 0.05
-Nodes (68): LoadingScreen VERIFYING ACCESS Race, e2e-role-qa waitSettled, Wave B TL BA Staff QA, Command Nav BA Allowlist, Branch Admin Finance Deny, Staff POS Deny, Team Lead POS Deny, OpsRoleGate (+60 more)
+Cohesion: 0.08
+Nodes (47): Command Nav BA Allowlist, Branch Admin Finance Deny, UI-02 Command Nav Allowlist, WF-BA-01 POS Sale, WF-BA-02 Inventory Adjust, POS Sticky Pay Bar, Branch Admin Role Guide, Branch Admin POS Home (+39 more)
 
 ### Community 32 - "ServiceDetailPage.jsx"
-Cohesion: 0.06
-Nodes (28): SERVICE_DETAIL_CONTENT, branchCityName(), fetchStartingPrices(), useStartingPrices(), WASH_CARD_SERVICE_SLUG, BranchSiteCard(), FALLBACK_VISIBLE_BRANCHES, GoogleMapsMark() (+20 more)
+Cohesion: 0.08
+Nodes (16): SERVICE_DETAIL_CONTENT, CLEARPRO_FIGURES, ClearProCard(), DetailCtas(), HERO_OVERRIDES, LedeText(), LOCAL_SERVICE_SLUG_BY_DETAIL, SECONDARY_CTA (+8 more)
 
-### Community 33 - "ProductsManagePage.jsx"
-Cohesion: 0.07
-Nodes (53): canModifyStock(), MerchItemFields(), PickupHandover(), handover(), getInventoryCrudLocked(), listProducts(), setInventoryCrudLocked(), aggregateBranchStockMap() (+45 more)
+### Community 33 - "BranchInventoryPage"
+Cohesion: 0.23
+Nodes (12): BranchInventoryPage(), assertCanMutate(), assignToBranch(), onApproveRecon(), onOwnerSet(), onRejectRecon(), onRestock(), onSubmitRecon() (+4 more)
 
 ### Community 34 - "CustomerMorePage.jsx"
-Cohesion: 0.07
-Nodes (35): db, PROD_ORIGIN, root, SheetActions(), formatWhen(), NotificationBell(), useUserNotifications(), toggleSms() (+27 more)
+Cohesion: 0.05
+Nodes (56): BirthdayGreetingSheet(), close(), BirthdayHomeCard(), BirthdayPass(), CONFETTI, readGreeted(), writeGreeted(), Sheet() (+48 more)
 
 ### Community 35 - "cn"
-Cohesion: 0.05
-Nodes (94): @base-ui/react, class-variance-authority, CATEGORY_META, CommandMenu(), onKey(), HighlightMatch(), isEditableElement(), isRecentAllowed() (+86 more)
+Cohesion: 0.04
+Nodes (113): @base-ui/react, class-variance-authority, OpsInstallPopup(), CATEGORY_META, CommandMenu(), onKey(), HighlightMatch(), isEditableElement() (+105 more)
 
-### Community 36 - "Shop day (morning to checkout)"
-Cohesion: 0.15
-Nodes (26): Checkout, Clock-in attendance, Crew, Attendance geofence, Sales, Shop day (morning to checkout), Branch Admin, Checkout (+18 more)
+### Community 36 - "Team Lead"
+Cohesion: 0.06
+Nodes (52): Role Sales, Role Team Lead, Staff POS Deny, Team Lead POS Deny, OpsRoleGate, UI-05 OpsRoleGate Access Denied, WF-TL-01 Queue Scan Advance Lane, WF-TL-02 New Wash Ticket (+44 more)
 
 ### Community 37 - "auditFixtures.js"
-Cohesion: 0.08
-Nodes (41): db, dryRun, envPath, fixture, root, AUDIT_DAY, AUDIT_MONTH_END, AUDIT_MONTH_START (+33 more)
+Cohesion: 0.07
+Nodes (47): db, dryRun, envPath, fixture, root, AUDIT_DAY, AUDIT_MONTH_END, AUDIT_MONTH_START (+39 more)
 
-### Community 38 - "lifecycleSms.mjs"
-Cohesion: 0.18
-Nodes (12): db, db, shopOn, buildLifecycleSms(), countCompletedVisits(), LIFECYCLE_KINDS, resolveVisitMilestone(), runVisitMilestoneSms() (+4 more)
+### Community 38 - "referral.mjs"
+Cohesion: 0.11
+Nodes (26): db, db, shopOn, buildLifecycleSms(), countCompletedVisits(), LIFECYCLE_KINDS, resolveVisitMilestone(), runVisitMilestoneSms() (+18 more)
 
 ### Community 39 - "Ultimate Readiness Checklist"
-Cohesion: 0.10
-Nodes (28): Changelog 2026-11-16 Releases, BusyBee BrandTxt Production SMS, Hakum Money Contract, Sunday Recon Floor Chemical Chart, Branch day sign-off, Money honesty (2026-09-26 Bacoor), Production ops (do not fake-close), BUG-002 Vercel SMS IP (+20 more)
+Cohesion: 0.05
+Nodes (47): Changelog 2026-11-16 Releases, Cash Flow, Finance and Reports, P&L, Quotes and Vendors, Shift Closes, BusyBee BrandTxt Production SMS, Hakum Money Contract (+39 more)
 
-### Community 40 - "formResults.js"
-Cohesion: 0.16
-Nodes (21): bookingStatusToSubmissionStatus(), buildSubmissionAnswerRows(), DATE_FILTER_PRESETS, DETAILING_COLUMN_ALIAS, DETAILING_RESULT_COLUMNS, filterFormResultItems(), FORM_RESULT_KIND_TABS, formatAnswerDisplay() (+13 more)
+### Community 40 - "PlanningFormsSmartPanel.jsx"
+Cohesion: 0.06
+Nodes (73): admin, results, canEditDeleteFormResults(), downloadPng(), bookingStatusToSubmissionStatus(), buildSubmissionAnswerRows(), DATE_FILTER_PRESETS, DETAILING_COLUMN_ALIAS (+65 more)
 
 ### Community 41 - "opsValidation.js"
-Cohesion: 0.12
-Nodes (23): admin, BRANCH_CODE, cleanupSmoke(), client, envPath, fail(), main(), ok() (+15 more)
+Cohesion: 0.13
+Nodes (16): provisionStaff(), updateServiceLoyaltyWeight(), updateStaffPerson(), asBool(), BRANCH_REQUIRED_ROLES, EDITABLE_ROLES, LOYALTY_PAY_CATEGORIES, STAMP_EARN_MODES (+8 more)
 
-### Community 42 - "FinancePLTab.jsx"
-Cohesion: 0.12
-Nodes (36): accountOrder(), accountWatchlist(), amount(), billLineMinor(), buildBillRows(), buildComparePeriods(), calendarPeriod(), DISCOUNTS_ROW (+28 more)
+### Community 42 - "financeBooks.js"
+Cohesion: 0.09
+Nodes (45): NamedSelect(), ACCOUNT_KINDS, accountLabel(), accountOrder(), accountWatchlist(), activeAccounts(), amount(), billLineMinor() (+37 more)
 
 ### Community 43 - "paintMaintenance.js"
-Cohesion: 0.22
-Nodes (18): applyPaintMaintenanceOnComplete(), findActiveSchedule(), lookupVehicleId(), resolveFrequencyMonths(), addMonthsDateOnly(), CLOSED_BOOKING_STATUSES, coatedAtDateOnly(), DETAILING_SCHEDULE_TYPES (+10 more)
+Cohesion: 0.24
+Nodes (17): applyPaintMaintenanceOnComplete(), findActiveSchedule(), lookupVehicleId(), resolveFrequencyMonths(), addMonthsDateOnly(), CLOSED_BOOKING_STATUSES, coatedAtDateOnly(), DETAILING_SCHEDULE_TYPES (+9 more)
 
-### Community 44 - "posAnnouncer.js"
-Cohesion: 0.21
-Nodes (17): isReadyForPaymentVoice(), pickAnnouncerVoice(), announcePayment(), announceTest(), chime(), clipUrls, enqueue(), fetchAiClip() (+9 more)
+### Community 44 - "PosCounterPage"
+Cohesion: 0.09
+Nodes (36): isReadyForPaymentVoice(), pickAnnouncerVoice(), announcePayment(), announceTest(), chime(), clipUrls, enqueue(), fetchAiClip() (+28 more)
 
-### Community 45 - "Hakum Payroll Documentation Index"
-Cohesion: 0.08
-Nodes (27): Strict Payroll Verdict, canViewOwnPay, ops_form_submissions Cash Advances, Payroll Dataflow, Floor vs Fixed Tracks, Pending Floor and End of Shift, Cash Advances Approve vs Auto-Deduct, compensation_settings Singleton (+19 more)
+### Community 45 - "daily-sheet/README.md"
+Cohesion: 0.05
+Nodes (38): Architecture diagrams (Archify), Conventions, Priority maps, Tooling, Strict Payroll Verdict, canViewOwnPay, Dual Floor/Fixed Wizard, FinanceShiftCloseTab Floor Coverage (+30 more)
 
-### Community 46 - "CrmPage.jsx"
-Cohesion: 0.04
-Nodes (133): NotificationSimulatorPreview(), OpsEmptyState(), OpsErrorState(), DEFAULT_STEP_ICONS, OpsGuideCard(), BOOKING_WORKFLOW_STEPS, BRANCH_STOCK_WORKFLOW_STEPS, CRM_WORKFLOW_STEPS (+125 more)
+### Community 46 - "react"
+Cohesion: 0.05
+Nodes (151): lucide-react, react, react-router-dom, sonner, AuthContext, useAuth(), MerchItemFields(), PickupHandover() (+143 more)
 
 ### Community 47 - "20260915150000_db_advisor_harden.sql"
 Cohesion: 0.06
 Nodes (27): corporate_balances_created_by_idx, customer_notes_created_by_idx, customer_notes_vehicle_id_idx, expense_report_lines_category_id_idx, expense_report_lines_expense_id_idx, expense_reports_branch_idx, expense_reports_reviewed_by_idx, expense_reports_submitted_by_idx (+19 more)
 
 ### Community 48 - "complete_pos_sale RPC"
-Cohesion: 0.06
-Nodes (39): SA-H2 Handoff UUID Used as service_id, award_loyalty_stamps RPC, complete_pos_sale RPC, Finance Accept Reject Lock Close, Floor Writes SECURITY DEFINER RPCs, Loyalty Program Settings, Money Path Binding POS Close Finance Payroll, P&L From Paid POS Plus Paid Expenses (+31 more)
+Cohesion: 0.05
+Nodes (42): SA-H2 Handoff UUID Used as service_id, award_loyalty_stamps RPC, complete_pos_sale RPC, Finance Accept Reject Lock Close, Floor Writes SECURITY DEFINER RPCs, Loyalty Program Settings, Money Path Binding POS Close Finance Payroll, P&L From Paid POS Plus Paid Expenses (+34 more)
 
 ### Community 49 - "scripts"
 Cohesion: 0.05
 Nodes (42): scripts, archify, audit:api-auth, audit:db, audit:db:prove, build, check, check:customer (+34 more)
 
 ### Community 50 - "probe-session-scrub-401.mjs"
-Cohesion: 0.16
-Nodes (13): collectErrors(), authOnly(), clearSession(), CYCLES, dismissCookieBanner(), ensurePreview(), opsLogin(), positiveControl() (+5 more)
+Cohesion: 0.09
+Nodes (19): db, root, waitForSheetsTable(), collectErrors(), isNavigationRace(), safeEvaluate(), authOnly(), clearSession() (+11 more)
 
-### Community 51 - "fetchOperationsSnapshot"
-Cohesion: 0.26
-Nodes (13): fetchCrewFloorSnapshot(), getTodayDateSafe(), collectScoped(), fetchOperationsSnapshot(), fetchPresentAssignableStaff(), fetchTeamLeadDayBoard(), fetchTicket(), getTodayDate() (+5 more)
+### Community 51 - "CrewAttendancePanels.jsx"
+Cohesion: 0.09
+Nodes (44): InputGroupAddon(), inputGroupAddonVariants, InputGroupInput(), attendanceRowsToCsv(), downloadTextFile(), ADMINISTRATIVE_ROLES, ATTENDANCE_HEADCOUNT, attendanceRoleHeadcount() (+36 more)
 
-### Community 52 - "CrmSmartGroupsPanel.jsx"
-Cohesion: 0.08
-Nodes (50): buildCustomerVisitStats(), CRM_MATCHES, CRM_RANGE_KINDS, CRM_RANGE_UNITS, CRM_SMART_GROUP_PRESETS, DEFAULT_SMART_FILTER, deleteSavedSmartGroup(), describeSmartFilter() (+42 more)
+### Community 52 - "crmSmartGroups.js"
+Cohesion: 0.10
+Nodes (33): buildCustomerVisitStats(), CRM_MATCHES, CRM_RANGE_KINDS, CRM_RANGE_UNITS, CRM_SMART_GROUP_PRESETS, DEFAULT_SMART_FILTER, describeSmartFilter(), describeSmartRange() (+25 more)
 
 ### Community 53 - "Roles and Users Inventory"
 Cohesion: 0.06
 Nodes (38): Advisors Snapshot, haversine_meters search_path Harden, unindexed_foreign_keys Closed, B-02 Clients Could Mint Loyalty Stamps, B-04 ASA CRM Content Ungated, B-05 ASA Console Reviews Queue Ungated, B-06 ASA Denied Home Redirect, B-07 Complaints Inbox Read-Only (+30 more)
 
 ### Community 54 - "queueLogic.js"
-Cohesion: 0.05
-Nodes (57): admin, results, admin, results, QUEUE_EDITOR_ROLES, QUEUE_VIEWER_ROLES, CancellationReasonDialog(), submit() (+49 more)
-
-### Community 55 - "Hakum POS Documentation Index"
-Cohesion: 0.09
-Nodes (15): review_shift_close Accept Unlock Not Pay, run_payroll Confirm With Advisory Lock, Strict POS Verdict, POS Structure, POS Dataflow, Checkout and Catalog, End of Shift Truth and Attestation, POS to Payroll Connection (+7 more)
-
-### Community 56 - "BookingBoardPage.jsx"
 Cohesion: 0.04
-Nodes (80): C. Earlier notes in the same file — still open, CustomerNotesPanel(), addNote(), OpsTabList(), Tabs(), TabsContent(), TabsList(), tabsListVariants (+72 more)
+Nodes (99): Seams under test, Task 6: Statuses, including the refused skip, admin, results, canMarkFailedQa(), canPushFinalCheckToPayment(), canViewRedoLane(), QUEUE_EDITOR_ROLES (+91 more)
+
+### Community 55 - "Locked POS Payroll Finance Money Contract"
+Cohesion: 0.22
+Nodes (3): review_shift_close Accept Unlock Not Pay, run_payroll Confirm With Advisory Lock, Locked POS Payroll Finance Money Contract
+
+### Community 56 - "InventoryPage.jsx"
+Cohesion: 0.11
+Nodes (35): canEditAttendanceRoles(), canEditAttendanceSettings(), canManageCrew(), canManageVehicleCatalog(), canUseAttendanceClock(), OpsTabList(), Tabs(), TabsContent() (+27 more)
 
 ### Community 57 - "posAnnounceApi.mjs"
-Cohesion: 0.08
-Nodes (44): Checks, Cost, How it works, POS voice announcer ("ready for payment"), Setting up a branch counter, out, outDir, root (+36 more)
+Cohesion: 0.09
+Nodes (40): How it works, out, outDir, root, text, geminiOut, htmlOut, outDir (+32 more)
 
-### Community 58 - "liveQueuePath.js"
-Cohesion: 0.35
-Nodes (8): copyPath(), copyText(), absolutePublicUrl(), branchLaunchGuide(), CUSTOMER_QUEUE_PATH, liveQueuePath(), shopTvPath(), shopLinks()
+### Community 58 - "payslip.js"
+Cohesion: 0.22
+Nodes (15): DAY_CREW_ROLES, getPeriodsForYearMonth(), isDayCrewRole(), lastDayOfMonth(), MONTHS, officePayrollPeople(), payBiweek(), payHalf() (+7 more)
 
-### Community 59 - "floorBoardLanes.js"
-Cohesion: 0.27
-Nodes (11): DETAILING_FLOOR_LIVE_STATUSES, emptyLaneCounts(), FLOOR_BOARD_FAMILY_META, mergeTimelineFailedQa(), splitFloorBoardLanes(), sumFloorLaneCounts(), tallyLanes(), WASH_FLOOR_LANE_LABELS (+3 more)
+### Community 59 - "leftoverUxSeam.test.js"
+Cohesion: 0.09
+Nodes (34): 5. Screens (do these first, in this order), 5a. Team lead queue — `OperationsQueuePage` / `TeamLeadQueuePage`, 5b. Crew time clock — `AttendancePage` (label it **Time clock**, route unchanged), 5c. Admin "Today" — `OperationsDashboardPage` / `SuperAdminFloorBoard` (label **Today**,, 5d. Everything else, DETAILING_FLOOR_LIVE_STATUSES, emptyLaneCounts(), FLOOR_BOARD_FAMILY_META (+26 more)
 
 ### Community 60 - "OperationsPages.jsx"
 Cohesion: 0.05
-Nodes (105): date-fns, useAuth(), canSeeAllBranches(), getBranchScopeList(), Bars(), pct(), ReferralRank(), STATUS_BADGE_MAP (+97 more)
-
-### Community 61 - "generate-owner-stories.py"
-Cohesion: 0.08
-Nodes (13): 4.4 CSS — `src/styles.css`, in the "Branded public / preview ops forms" block (around the `.hakum-form-*` rules, ~line 5175), main(), main(), write_db_full(), write_frontend(), write_money(), write_rls(), add_tab() (+5 more)
+Nodes (97): Task 2: Fix Marketing/Investor Queue Board Gate & Duplicate `'hr'` Nav Key, allowedBookingViews(), canEditQueueTicket(), canSeeAllBranches(), getBranchScopeList(), ServiceKindPicker(), fetchAdminConsoleSnapshot(), paginateBookingTableRows() (+89 more)
 
 ### Community 62 - "verify-september-2026.mjs"
-Cohesion: 0.06
-Nodes (43): ACCOUNTS, admin, BATANGAS_SEED_STAFF, findBatangasStaff(), loadStaff(), login(), must(), opts (+35 more)
+Cohesion: 0.05
+Nodes (50): ACCOUNTS, admin, BATANGAS_SEED_STAFF, findBatangasStaff(), loadCatalog(), loadStaff(), login(), must() (+42 more)
 
 ### Community 63 - "september2026Plan.mjs"
-Cohesion: 0.07
-Nodes (32): buildSeptemberPlan(), addSale(), bookingRow(), newCustomer(), paymentFor(), sheetPlan(), walkInCustomer(), CANCEL_REASONS (+24 more)
+Cohesion: 0.10
+Nodes (25): buildSeptemberPlan(), addSale(), bookingRow(), newCustomer(), paymentFor(), sheetPlan(), walkInCustomer(), CANCEL_REASONS (+17 more)
 
 ### Community 64 - "run_payroll"
 Cohesion: 0.06
 Nodes (21): buildPayrollPreview, Dual-Track Payroll, Fixed Salary from Packages, Floor Pay from Paid POS and Attendance, run_payroll, pg_advisory_xact_lock Payroll Confirm, buildRunPayrollPayload, payroll_run_lines (+13 more)
 
 ### Community 65 - "posSale.test.js"
-Cohesion: 0.09
-Nodes (27): canChangePosCartLineQuantity(), canRemovePosCartLine(), removePosCartLine(), setPosCartLineQuantity(), stepPosCartLineQuantity(), clearCart(), renderOrderLine(), birthday (+19 more)
+Cohesion: 0.07
+Nodes (31): canChangePosCartLineQuantity(), canRemovePosCartLine(), cashTenderCoversTotal(), openHandoffInCart(), POS_MAX_LINE_QUANTITY, removePosCartLine(), setPosCartLineQuantity(), splitCashGcash() (+23 more)
 
 ### Community 66 - "FinancePage.jsx"
-Cohesion: 0.05
-Nodes (117): recharts, DataTable(), ChartContainer(), ChartContext, ChartLegendContent(), ChartStyle(), ChartTooltipContent(), getPayloadConfigFromPayload() (+109 more)
+Cohesion: 0.03
+Nodes (205): RFC-4180, recharts, DataTable(), Badge(), badgeVariants, ChartContainer(), ChartContext, ChartLegendContent() (+197 more)
 
-### Community 67 - "e2e-role-qa.mjs"
+### Community 67 - "Investor"
 Cohesion: 0.16
-Nodes (17): customerLogin(), dismissCookieBanner(), expectAllow(), expectDeny(), fail(), failed, isDeniedWall(), opsLogin() (+9 more)
+Nodes (18): Investor Finance Home, Investor POS Deny, WF-INV-01 Finance Read-Only Hub, CommandShell Branch-Scoped, Investor Role Guide, Investor, Investor Slim CommandShell, Super Admin ASA Role Guide (+10 more)
 
 ### Community 68 - "ROLES"
-Cohesion: 0.03
-Nodes (63): admin, app, depNames, kinds, navBoss, pkg, results, rlsTables (+55 more)
+Cohesion: 0.04
+Nodes (53): admin, app, depNames, kinds, navBoss, pkg, results, rlsTables (+45 more)
 
-### Community 69 - "requestBriefE2e.test.js"
-Cohesion: 0.10
-Nodes (33): admin, results, formatAuditDetail(), peso(), shareOfTotal(), ADMIN_ROSTER_GROUPS, buildAdminRoster(), aggregateByService() (+25 more)
+### Community 69 - "kpiPart8.js"
+Cohesion: 0.16
+Nodes (23): admin, results, formatAuditDetail(), peso(), shareOfTotal(), aggregateByService(), averageCycleMinutes(), averageWaitMinutes() (+15 more)
 
 ### Community 70 - "CustomerAccountPage.jsx"
-Cohesion: 0.10
-Nodes (35): ActiveVisitCard(), Badge(), SHORT, stepCaption(), VisitProgress(), CUSTOMER_BOOK_PATH, customerVisitPath(), activityInRange() (+27 more)
+Cohesion: 0.08
+Nodes (46): ActiveVisitCard(), Pills(), SHORT, stepCaption(), VisitProgress(), copyPath(), copyText(), customerVisitPath() (+38 more)
 
-### Community 71 - "normalizePricingSize"
+### Community 71 - "Marketing"
 Cohesion: 0.16
-Nodes (19): safeVehiclePhotoUrl(), portalAction(), normalizeVehicleIcon(), normalizePricingSize(), openEdit(), saveVehicleEdit(), applyVehicle(), CarForm() (+11 more)
+Nodes (17): Marketing CRM Home, WF-MKT-01 CRM Planner, Broadcast, Marketing CRM SMS Broadcasts, Marketing Role Guide, Marketing, Notifications, Site content (+9 more)
 
 ### Community 72 - "_dead-button-crawl.mjs"
 Cohesion: 0.13
 Nodes (14): base, clickButton(), dead, errors, login(), MAX_CLICKS, outDir, pageErrs (+6 more)
 
 ### Community 73 - "provisionCustomer.mjs"
-Cohesion: 0.14
-Nodes (24): assertQueueEditor(), CUSTOMER_REFERENCING_COLUMNS, findCustomerMatches(), identityConflictError(), isMissingTable(), looksLikeEmail(), MIGRATION_PENDING_TABLES, notifyCustomer() (+16 more)
+Cohesion: 0.13
+Nodes (24): assertQueueEditor(), CUSTOMER_REFERENCING_COLUMNS, CUSTOMER_REFERENCING_TABLES, findCustomerMatches(), identityConflictError(), isMissingTable(), looksLikeEmail(), MIGRATION_PENDING_TABLES (+16 more)
 
 ### Community 74 - "complete_pos_sale"
 Cohesion: 0.06
@@ -1034,16 +1028,16 @@ Cohesion: 0.07
 Nodes (21): bookings_created_by_idx, bookings_final_checked_by_idx, bookings_price_edited_by_idx, bookings_redo_by_idx, bookings_sent_to_payment_by_idx, bookings_team_lead_id_idx, customer_memberships_customer_id_idx, customer_memberships_tier_id_idx (+13 more)
 
 ### Community 76 - "Full-System Audit Pack 2026-08-01"
-Cohesion: 0.10
-Nodes (24): AUTH-P0-1 Stale getSession Hotspots, Full-System Audit Pack 2026-08-01, PERF-P0-1 Eager App Chunks, assign_daily_queue_number, DB-P0-1 Queue Number Allocator, Index Hygiene sms_events, DB-P0-1 Queue UNIQUE Shared, assign_daily_queue_number Missing from Git (+16 more)
+Cohesion: 0.08
+Nodes (29): AUTH-P0-1 Stale getSession Hotspots, Full-System Audit Pack 2026-08-01, PERF-P0-1 Eager App Chunks, assign_daily_queue_number, DB-P0-1 Queue Number Allocator, Index Hygiene sms_events, DB-P0-1 Queue UNIQUE Shared, assign_daily_queue_number Missing from Git (+21 more)
 
 ### Community 77 - "_daily-sheet-walk.mjs"
-Cohesion: 0.08
-Nodes (26): accountLabels, ATTENDANCE, base, blockedWrites, CA_REQUESTS, failed, failedRequests, intercept() (+18 more)
+Cohesion: 0.05
+Nodes (49): accountLabels, ATTENDANCE, base, blockedWrites, CA_REQUESTS, failed, failedRequests, intercept() (+41 more)
 
 ### Community 78 - "bookingStatus.mjs"
-Cohesion: 0.13
-Nodes (21): ALLOWED, ensureExperienceListId(), handleBookingStatusRequest(), insertExperienceInvestigation(), userClient(), notifyBookingPhotosReady(), canEnterPaymentHandoff(), isPaymentHandoffStatus() (+13 more)
+Cohesion: 0.15
+Nodes (18): ALLOWED, ensureExperienceListId(), handleBookingStatusRequest(), insertExperienceInvestigation(), userClient(), notifyBookingPhotosReady(), canEnterPaymentHandoff(), isPaymentHandoffStatus() (+10 more)
 
 ### Community 79 - "Full-System UAT & Cleanup Implementation Plan"
 Cohesion: 0.29
@@ -1053,145 +1047,149 @@ Nodes (6): Full-System UAT & Cleanup Implementation Plan, Task 1: Apply Pending 
 Cohesion: 0.12
 Nodes (23): OPS_LOGIN_ROLES, InAppNotificationListener(), PwaUpdateBanner(), buildForegroundToastData(), defaultNotificationHome(), playGentleNotificationChime(), rememberNotificationId(), currentAppVersion() (+15 more)
 
+### Community 81 - "publicInquiry.test.js"
+Cohesion: 0.04
+Nodes (26): matrix, meta, parsePublicFormGuard(), CURRENT_GUIDES, CURRENT_STORIES, RETIRED, root, apiClient (+18 more)
+
 ### Community 82 - "Staff Deep Audit"
 Cohesion: 0.07
-Nodes (36): Staff Own Assignments and Self Attendance at branch_slug, Staff Home /operations/my-tasks, Staff Full-System Pack, Staff Role, allowRoute Staff Deny, Planning card_id Lock, Client-Only Geofence on Attendance, /operations/login Partial OPS-M3 (+28 more)
+Nodes (35): Staff Own Assignments and Self Attendance at branch_slug, Staff Home /operations/my-tasks, Staff Full-System Pack, Staff Role, allowRoute Staff Deny, Planning card_id Lock, Client-Only Geofence on Attendance, /operations/login Partial OPS-M3 (+27 more)
 
 ### Community 83 - "bacoorDailyReport.js"
-Cohesion: 0.10
-Nodes (28): buildBacoorDailyReport(), classifySaleBucket(), emptyBacoorDailyReport(), formatBacoorReportHeader(), formatBacoorReportText(), shiftCloseHasActivity(), cashAdvanceInBranchScope(), expenseCountsOnDailyClose() (+20 more)
+Cohesion: 0.14
+Nodes (19): buildBacoorDailyReport(), classifySaleBucket(), formatBacoorReportHeader(), formatBacoorReportText(), shiftCloseHasActivity(), cashAdvanceInBranchScope(), expenseCountsOnDailyClose(), accumulatePosCategoryTotals() (+11 more)
 
 ### Community 84 - "e2e-rbac-matrix.mjs"
-Cohesion: 0.03
-Nodes (46): P4 Live Readiness, Part 9 Hardening System Readiness, admin, results, admin, adminClient, asaDefault, asaLocked (+38 more)
+Cohesion: 0.07
+Nodes (24): P4 Live Readiness, Task 15: Best-practices gate, admin, results, admin, adminClient, asaDefault, asaLocked (+16 more)
 
-### Community 85 - "compensation.js"
-Cohesion: 0.05
-Nodes (68): Dual Floor/Fixed Wizard, FinanceShiftCloseTab Floor Coverage, Payroll Structure, PayrollCashAdvancesPanel, PayrollPage, attendanceRowForPayroll(), attendanceWeight(), buildCeramicCompensationExpenses() (+60 more)
+### Community 85 - "payroll.js"
+Cohesion: 0.15
+Nodes (24): clampCompensationPercent(), isWashEligibleLine(), lineSalaryPct(), salaryPctPoolMinor(), splitWashPool(), washPoolAmountMinor(), applyFloorPreviewToBacoorReport(), buildPayrollPreview() (+16 more)
 
-### Community 86 - "notifyRouting.js"
-Cohesion: 0.06
-Nodes (44): blocked, db, pairs, roleById, root, routeKeyFor(), runScopedQueries(), unwrapRows() (+36 more)
+### Community 86 - "sidebarConsolidation.test.js"
+Cohesion: 0.23
+Nodes (16): runScopedQueries(), unwrapRows(), normalizeOpsNavSearch(), OPS_ROUTE_PREFIX_TO_KEY, opsCustomerSearchUrl(), opsNavIsActive(), opsProductSearchUrl(), opsServiceSearchUrl() (+8 more)
 
 ### Community 87 - "Detailing SKUs Stay on Bookings"
-Cohesion: 0.07
-Nodes (26): Role Detailer, PUB-1 /book Reads PPF location.state, assign_persistent_queue_number RPC, Bookings Multi-day Detailing Pipeline, Detailing SKUs Stay on Bookings, Public /book Detailing Only, Public Site Routes /book /queue /home, SKU ceramic-coating detailing (+18 more)
+Cohesion: 0.05
+Nodes (38): Role Detailer, PUB-1 /book Reads PPF location.state, server/apiGateway.mjs /api/* Gateway, asa_has_grant Permission Toggles, assign_persistent_queue_number RPC, Bookings Multi-day Detailing Pipeline, BossMich Super Admin Role, Data Center Super Admin Only (+30 more)
 
 ### Community 88 - "birthdayPerk.js"
-Cohesion: 0.09
-Nodes (44): What already exists (don't rebuild it), attachBirthdayCode(), ensureBirthdayPerk(), grantBirthdayIfDue(), listBirthdayCustomers(), runBirthdayGreetings(), sendBirthdayGreeting(), sendBirthdayQueueStart() (+36 more)
+Cohesion: 0.12
+Nodes (34): What already exists (don't rebuild it), attachBirthdayCode(), ensureBirthdayPerk(), grantBirthdayIfDue(), listBirthdayCustomers(), runBirthdayGreetings(), sendBirthdayGreeting(), sendBirthdayQueueStart() (+26 more)
 
-### Community 89 - "paymentMethods.js"
-Cohesion: 0.07
-Nodes (29): Checklist — frontend and backend, COMPARE, db, linesBySheet, problems, root, salesByDay, db (+21 more)
+### Community 89 - "e2e-request-brief.mjs"
+Cohesion: 0.15
+Nodes (11): admin, password, results, root, stamp, UNIT_STEPS, buildCompletedVisitReview(), starScore() (+3 more)
 
-### Community 90 - "My Tasks"
-Cohesion: 0.19
-Nodes (18): Attendance home, Clock in, Crew, My Pay, Wash-pool share, Attendance home, Clock in, Crew (+10 more)
+### Community 90 - "Video Editor"
+Cohesion: 0.08
+Nodes (34): Role Video Editor, Video Editor Planning Calendar Home, WF-VID-01 Calendar Tasks, Video Editor Calendar Proof Upload, Video Editor Role Guide, Video Editor, Attendance home, Clock in (+26 more)
 
 ### Community 91 - "PeopleManagePage.jsx"
-Cohesion: 0.12
-Nodes (31): countEnabledAssistantGrants(), AssistantGrantsEditor(), GrantGroupRows(), OpsSkeleton(), OpsStatTile(), Skeleton(), deactivateStaffPerson(), provisionStaff() (+23 more)
+Cohesion: 0.11
+Nodes (35): generalAdminSheetGrants(), INTERNAL_ROLE_LABELS, internalRoleLabel(), ROLE_ACCESS_SUMMARY, roleAccessSummary(), normalizeAssistantGrants(), deactivateStaffPerson(), updateStaffAccountFields() (+27 more)
 
 ### Community 92 - "_september-shots.mjs"
 Cohesion: 0.05
 Nodes (44): Task 14: Page matrix for every signed-in role, badResponses, base, blockedWrites, failed, installExportSpy(), isWrite(), login() (+36 more)
 
 ### Community 93 - "bookingTable.js"
-Cohesion: 0.22
-Nodes (19): BOOKING_TABLE_DEFAULT_PAGE_SIZE, bookingCarPlateLine(), bookingCarText(), bookingPayKind(), bookingPlateText(), bookingServiceText(), bookingVehicleText(), compareBookingTableRows() (+11 more)
+Cohesion: 0.19
+Nodes (21): BOOKING_TABLE_DEFAULT_PAGE_SIZE, BOOKING_TABLE_PAGE_SIZES, bookingCarPlateLine(), bookingCarText(), bookingDetailingTypeText(), bookingPayKind(), bookingPlateText(), bookingServiceText() (+13 more)
 
 ### Community 94 - "20260720130000_phase1_to_4_platform_schema.sql"
 Cohesion: 0.12
 Nodes (23): customers_sync_full_name, loyalty_ledger_customer_idx, public.complaints, public.complete_pos_sale(), public.contact_inquiries, public.customer_memberships, public.daily_sales_summary, public.event_registrations (+15 more)
 
 ### Community 95 - "Money Path Principal Audit 2026-09"
-Cohesion: 0.07
-Nodes (23): OPS-E2E Live Cutover Still Open, SMS-HANDSET Owner Handset Still Open, Owner Revisions Tracker 2026-08-31, Full System Audit 2026-08-31, Principal Pass 63 of 63 Tests 2026-09-03, Money Path Backend Trust Map, Finance POS Payroll Design Critique, Money Path Frontend Surface Map (+15 more)
+Cohesion: 0.08
+Nodes (20): OPS-E2E Live Cutover Still Open, SMS-HANDSET Owner Handset Still Open, Owner Revisions Tracker 2026-08-31, Full System Audit 2026-08-31, Principal Pass 63 of 63 Tests 2026-09-03, Money Path Backend Trust Map, Finance POS Payroll Design Critique, Money Path Frontend Surface Map (+12 more)
 
-### Community 96 - "Detailer"
-Cohesion: 0.10
-Nodes (43): Detailer Bookings Home, Sales Bookings Home, WF-DET-01 Detailing on Bookings, Detailer, Detailer Role Guide, Absent crew off pool, Branch-day settlement, Carwash salary pool (+35 more)
+### Community 96 - "Pay rules (pool, late, detailing, advances)"
+Cohesion: 0.18
+Nodes (29): Absent crew off pool, Branch-day settlement, Carwash salary pool, Approved cash advances, Crew compensation estimate, Crew, Detailing commission, Floor payroll (+21 more)
 
 ### Community 97 - "20260820250000_remaining_fk_indexes.sql"
 Cohesion: 0.08
 Nodes (16): blogs_created_by_idx, complaints_booking_id_idx, complaints_branch_idx, data_center_events_actor_id_idx, event_registrations_event_id_idx, events_branch_idx, notification_broadcasts_branch_slug_idx, notification_broadcasts_sent_by_idx (+8 more)
 
-### Community 98 - "e2e-real-customer-status-sms.mjs"
-Cohesion: 0.15
-Nodes (17): admin, CUSTOMER, DETAILING_STATUSES, ensureVehicle(), fail(), failed, messageStatus(), mockReq() (+9 more)
+### Community 98 - "Cars Catalog"
+Cohesion: 0.14
+Nodes (16): Car Size Pricing Tier, Cars Catalog, Inventory, Loyalty Program, POS Catalog, Catalog Size Auto-Price, Staff Size Override, PH Bay Size (+8 more)
 
 ### Community 99 - "BookingFloorBoard.jsx"
-Cohesion: 0.16
-Nodes (23): BookingCarCard(), BookingFloorBoard(), arrive(), notify(), DEFAULT_STAGE_ORDER, MaintenanceDueCard(), URGENCY_LABEL, whenLabel() (+15 more)
+Cohesion: 0.21
+Nodes (20): BookingCarCard(), BookingFloorBoard(), arrive(), notify(), DEFAULT_STAGE_ORDER, MaintenanceDueCard(), URGENCY_LABEL, whenLabel() (+12 more)
 
 ### Community 100 - "CUST-H2 Phone-Only Password Reset"
 Cohesion: 0.12
-Nodes (18): Customer Portal Persona, Customer Deep Audit, Customer Capability Matrix, CUST-H1 Auth Lookup Email Enumeration, Customer Defects and Fixes, Customer Verification, customer-deep Prior Audit, Customer Full-System Pack (+10 more)
+Nodes (20): Customer Portal Persona, Customer Deep Audit, Customer Capability Matrix, CUST-H1 Auth Lookup Email Enumeration, Customer Defects and Fixes, Customer Verification, Supabase Auth SMTP Blocker, Supabase Auth SMTP Password Email (+12 more)
 
-### Community 101 - "servicePricing.js"
-Cohesion: 0.18
-Nodes (17): availablePricingSizes(), emptySizePriceForm(), formatSizePriceRange(), LEGACY_TO_PRICING, PRICING_SIZE_SLUGS, resolveServicePriceMinor(), serviceHasSizePricing(), SIZE_PRICE_MULTIPLIERS (+9 more)
+### Community 101 - "ServicesManagePage.jsx"
+Cohesion: 0.20
+Nodes (23): listServiceReferralEligibility(), defaultPayCategoryForCatalogScope(), availablePricingSizes(), emptySizePriceForm(), formatSizePriceRange(), LEGACY_TO_PRICING, PRICING_SIZE_SLUGS, serviceHasSizePricing() (+15 more)
 
 ### Community 102 - "Preferred Homepage Section Order"
 Cohesion: 0.07
 Nodes (25): PPF Grey Truck Information Image, PPF Stage Ladder Redesign Plan, PPF_PACKAGES, PPF Protection Ladder, Preferred Homepage Production Transplant Plan, Preferred Homepage Section Order, HomeHeroSection, Placeholder Hero Clips (+17 more)
 
-### Community 103 - "CustomerLoyaltyPage.jsx"
-Cohesion: 0.10
-Nodes (25): BirthdayGreetingSheet(), close(), BirthdayHomeCard(), BirthdayPass(), CONFETTI, readGreeted(), writeGreeted(), Stat() (+17 more)
+### Community 103 - "dailyOpsNetwork.test.js"
+Cohesion: 0.13
+Nodes (12): hhmmToMinutes(), bacoorAbsent, bacoorLate, bacoorOnTime, bacoorWash, imusCeramic, imusCrew, imusDetailer (+4 more)
 
-### Community 104 - "InstallGuide.jsx"
-Cohesion: 0.10
-Nodes (36): bindInstallPromptCapture(), CustomerInstallPopup(), GuideBody(), InstallGuide(), closePopup(), handleInstall(), OpsInstallPopup(), runNativeInstall() (+28 more)
+### Community 104 - "Size Slugs"
+Cohesion: 0.14
+Nodes (14): Audit and History, Audit Diff Drawer, Plate/Phone Visit Ledger, bookings.vehicle_type, Extra Large Vehicle Size, Large Vehicle Size, Medium Vehicle Size, service_size_prices (+6 more)
 
-### Community 105 - "teamLeadStatusScenarios.test.js"
-Cohesion: 0.10
-Nodes (19): Out of scope, Rules that stay, Seams under test, Shop-day order, Shop-day readiness Implementation Plan, Task 6: Statuses, including the refused skip, What “ready for daily use” means, nextDetailingBoardStatus() (+11 more)
+### Community 105 - "Shop-day readiness Implementation Plan"
+Cohesion: 0.33
+Nodes (5): Out of scope, Rules that stay, Shop-day order, Shop-day readiness Implementation Plan, What “ready for daily use” means
 
 ### Community 106 - "tintFinder.js"
 Cohesion: 0.13
 Nodes (20): orderedBenefits(), recommendTint(), suggestTint(), TINT_FILM_SHADES, TINT_MOST_POPULAR, TINT_PACKAGE_NAMES, TINT_QUESTIONS, TINT_SUGGESTION_TIERS (+12 more)
 
-### Community 107 - "Pass 2 Toward 100%"
-Cohesion: 0.18
-Nodes (12): BusyBee IP Whitelist / API Host, Pass 2 Toward 100%, 01-READYNESS-CHECKLIST.md, Supabase Auth SMTP Blocker, Vercel Env Parity, BusyBee API Host Blocker, CONTINUE HERE Ops Blockers, Supabase Auth SMTP Password Email (+4 more)
+### Community 107 - "P0 Backlog Status Post-Fix Pass"
+Cohesion: 0.11
+Nodes (19): AUTH-P0-1 Fresh Token on Book, OPS-P0-1 Upstash Rate Limits, P0 Backlog Status Post-Fix Pass, RPT-P0-1 Reports Error Toasts, BusyBee IP Whitelist / API Host, Pass 2 Toward 100%, 01-READYNESS-CHECKLIST.md, Upstash Shared Rate Limit (+11 more)
 
 ### Community 108 - "package.json"
-Cohesion: 0.09
-Nodes (25): name, private, type, version, clsx, cmdk, eslint, @eslint/js (+17 more)
+Cohesion: 0.08
+Nodes (26): name, private, type, version, clsx, cmdk, eslint, @eslint/js (+18 more)
 
 ### Community 109 - "dependencies"
 Cohesion: 0.07
 Nodes (27): dependencies, @base-ui/react, class-variance-authority, clsx, cmdk, date-fns, gsap, leaflet (+19 more)
 
 ### Community 110 - "CustomerSignInPage.jsx"
-Cohesion: 0.11
-Nodes (35): CustomerSetPasswordPage, CustomerSignInPage, DemoAccountChips(), AuthLegalLinks(), CUSTOMER_AUTH_BULLETS, HakumAuthShell(), TEAM_AUTH_BULLETS, describeAuthError() (+27 more)
+Cohesion: 0.14
+Nodes (28): CustomerSetPasswordPage, CustomerSignInPage, DemoAccountChips(), AuthLegalLinks(), CUSTOMER_AUTH_BULLETS, HakumAuthShell(), TEAM_AUTH_BULLETS, describeAuthError() (+20 more)
 
 ### Community 111 - "e2e-push-real.mjs"
-Cohesion: 0.08
-Nodes (28): base, browserIds, BROWSERS, clickByText(), db, enableViaUi(), endpoints, EVENT_PERSONAS (+20 more)
+Cohesion: 0.09
+Nodes (23): base, browserIds, BROWSERS, clickByText(), db, enableViaUi(), endpoints, EVENT_PERSONAS (+15 more)
 
-### Community 112 - "e2e-money-path-ui.mjs"
-Cohesion: 0.15
-Nodes (14): dismissCookieBanner(), fail(), failed, FINANCE_TABS, gotoShot(), opsLogin(), outDir, pass() (+6 more)
+### Community 112 - "generate-owner-stories.py"
+Cohesion: 0.26
+Nodes (7): 4.4 CSS — `src/styles.css`, in the "Branded public / preview ops forms" block (around the `.hakum-form-*` rules, ~line 5175), add_tab(), e(), role_card(), role_tab(), section(), story()
 
-### Community 113 - "Admin Full-System Pack"
-Cohesion: 0.13
-Nodes (16): OPS-M7 Memberships Save Hidden, admin-deep Prior Audit, Admin Full-System Pack, Admin Role Branch Scope, ui-dead-controls OPS-M7, ADM-M1 Queue New Denied, Admin Page Checklist, OPS-M3 Ops Login Partial (+8 more)
+### Community 113 - "Admin Defects and Fixes"
+Cohesion: 0.11
+Nodes (19): ADM-C4 Bookings Create All Branches, ADM-H1 Console POS First-Slug Only, ADM-H2 create_branch Any Admin, ADM-H3 Unscoped People Directory, Admin Defects and Fixes, OPS-M7 Memberships Save Hidden, admin-deep Prior Audit, Admin Full-System Pack (+11 more)
 
 ### Community 114 - "20260715153235_crew_kpi_dynamic_branches.sql"
 Cohesion: 0.09
 Nodes (8): idx_queue_assignments_booking_staff, idx_queue_assignments_released_at, idx_queue_assignments_staff, idx_queue_assignments_started_at, idx_queue_assignments_status, public.get_my_queue_work(), queue_assignments_one_active_staff_booking_idx, trg_start_late_queue_assignment
 
 ### Community 115 - "Team Lead Open Defects"
-Cohesion: 0.08
-Nodes (28): /operations/queue/new Ready DB-P0-1 Risk, DB-P0-1 No Queue UNIQUE Assign RPC, Team Lead Home /operations/dashboard, Team Lead Full-System Pack, TL-C5 Broad Customers SELECT, Team Lead Denied POS and Ops Surfaces, Team Lead Mark Redo Hidden, /operations/dashboard Ready Floor Home (+20 more)
-
-### Community 116 - "customerAuth.js"
 Cohesion: 0.06
-Nodes (78): Phase 03B — the program (backend + app). **Migration needs Kirk's OK before it is applied.**, admin, created, PHONE, results, root, stamp, archiveOrRestoreCustomer() (+70 more)
+Nodes (38): /operations/queue/new Ready DB-P0-1 Risk, DB-P0-1 No Queue UNIQUE Assign RPC, Team Lead Home /operations/dashboard, Team Lead Full-System Pack, TL-C5 Broad Customers SELECT, Team Lead Denied POS and Ops Surfaces, Team Lead Mark Redo Hidden, /operations/dashboard Ready Floor Home (+30 more)
+
+### Community 116 - "customerSignup.mjs"
+Cohesion: 0.07
+Nodes (62): operations, Phase 03B — the program (backend + app). **Migration needs Kirk's OK before it is applied.**, admin, created, PHONE, results, root, stamp (+54 more)
 
 ### Community 117 - "20261001090000_daily_sheet.sql"
 Cohesion: 0.14
@@ -1201,49 +1199,49 @@ Nodes (17): daily_sheet_lines_account_idx, daily_sheet_lines_sheet_idx, daily_sh
 Cohesion: 0.22
 Nodes (15): clearSession(), clickText(), dismissCookie(), ensurePreview(), inventory(), log, login(), note() (+7 more)
 
-### Community 119 - "referral.mjs"
-Cohesion: 0.16
-Nodes (24): ensureReferralCode(), firstName(), handleReferralRequest(), linkReferralAtSignup(), loadReferralSettings(), lookupReferrer(), manilaYear(), notifyReferralForSale() (+16 more)
+### Community 119 - "referral.test.js"
+Cohesion: 0.11
+Nodes (27): ReferralCard(), copy(), phoneOnly(), share(), applyReferralRewardToCart(), REFERRAL_DISCOUNT_REASON, referralRewardLineError(), referralRewardMinor() (+19 more)
 
 ### Community 120 - "check-portal-actions.mjs"
 Cohesion: 0.29
 Nodes (4): documented, handled, root, source
 
-### Community 121 - "PointsShop.jsx"
-Cohesion: 0.14
-Nodes (28): PointsShop(), claim(), applyReconLine(), branchAssignmentRows(), branchOnHand(), buildReconApprovalMutations(), isAssignedToBranch(), productIsResellable() (+20 more)
+### Community 121 - "ProductsManagePage"
+Cohesion: 0.19
+Nodes (24): applyRestockQty(), formatBranchOnHandSummary(), stockRowsByProductId(), branchAssignedForProduct(), findBranchSizeStock(), productSizeKey(), productSizePriceMinor(), productSizeRows() (+16 more)
 
-### Community 122 - "PublicLandingPage.jsx"
-Cohesion: 0.07
-Nodes (24): COVERED_DEFECTS, EXCLUSIONS, FILM_TRAITS, OPERATIONAL_DISCLAIMERS, PPF_ADD_ONS, PPF_ADD_ONS_GLASS_AND_WHEELS, PPF_ADD_ONS_GLASS_ONLY, PPF_FILM_BRAND (+16 more)
+### Community 122 - "homepageOfferSections.test.js"
+Cohesion: 0.12
+Nodes (23): COVERED_DEFECTS, EXCLUSIONS, FILM_TRAITS, OPERATIONAL_DISCLAIMERS, PPF_ADD_ONS, PPF_ADD_ONS_GLASS_AND_WHEELS, PPF_ADD_ONS_GLASS_ONLY, PPF_FILM_BRAND (+15 more)
 
 ### Community 123 - "LoadingScreen"
-Cohesion: 0.19
-Nodes (13): AppShellGate, gate(), RootEntry, OpsRoleGate(), ProtectedRoute(), LoadingScreen(), APP_SHELL_PATH, MARKETING_HOME_PATH (+5 more)
+Cohesion: 0.20
+Nodes (12): AppShellGate, gate(), RootEntry, OpsRoleGate(), ProtectedRoute(), LoadingScreen(), APP_SHELL_PATH, MARKETING_HOME_PATH (+4 more)
 
 ### Community 124 - "plannerBoard.js"
 Cohesion: 0.19
 Nodes (19): boardVisibleToProfile(), CASH_ADVANCE_BOARD_HIDDEN_ROLES, DEFAULT_PLAN_LISTS, defaultPlanListId(), describeBoardVisibility(), hidesCashAdvancePlannerBoard(), isCashAdvancePlannerBoard(), isPlannerBoardVisible() (+11 more)
 
-### Community 125 - "ContentBlockEditor"
-Cohesion: 0.27
-Nodes (16): ContentBlockEditor(), add(), commit(), duplicate(), handleCanvasFilesDrop(), insertAfter(), insertParagraphLink(), move() (+8 more)
+### Community 125 - "Bookings and Maintenance"
+Cohesion: 0.19
+Nodes (10): ActiveVisitCard, Bookings and Maintenance, Detailing Kanban, Visit Progress, Detailing Services Lanes, Money Pulse, Services and Packages Lanes, Same-Day Service and Package Tickets (+2 more)
 
 ### Community 126 - "marketing-regression-check.mjs"
 Cohesion: 0.08
-Nodes (24): Marketing CRM (Directory / Insights / SMS), Marketing Full-System Flows, MKT-H6/H8/H10/M1 Deferred Events Push Complaints Contact, Marketing Home /operations/crm, Marketing Deep Audit, Marketing Role, user_has_branch_access, CRM Directory Branch Customers via Bookings (+16 more)
+Nodes (27): CUST-H9 Honeypot and Dwell, CAPTCHA Stronger than Honeypot, Marketing CRM (Directory / Insights / SMS), CUST-H9 Public Form Spam, Marketing Full-System Flows, MKT-H6/H8/H10/M1 Deferred Events Push Complaints Contact, Marketing Home /operations/crm, Marketing Deep Audit (+19 more)
 
-### Community 127 - "Role QA Progress Log"
-Cohesion: 0.07
-Nodes (25): Role QA Progress Log, Detailer QUEUE_VIEWER_ROLES P0, Wave A Scaffold and P0 Gate, Wave E Customer PWA QA, Wave F Readiness Gate, Customer /account Home, Customer Dock Account Book Queue Loyalty More, Customer Operations Deny (+17 more)
+### Community 127 - "Customer Portal"
+Cohesion: 0.10
+Nodes (18): Customer /account Home, Customer Dock Account Book Queue Loyalty More, Customer Operations Deny, Customer Portal, CustomerAccountDock capp-dock, UI-04 Customer Account Dock, WF-CUS-01 Customer Sign-In Account, WF-CUS-02 Book Queue Loyalty (+10 more)
 
 ### Community 128 - "_finance-deep-shots.mjs"
 Cohesion: 0.17
 Nodes (22): clearSession(), clickText(), dismissCookie(), ensurePreview(), financePass(), inventory(), log, login() (+14 more)
 
 ### Community 129 - "VehicleMakeModelFields"
-Cohesion: 0.20
-Nodes (18): SuggestInput(), fetchCatalogRows(), loadCatalogMap(), VehicleMakeModelFields(), suggestSize(), catalogMakes(), catalogRowsToMap(), catalogRowsToSizeIndex() (+10 more)
+Cohesion: 0.22
+Nodes (17): SuggestInput(), fetchCatalogRows(), loadCatalogMap(), VehicleMakeModelFields(), suggestSize(), catalogMakes(), catalogRowsToMap(), catalogRowsToSizeIndex() (+9 more)
 
 ### Community 130 - "_pos-voice-check.mjs"
 Cohesion: 0.17
@@ -1254,28 +1252,28 @@ Cohesion: 0.12
 Nodes (15): account(), asUser(), base, dayTag, failed, framesDir, insertTicket(), loginOps() (+7 more)
 
 ### Community 132 - "normalizeFormSettings"
-Cohesion: 0.31
-Nodes (16): 4.3 `src/components/BrandedOpsForm.jsx`, 5. Tests, BrandedOpsForm(), FormField(), WizardBody(), advance(), showErrors(), answerRows() (+8 more)
+Cohesion: 0.32
+Nodes (16): 4.3 `src/components/BrandedOpsForm.jsx`, 5. Tests, FormField(), WizardBody(), advance(), showErrors(), answerRows(), firstInvalidStep() (+8 more)
 
 ### Community 133 - "branchListFilter.js"
 Cohesion: 0.43
 Nodes (6): BRANCH_LIST_FILTERS, branchListStatus(), countBranchRows(), filterBranchRows(), matchesStatus(), rows
 
 ### Community 134 - "serviceKinds.js"
-Cohesion: 0.09
-Nodes (37): Hand-worked sheet (the only expected pesos), Task 10: Points and a merch claim, Task 11: Tenders and the sheet pesos, Task 13: Paths that were not named, still part of the day, Task 15: Best-practices gate, Task 16: One full day, then the readiness note, Task 1: Shop-day rule file that fails before the script exists, Task 2: Crew sign-in and the geofence (+29 more)
+Cohesion: 0.10
+Nodes (29): Hand-worked sheet (the only expected pesos), Task 10: Points and a merch claim, Task 11: Tenders and the sheet pesos, Task 13: Paths that were not named, still part of the day, Task 16: One full day, then the readiness note, Task 1: Shop-day rule file that fails before the script exists, Task 2: Crew sign-in and the geofence, Task 3: Attendance headcount (+21 more)
 
 ### Community 135 - "e2e-maintenance-arrive.mjs"
 Cohesion: 0.18
 Nodes (6): admin, created, PHONE, results, root, stamp
 
 ### Community 136 - "PublicShopPage.jsx"
-Cohesion: 0.08
-Nodes (32): FormLegalNotice(), BRANCH_MAP_LISTINGS, BRAND_COLLAB_TYPES, CONTACT_STATUSES, normalizeBrandCollaborationInquiry(), normalizePartnershipInquiry(), PARTNERSHIP_STATUSES, SITE_TYPE_LABELS (+24 more)
+Cohesion: 0.12
+Nodes (24): FormLegalNotice(), BRAND_COLLAB_TYPES, CONTACT_STATUSES, normalizeBrandCollaborationInquiry(), normalizePartnershipInquiry(), PARTNERSHIP_STATUSES, SITE_TYPE_LABELS, SITE_TYPE_VALUES (+16 more)
 
 ### Community 137 - "Xero-style Finance and Reporting: build checklist"
-Cohesion: 0.11
-Nodes (17): Cash Flow, Finance and Reports, P&L, Quotes and Vendors, Shift Closes, 0. Square sales summary and home (Reporting) - built 29 Sep 2026, 1. Chart of accounts (Finance), 2. Profit and Loss statement (Finance) (+9 more)
+Cohesion: 0.17
+Nodes (12): 0. Square sales summary and home (Reporting) - built 29 Sep 2026, 1. Chart of accounts (Finance), 2. Profit and Loss statement (Finance), 3. Compare periods (Reporting on the P&L), 4. Branch tracking (Finance), 5. This month vs year to date (Finance), 6. Year-over-year sales chart (Reporting), 7. Recent payments by branch (Finance) (+4 more)
 
 ### Community 138 - "posInsights.js"
 Cohesion: 0.20
@@ -1290,68 +1288,64 @@ Cohesion: 0.09
 Nodes (21): aliases, components, hooks, lib, ui, utils, iconLibrary, menuAccent (+13 more)
 
 ### Community 141 - "Assistant Super Admin"
-Cohesion: 0.12
-Nodes (25): Assistant Super Admin, Expense Report, ASA Demo ID Correction assistant to asa, Wave C Leadership Money QA, ASA cars and data-center Deny, ASA Grant-Dependent Access, Leadership and Books Path, WF-ASA-01 Grant Matrix Honesty (+17 more)
-
-### Community 142 - "responsive-validation.mjs"
-Cohesion: 0.16
-Nodes (15): byViewport, cells, clearSession(), conditionals, customerLogin(), dismissCookieBanner(), ensureAuth(), fails (+7 more)
+Cohesion: 0.15
+Nodes (21): Assistant Super Admin, Expense Report, ASA Demo ID Correction assistant to asa, Wave C Leadership Money QA, ASA cars and data-center Deny, ASA Grant-Dependent Access, Leadership and Books Path, WF-ASA-01 Grant Matrix Honesty (+13 more)
 
 ### Community 143 - "schema.sql"
 Cohesion: 0.20
 Nodes (20): bookings_customer_idx, bookings_schedule_idx, bookings_set_updated_at, bookings_soft_delete, customers_email_unique, customers_set_updated_at, customers_soft_delete, public.archive_instead_of_delete() (+12 more)
 
 ### Community 144 - "build-hakum-map.mjs"
-Cohesion: 0.18
-Nodes (16): AREAS, build(), classifyArea(), fileKind(), fileLabel(), layoutClusters(), layoutPanels(), OUT (+8 more)
+Cohesion: 0.14
+Nodes (17): AREAS, build(), classifyArea(), fileKind(), fileLabel(), layoutClusters(), layoutPanels(), OUT (+9 more)
 
 ### Community 145 - "check-audit-p2.mjs"
 Cohesion: 0.09
 Nodes (20): adminApi, auth, booking, bookPage, crm, css, customerSignIn, finance (+12 more)
 
-### Community 146 - "Hakum Phase 2 — internal system backlog"
-Cohesion: 0.22
-Nodes (8): HAK-01 — Rename Floor Board to Floor Insight, HAK-02 — First Come, First Served Queue, HAK-03 — Restrict Admin POS to retail, HAK-04 — Team Lead job order ownership, HAK-05 — Service-specific vouchers, HAK-06 — Fixed amount discounts, Hakum Phase 2 — internal system backlog, Scheduling and release boundary
+### Community 146 - "dailySheetApprovalLadder.test.js"
+Cohesion: 0.17
+Nodes (11): canEdit, canReview, fnBody(), raw, reopen, review, root, save (+3 more)
 
 ### Community 147 - "Super Admin Open Defects"
-Cohesion: 0.10
-Nodes (23): Super Admin Home /operations/console, getBranchScopeList All-Branch Null Scope, Super Admin Full-System Pack, UI Dead Controls Audit, /operations/console Partial SA-M4/M5, Super Admin Page Checklist, Full-System Master README, SA-M4 Console Profit Window Mismatch (+15 more)
+Cohesion: 0.07
+Nodes (33): PERF-P0-1 React.lazy Route Seams, OPS-M3 Forgot-Password Bounce, PERF-P0-1 Eager Bundles Shared, PERF-P0-1, AUTH-P0-1 getSession / NotificationBell, PERF-P0-1 Eager Bundles, Staff Open Defects, Super Admin Home /operations/console (+25 more)
 
 ### Community 148 - "Handoff — Birthday greeting · Profile progress · Refer a friend"
 Cohesion: 0.10
 Nodes (21): 01 · Birthday greeting on the day — FRONTEND ONLY, 03 · Refer a friend — **detailing and up only, never carwash**, 0. Ground rules for this repo (read before touching anything), Board 01 — Birthday greeting, Board 02 — Profile progress, Board 03 — Refer a friend, Board Plan, Build (+13 more)
 
 ### Community 149 - "POS App"
-Cohesion: 0.08
-Nodes (29): Bookings Detailing Pipeline, Branch Scope, Cash Advance, Hakum Domain Glossary, Floor, Queue to POS Handoff, Inventory, Loyalty Program (+21 more)
+Cohesion: 0.12
+Nodes (20): Bookings Detailing Pipeline, Branch Scope, Cash Advance, Hakum Domain Glossary, Floor, Queue to POS Handoff, Payroll Run, POS Counter (+12 more)
 
 ### Community 150 - "Hakum Design System"
-Cohesion: 0.04
-Nodes (49): Cars Catalog SA-Only Gate, isSuperAdmin BossMich All Gates, Operations Services Products SMS Redirects, Super Admin Route Matrix, Hakum Ops Design System Retired Pointer, UI-03 Ops Destructive Toasts, Design System Foundations, Brand Color Tokens (+41 more)
+Cohesion: 0.05
+Nodes (38): Hakum Ops Design System Retired Pointer, UI-03 Ops Destructive Toasts, Design System Foundations, Brand Color Tokens, design-tokens.css Live Tokens, lucide-react Iconography, Design System Components, Button (+30 more)
 
 ### Community 151 - "Hub table policies (USING / WITH CHECK gist)"
 Cohesion: 0.18
 Nodes (10): Authz bridge (FE ↔ DB), bookings, Graphify hub RLS + storage policies (live), Hub table policies (USING / WITH CHECK gist), plan_cards / queue_assignments / settings, sales / sale_line_items / pos_handoffs, services / service_size_prices / products, shift_close_reports / payroll_runs / expenses (+2 more)
 
-### Community 152 - "P0 Backlog Status Post-Fix Pass"
-Cohesion: 0.10
-Nodes (21): AUTH-P0-1 Fresh Token on Book, CUST-H9 Honeypot and Dwell, OPS-P0-1 Upstash Rate Limits, P0 Backlog Status Post-Fix Pass, PERF-P0-1 React.lazy Route Seams, Upstash Shared Rate Limit, CAPTCHA Stronger than Honeypot, Upstash Redis Optional (+13 more)
+### Community 152 - "Customer App"
+Cohesion: 0.21
+Nodes (12): Catalog Size Autofill, Customer Book, Customer Garage, Island Dock, Live Queue, Loyalty Home, Customer Size Autofill, Branch Admin Watch (+4 more)
 
 ### Community 153 - "Role-by-role System QA 2026-09"
 Cohesion: 0.10
 Nodes (18): Cashiers Should Land Pending-First, canAccessPos Role Gate, POS /operations/pos Surface, resolvePosLandingTab Pending-First, Pending Landing Missing Fixed High, Branch Admin Home is POS, Branch Admin Hard Route Allowlist, Detailer Removed from QUEUE_VIEWER_ROLES (+10 more)
 
 ### Community 154 - "Owner"
-Cohesion: 0.04
-Nodes (59): Data Center, Services and Merch Catalog, Employee Payouts View, My Pay, Payroll Payout, Payroll, POS Proof, Payroll Wizard (+51 more)
+Cohesion: 0.06
+Nodes (46): Data Center, Console, Quick Actions, Services and Merch Catalog, Employee Payouts View, My Pay, Payroll Payout, Payroll (+38 more)
 
 ### Community 155 - "PublicLandingPage"
 Cohesion: 0.11
 Nodes (18): Benzin Display Typography, Public Brand Typography and Logo Design, Gilmer Supporting Typography, Hakum LW (OW) Public Mark, About Us Editorial Panel, Public Homepage Reference Alignment Design, Hero Four-Band Composition, PublicLandingPage (+10 more)
 
 ### Community 156 - "CustomerSignUpPage.jsx"
-Cohesion: 0.17
-Nodes (22): CustomerSignUpPage, ACCOUNT_STATUSES, resolveCustomerAuthIntent(), emptyOnboardingDraft(), isSyntheticCustomerEmail(), looksLikeEmail(), mergeTeamLeadPrefill(), ONBOARDING_STEPS (+14 more)
+Cohesion: 0.14
+Nodes (25): anonClient(), signInCustomerWithPassword(), CustomerSignUpPage, ACCOUNT_STATUSES, activateSignupHref(), resolveCustomerAuthIntent(), emptyOnboardingDraft(), isSyntheticCustomerEmail() (+17 more)
 
 ### Community 157 - "20261108203000_optimize_foreign_key_indexes.sql"
 Cohesion: 0.13
@@ -1363,31 +1357,31 @@ Nodes (9): AdminTable(), BranchCard(), ButtonBase(), EmptyState(), ErrorState(),
 
 ### Community 159 - "Master Readiness Checklist"
 Cohesion: 0.11
-Nodes (17): enforce_staff_attendance_geofence, B-01 Double Queue Numbers, B-16 Clients Could Call Queue Allocator, B-17 Public Forms Direct Insert Spam, B-18 Geo Attendance Forged Coordinates, B-28 Geofence RPC Executable, Slice F Public Inquiry API Geofence, CUST-H9 Contact Complaints Open Insert (+9 more)
+Nodes (17): enforce_staff_attendance_geofence, B-01 Double Queue Numbers, B-16 Clients Could Call Queue Allocator, B-17 Public Forms Direct Insert Spam, B-18 Geo Attendance Forged Coordinates, B-28 Geofence RPC Executable, Slice F Public Inquiry API Geofence, ASA-M2 complete_pos_sale Ignores pos Grant (+9 more)
 
 ### Community 160 - "profileCompletion.js"
 Cohesion: 0.18
 Nodes (14): 02 · Profile completion progress — FRONTEND ONLY, Build, Tests, ProfileChecklist(), ProfileProgressCard(), saveCar(), hasText(), NEXT_ORDER (+6 more)
 
 ### Community 161 - "ASA-M1 Expenses RLS Ignores finance_write"
-Cohesion: 0.11
-Nodes (22): ASA finance_write Grant, ASA-M1 Expenses RLS Ignores finance_write, ASA-M2 complete_pos_sale Ignores pos Grant, ASA-P0-1 Grants UI-Only for POS Finance Reports, ASA Finance RLS Live, ASA-P0-1 POS Grant Enforcement, ASA-M1 Finance Honesty, asa-deep Prior Audit (+14 more)
+Cohesion: 0.15
+Nodes (19): ASA finance_write Grant, ASA-M1 Expenses RLS Ignores finance_write, ASA Finance RLS Live, ASA-P0-1 POS Grant Enforcement, ASA-M1 Finance Honesty, asa-deep Prior Audit, ASA Full-System Pack, Assistant Super Admin Role (+11 more)
 
 ### Community 162 - "Branch Admin POS Day Path"
 Cohesion: 0.12
 Nodes (16): Paid POS Provenance Lines, Finance /operations/finance Surface, My Pay Confirmed vs Estimate, Payroll Denied to Branch Admin, FE Role Matrix Money Surfaces, Investor Home is Finance, Payroll Route SA and ASA Only, POS Route Denied to Team Lead (+8 more)
 
-### Community 163 - "Cars Catalog"
-Cohesion: 0.03
-Nodes (87): Car Size Pricing Tier, Cars Catalog, ActiveVisitCard, Customer capp, Customer PWA, Attendance, Clock In/Out, Attendance Exceptions (+79 more)
+### Community 163 - "Attendance"
+Cohesion: 0.15
+Nodes (13): Attendance, Clock In/Out, Attendance Exceptions, Attendance Heatmap, Console Exceptions, Today Pulse, Crew / KPI, Crew Roster (+5 more)
 
 ### Community 164 - "normalizeFields"
-Cohesion: 0.31
-Nodes (13): 4. Proposed design (no parallel system), 4.1 `src/lib/opsForms.js`, normalizeFields(), submissionTitle(), templateFields(), validatePayload(), withLiveBranchOptions(), submitPublicOpsFormViaApi() (+5 more)
+Cohesion: 0.30
+Nodes (13): 4. Proposed design (no parallel system), 1. What you are building (summary), 4.1 `src/lib/opsForms.js`, BrandedOpsForm(), normalizeFields(), templateFields(), validatePayload(), withLiveBranchOptions() (+5 more)
 
 ### Community 165 - "PlanningBoardPage.jsx"
-Cohesion: 0.11
-Nodes (28): hrefForCalendarItem(), allowedReviewAssigneePatch(), assigneeStatus(), buildPlannerAssignNotify(), cardsFromAssigneeRows(), filterPlannerCards(), flattenPlannerCards(), isAll() (+20 more)
+Cohesion: 0.12
+Nodes (25): hrefForCalendarItem(), allowedReviewAssigneePatch(), assigneeStatus(), cardsFromAssigneeRows(), filterPlannerCards(), flattenPlannerCards(), isAll(), reviewItemsFromAssigneeRows() (+17 more)
 
 ### Community 166 - "Epic: Late Absent CA Detailer Commission"
 Cohesion: 0.11
@@ -1406,40 +1400,40 @@ Cohesion: 0.14
 Nodes (16): ALL_MUTATIONS, ALL_NAMES, argvRest, BACKUP_DIR, BACKUP_MANIFEST, backupName(), from, listBackedUp() (+8 more)
 
 ### Community 170 - "TaskModal.jsx"
-Cohesion: 0.17
-Nodes (18): datetimeLocalToIso(), isoToDatetimeLocalValue(), OPS_TIME_ZONE, nextPlanCardPosition(), hasPlannerProof(), planProofObjectPath(), ProofSubmit(), submit() (+10 more)
+Cohesion: 0.13
+Nodes (23): datetimeLocalToIso(), isoToDatetimeLocalValue(), OPS_TIME_ZONE, nextPlanCardPosition(), hasPlannerProof(), planProofObjectPath(), toggleStaffId(), ProofSubmit() (+15 more)
 
 ### Community 171 - "Hakum Auto Care — Customer Notifications Template Review (App & SMS)"
 Cohesion: 0.11
 Nodes (17): 1. Delivery Channels & Technical Architecture, 2. Real-Time Operational Queue & Bay Status (Side-by-Side Review), 3.1 Stage 1: Waiting / In Queue (20 Variants), 3.2 Stage 2: In-Progress / Bay Work Underway (20 Variants), 3.3 Stage 3: Final Inspection / QC (20 Variants), 3.4 Stage 4: For Payment / Settle at Cashier (20 Variants), 3.5 Stage 5: Service Completed / Released (20 Variants), 3. Operational SMS Rotation Pools (20 Variants Per Stage) (+9 more)
 
-### Community 172 - "ownerRevisionsPhase7.js"
-Cohesion: 0.19
-Nodes (14): aggregateBestSellers(), reconUsageQty(), aggregateCarSizePerSale(), aggregateChemicalUsageByWeek(), canCreateStaffRoleOverride(), canRevokeStaffRoleOverride(), chemicalUsageNeedsStub(), formatCarSizeLabel() (+6 more)
+### Community 172 - "inventoryBranchStock.test.js"
+Cohesion: 0.26
+Nodes (11): aggregateBranchStockMap(), applyOwnerSetQty(), applyReconLine(), branchAssignmentRows(), buildReconApprovalMutations(), countPendingRestocksForScope(), filterOperationalStockRows(), isAssignedToBranch() (+3 more)
 
 ### Community 173 - "inferPhPricingSize"
 Cohesion: 0.21
 Nodes (9): BIKE_MAKES, EXPLICIT, inferPhPricingSize(), LARGE_TOKENS, PRICING_SIZE_SLUGS, SMALL_TOKENS, tokenHit(), XL_TOKENS (+1 more)
 
-### Community 174 - "e2e-lifecycle-walk.mjs"
-Cohesion: 0.13
-Nodes (9): base, consoleNotes, dismiss(), failed, notes, opsLogin(), outDir, root (+1 more)
+### Community 174 - "rewardsCatalog.js"
+Cohesion: 0.29
+Nodes (9): earnedVisitRewards(), latestEarnedVisitReward(), MEMBER_TIERS, memberTier(), MERCH_POINTS, nextVisitReward(), SERVICE_POINTS, VISIT_REWARDS (+1 more)
 
-### Community 175 - "e2e-ui-money.mjs"
-Cohesion: 0.14
-Nodes (9): dismissCookieBanner(), failed, opsLogin(), outDir, results, root, summary, waitDeniedOrSettled() (+1 more)
+### Community 175 - "PosSheetHistory.jsx"
+Cohesion: 0.21
+Nodes (9): csvColumns, gapOf(), Metric(), PosSheetHistory(), pickPreset(), PRESETS, STATUSES, t() (+1 more)
 
 ### Community 176 - "canStaffUpdateBookingStatus"
-Cohesion: 0.12
-Nodes (16): ASA queue_all Booking-Status Gate, CRM_SAFE_BOOKING_STATUSES, Floor Booking Status CRM-Safe Own Branch, TL-C1 Booking-Status Ignored Branch, Team Lead Defects and Fixes, ACTIVE_QUEUE_STATUSES waiting in_progress final_checking, /api/booking-status, Postgres Enum booking_status (+8 more)
-
-### Community 177 - "probe-transactions.mjs"
 Cohesion: 0.13
-Nodes (12): byStatus, columns, db, handoffById, linkedBookings, linkedSales, mismatches, root (+4 more)
+Nodes (15): ASA queue_all Booking-Status Gate, CRM_SAFE_BOOKING_STATUSES, Floor Booking Status CRM-Safe Own Branch, ACTIVE_QUEUE_STATUSES waiting in_progress final_checking, /api/booking-status, Postgres Enum booking_status, BOOKING_TERMINAL_STATUSES completed cancelled, Detailing Status Ladder Placeholder to Completed (+7 more)
 
-### Community 178 - "_qa-live-writes.mjs"
-Cohesion: 0.18
-Nodes (12): admin, asUser(), cleanup, fail(), main(), pass(), results, stamp (+4 more)
+### Community 177 - "test-ops-crud.mjs"
+Cohesion: 0.24
+Nodes (10): admin, BRANCH_CODE, cleanupSmoke(), client, envPath, fail(), main(), ok() (+2 more)
+
+### Community 178 - "compensation.js"
+Cohesion: 0.10
+Nodes (29): admin, asUser(), cleanup, fail(), main(), pass(), results, stamp (+21 more)
 
 ### Community 179 - "Daily Sheet — owner and Branch Admin guide"
 Cohesion: 0.12
@@ -1470,16 +1464,16 @@ Cohesion: 0.17
 Nodes (16): @react-three/drei, @react-three/fiber, three, BASIC_DOOR_SURFACES, BASIC_HOOD_SURFACE, BASIC_LIGHT_SURFACES, Car(), CarModel() (+8 more)
 
 ### Community 186 - "busybee.mjs"
-Cohesion: 0.26
-Nodes (9): balKind, report, busybeeBalance(), busybeeErrorKind(), busybeeSendSms(), busybeeSendSmsViaRelay(), cfg(), looksLikeParkingHtml() (+1 more)
+Cohesion: 0.12
+Nodes (19): balKind, report, c0, c1, stamp, busybeeBalance(), busybeeErrorKind(), busybeeSendSms() (+11 more)
 
 ### Community 187 - "probe-stranded-sheets.mjs"
 Cohesion: 0.13
 Nodes (12): findStrandedSheets(), WAITING, approvers, byStatus, db, root, sheets, { stranded, waiting, superAdmins, financeAsas } (+4 more)
 
 ### Community 188 - "pending_floor_optional Hard Gate"
-Cohesion: 0.06
-Nodes (32): EoS Attestation Only Not Payroll Amounts, POS Expense Draft Counts Drawer Not P and L, Finance Accept Does Not Auto-Pay, Pending Floor Hard Gate Client-Only, run_payroll Trusts Client amount_minor, Loyalty Gate and Catalog Reprice Shipped, P0-1 Loyalty Button Ungated Free Line, P0-2 Server Trusts Client Prices (+24 more)
+Cohesion: 0.05
+Nodes (37): EoS Attestation Only Not Payroll Amounts, POS Expense Draft Counts Drawer Not P and L, Finance Accept Does Not Auto-Pay, Honesty Claim vs MONEY-CONTRACT, Pending Floor Hard Gate Client-Only, run_payroll Trusts Client amount_minor, Loyalty Gate and Catalog Reprice Shipped, P0-1 Loyalty Button Ungated Free Line (+29 more)
 
 ### Community 189 - "Payroll Module Audit"
 Cohesion: 0.25
@@ -1505,33 +1499,33 @@ Nodes (10): ops_lab_statuses_active_sort_idx, ops_lab_statuses_slug_uidx, ops_la
 Cohesion: 0.18
 Nodes (10): accessory_redemptions_customer_idx, bookings_friend_referral_after, bookings_friend_referral_before, bookings_referred_customer_idx, customers_referral_code_uidx, public.accessory_redemptions, public.booking_is_detailing(), public.bookings_friend_referral_before() (+2 more)
 
-### Community 195 - "customerPortalClient.js"
-Cohesion: 0.26
-Nodes (10): CustomerAccountDock(), ICONS, subscribe(), customerAccountTabId(), getCustomerAccountTabs(), ACTIVE_VISIT_EVENT, greeting(), hasActiveVisit() (+2 more)
+### Community 195 - "bookingStatusTransitions.test.js"
+Cohesion: 0.29
+Nodes (7): BOOKING_STATUS_LIVE, canHandOffToPayment(), canTransitionBookingStatus(), PAYMENT_HANDOFF_FROM, transitionAllowedForRole(), BOOKING_STATUS_TRANSITIONS, root
 
 ### Community 196 - "complete_pos_sale Paid Sale Write"
-Cohesion: 0.13
-Nodes (14): Clock to POS to EoS to Finance to Payroll to P and L, complete_pos_sale Paid Sale Write, finance_daily_pl Paid Income Posted Expenses, UI Payment Allowlist RPC Residual, submit_shift_close EoS Attestation, Queue to Pay to EoS to Accept to Payroll to P and L, WF-POS-01 Pay Queue Settle, WF-POS-02 Walk-in Merch (+6 more)
+Cohesion: 0.15
+Nodes (12): Clock to POS to EoS to Finance to Payroll to P and L, complete_pos_sale Paid Sale Write, finance_daily_pl Paid Income Posted Expenses, UI Payment Allowlist RPC Residual, submit_shift_close EoS Attestation, Queue to Pay to EoS to Accept to Payroll to P and L, Payment Methods Not RPC Enforced, F1 System Context POS in Hakum (+4 more)
 
-### Community 197 - "export-user-stories-pdf.mjs"
-Cohesion: 0.18
-Nodes (7): exports, root, outDir, outHtml, outPdf, root, skipPy
+### Community 197 - "shiftClose.js"
+Cohesion: 0.31
+Nodes (8): emptyBacoorDailyReport(), moneySnapshotFromReport(), normalizeSalaryDraftExtras(), SHIFT_CLOSE_FIELD_LABELS, SHIFT_CLOSE_MONEY_KEYS, shiftCloseDiffRows(), shiftCloseFieldLabel(), root
 
 ### Community 198 - "check-crm-insights-days.mjs"
 Cohesion: 0.12
 Nodes (9): db, ensurePreview(), lastMonthEnd, lastMonthStart, root, shots, sleep(), today (+1 more)
 
-### Community 199 - "check-planner-tabs.mjs"
-Cohesion: 0.25
-Nodes (10): check(), db, ensurePreview(), EXPECTED_TABS, expectedCalendarBookings(), HOME, root, runPersona() (+2 more)
+### Community 199 - "defaultWeekHours"
+Cohesion: 0.24
+Nodes (10): createBranch(), saveBranchOperatingHours(), setBranchGoogleReviewUrl(), updateBranch(), defaultWeekHours(), validateBranchInput(), closeForm(), onSubmit() (+2 more)
 
-### Community 200 - "isOpsAuthedUrl"
-Cohesion: 0.05
-Nodes (58): base, failed, findings, opsLogin(), outDir, personaIds, results, root (+50 more)
+### Community 200 - "e2e-role-qa.mjs"
+Cohesion: 0.02
+Nodes (113): dismissCookieBanner(), fail(), failed, FINANCE_TABS, gotoShot(), opsLogin(), outDir, pass() (+105 more)
 
-### Community 201 - "customer.js"
-Cohesion: 0.19
-Nodes (21): operations, 1. Sign up and sign in, applyBranchFilter(), bookingMatchesQuery(), handleCustomerHistoryRequest(), handleCustomerSignupRequest(), handleProvisionRequest(), buildHistoryTimeline() (+13 more)
+### Community 201 - "customerHistoryApi.mjs"
+Cohesion: 0.38
+Nodes (13): applyBranchFilter(), bookingMatchesQuery(), handleCustomerHistoryRequest(), buildHistoryTimeline(), classifyHistoryQuery(), filterHistoryTimeline(), HISTORY_ROLES, normalizeHistoryPhone() (+5 more)
 
 ### Community 202 - "publicHomeContent.js"
 Cohesion: 0.20
@@ -1541,33 +1535,33 @@ Nodes (11): aboutImage, beforeAfterShowcase, ceramicPackages, ceramicSection, fe
 Cohesion: 0.17
 Nodes (9): customer_referral_rewards_available_idx, customer_referral_rewards_role_uidx, public.qualify_referral_for_sale(), public.referral_program_settings, public.sale_line_items_qualify_referral(), public.sales_referral_status_change(), public.unqualify_referral_for_sale(), sale_line_items_qualify_referral (+1 more)
 
-### Community 204 - "planningPart6.js"
+### Community 204 - "e2e-queue-sms-pos.mjs"
 Cohesion: 0.25
-Nodes (6): admin, results, complaintFields(), fieldKeyFromLabel(), formatFormPayloadDescription(), parseCustomFieldsCsv()
+Nodes (4): admin, client, failed, results
 
-### Community 205 - "probe-demo-login.mjs"
-Cohesion: 0.18
-Nodes (6): admin, allOk, alone, IDS, root, shared
+### Community 205 - "ownerRevisionsPhase2.test.js"
+Cohesion: 0.29
+Nodes (6): bookingCalendarEventPropGetter(), bookingCalendarStyle(), floorNextAction(), getBookingPrimaryNextStatus(), detailingBooking, root
 
 ### Community 206 - "devDependencies"
 Cohesion: 0.13
 Nodes (15): devDependencies, eslint, @eslint/js, eslint-plugin-react, eslint-plugin-react-hooks, eslint-plugin-react-refresh, globals, puppeteer (+7 more)
 
-### Community 207 - "provisionStaff.mjs"
-Cohesion: 0.08
-Nodes (33): operations, operations, operations, operations, operations, operations, operations, operations (+25 more)
+### Community 207 - "demoLoginApi.mjs"
+Cohesion: 0.10
+Nodes (21): operations, operations, operations, operations, operations, operations, createGateway(), readGatewayOperation() (+13 more)
 
 ### Community 208 - "posTicketCustomer.js"
-Cohesion: 0.12
-Nodes (26): getLoyaltyProgramSettings(), splitCustomerName(), customerFormError(), customerFormValues(), hasCustomerInput(), hasValidEmail(), hasValidPhone(), ticketFormValues() (+18 more)
+Cohesion: 0.24
+Nodes (13): splitCustomerName(), customerFormError(), customerFormValues(), hasCustomerInput(), hasValidEmail(), hasValidPhone(), ticketFormValues(), ticketNeedsCustomer() (+5 more)
 
-### Community 209 - "busybeeSendSmsDirect"
-Cohesion: 0.31
-Nodes (5): busybeeSendSmsDirect(), parkingFailure(), handleBusybeeRelayRequest(), json(), readJsonBody()
+### Community 209 - "teamLeadQueueManager.test.js"
+Cohesion: 0.25
+Nodes (7): css, daylightCss, layout, ops, page, presentation, root
 
-### Community 211 - "dailySheetApprovalLadder.test.js"
-Cohesion: 0.04
-Nodes (41): generalAdminSheetGrants(), INTERNAL_ROLE_LABELS, internalRoleLabel(), ROLE_ACCESS_SUMMARY, roleAccessSummary(), ASSISTANT_GRANT_GROUPS, ASSISTANT_GRANT_KEYS, ASSISTANT_GRANT_LABELS (+33 more)
+### Community 211 - "assistantGrantsEditor.test.js"
+Cohesion: 0.15
+Nodes (12): ASSISTANT_GRANT_GROUPS, ASSISTANT_GRANT_KEYS, ASSISTANT_GRANT_LABELS, countEnabledAssistantGrants(), DEFAULT_ASSISTANT_GRANTS, setAssistantGrantsPreset(), AssistantGrantsEditor(), GrantGroupRows() (+4 more)
 
 ### Community 212 - "audit-api-auth.mjs"
 Cohesion: 0.22
@@ -1589,52 +1583,52 @@ Nodes (9): payroll_run_lines_branch_idx, payroll_run_lines_run_idx, payroll_run_
 Cohesion: 0.20
 Nodes (10): marketing-deep Prior Audit, Marketing Full-System Pack, Marketing Role CRM Only, Marketing CRM Directory, Marketing CRM SMS, Deferred Events Push Complaints, Marketing Page Checklist, CUST-H9 Leads Form Spam (+2 more)
 
-### Community 217 - "publicOpsForm.mjs"
-Cohesion: 0.19
-Nodes (16): computeServiceSizePricing(), insertBookingPlaceholderAndNotify(), resolveOptionalCustomerId(), resolveBookingCustomerId(), computeDetailingScheduledStart(), linkSubmissionToBooking(), matchDetailingServiceRow(), resolveDetailingBranchSlug() (+8 more)
+### Community 217 - "Transfer a car"
+Cohesion: 0.29
+Nodes (7): Branch Admin rule, Related, Shop floor steps, Transfer a car, What does not move, What moves, When to use
 
 ### Community 218 - "Hakum Auto Care — Master System Test Plan & Quality Assurance Specification"
 Cohesion: 0.14
 Nodes (13): 10.1 Floor Insight Dashboard (Exclusive Access), 10. Workflow 8: Owner Master Governance (`BossMich`), 11. Workflow 9: Multi-User Concurrency & Race Conditions, 12. Complete Traceability Matrix & Automated Test Seams, 2. Global RBAC & User Persona Matrix, 8.1 The Four Inventory Categories & Recipe Deductions, 8.2 Inventory RBAC & Restock Approval Workflow (Notes 15, 17, 18), 8. Workflow 6: Inventory Management & Approval Governance (+5 more)
 
 ### Community 219 - "Handoff: Points shop (merch for points) — build it"
-Cohesion: 0.14
-Nodes (13): 1. Database (one new migration — **do NOT apply it**; Kirk applies migrations himself), 2. Server, 3. Customer app (look = mock option A + "Same for all options"), 4. Counter (Point of Sales, `src/pages/PosPage.jsx`), 5. Admin "Merch shop" page, 6. Website, Checks before you say it's done, Decided rules (don't change without asking Kirk) (+5 more)
+Cohesion: 0.13
+Nodes (14): 1. Database (one new migration — **do NOT apply it**; Kirk applies migrations himself), 2. Server, 3. Customer app (look = mock option A + "Same for all options"), 4. Counter (Point of Sales, `src/pages/PosPage.jsx`), 5. Admin "Merch shop" page, 6. Website, Checks before you say it's done, Decided rules (don't change without asking Kirk) (+6 more)
 
 ### Community 220 - "Remaining work — principal PM audit (2026-10-05, re-audited 2026-10-07)"
 Cohesion: 0.10
 Nodes (22): Attendance spoof block, CRUD dialogs, data hygiene (2026-10-06), Continue checklist (ordered), `daily_sheet_server_totals` returning "permission denied" is correct, not a defect, Documentation debt, ⚠️ Four migrations are drafted, guarded and NOT applied (owner action), Fresh verify (2026-10-10, principal closeout — branch `audit/2026-10-08-closeout`), Fresh verify (this session, 2026-10-05), Future-branch / RBAC / future-users (2026-10-05) (+14 more)
 
-### Community 221 - "check-opslead-crm-notes.mjs"
-Cohesion: 0.24
-Nodes (8): account(), db, ensurePreview(), opts, pickTarget(), root, shots, sleep()
+### Community 221 - "check-session.mjs"
+Cohesion: 0.29
+Nodes (5): auth, root, session, supabase, token
 
-### Community 222 - "smoke-busybee.mjs"
-Cohesion: 0.25
-Nodes (5): ensureCustomer(), c0, c1, stamp, normalizePhMobile()
+### Community 222 - "generate-graphify-full-dumps.py"
+Cohesion: 0.48
+Nodes (5): main(), write_db_full(), write_frontend(), write_money(), write_rls()
 
 ### Community 223 - "ref_node_child_process"
-Cohesion: 0.05
-Nodes (34): db, ensurePreview(), root, shots, sleep(), checklistPath, failed, finished (+26 more)
+Cohesion: 0.03
+Nodes (52): bin, result, check(), db, ensurePreview(), EXPECTED_TABS, expectedCalendarBookings(), HOME (+44 more)
 
-### Community 224 - "inventoryCrudLock.test.js"
-Cohesion: 0.36
-Nodes (5): formatBranchOnHandSummary(), INVENTORY_CRUD_LOCK_KEY, inventoryCrudLockedFromSetting(), stockRowsByProductId(), root
+### Community 224 - "src/lib/adminApi.js"
+Cohesion: 0.13
+Nodes (25): onCreate(), archiveBranch(), branchesCache, createProduct(), createService(), DEFAULT_LOYALTY_SETTINGS, getInventoryCrudLocked(), isMissingStaffColumn() (+17 more)
 
 ### Community 225 - "check-audit-security.mjs"
 Cohesion: 0.18
 Nodes (9): app, chips, http, lookup, portal, pr, root, sendFn (+1 more)
 
-### Community 226 - "Investor"
-Cohesion: 0.13
-Nodes (34): Investor Finance Home, Investor POS Deny, WF-INV-01 Finance Read-Only Hub, Investor Role Guide, Investor, Assistant, End of shift, Branch expense reports (+26 more)
+### Community 226 - "Night close, finance accept, books"
+Cohesion: 0.27
+Nodes (20): Assistant, End of shift, Branch expense reports, Finance accept or reject, Finance books, Hard gate on payroll confirm, Night close, finance accept, books, Owner (+12 more)
 
-### Community 227 - "check-session.mjs"
-Cohesion: 0.07
-Nodes (19): auth, root, session, supabase, token, db, newFailures, refundDays (+11 more)
+### Community 227 - "publicQueueKiosk.test.js"
+Cohesion: 0.09
+Nodes (15): htmlPath, pdfKb, pdfPath, required, root, t, AUDIT, CODE (+7 more)
 
 ### Community 228 - "publicCatalog.js"
-Cohesion: 0.27
+Cohesion: 0.29
 Nodes (12): buildPublicServiceOverview(), enrichPublicCatalogService(), fetchPublicCatalogServices(), HIDDEN_FROM_PUBLIC_OVERVIEW, isHiddenFromPublicOverview(), MARKETING_COPY_BY_KEY, MARKETING_SLUG_ALIASES, marketingCopyForServiceSlug() (+4 more)
 
 ### Community 229 - "check-user-settings-auth.mjs"
@@ -1654,8 +1648,8 @@ Cohesion: 0.25
 Nodes (11): pg_temp.assert(), accessory_redemptions, branches, customers, loyalty_ledger, product_branch_stock, product_stock_movements, products (+3 more)
 
 ### Community 233 - "is_admin Over-Wide RLS"
-Cohesion: 0.11
-Nodes (16): B-31 ASA Content Notifications RLS, B-32 Events is_admin Over-Wide, B-33 Customers is_admin Over-Wide, B-34 Bookings Cross-Branch Read, B-35 can_edit_planning Duplicate Grant Logic, B-36 Attendance Cross-Branch Read, Admin Deep Audit, Admin Route Capability Matrix (+8 more)
+Cohesion: 0.15
+Nodes (11): B-31 ASA Content Notifications RLS, B-32 Events is_admin Over-Wide, B-33 Customers is_admin Over-Wide, B-34 Bookings Cross-Branch Read, B-35 can_edit_planning Duplicate Grant Logic, B-36 Attendance Cross-Branch Read, Admin Deep Audit, Admin Route Capability Matrix (+3 more)
 
 ### Community 234 - "public.redeem_accessory"
 Cohesion: 0.17
@@ -1666,16 +1660,16 @@ Cohesion: 0.15
 Nodes (4): Crew Staff, Geo Clock In Out, Crew Staff Role Guide, Team Lead Capability Set
 
 ### Community 236 - "Team Portal redesign — Option B "Daylight" (frontend only)"
-Cohesion: 0.14
-Nodes (13): 1. The one rule: frontend only, 2. What "Daylight" is (the design in one paragraph), 3. Design tokens, 5. Screens (do these first, in this order), 5a. Team lead queue — `OperationsQueuePage` / `TeamLeadQueuePage`, 5b. Crew time clock — `AttendancePage` (label it **Time clock**, route unchanged), 5c. Admin "Today" — `OperationsDashboardPage` / `SuperAdminFloorBoard` (label **Today**,, 5d. Everything else (+5 more)
+Cohesion: 0.22
+Nodes (8): 1. The one rule: frontend only, 2. What "Daylight" is (the design in one paragraph), 3. Design tokens, 6. Words (glossary — use everywhere in the portal UI), 7. Accessibility and quality bar, 8. How to work in this repo, 9. Verify before you say done, Team Portal redesign — Option B "Daylight" (frontend only)
 
-### Community 237 - "phVehicles.js"
-Cohesion: 0.18
-Nodes (11): admin, client, failed, results, stamp, filterVehicleMakes(), filterVehicleModels(), modelsForMake() (+3 more)
+### Community 237 - "e2e-plate-vehicle-queue.mjs"
+Cohesion: 0.25
+Nodes (5): admin, client, failed, results, stamp
 
 ### Community 238 - "audit-db-deep.mjs"
-Cohesion: 0.16
-Nodes (12): assertReadOnly(), bySeverity, CORE, count(), db, fetchAll(), findings, outDir (+4 more)
+Cohesion: 0.06
+Nodes (26): Checklist — frontend and backend, Daily sheet formulas, Expenses and profit, Honest limits, How jobs are grouped, Sales, What is left to collect, assertReadOnly() (+18 more)
 
 ### Community 239 - "Finance: the Xero Profit and Loss"
 Cohesion: 0.17
@@ -1689,13 +1683,13 @@ Nodes (8): anon, idx_audit_logs_actor_created, idx_audit_logs_created_at, idx_au
 Cohesion: 0.40
 Nodes (5): Admin shop-day friction log, How to add a row, Live shop-day observations (add below), Redesign gate, Seeded from FLOPS / audit (not new redesign triggers)
 
-### Community 242 - "check-crm-smart-groups.mjs"
-Cohesion: 0.28
-Nodes (7): db, ensurePreview(), expectations(), paged(), root, shots, sleep()
+### Community 242 - "CustomerNotesPanel.jsx"
+Cohesion: 0.57
+Nodes (5): CustomerNotesPanel(), addNote(), CUSTOMER_NOTE_TYPES, isRegularGuest(), validateCustomerNote()
 
-### Community 243 - "TeamLeadQueuePage.jsx"
-Cohesion: 0.12
-Nodes (29): canPushFinalCheckToPayment(), DaylightQueueCard(), elapsedMinutes(), TeamLeadQueuePage(), byQueueSequence(), DAYLIGHT_STAGES, formatDaylightDuration(), groupDaylightQueue() (+21 more)
+### Community 243 - "clearVehicleCatalogCache"
+Cohesion: 0.38
+Nodes (7): clearVehicleCatalogCache(), addRow(), closeEdit(), removeRow(), saveEdit(), toggleActive(), sizeLabel()
 
 ### Community 245 - "20260727020000_smart_ops_forms.sql"
 Cohesion: 0.21
@@ -1713,9 +1707,9 @@ Nodes (6): inventory_recons_inventory_crud_lock, product_branch_stock_inventory_
 Cohesion: 0.19
 Nodes (6): product_branch_stock_count_guard, product_stock_movements_coffee_recipe, products_one_material_role, public.guard_branch_stock_count(), public.restock_requests, restock_requests_pending_idx
 
-### Community 249 - "formResultsStore.mjs"
-Cohesion: 0.26
-Nodes (9): assertFormResultsCaller(), buildBookingSyncPatch(), handleFormResultsAction(), parseOptionalIsoDate(), selectSubmissionWithOptionalBookingId(), TERMINAL_BOOKING_STATUSES, VALID_SUBMISSION_STATUSES, VALID_DETAILING_BOARD_STATUSES (+1 more)
+### Community 249 - "provisionStaff.mjs"
+Cohesion: 0.14
+Nodes (22): operations, 1. Sign up and sign in, assertFormResultsCaller(), buildBookingSyncPatch(), handleFormResultsAction(), parseOptionalIsoDate(), selectSubmissionWithOptionalBookingId(), TERMINAL_BOOKING_STATUSES (+14 more)
 
 ### Community 250 - "Payroll Four Jobs Floor Ceramic Salary CA"
 Cohesion: 0.17
@@ -1750,8 +1744,8 @@ Cohesion: 0.17
 Nodes (11): Accessibility & Inclusion, Brand Commitments, Capabilities and Constraints, Evidence on Hand, Operating Context, Platform, Positioning, Product (+3 more)
 
 ### Community 258 - "customerPortal.mjs"
-Cohesion: 0.06
-Nodes (61): admin, password, results, root, stamp, UNIT_STEPS, ensureReferralCode(), googleReviewUrl() (+53 more)
+Cohesion: 0.05
+Nodes (78): Part 9 Hardening System Readiness, accounts, admin, results, findCustomerByIdentifier(), getAuthUser(), handleCustomerAuthLookupRequest(), lookupCustomerAuthStatus() (+70 more)
 
 ### Community 259 - "check-investor-readonly.mjs"
 Cohesion: 0.33
@@ -1761,9 +1755,9 @@ Nodes (8): branchName(), check(), db, ensurePreview(), root, runPersona(), shots
 Cohesion: 0.25
 Nodes (8): 2026-09-27 — untested pages, push, backend, Honesty note, Next actions (priority), Overall verdict, Principal progress — 2026-09-26, Product / PM status, What does **not** work / is blocked, What works (proven this session)
 
-### Community 261 - "verify-vehicle-catalog-parity.mjs"
-Cohesion: 0.10
-Nodes (14): rows, vals, rows, vals, admin, rows, chunkSize, rows (+6 more)
+### Community 261 - "phVehicles.js"
+Cohesion: 0.12
+Nodes (18): rows, vals, rows, vals, chunkSize, rows, env, flat (+10 more)
 
 ### Community 262 - "public.complete_payment"
 Cohesion: 0.21
@@ -1789,9 +1783,9 @@ Nodes (10): `allowRoute` keys → permission functions, `/api/*` gateway, Custom
 Cohesion: 0.18
 Nodes (9): admin_override_queue_status RPC, assign_daily_queue_number RPC, Legacy pay_category ppf Maps to Package, Queue Same-day Services Packages, SKU premium-car-wash wash, ADMIN_OVERRIDE_TARGET waiting in_progress final_checking, assign_daily_queue_number Daily Queue, pay_category ppf Legacy Film Bundle Queue (+1 more)
 
-### Community 268 - "4. File-by-file changes"
-Cohesion: 0.11
-Nodes (16): 1. The wizards the app already has, 2. The shared pattern, 3. How forms are stored today, 0. Repo rules (read first), 1. What you are building (summary), 2. Database: the `custom` kind (option B), 3. Data shape (no other schema change), 4.2 `src/lib/formWizard.js` (new, pure, no React) (+8 more)
+### Community 268 - "Wizard form template — implementation plan"
+Cohesion: 0.17
+Nodes (10): 1. The wizards the app already has, 2. The shared pattern, 3. How forms are stored today, 0. Repo rules (read first), 2. Database: the `custom` kind (option B), 3. Data shape (no other schema change), 6. Verify on localhost only, 7. Done means (+2 more)
 
 ### Community 269 - "Responsive Validation Report"
 Cohesion: 0.18
@@ -1813,9 +1807,9 @@ Nodes (5): bookings_for_payment_floor_idx, expense_status_events_expense_id_idx,
 Cohesion: 0.22
 Nodes (9): Bugs found while seeding (fixed in production), Commands, Customer portal note, Logins for checking, Role probe (statuses, overrides, approvals), Safety, September 2026 test data (Bacoor + Batangas), Tags (how seed rows are found) (+1 more)
 
-### Community 275 - "Daily sheet formulas"
+### Community 275 - "fullWidthAndStamps.test.js"
 Cohesion: 0.29
-Nodes (6): Daily sheet formulas, Expenses and profit, Honest limits, How jobs are grouped, Sales, What is left to collect
+Nodes (5): app, bredesign, root, styles, tokens
 
 ### Community 276 - "e2e-newrequest.mjs"
 Cohesion: 0.25
@@ -1825,9 +1819,9 @@ Nodes (6): Part 1 RBAC Nav Routing, checklistPath, finished, root, started, STEP
 Cohesion: 0.29
 Nodes (5): public.bookings Hub Table, Hub Tables bookings sales staff_profiles, Planner plan_cards Boards Lists, Storage Bucket plan-proofs Private, Planner plan_cards Lists Boards Review
 
-### Community 278 - "import-ceramic-coatings.mjs"
+### Community 278 - "tlQueueUxFixes.test.js"
 Cohesion: 0.29
-Nodes (4): admin, envPath, rows, row()
+Nodes (6): api, card, editor, newTicket, root, tlPage
 
 ### Community 279 - "ForbiddenPage.jsx"
 Cohesion: 0.43
@@ -1838,8 +1832,8 @@ Cohesion: 0.32
 Nodes (6): admin, GENERAL_ADMIN_GRANTS, listAllAuthUsersByEmail(), main(), passwordForEnv(), REAL_EMPLOYEES
 
 ### Community 281 - "Button"
-Cohesion: 0.06
-Nodes (120): lucide-react, react, react-router-dom, sonner, AuthContext, canEditDeleteFormResults(), BranchLocationPicker(), markerIcon (+112 more)
+Cohesion: 0.05
+Nodes (99): 4a. FloorAppShell (phone-first: team lead, crew, sales, marketing, video editor, detailer), INTERNAL_SEO_LINKS, MediaLibraryDialog(), BranchLocationPicker, CustomerPinControl(), patchSchedule(), saveTypeIntervals(), sendReminder() (+91 more)
 
 ### Community 282 - "probe-remount-blast-radius.mjs"
 Cohesion: 0.38
@@ -1849,9 +1843,9 @@ Nodes (6): db, distinctOwners(), readOrFail(), root, TABLES, totalRows()
 Cohesion: 0.38
 Nodes (7): BranchWeather(), fetchBranchWeather(), resolveWeatherTarget(), weatherCacheKey(), weatherForecastLine(), weatherLabelFromCode(), WMO
 
-### Community 284 - "bookingFloorBoard.test.js"
-Cohesion: 0.29
-Nodes (5): PAINT_MAINTENANCE_SERVICE_ID, now, root, schedule, service
+### Community 284 - "maintenanceSchedulesApi.mjs"
+Cohesion: 0.16
+Nodes (16): ARRIVE_ROLES, canProcessMaintenanceArrival(), canSeeAllBranches(), handleMaintenanceSchedulesRequest(), loadStaff(), processArrival(), READ_ROLES, TYPE_ROLES (+8 more)
 
 ### Community 285 - "e2e-daily-sheet-money.mjs"
 Cohesion: 0.27
@@ -1897,9 +1891,9 @@ Nodes (7): allSql, findExecuteGrants(), functionDefinitions(), migrationDir, mig
 Cohesion: 0.24
 Nodes (10): P0 Must Ship, P1 Functionality Completeness, Hakum Readiness Checklist, Core Product Flows, Hakum Functionality and Readiness Audit, Legacy Admin Routes, Route Inventory, Security (2).md Bare Minimum (+2 more)
 
-### Community 296 - "posPayrollSettings.test.js"
-Cohesion: 0.43
-Nodes (5): DEFAULT_POS_EXPENSE_KINDS, normalizePosSettings(), toPosSettingsRow(), savePosSettings(), root
+### Community 296 - "Paint Maintenance Schedules"
+Cohesion: 0.33
+Nodes (6): DetailingMaintenancePanel, Notify Client SMS/Push, Paint Maintenance Schedules, Set Date Marks Visit Done, Reminders, SMS/Push on Advance
 
 ### Community 297 - "busybee-sms Edge Function"
 Cohesion: 0.27
@@ -1917,33 +1911,33 @@ Nodes (8): Average Wait Minutes, KPI Sample Counts, Asia/Manila Half-Open Date B
 Cohesion: 0.20
 Nodes (8): HKM-21 About Image, Mobile Detailing Locked Card, Public About and Services Imagery Plan, publicHomeContent, Services 4-2-1 Grid, Lighter Ceramic Package Overlay, Homepage Services Responsive Refinement Plan, loadHomepageContent
 
-### Community 301 - "busybeeReminderSms.test.js"
-Cohesion: 0.53
-Nodes (4): brandTxtRequiresIpWhitelist(), formatWhitelistRequestIps(), productionSmsEgressPlan(), root
+### Community 301 - "financeDrilldown.js"
+Cohesion: 0.73
+Nodes (4): extractDailySheetId(), extractPayslipId(), FAMILY_TO_LINE_KIND, getExpenseSourceMeta()
 
 ### Community 302 - "June 2025 – November 2026 Full-System Seed & Multi-Month Scale Guide"
 Cohesion: 0.33
 Nodes (5): Cleanup, Commands, June 2025 – November 2026 Full-System Seed & Multi-Month Scale Guide, Safety & Tag Isolation, What Is Generated (Standard 18-Month Plan)
 
-### Community 303 - "Hakum Engineering & Ops Handoff Guide"
+### Community 303 - "guardedMigrationContract.test.js"
 Cohesion: 0.33
-Nodes (6): Fixed Planner Forms & Sequence Reordering, Permanent Form Results Board, Hakum Engineering & Ops Handoff Guide, Production Ops Blockers (SMTP, BrandTxt IP, Push Opt-In), Cross-Platform PWA Persistence & Auto-Update, Hakum System Topology & Domain Split
+Nodes (4): EXEMPTED, GUARDED, migrationsDir, root
 
-### Community 304 - "US-QA-04 Night Close → Finance → Payroll"
-Cohesion: 0.47
-Nodes (5): US-QA-04 Night Close → Finance → Payroll, Epic: End of Shift & Close Review, Pending Floor Confirm Gate, US-CLOSE-02 Finance Shift Review, US-CLOSE-03 Pending Floor Gate
+### Community 304 - "passwordUpdateErrorHonesty.test.js"
+Cohesion: 0.33
+Nodes (3): root, setPassword, signUp
 
 ### Community 305 - "crewDayCard.test.js"
 Cohesion: 0.53
 Nodes (4): formatCurrentCarLine(), pickCurrentAssignment(), sheetSalaryPoolMinor(), root
 
 ### Community 306 - "Hakum Principal Graphify Memory"
-Cohesion: 0.22
-Nodes (10): Hakum Graphify Knowledge Graph, server/apiGateway.mjs /api/* Gateway, Query graphify-out/graph.json First, Hakum Principal Graphify Memory, GRAPHIFY_MEMORY Live DB Facts, Vite React Supabase SPA Architecture, graphify query path explain, graphify update AST Only (+2 more)
+Cohesion: 0.12
+Nodes (19): Hakum Graphify Knowledge Graph, Query graphify-out/graph.json First, Hakum Principal Graphify Memory, GRAPHIFY_MEMORY Live DB Facts, graphify query path explain, graphify update AST Only, GRAPHIFY_WORKFLOWS Enums API Storage, Hakum Live Workflows Enums API (+11 more)
 
-### Community 307 - "PosPage.jsx"
-Cohesion: 0.07
-Nodes (67): canDiscountPosSale(), PointsShopPickup(), birthdayCodeShapeError(), normalizeBirthdayCode(), applyAdHocDiscount(), applyReferralRewardToCart(), assertBranchAdminCart(), buildCatalogCartLine() (+59 more)
+### Community 307 - "posSale.js"
+Cohesion: 0.10
+Nodes (39): Shop day, assertBranchAdminCart(), buildCatalogCartLine(), buildPosSalePayload(), canRedeemLoyaltyAward(), clearPosDraft(), isAllowedPosPaymentMethod(), isPosServiceLine() (+31 more)
 
 ### Community 310 - "20260810160000_customer_history_indexes.sql"
 Cohesion: 0.31
@@ -1953,17 +1947,17 @@ Nodes (7): bookings_branch_created_idx, bookings_customer_id_created_idx, bookin
 Cohesion: 0.27
 Nodes (5): public.shift_close_field_config, public.shift_close_reports, shift_close_reports_branch_date_idx, shift_close_reports_branch_date_open_uidx, shift_close_reports_status_idx
 
-### Community 314 - "probe-salary-account-invariant.mjs"
-Cohesion: 0.33
-Nodes (4): db, paidSheet, root, salary
+### Community 314 - "sheetPostedExpenseProtection.test.js"
+Cohesion: 0.40
+Nodes (5): effectivePolicy(), root, sheet, strip(), tab
 
 ### Community 315 - "prodShellContract.test.js"
 Cohesion: 0.25
 Nodes (7): boundary, indexHtml, main, manifest, root, vercel, vite
 
-### Community 316 - "probe-stranded-customers.mjs"
-Cohesion: 0.33
-Nodes (5): cols, db, ids, labels, root
+### Community 316 - "Queue Ticket"
+Cohesion: 0.40
+Nodes (5): Queue Ticket, ServiceKindPicker, TL Size Override, Vehicle Catalog Lookup, VehicleMakeModelFields
 
 ### Community 317 - "20261119120000_wordpress_blog_seo_and_scheduling.sql"
 Cohesion: 0.47
@@ -2002,20 +1996,20 @@ Cohesion: 0.31
 Nodes (8): Owner Share Pack Index, generate:owner-stories, Morning Day Night Shop Cadence, Owner User Stories HTML Pack, Owner User Stories PDF Pack, Two-Branch Wash Pool Example Pesos, Owner Pack Role Tabs, Same-Night Close Loop
 
 ### Community 327 - "_daily-sheet-sql-check.mjs"
-Cohesion: 0.06
-Nodes (26): as(), base, db, fails(), migration, require, errors, out (+18 more)
+Cohesion: 0.25
+Nodes (6): as(), base, db, fails(), migration, require
 
-### Community 328 - "CrmInsightsPanel.jsx"
-Cohesion: 0.10
-Nodes (43): admin, peak, results, week, addDaysToKey(), aggregateLineItemsByFamily(), aggregateLineItemsByService(), aggregateSalesByBranch() (+35 more)
+### Community 328 - "CrmPage"
+Cohesion: 0.08
+Nodes (56): addDaysToKey(), aggregateLineItemsByFamily(), aggregateLineItemsByService(), aggregateSalesByBranch(), aggregateSalesByHour(), aggregateSalesByWeekday(), ALL_WEEKDAYS, applyBranchScope() (+48 more)
 
 ### Community 329 - "@supabase/supabase-js"
-Cohesion: 0.03
-Nodes (44): @supabase/supabase-js, assert(), asUser(), extra, results, stamp, admin, created (+36 more)
+Cohesion: 0.02
+Nodes (89): @supabase/supabase-js, admin, results, admin, peak, results, week, assert() (+81 more)
 
 ### Community 330 - "branchHours.js"
-Cohesion: 0.39
-Nodes (6): branchHoursStatus(), DAY_NAMES, dayRow(), formatTime(), minutesFromTime(), nextOpenDay()
+Cohesion: 0.29
+Nodes (8): setBranchHours(), branchHoursStatus(), DAY_NAMES, dayRow(), formatTime(), isoToDayOfWeek(), minutesFromTime(), nextOpenDay()
 
 ### Community 331 - "20260715153848_add_advisor_foreign_key_indexes.sql"
 Cohesion: 0.28
@@ -2054,8 +2048,8 @@ Cohesion: 0.25
 Nodes (5): ADM-C3 Attendance Empty Scope Fallback, ASA branches_all Grant, ASA-C1 Empty Scope Widened to All, ASA-C2 Finance Empty Scope Unscoped Query, ASA-C4 Assignments Always Cleared
 
 ### Community 340 - "demoAccounts.js"
-Cohesion: 0.03
-Nodes (58): puppeteer, db, ensurePreview(), root, shots, sleep(), db, ensurePreview() (+50 more)
+Cohesion: 0.02
+Nodes (110): puppeteer, db, ensurePreview(), expectations(), paged(), root, shots, sleep() (+102 more)
 
 ### Community 341 - "Wizard template implementation — 18 October 2026"
 Cohesion: 0.25
@@ -2077,21 +2071,17 @@ Nodes (8): 4.1 Points Accumulation Matrix (22 Service SKUs), 4.2 Milestone Visit
 Cohesion: 0.25
 Nodes (8): 6.1 FIFO Queue Ordering & Customer Recognition, 6.2 Bay Lifecycle & Failed QA Redo Lane, 6.3 Handoff to Payment & Ticket Lock, 6. Workflow 4: Team Lead Floor Operations (`team_lead`), Edge Cases & Failed Paths, Happy Path, Happy Path, Happy Path
 
-### Community 346 - "customerAdminCrud.test.js"
-Cohesion: 0.20
-Nodes (6): requireActiveStaff(), createHarness(), invoke(), root, DELEGATING_AUTH_MODULES, root
+### Community 346 - "attendance-heatmap.jsx"
+Cohesion: 0.60
+Nodes (4): date-fns, AttendanceHeatmap(), cellTone(), shortDate()
 
 ### Community 347 - "Hakum RBAC matrix (19 Oct 2026)"
 Cohesion: 0.25
 Nodes (7): Columns, Crew (not on the sheet), Database, Groups, Hakum RBAC matrix (19 Oct 2026), Named Accounts (Nov 2026 Access Sheet), People
 
-### Community 348 - "Slice U Finance Loyalty Catalog RLS"
-Cohesion: 0.25
-Nodes (7): multiple_permissive_policies Closed, B-37 Sales Read Without finance_view, B-38 Loyalty Write Without memberships Grant, B-39 Branch Admin Catalog Write, B-40 BA Customer Memberships Write, OPT-09 Permissive Policy Merges, Slice U Finance Loyalty Catalog RLS
-
-### Community 349 - "Role × story × evidence (2026-10-05)"
-Cohesion: 0.25
-Nodes (8): Branding, Continue after this doc pass, Database / Supabase consistency, Legend, Money path (all branches live: Bacoor, Batangas; Dasma coming soon), Personas, Push: who should get what (no SMS), Role × story × evidence (2026-10-05)
+### Community 348 - "Roles Matrix"
+Cohesion: 0.04
+Nodes (61): multiple_permissive_policies Closed, B-03 Branch Admin URL Bypass Finance CRM, B-25 ASA Grant UI Flat Checklist, B-37 Sales Read Without finance_view, B-38 Loyalty Write Without memberships Grant, B-39 Branch Admin Catalog Write, B-40 BA Customer Memberships Write, OPT-09 Permissive Policy Merges (+53 more)
 
 ### Community 350 - "Production Ops Gaps"
 Cohesion: 0.25
@@ -2105,33 +2095,33 @@ Nodes (4): blogs_updated_at_idx, events_updated_at_idx, trg_blogs_sync_cms_row, 
 Cohesion: 0.25
 Nodes (3): src, win(), w
 
-### Community 354 - "generate-brand-meta-assets.mjs"
-Cohesion: 0.25
-Nodes (6): sharp, lockupPath, markPath, NAVY, OFF_WHITE, publicDir
+### Community 354 - "rolePersonaCoverage.test.js"
+Cohesion: 0.08
+Nodes (16): sharp, lockupPath, markPath, NAVY, OFF_WHITE, publicDir, DEPRECATED_ROLES, LOGOS (+8 more)
 
 ### Community 355 - "Vercel Static IPs — Hakum production SMS egress"
 Cohesion: 0.29
 Nodes (7): Assigned Static IPs (fill when provisioned), Enable (on the Hakum Vercel team), Link this repo, Optional relay (if Static IPs not purchased), Status (2026-09-24 this CLI), Status (2026-10-16 this CLI), Vercel Static IPs — Hakum production SMS egress
 
-### Community 356 - "daysUntilDue"
-Cohesion: 0.83
-Nodes (3): maintenanceReminderDue(), daysUntilDue(), manilaTodayDateOnly()
+### Community 356 - "detailingBookingNotices.test.js"
+Cohesion: 0.12
+Nodes (26): reminderOffset(), runDetailingBookingReminders(), runMaintenanceReminders(), BookingCalendar(), isoOf(), monthOf(), WEEKDAYS, addDaysISO() (+18 more)
 
 ### Community 357 - "PosTileGrid"
 Cohesion: 1.00
 Nodes (4): PosTileGrid(), pricedItem(), priceFor(), selectedSize()
 
 ### Community 358 - "permissions.js"
-Cohesion: 0.04
-Nodes (163): Task 12: Who may see and process the sheet, Task 2: Fix Marketing/Investor Queue Board Gate & Duplicate `'hr'` Nav Key, ACCOUNTS, admin, asUser(), envPath, expectPerms(), fail() (+155 more)
+Cohesion: 0.05
+Nodes (140): Task 12: Who may see and process the sheet, ACCOUNTS, admin, asUser(), envPath, expectPerms(), fail(), loadStaffProfile() (+132 more)
 
 ### Community 359 - "heroTier.js"
 Cohesion: 0.32
 Nodes (5): currentHeroOrientation(), currentHeroTier(), HERO_TIERS, pickHeroOrientation(), pickHeroTier()
 
-### Community 361 - "financeAudit.test.js"
-Cohesion: 0.25
-Nodes (7): buildExpenses(), salesByBranch(), expenses, plRows, root, sales, salesRows
+### Community 361 - "cashAdvanceCode.test.js"
+Cohesion: 0.70
+Nodes (3): cashAdvanceReleaseError(), normalizeCashAdvanceCode(), approved
 
 ### Community 362 - "20260721190000_loyalty_membership_smart.sql"
 Cohesion: 0.29
@@ -2157,9 +2147,9 @@ Nodes (3): public.require_present_crew_on_start(), public.visit_has_present_crew
 Cohesion: 0.29
 Nodes (3): customer_birthday_perks_code_uidx, customers_lock_birthday, public.customers_lock_birthday()
 
-### Community 369 - "exportSlip"
-Cohesion: 0.67
-Nodes (3): accountLabel(), exportSlip(), slipColumns()
+### Community 369 - "posCustomerAutoFill.test.js"
+Cohesion: 0.50
+Nodes (4): applyFill(), onFoundBody(), root, src
 
 ### Community 370 - "markdownTableIntegrity.test.js"
 Cohesion: 0.32
@@ -2181,6 +2171,10 @@ Nodes (7): calledPaths(), functions, read(), rewrites, root, vercel, walk()
 Cohesion: 0.38
 Nodes (4): Services and Packages Port, Service Package Bundle, Service Catalog Item, SizePricing Four Sizes
 
+### Community 377 - "Bookings Calendar"
+Cohesion: 0.50
+Nodes (4): Bookings Calendar, Planning Boards and Calendar, Planning, Review Inbox
+
 ### Community 378 - "splitWashPool"
 Cohesion: 0.29
 Nodes (6): attendanceWeight, splitWashPool, wash_pool_pct, washPoolAmountMinor, Money Contract E2 Wash Pool Bay Crew, F4 Wash Pool Day
@@ -2196,6 +2190,10 @@ Nodes (7): Code review (campaign diffs — findings only), Diagnosing-bugs — B
 ### Community 381 - "Team Portal Daylight Implementation Plan"
 Cohesion: 0.29
 Nodes (6): Constraints, Step 1 — Team lead queue (5a), with its required floor-shell chrome (4a), Step 2 — Crew Time clock (5b), Step 3 — Admin Today (5c), with command-shell chrome (4b), Step 4 — Shared kit and remaining pages (5d), Team Portal Daylight Implementation Plan
+
+### Community 382 - "Branch Stock"
+Cohesion: 0.50
+Nodes (4): Branch CRUD, Purchases, Branch Stock, Restock
 
 ### Community 385 - "20261118170000_multi_month_scale_indexes.sql"
 Cohesion: 0.29
@@ -2246,8 +2244,8 @@ Cohesion: 0.32
 Nodes (4): hasHeroLogoMomentRestarted(), HERO_LOGO_WINDOWS, HERO_MOBILE_MAX_WIDTH, isHeroLogoMoment()
 
 ### Community 409 - "Operations Lead"
-Cohesion: 0.07
-Nodes (32): Operations Lead, Planner Task, Operations Lead People Deny, Operations Lead Roadmap Home, WF-OL-01 Ops Lab Roadmap, enforce_staff_attendance_geofence Trigger, Operations Lead Has No Clock, staff_attendance Geofence (+24 more)
+Cohesion: 0.06
+Nodes (35): Operations Lead, Planner Task, Operations Lead People Deny, Operations Lead Roadmap Home, WF-OL-01 Ops Lab Roadmap, enforce_staff_attendance_geofence Trigger, Operations Lead Has No Clock, staff_attendance Geofence (+27 more)
 
 ### Community 410 - "Super Admin Defects and Fixes"
 Cohesion: 0.20
@@ -2278,8 +2276,8 @@ Cohesion: 0.33
 Nodes (5): Five-State Car Care Story, PinnedCarStory, Pinned Car Scroll Story Plan, scrollStoryAssets, usePinnedCarStory
 
 ### Community 419 - "NewChanges checklist"
-Cohesion: 0.29
-Nodes (6): Customers, Database, Money, NewChanges checklist, Shop day, Stock
+Cohesion: 0.33
+Nodes (5): Customers, Database, Money, NewChanges checklist, Stock
 
 ### Community 420 - "wipe-september-2026.sql"
 Cohesion: 0.33
@@ -2417,21 +2415,13 @@ Nodes (3): expense_categories_code_key, expense_categories_guard_salary, public.
 Cohesion: 0.18
 Nodes (9): authProvider, liveStatusSms, lookup, migration, portal, provision, publicBook, queuePage (+1 more)
 
-### Community 494 - "Architecture diagrams (Archify)"
-Cohesion: 0.40
-Nodes (4): Architecture diagrams (Archify), Conventions, Priority maps, Tooling
-
 ### Community 495 - "Admin daily-ops tracker (no redesign)"
 Cohesion: 0.40
 Nodes (5): Admin daily-ops tracker (no redesign), Checklist, Fresh egress probe (this session), Human send steps (BrandTxt), Verify package integrity
 
 ### Community 496 - "Auth SMTP — proof checklist (Gate 10.1)"
-Cohesion: 0.40
-Nodes (5): Auth SMTP — proof checklist (Gate 10.1), Configure (dashboard), Go criteria, Proof (required to close Gate 10.1), Why it matters
-
-### Community 497 - "BrandTxt (BusyBee) — whitelist follow-up (copy/paste email)"
-Cohesion: 0.40
-Nodes (5): After Dexter confirms, BrandTxt (BusyBee) — whitelist follow-up (copy/paste email), Follow-up email — reply to Dexter (same thread), Second follow-up (after Static IPs are assigned), Vercel production — permanent setup (no bypass)
+Cohesion: 0.18
+Nodes (10): Auth SMTP — proof checklist (Gate 10.1), Configure (dashboard), Go criteria, Proof (required to close Gate 10.1), Why it matters, After Dexter confirms, BrandTxt (BusyBee) — whitelist follow-up (copy/paste email), Follow-up email — reply to Dexter (same thread) (+2 more)
 
 ### Community 498 - "B-21 Orphan branch_operating_hours Migration"
 Cohesion: 0.50
@@ -2512,23 +2502,23 @@ Nodes (3): Local Near-Me SEO Hubs (Bacoor, Imus, Cavite, Batangas), SEO & AI Sea
 ## Knowledge Gaps
 - **686 isolated node(s):** `gsap`, `shadcn`, `tw-animate-css`, `@types/react`, `@types/react-dom` (+681 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 4525 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **477 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **478 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `Detailer QUEUE_VIEWER_ROLES P0` connect `Role QA Progress Log` to `FloorAppShell`, `permissions.js`?**
-  _High betweenness centrality (0.092) - this node is a cross-community bridge._
+- **Why does `Detailer QUEUE_VIEWER_ROLES P0` connect `Detailer` to `permissions.js`?**
+  _High betweenness centrality (0.106) - this node is a cross-community bridge._
 - **What connects `gsap`, `shadcn`, `tw-animate-css` to the rest of the system?**
   _686 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `DailySheetPanel.jsx` be split into smaller, more focused modules?**
-  _Cohesion score 0.09764309764309764 - nodes in this community are weakly interconnected._
-- **Why does `Wave D Specialty QA` connect `FloorAppShell` to `Detailer`, `Role QA Progress Log`?**
-  _High betweenness centrality (0.058) - this node is a cross-community bridge._
+  _Cohesion score 0.09545454545454546 - nodes in this community are weakly interconnected._
+- **Why does `Wave D Specialty QA` connect `Detailer` to `Video Editor`, `Marketing`?**
+  _High betweenness centrality (0.070) - this node is a cross-community bridge._
 - **Should `ref_node_assert` be split into smaller, more focused modules?**
-  _Cohesion score 0.010669842805920522 - nodes in this community are weakly interconnected._
-- **Why does `Team Lead` connect `Branch Admin` to `Detailer`, `Cars Catalog`, `Shop day (morning to checkout)`, `Team Lead Capability Set`, `Roles Matrix`, `FloorAppShell`, `Operations Lead`, `Owner`?**
-  _High betweenness centrality (0.038) - this node is a cross-community bridge._
+  _Cohesion score 0.011766888400074206 - nodes in this community are weakly interconnected._
+- **Why does `Roles Matrix` connect `Roles Matrix` to `Team Lead`, `Ultimate Readiness Checklist`, `Shop Day Money Path`, `Roles and Users Inventory`, `Detailing SKUs Stay on Bookings`, `Operations Lead`, `Video Editor`?**
+  _High betweenness centrality (0.040) - this node is a cross-community bridge._
 
 ### Low-confidence Hints
 _AMBIGUOUS edges — the extractor was unsure. Verify before acting on these._
