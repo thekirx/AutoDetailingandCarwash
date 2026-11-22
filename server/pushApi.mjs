@@ -37,6 +37,9 @@ export async function handleSendPushRequest(req, res) {
       const bodyText = message || 'Push is working on this device.'
       // Prefer app shells over bare "/" so click-through lands in account/ops, not marketing home
       const url = safeNotificationPath(body.url, '/account')
+      const platform = ['web', 'android', 'ios'].includes(String(body.platform || '').toLowerCase())
+        ? String(body.platform).toLowerCase()
+        : 'all'
       const result = await sendWebPushToUsers({
         userIds: [userData.user.id],
         title: titleText,
@@ -44,20 +47,25 @@ export async function handleSendPushRequest(req, res) {
         url,
         tag: body.tag || 'self-test',
         kind: 'self_test',
+        platform,
       })
-      try {
-        await db.from('user_notifications').insert({
-          user_id: userData.user.id,
-          kind: 'self_test',
-          title: titleText,
-          body: bodyText,
-          url,
-          tag: body.tag || 'self-test',
-        })
-      } catch {
-        /* inbox is best-effort; push already attempted */
+      let inboxInserted = 0
+      if (body.skipInbox !== true) {
+        try {
+          const { error: inboxErr } = await db.from('user_notifications').insert({
+            user_id: userData.user.id,
+            kind: 'self_test',
+            title: titleText,
+            body: bodyText,
+            url,
+            tag: body.tag || 'self-test',
+          })
+          if (!inboxErr) inboxInserted = 1
+        } catch {
+          /* inbox is best-effort; push already attempted */
+        }
       }
-      return json(res, 200, { ok: true, ...result }, req)
+      return json(res, 200, { ok: true, inboxInserted, ...result }, req)
     }
 
     const targets = Array.isArray(body.targets) ? body.targets : []
@@ -97,7 +105,8 @@ export async function handleSendPushRequest(req, res) {
       kind: body.kind || 'system',
     })
 
-    const inboxIds = [...new Set(targets.map((t) => t.userId).filter(Boolean))]
+    const explicitIds = targets.map((t) => t.userId).filter(Boolean)
+    const inboxIds = body.inbox === false ? [] : [...new Set([...explicitIds, ...userIds])]
     if (inboxIds.length) {
       const db = admin()
       await db.from('user_notifications').insert(
@@ -112,7 +121,7 @@ export async function handleSendPushRequest(req, res) {
       )
     }
 
-    return json(res, 200, { ok: true, ...result, userIds: userIds.length }, req)
+    return json(res, 200, { ok: true, ...result, userIds: userIds.length, inboxInserted: inboxIds.length }, req)
   } catch (err) {
     return json(res, 500, { error: String(err.message || err) }, req)
   }

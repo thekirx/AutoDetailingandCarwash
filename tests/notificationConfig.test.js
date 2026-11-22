@@ -14,6 +14,8 @@ import {
 } from '../src/lib/notificationConfig.js'
 import { isEligibleStatusSmsBooking } from '../server/notifyBooking.mjs'
 import { handleNotificationConfigRequest, loadNotificationConfig } from '../server/notificationConfigApi.mjs'
+import { classifyPushPlatform, summarizeSubscriptionsByPlatform } from '../src/lib/pushPlatform.js'
+import { diagnoseVapidConfig } from '../server/webPush.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const read = (p) => readFileSync(resolve(root, p), 'utf8')
@@ -160,6 +162,42 @@ describe('notification-config API auth boundary & UI wiring', () => {
     assert.match(page, /NotificationSettingsPanel/)
     assert.match(panel, /\/api\/notification-config/)
     assert.match(panel, /send_status_sms_test/)
+    assert.match(panel, /test_vapid_push/)
+    assert.match(panel, /test_in_app/)
+    assert.match(panel, /Test Web Browser/)
+    assert.match(panel, /Test Mobile Android/)
+    assert.match(panel, /Test Mobile iOS/)
     assert.equal(/#[0-9a-f]{6}/i.test(panel), false)
+  })
+
+  it('classifies Web, Android, and iOS APNs push subscriptions and diagnoses VAPID keys accurately', () => {
+    const subs = [
+      { endpoint: 'https://web.push.apple.com/QH...', user_agent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_7)' },
+      { endpoint: 'https://fcm.googleapis.com/fcm/send/abc', user_agent: 'Mozilla/5.0 (Linux; Android 15; Pixel 9)' },
+      { endpoint: 'https://fcm.googleapis.com/fcm/send/xyz', user_agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+    ]
+    assert.equal(classifyPushPlatform(subs[0]), 'ios')
+    assert.equal(classifyPushPlatform(subs[1]), 'android')
+    assert.equal(classifyPushPlatform(subs[2]), 'web')
+    assert.deepEqual(summarizeSubscriptionsByPlatform(subs), {
+      total: 3,
+      counts: { web: 1, android: 1, ios: 1 },
+    })
+
+    const missing = diagnoseVapidConfig({})
+    assert.equal(missing.configured, false)
+    assert.equal(missing.valid, false)
+
+    const mismatch = diagnoseVapidConfig({
+      VAPID_PUBLIC_KEY: 'AAA',
+      VITE_VAPID_PUBLIC_KEY: 'BBB',
+      VAPID_PRIVATE_KEY: 'CCC',
+    })
+    assert.equal(mismatch.publicKeyMatch, false)
+  })
+
+  it('writes user_notifications inbox rows for role-based targets in pushApi.mjs', () => {
+    const pushApi = read('server/pushApi.mjs')
+    assert.match(pushApi, /inboxIds = body\.inbox === false \? \[\] : \[\.\.\.new Set\(\[\.\.\.explicitIds, \.\.\.userIds\]\)\]/)
   })
 })

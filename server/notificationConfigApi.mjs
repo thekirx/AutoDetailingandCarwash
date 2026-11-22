@@ -9,6 +9,7 @@ import { resolveActiveStaff } from './staffAuth.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
 import { busybeeBalance, busybeeSendSms, normalizePhMobile } from './busybee.mjs'
 import { gatherNotificationDiagnostics, maskPhoneSuffix } from './notificationDiagnostics.mjs'
+import { diagnoseVapidConfig, sendWebPushToUsers } from './webPush.mjs'
 import {
   NOTIFICATION_CONFIG_KEY,
   createDefaultNotificationConfig,
@@ -171,6 +172,122 @@ export async function handleNotificationConfigRequest(req, res) {
         ok: sms.ok,
         sms,
         provider_health: freshBalance ? { ...freshBalance, redacted: false } : null,
+      }, req)
+    }
+
+    if (body?.action === 'test_vapid_push') {
+      const vapid = diagnoseVapidConfig()
+      if (!vapid.configured || !vapid.valid) {
+        return json(
+          res,
+          400,
+          {
+            ok: false,
+            error: vapid.error || 'VAPID keys are not configured on the server.',
+            vapid,
+          },
+          req,
+        )
+      }
+
+      const rawPlatform = String(body.platform || 'all').toLowerCase()
+      const platform = ['web', 'android', 'ios', 'all'].includes(rawPlatform) ? rawPlatform : 'all'
+      const scope = body.scope === 'staff' ? 'staff' : 'self'
+      let targetUserIds = [staff.id]
+      if (scope === 'staff') {
+        const { data: staffRows } = await db
+          .from('push_subscriptions')
+          .select('user_id')
+          .in('role', ['BossMich', 'assistant_super_admin', 'admin', 'team_lead', 'ops_lead', 'marketing', 'sales', 'detailer', 'washer', 'brand_ambassador', 'finance'])
+        const staffIds = [...new Set((staffRows || []).map((r) => r.user_id).filter(Boolean))]
+        targetUserIds = staffIds.length ? staffIds : [staff.id]
+      }
+
+      const platformLabel =
+        platform === 'ios' ? 'Mobile iOS' : platform === 'android' ? 'Mobile Android' : platform === 'web' ? 'Web Browser' : 'All Platforms'
+      const title = `Hakum VAPID Test · ${platformLabel}`
+      const msgBody = `Live Web Push verification for ${platformLabel} (${scope === 'staff' ? 'Enrolled Staff' : 'Super Admin'}).`
+      const tag = `vapid-test-${platform}-${Date.now()}`
+      const pushResult = await sendWebPushToUsers({
+        userIds: targetUserIds,
+        title,
+        body: msgBody,
+        url: '/operations/notifications?tab=settings',
+        tag,
+        kind: 'self_test',
+        platform,
+      })
+
+      let inboxRow = null
+      if (body.includeInbox !== false && pushResult.subscriptions > 0) {
+        const { data: inserted } = await db
+          .from('user_notifications')
+          .insert({
+            user_id: staff.id,
+            kind: 'self_test',
+            title,
+            body: msgBody,
+            url: '/operations/notifications?tab=settings',
+            tag,
+          })
+          .select('id, title, body, url, kind, created_at')
+          .maybeSingle()
+        inboxRow = inserted || null
+      }
+
+      await db.from('audit_logs').insert({
+        action: 'notification_vapid_push_test',
+        actor_id: staff.id,
+        entity_type: 'push_subscriptions',
+        entity_id: platform,
+        details: {
+          scope,
+          platform,
+          subscriptions: pushResult.subscriptions,
+          sent: pushResult.sent,
+          failed: pushResult.failed,
+          pruned: pushResult.pruned,
+        },
+      })
+
+      return json(res, 200, {
+        ok: true,
+        vapid,
+        scope,
+        notification: inboxRow,
+        ...pushResult,
+      }, req)
+    }
+
+    if (body?.action === 'test_in_app') {
+      const tag = `in-app-test-${Date.now()}`
+      const title = 'Hakum In-App Notification Test'
+      const msgBody = 'Realtime bell badge, sound chime, and foreground toast banner verified.'
+      const { data: inserted, error: insErr } = await db
+        .from('user_notifications')
+        .insert({
+          user_id: staff.id,
+          kind: 'in_app_test',
+          title,
+          body: msgBody,
+          url: '/operations/notifications?tab=settings',
+          tag,
+        })
+        .select('id, user_id, kind, title, body, url, tag, created_at')
+        .single()
+      if (insErr) return json(res, 500, { error: insErr.message }, req)
+
+      await db.from('audit_logs').insert({
+        action: 'notification_in_app_test',
+        actor_id: staff.id,
+        entity_type: 'user_notifications',
+        entity_id: inserted.id,
+        details: { kind: inserted.kind },
+      })
+
+      return json(res, 200, {
+        ok: true,
+        notification: inserted,
       }, req)
     }
 

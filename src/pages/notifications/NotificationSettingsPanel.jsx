@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Clock,
   Loader2,
+  Monitor,
   Play,
   RefreshCw,
   RotateCcw,
@@ -12,9 +13,11 @@ import {
   Send,
   ShieldCheck,
   Smartphone,
+  TabletSmartphone,
   Wallet,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import PushToggle from '@/components/PushToggle'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { formatBusybeeBalance } from '@/lib/busybeeHealth'
 import {
@@ -117,7 +120,9 @@ export default function NotificationSettingsPanel({
 
   const [testPhone, setTestPhone] = useState('')
   const [sendingSmsTest, setSendingSmsTest] = useState(false)
-  const [sendingPushTest, setSendingPushTest] = useState(false)
+  const [pushTestScope, setPushTestScope] = useState('self')
+  const [activeNotifTest, setActiveNotifTest] = useState('')
+  const [lastNotifResult, setLastNotifResult] = useState(null)
   const [runningJob, setRunningJob] = useState(null)
 
   const isDirty = useMemo(
@@ -238,29 +243,93 @@ export default function NotificationSettingsPanel({
     }
   }
 
-  async function runSelfPushTest() {
-    setSendingPushTest(true)
+  async function runVapidPushTest(platform = 'all') {
+    if (!canEdit) return
+    setActiveNotifTest(`vapid_${platform}`)
+    setLastNotifResult(null)
     try {
       const token = await getAccessTokenFresh()
-      const res = await fetch('/api/send-push', {
+      const res = await fetch('/api/notification-config', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ selfTest: true }),
+        body: JSON.stringify({
+          action: 'test_vapid_push',
+          platform,
+          scope: pushTestScope,
+        }),
       })
       const data = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(data.error || 'Push self-test failed.')
+      if (!res.ok) {
+        const msg = data.error || 'VAPID push test failed.'
+        setLastNotifResult({ ok: false, kind: 'vapid', platform, message: msg, data })
+        throw new Error(msg)
+      }
+      const platformName =
+        platform === 'ios'
+          ? 'Mobile iOS'
+          : platform === 'android'
+            ? 'Mobile Android'
+            : platform === 'web'
+              ? 'Web Browser'
+              : 'All Platforms'
       if ((data.subscriptions || 0) === 0) {
-        toast.info('No push subscription on this device yet. Enable browser notifications first.')
+        const hint =
+          platform === 'ios'
+            ? 'No iOS Home Screen subscription enrolled for this scope yet. Open Hakum in iPhone Safari → Share → Add to Home Screen → Alerts on.'
+            : platform === 'android'
+              ? 'No Android Chrome/PWA subscription enrolled for this scope yet. Open Hakum on Android Chrome → Alerts on.'
+              : platform === 'web'
+                ? 'No desktop browser subscription enrolled for this scope yet. Click Enable alerts in the header first.'
+                : 'No push subscriptions enrolled for this scope yet. Enable alerts on this device first.'
+        setLastNotifResult({ ok: false, kind: 'vapid', platform, message: hint, data })
+        toast.info(hint)
       } else {
-        toast.success(`Push test sent (${data.sent || 0} delivered across ${data.subscriptions} device${data.subscriptions === 1 ? '' : 's'}).`)
+        const summary = `${platformName} VAPID test: ${data.sent || 0} sent · ${data.failed || 0} failed${data.pruned ? ` · ${data.pruned} expired pruned` : ''}`
+        setLastNotifResult({
+          ok: (data.sent || 0) > 0 && (data.failed || 0) === 0,
+          kind: 'vapid',
+          platform,
+          message: summary,
+          data,
+        })
+        if ((data.sent || 0) > 0) toast.success(summary)
+        else toast.error(`${summary}${data.failures?.[0]?.message ? ` (${data.failures[0].message})` : ''}`)
+        await loadConfig()
       }
     } catch (err) {
       toast.error(err.message)
     } finally {
-      setSendingPushTest(false)
+      setActiveNotifTest('')
+    }
+  }
+
+  async function runInAppNotificationTest() {
+    if (!canEdit) return
+    setActiveNotifTest('in_app')
+    setLastNotifResult(null)
+    try {
+      const token = await getAccessTokenFresh()
+      const res = await fetch('/api/notification-config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ action: 'test_in_app' }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'In-app notification test failed.')
+      const msg = 'In-App notification inserted — check the foreground toast, chime, and top-right Bell badge.'
+      setLastNotifResult({ ok: true, kind: 'in_app', message: msg, data })
+      toast.success('In-App notification triggered via Realtime.')
+    } catch (err) {
+      setLastNotifResult({ ok: false, kind: 'in_app', message: err.message })
+      toast.error(err.message)
+    } finally {
+      setActiveNotifTest('')
     }
   }
 
@@ -722,33 +791,215 @@ export default function NotificationSettingsPanel({
             </CardContent>
           </Card>
 
-          {/* Card 5: Web Push Device Coverage by Role */}
+          {/* Card 5: Web Push (VAPID), In-App & Platform Verification */}
           <Card>
             <CardHeader className="pb-2">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
                   <CardTitle className="flex items-center gap-2 text-base font-bold">
                     <BellRing className="size-4 text-primary" aria-hidden />
-                    Web Push Device Coverage
+                    Push (VAPID), In-App &amp; Platform Tests
                   </CardTitle>
                   <CardDescription className="text-xs">
-                    {pushStats?.total_subscriptions ?? 0} total active devices ({pushStats?.staff_subscriptions ?? 0} staff · {pushStats?.customer_subscriptions ?? 0} customer)
+                    {pushStats?.total_subscriptions ?? 0} total active devices ({pushStats?.staff_subscriptions ?? 0} staff ·{' '}
+                    {pushStats?.customer_subscriptions ?? 0} customer)
                   </CardDescription>
                 </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="min-h-9 cursor-pointer text-xs font-semibold"
-                  disabled={sendingPushTest}
-                  onClick={runSelfPushTest}
-                >
-                  <Bell className="mr-1.5 size-3.5 text-primary" aria-hidden />
-                  {sendingPushTest ? 'Testing…' : 'Test this device'}
-                </Button>
+                <PushToggle audience="ops" compact surface="light" />
               </div>
             </CardHeader>
-            <CardContent className="pt-1">
+            <CardContent className="space-y-4 pt-1">
+              {(() => {
+                const vapid = pushStats?.vapid || {}
+                const clientVapidPrefix = String(import.meta.env.VITE_VAPID_PUBLIC_KEY || '').trim().slice(0, 10)
+                const clientMatched =
+                  Boolean(clientVapidPrefix) &&
+                  (!vapid.serverPublicKeyPrefix || clientVapidPrefix === vapid.serverPublicKeyPrefix)
+                const counts =
+                  pushTestScope === 'staff'
+                    ? pushStats?.staff_platforms || { web: 0, android: 0, ios: 0 }
+                    : pushStats?.caller_platforms || { web: 0, android: 0, ios: 0 }
+
+                return (
+                  <>
+                    <div className="flex flex-wrap items-center gap-2 border-b border-border/70 pb-3 text-xs">
+                      <Badge
+                        variant={pushStats?.vapid_configured ? 'outline' : 'destructive'}
+                        className={
+                          pushStats?.vapid_configured
+                            ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                            : ''
+                        }
+                      >
+                        {pushStats?.vapid_configured ? 'VAPID Server Ready' : 'VAPID Missing / Invalid'}
+                      </Badge>
+                      <Badge
+                        variant={clientMatched ? 'outline' : 'destructive'}
+                        className={
+                          clientMatched
+                            ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                            : ''
+                        }
+                      >
+                        {clientMatched
+                          ? `Client Key (${clientVapidPrefix}…)`
+                          : clientVapidPrefix
+                            ? 'Client/Server Key Mismatch'
+                            : 'Missing VITE_VAPID_PUBLIC_KEY'}
+                      </Badge>
+                      <Badge variant="secondary" className="tabular-nums">
+                        Web {pushStats?.by_platform?.web ?? 0} · Android {pushStats?.by_platform?.android ?? 0} · iOS{' '}
+                        {pushStats?.by_platform?.ios ?? 0}
+                      </Badge>
+                      {vapid.error ? <p className="w-full text-destructive">{vapid.error}</p> : null}
+                    </div>
+
+                    {canEdit ? (
+                      <div className="space-y-3 border-b border-border/70 pb-3.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-xs font-semibold text-foreground">
+                            Run live delivery verification
+                          </span>
+                          <div
+                            className="inline-flex rounded-lg border border-border bg-muted/40 p-0.5 text-[11px]"
+                            role="group"
+                            aria-label="Push test scope"
+                          >
+                            <button
+                              type="button"
+                              className={cn(
+                                'cursor-pointer rounded-md px-2.5 py-1 font-semibold transition',
+                                pushTestScope === 'self'
+                                  ? 'bg-background text-foreground shadow-xs'
+                                  : 'text-muted-foreground hover:text-foreground',
+                              )}
+                              onClick={() => setPushTestScope('self')}
+                            >
+                              My Owner devices
+                            </button>
+                            <button
+                              type="button"
+                              className={cn(
+                                'cursor-pointer rounded-md px-2.5 py-1 font-semibold transition',
+                                pushTestScope === 'staff'
+                                  ? 'bg-background text-foreground shadow-xs'
+                                  : 'text-muted-foreground hover:text-foreground',
+                              )}
+                              onClick={() => setPushTestScope('staff')}
+                            >
+                              Enrolled staff
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="min-h-10 cursor-pointer justify-start text-xs font-semibold"
+                            disabled={Boolean(activeNotifTest)}
+                            onClick={runInAppNotificationTest}
+                          >
+                            <Bell className="mr-2 size-3.5 text-primary" aria-hidden />
+                            {activeNotifTest === 'in_app' ? 'Triggering…' : 'Test In-App Alert & Bell'}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="min-h-10 cursor-pointer justify-between text-xs font-semibold"
+                            disabled={Boolean(activeNotifTest)}
+                            onClick={() => runVapidPushTest('web')}
+                          >
+                            <span className="flex items-center">
+                              <Monitor className="mr-2 size-3.5 text-primary" aria-hidden />
+                              {activeNotifTest === 'vapid_web' ? 'Sending…' : 'Test Web Browser'}
+                            </span>
+                            <Badge variant="secondary" className="ml-1 tabular-nums text-[10px]">
+                              {counts.web}
+                            </Badge>
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="min-h-10 cursor-pointer justify-between text-xs font-semibold"
+                            disabled={Boolean(activeNotifTest)}
+                            onClick={() => runVapidPushTest('android')}
+                          >
+                            <span className="flex items-center">
+                              <Smartphone className="mr-2 size-3.5 text-primary" aria-hidden />
+                              {activeNotifTest === 'vapid_android' ? 'Sending…' : 'Test Mobile Android'}
+                            </span>
+                            <Badge variant="secondary" className="ml-1 tabular-nums text-[10px]">
+                              {counts.android}
+                            </Badge>
+                          </Button>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            className="min-h-10 cursor-pointer justify-between text-xs font-semibold"
+                            disabled={Boolean(activeNotifTest)}
+                            onClick={() => runVapidPushTest('ios')}
+                          >
+                            <span className="flex items-center">
+                              <TabletSmartphone className="mr-2 size-3.5 text-primary" aria-hidden />
+                              {activeNotifTest === 'vapid_ios' ? 'Sending…' : 'Test Mobile iOS'}
+                            </span>
+                            <Badge variant="secondary" className="ml-1 tabular-nums text-[10px]">
+                              {counts.ios}
+                            </Badge>
+                          </Button>
+                        </div>
+
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          className="min-h-10 w-full cursor-pointer text-xs font-semibold"
+                          disabled={Boolean(activeNotifTest)}
+                          onClick={() => runVapidPushTest('all')}
+                        >
+                          <Send className="mr-1.5 size-3.5 text-primary" aria-hidden />
+                          {activeNotifTest === 'vapid_all'
+                            ? 'Dispatching VAPID across all platforms…'
+                            : 'Test All Platforms (Web + Android + iOS)'}
+                        </Button>
+
+                        {lastNotifResult ? (
+                          <div
+                            role="status"
+                            className={cn(
+                              'rounded-lg border px-3 py-2 text-xs',
+                              lastNotifResult.ok
+                                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300'
+                                : 'border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-300',
+                            )}
+                          >
+                            <p className="font-medium">{lastNotifResult.message}</p>
+                            {lastNotifResult.data?.failures?.length ? (
+                              <ul className="mt-1 list-disc pl-4 text-[11px]">
+                                {lastNotifResult.data.failures.map((f, idx) => (
+                                  <li key={idx}>
+                                    {f.platform} ({f.host}) · HTTP {f.statusCode || 'ERR'}: {f.message}
+                                  </li>
+                                ))}
+                              </ul>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <p className="text-[11px] leading-relaxed text-muted-foreground">
+                            iOS Web Push works only when opened from Safari → Share → Add to Home Screen (iOS 16.4+). In-App alerts trigger real-time bell counts, sound chime, and banner toasts across Web, Android, and iOS.
+                          </p>
+                        )}
+                      </div>
+                    ) : null}
+                  </>
+                )
+              })()}
+
               <div className="divide-y divide-border/70">
                 {(pushStats?.by_role || []).map((row) => {
                   const pct = row.active_users > 0 ? Math.round((row.subscribed_users / row.active_users) * 100) : 0

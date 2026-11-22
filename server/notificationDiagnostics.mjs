@@ -4,6 +4,8 @@
  * live BusyBee credit balance, and masked recent SMS delivery telemetry.
  */
 import { busybeeBalance } from './busybee.mjs'
+import { diagnoseVapidConfig } from './webPush.mjs'
+import { emptyPlatformCounts, summarizeSubscriptionsByPlatform } from '../src/lib/pushPlatform.js'
 import { DEFAULT_NOTIFICATION_CONFIG } from '../src/lib/notificationConfig.js'
 
 const ROLE_LABELS = Object.freeze({
@@ -30,7 +32,7 @@ export function maskPhoneSuffix(phone) {
 export async function gatherNotificationDiagnostics(db, { isSuperAdmin, callerId }) {
   const [staffRes, pushRes, custPushCountRes, remindersRes, templatesRes] = await Promise.all([
     db.from('staff_profiles').select('id, role, full_name, phone').eq('is_active', true).eq('is_archived', false),
-    db.from('push_subscriptions').select('user_id, updated_at'),
+    db.from('push_subscriptions').select('user_id, endpoint, user_agent, updated_at'),
     db.from('customers').select('id', { count: 'exact', head: true }).eq('is_disabled', false).eq('is_archived', false),
     db.from('notification_settings').select('id', { count: 'exact', head: true }).eq('enabled', true),
     db.from('notification_templates').select('key', { count: 'exact', head: true }),
@@ -60,10 +62,16 @@ export async function gatherNotificationDiagnostics(db, { isSuperAdmin, callerId
   const customerSubscribedUsers = new Set()
   let customerSubCount = 0
   let staffSubCount = 0
+  const staffPlatformCounts = emptyPlatformCounts()
+  const customerPlatformCounts = emptyPlatformCounts()
+  const callerRows = []
+  const staffSubRows = []
   for (const p of pushRows) {
+    if (p.user_id === callerId) callerRows.push(p)
     const s = staffById.get(p.user_id)
     if (s) {
       staffSubCount += 1
+      staffSubRows.push(p)
       const entry = roleAgg.get(s.role)
       if (entry) {
         entry.subscriptions += 1
@@ -74,6 +82,14 @@ export async function gatherNotificationDiagnostics(db, { isSuperAdmin, callerId
       customerSubscribedUsers.add(p.user_id)
     }
   }
+  Object.assign(staffPlatformCounts, summarizeSubscriptionsByPlatform(staffSubRows).counts)
+  Object.assign(
+    customerPlatformCounts,
+    summarizeSubscriptionsByPlatform(pushRows.filter((p) => !staffById.has(p.user_id))).counts,
+  )
+  const callerPlatforms = summarizeSubscriptionsByPlatform(callerRows).counts
+  const allPlatforms = summarizeSubscriptionsByPlatform(pushRows).counts
+  const vapid = diagnoseVapidConfig()
 
   const byRole = [
     ...[...roleAgg.values()]
@@ -132,9 +148,12 @@ export async function gatherNotificationDiagnostics(db, { isSuperAdmin, callerId
       total_subscriptions: pushRows.length,
       staff_subscriptions: staffSubCount,
       customer_subscriptions: customerSubCount,
-      vapid_configured: Boolean(
-        (process.env.VAPID_PUBLIC_KEY || process.env.VITE_VAPID_PUBLIC_KEY) && process.env.VAPID_PRIVATE_KEY,
-      ),
+      vapid_configured: vapid.configured && vapid.valid,
+      vapid,
+      by_platform: allPlatforms,
+      staff_platforms: staffPlatformCounts,
+      customer_platforms: customerPlatformCounts,
+      caller_platforms: callerPlatforms,
       by_role: byRole,
     },
     automation_summary: {

@@ -4,9 +4,51 @@
  */
 import webpush from 'web-push'
 import { inNotifyScope, planStaffRecipients } from '../src/lib/notifyRouting.js'
+import { classifyPushPlatform } from '../src/lib/pushPlatform.js'
 import { safeNotificationPath } from './notificationTargetUrl.mjs'
 import { loadNotificationConfig } from './notificationConfigApi.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
+
+export function diagnoseVapidConfig(env = process.env) {
+  const serverPublic = String(env.VAPID_PUBLIC_KEY || '').trim()
+  const vitePublic = String(env.VITE_VAPID_PUBLIC_KEY || '').trim()
+  const effectivePublic = serverPublic || vitePublic
+  const privateKey = String(env.VAPID_PRIVATE_KEY || '').trim()
+  const subject = String(env.VAPID_SUBJECT || 'mailto:ops@hakumautocare.com').trim()
+  const publicKeyMatch = serverPublic && vitePublic ? serverPublic === vitePublic : Boolean(effectivePublic)
+
+  if (!effectivePublic || !privateKey) {
+    return {
+      configured: false,
+      valid: false,
+      publicKeyMatch,
+      subject,
+      serverPublicKeyPrefix: effectivePublic ? effectivePublic.slice(0, 10) : null,
+      error: !effectivePublic ? 'VAPID_PUBLIC_KEY is not set on server.' : 'VAPID_PRIVATE_KEY is not set on server.',
+    }
+  }
+
+  try {
+    webpush.setVapidDetails(subject, effectivePublic, privateKey)
+    return {
+      configured: true,
+      valid: true,
+      publicKeyMatch,
+      subject,
+      serverPublicKeyPrefix: effectivePublic.slice(0, 10),
+      error: publicKeyMatch ? null : 'VAPID_PUBLIC_KEY and VITE_VAPID_PUBLIC_KEY do not match on server.',
+    }
+  } catch (err) {
+    return {
+      configured: true,
+      valid: false,
+      publicKeyMatch,
+      subject,
+      serverPublicKeyPrefix: effectivePublic.slice(0, 10),
+      error: String(err?.message || err),
+    }
+  }
+}
 
 function ensureVapid() {
   const publicKey = process.env.VAPID_PUBLIC_KEY || process.env.VITE_VAPID_PUBLIC_KEY
@@ -17,23 +59,60 @@ function ensureVapid() {
   return { publicKey }
 }
 
-export async function sendWebPushToUsers({ userIds, title, body, url = '/', tag, kind = 'system' }) {
+export async function sendWebPushToUsers({
+  userIds,
+  title,
+  body,
+  url = '/',
+  tag,
+  kind = 'system',
+  platform = 'all',
+}) {
   ensureVapid()
   const ids = [...new Set((userIds || []).filter(Boolean))]
-  if (!ids.length) return { sent: 0, failed: 0, pruned: 0, subscriptions: 0 }
+  const normalizedPlatform = ['web', 'android', 'ios'].includes(platform) ? platform : 'all'
+  const byPlatform = {
+    web: { subscriptions: 0, sent: 0, failed: 0 },
+    android: { subscriptions: 0, sent: 0, failed: 0 },
+    ios: { subscriptions: 0, sent: 0, failed: 0 },
+  }
+  if (!ids.length) {
+    return {
+      sent: 0,
+      failed: 0,
+      pruned: 0,
+      subscriptions: 0,
+      totalUserSubscriptions: 0,
+      platform: normalizedPlatform,
+      byPlatform,
+      failures: [],
+    }
+  }
 
   const db = admin()
-  const { data: subs, error } = await db.from('push_subscriptions').select('id, endpoint, p256dh, auth, user_id').in('user_id', ids)
+  const { data: subs, error } = await db
+    .from('push_subscriptions')
+    .select('id, endpoint, p256dh, auth, user_id, user_agent')
+    .in('user_id', ids)
   if (error) throw error
+
+  const allSubs = subs || []
+  const targetSubs =
+    normalizedPlatform === 'all'
+      ? allSubs
+      : allSubs.filter((sub) => classifyPushPlatform(sub) === normalizedPlatform)
 
   const safeUrl = safeNotificationPath(url, '/')
   const payload = JSON.stringify({ title, body, url: safeUrl, tag, kind, icon: '/apple-touch-icon.png' })
   let sent = 0
   let failed = 0
   const prune = []
+  const failures = []
 
   await Promise.all(
-    (subs || []).map(async (sub) => {
+    targetSubs.map(async (sub) => {
+      const subPlatform = classifyPushPlatform(sub)
+      byPlatform[subPlatform].subscriptions += 1
       try {
         await webpush.sendNotification(
           {
@@ -43,10 +122,26 @@ export async function sendWebPushToUsers({ userIds, title, body, url = '/', tag,
           payload,
         )
         sent += 1
+        byPlatform[subPlatform].sent += 1
       } catch (err) {
         failed += 1
-        const code = err.statusCode || err.status
+        byPlatform[subPlatform].failed += 1
+        const code = err.statusCode || err.status || null
         if (code === 404 || code === 410) prune.push(sub.endpoint)
+        if (failures.length < 10) {
+          let host = 'unknown'
+          try {
+            host = new URL(sub.endpoint).hostname
+          } catch {
+            /* ignore */
+          }
+          failures.push({
+            platform: subPlatform,
+            host,
+            statusCode: code,
+            message: String(err?.body || err?.message || 'Push delivery failed').slice(0, 140),
+          })
+        }
       }
     }),
   )
@@ -55,7 +150,16 @@ export async function sendWebPushToUsers({ userIds, title, body, url = '/', tag,
     await db.from('push_subscriptions').delete().in('endpoint', prune)
   }
 
-  return { sent, failed, pruned: prune.length, subscriptions: (subs || []).length }
+  return {
+    sent,
+    failed,
+    pruned: prune.length,
+    subscriptions: targetSubs.length,
+    totalUserSubscriptions: allSubs.length,
+    platform: normalizedPlatform,
+    byPlatform,
+    failures,
+  }
 }
 
 /**
