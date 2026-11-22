@@ -1,9 +1,18 @@
 import { addDaysISO, manilaTodayISO } from '../src/lib/bookingLead.js'
 import { maintenanceReminderDue } from '../src/lib/maintenanceReminderDue.js'
+import { isWithinQuietHours } from '../src/lib/notificationConfig.js'
+import { loadNotificationConfig } from './notificationConfigApi.mjs'
 import { sendPaintMaintenanceReminder } from './paintMaintenanceNotify.mjs'
 
 /** Monthly paint-maintenance reminders. The script and the cron call this. */
 export async function runMaintenanceReminders(admin, now = new Date()) {
+  const config = await loadNotificationConfig(admin)
+  if (config.maintenance_reminders_enabled === false) {
+    return { due: 0, sent: 0, failed: 0, skipped: true, reason: 'disabled_by_admin' }
+  }
+  if (isWithinQuietHours(config, now)) {
+    return { due: 0, sent: 0, failed: 0, skipped: true, reason: 'quiet_hours' }
+  }
   const today = manilaTodayISO(now)
   const horizon = addDaysISO(today, 30)
   const { data, error } = await admin

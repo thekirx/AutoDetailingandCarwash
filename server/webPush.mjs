@@ -5,6 +5,7 @@
 import webpush from 'web-push'
 import { inNotifyScope, planStaffRecipients } from '../src/lib/notifyRouting.js'
 import { safeNotificationPath } from './notificationTargetUrl.mjs'
+import { loadNotificationConfig } from './notificationConfigApi.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
 
 function ensureVapid() {
@@ -113,17 +114,22 @@ export async function deliverUserNotifications(
   }
 
   let pushRes = { sent: 0, failed: 0, pruned: 0, subscriptions: 0 }
-  try {
-    pushRes = await sendPush({
-      userIds: activeIds,
-      title,
-      body,
-      url: safeUrl,
-      tag: tag || undefined,
-      kind,
-    })
-  } catch (err) {
-    pushRes = { sent: 0, failed: activeIds.length, pruned: 0, subscriptions: 0, error: String(err.message || err) }
+  const cfg = await loadNotificationConfig(db)
+  if (cfg.push_notifications_enabled === false) {
+    pushRes = { sent: 0, failed: 0, pruned: 0, subscriptions: 0, skipped: 'push_disabled_by_admin' }
+  } else {
+    try {
+      pushRes = await sendPush({
+        userIds: activeIds,
+        title,
+        body,
+        url: safeUrl,
+        tag: tag || undefined,
+        kind,
+      })
+    } catch (err) {
+      pushRes = { sent: 0, failed: activeIds.length, pruned: 0, subscriptions: 0, error: String(err.message || err) }
+    }
   }
 
   return { targets: activeIds.length, skipped, inbox: inboxRes, push: pushRes }
@@ -158,6 +164,11 @@ export async function notifyRecipients(db, recipients, { kind, title, body, tag 
   for (const r of recipients) {
     const safeUrl = safeNotificationPath(r.url, '/')
     byUrl.set(safeUrl, [...(byUrl.get(safeUrl) || []), r.id])
+  }
+  const cfg = await loadNotificationConfig(db)
+  if (cfg.push_notifications_enabled === false) {
+    result.push = { sent: 0, failed: 0, pruned: 0, subscriptions: 0, skipped: 'push_disabled_by_admin' }
+    return result
   }
   try {
     for (const [url, userIds] of byUrl) {

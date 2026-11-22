@@ -6,8 +6,10 @@ import { applyTemplateText, bookingNotifyVars, bookingTemplateKey, templateByKey
 import { preferStoredCustomerName, renderQueueStatusSms } from '../src/lib/queueStatusSms.js'
 import { isWalkInCustomerName } from '../src/lib/queueCustomerName.js'
 import { customerNotifyAllowed } from '../src/lib/ownerRevisionsPhase7.js'
+import { isStatusSmsAllowedByConfig } from '../src/lib/notificationConfig.js'
 import { smsNotificationsEnabledFromSetting } from '../src/lib/smsNotificationsToggle.js'
 import { busybeeSendSms } from './busybee.mjs'
+import { loadNotificationConfig } from './notificationConfigApi.mjs'
 import { loadTemplateMap, templateEnabled } from './notificationTemplatesDb.mjs'
 import { applyPaintMaintenanceOnComplete } from './paintMaintenanceSchedule.mjs'
 import { NOTIFY_EVENTS, bookingOpsEvent, branchLabel } from '../src/lib/notifyRouting.js'
@@ -183,7 +185,7 @@ const EXCLUDED_SMS_CATEGORIES = new Set(['merch', 'product', 'shop', 'voucher', 
  * BusyBee SMS is strictly for customer booking status updates covering Detailing,
  * Services, and Packages — never merch/product/voucher rows or non-service tickets.
  */
-export function isEligibleStatusSmsBooking(booking) {
+export function isEligibleStatusSmsBooking(booking, config = null) {
   if (!booking) return false
   const svc = booking.services || {}
   const cat = String(svc.pay_category || booking.service_pay_category || '').trim().toLowerCase()
@@ -194,9 +196,13 @@ export function isEligibleStatusSmsBooking(booking) {
   if (cat || slug) {
     const kind = catalogLineKind({ itemType: svc.item_type, payCategory: cat, slug })
     if (kind === 'merch') return false
-    return kind === 'detailing' || kind === 'service' || kind === 'package' || kind === 'ppf'
+    const eligibleKind = kind === 'detailing' || kind === 'service' || kind === 'package' || kind === 'ppf'
+    if (!eligibleKind) return false
+    return config ? isStatusSmsAllowedByConfig(config, null, kind).allowed : true
   }
-  return Boolean(booking.service_id || (name && name.toLowerCase() !== 'merch'))
+  const hasServiceIdentity = Boolean(booking.service_id || (name && name.toLowerCase() !== 'merch'))
+  if (!hasServiceIdentity) return false
+  return config ? isStatusSmsAllowedByConfig(config, null, 'service').allowed : true
 }
 
 /** Customer-facing inbox/SMS/push payload. */
@@ -304,6 +310,7 @@ export async function isSmsNotificationsEnabled(db = admin()) {
  */
 export async function notifyBookingStatus(booking, status = booking?.status) {
   if (isSilentRedoNotify(booking, status)) return { skipped: true, reason: 'redo_silent' }
+  const key = status || booking?.status
   const db = admin()
   const hydrated = await hydrateBookingForNotify(db, booking)
   let templates = null
@@ -312,6 +319,7 @@ export async function notifyBookingStatus(booking, status = booking?.status) {
   } catch (err) {
     console.warn('[notify] template map failed', err?.message || err)
   }
+  const config = await loadNotificationConfig(db)
   const payload = buildBookingNotifyPayload(hydrated, status, templates)
   if (!payload) return { skipped: true }
 
@@ -331,11 +339,12 @@ export async function notifyBookingStatus(booking, status = booking?.status) {
     return { skipped: true, reason: 'customer_disabled_or_muted', sms: null, inbox: null, push: null, ops: null }
   }
 
-  const smsOn = await isSmsNotificationsEnabled(db)
+  const smsOn = Boolean((await isSmsNotificationsEnabled(db)) && config.sms_enabled !== false)
   result.smsEnabled = smsOn
-  const smsEligible = isEligibleStatusSmsBooking(hydrated)
+  const statusGate = isStatusSmsAllowedByConfig(config, key, null)
+  const smsEligible = isEligibleStatusSmsBooking(hydrated, config)
 
-  if (payload.phone && smsOn && smsEligible && customerNotifyAllowed(customerPrefs, 'sms')) {
+  if (payload.phone && smsOn && statusGate.allowed && smsEligible && customerNotifyAllowed(customerPrefs, 'sms')) {
     let userSmsOk = true
     if (payload.userId) {
       const { data: authUser, error: authErr } = await db.auth.admin.getUserById(payload.userId)
@@ -343,7 +352,11 @@ export async function notifyBookingStatus(booking, status = booking?.status) {
     }
 
     if (userSmsOk) {
-      const sms = await busybeeSendSms({ phone: payload.phone, message: payload.sms })
+      const sms = await busybeeSendSms({
+        phone: payload.phone,
+        message: payload.sms,
+        senderId: config.sms_sender_id,
+      })
       result.sms = sms
       await logSmsEvent(db, {
         phone: payload.phone,
@@ -366,6 +379,8 @@ export async function notifyBookingStatus(booking, status = booking?.status) {
         providerResponse: 'user_metadata.sms_opt_in=false',
       })
     }
+  } else if (payload.phone && smsOn && !statusGate.allowed) {
+    result.sms = { ok: false, status: 'skipped', providerResponse: statusGate.reason }
   } else if (payload.phone && !smsEligible) {
     result.sms = { ok: false, status: 'skipped', providerResponse: 'status_sms_services_packages_detailing_only' }
   } else if (payload.phone && customerPrefs && !customerNotifyAllowed(customerPrefs, 'sms')) {
@@ -385,17 +400,21 @@ export async function notifyBookingStatus(booking, status = booking?.status) {
 
   if (payload.userId && customerNotifyAllowed(customerPrefs, 'push')) {
     result.inbox = await writeInbox(db, [payload.userId], payload)
-    try {
-      result.push = await sendWebPushToUsers({
-        userIds: [payload.userId],
-        title: payload.title,
-        body: payload.body,
-        url: payload.url,
-        tag: payload.tag,
-        kind: payload.kind,
-      })
-    } catch (err) {
-      result.push = { error: String(err.message || err) }
+    if (config.push_notifications_enabled === false) {
+      result.push = { skipped: true, reason: 'push_disabled_by_admin' }
+    } else {
+      try {
+        result.push = await sendWebPushToUsers({
+          userIds: [payload.userId],
+          title: payload.title,
+          body: payload.body,
+          url: payload.url,
+          tag: payload.tag,
+          kind: payload.kind,
+        })
+      } catch (err) {
+        result.push = { error: String(err.message || err) }
+      }
     }
   } else if (payload.userId) {
     result.push = { ok: false, status: 'muted', providerResponse: 'customers.notify_push=false or is_disabled' }

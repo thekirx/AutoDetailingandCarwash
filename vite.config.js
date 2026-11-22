@@ -173,6 +173,14 @@ function attachHakumApis(server) {
     const { handleNotificationSettingsRequest } = await import('./server/notificationSettingsApi.mjs')
     return handleNotificationSettingsRequest(req, res)
   })
+  mount('/api/notification-config', async (req, res) => {
+    const { handleNotificationConfigRequest } = await import('./server/notificationConfigApi.mjs')
+    return handleNotificationConfigRequest(req, res)
+  })
+  mount('/api/notifications', async (req, res) => {
+    const { default: notificationsGateway } = await import('./api/notifications.js')
+    return notificationsGateway(req, res)
+  })
   mount('/api/notification-broadcast', async (req, res) => {
     const { handleNotificationBroadcastRequest } = await import('./server/notificationBroadcastApi.mjs')
     return handleNotificationBroadcastRequest(req, res)

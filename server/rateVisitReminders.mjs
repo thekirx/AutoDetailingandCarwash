@@ -3,6 +3,8 @@
  * Idempotent via sms_events event_type = rate_visit_<bookingId>.
  */
 import { REVIEW_DELAY_MS } from '../src/lib/visitReviewDelay.js'
+import { isWithinQuietHours } from '../src/lib/notificationConfig.js'
+import { loadNotificationConfig } from './notificationConfigApi.mjs'
 import { sendLifecycleSms } from './lifecycleSms.mjs'
 
 const WINDOW_MS = 6 * 60 * 60 * 1000 // don't nag visits older than 6h
@@ -26,6 +28,13 @@ function finishedMs(row) {
  * @param {{ appUrl?: string, nowMs?: number, limit?: number }} [opts]
  */
 export async function runRateVisitReminders(db, { appUrl = '', nowMs = Date.now(), limit = 40 } = {}) {
+  const config = await loadNotificationConfig(db)
+  if (config.rate_visit_enabled === false) {
+    return { ok: true, skipped: true, reason: 'disabled_by_admin', scanned: 0, eligible: 0, sent: 0, skippedRows: [] }
+  }
+  if (isWithinQuietHours(config, new Date(nowMs))) {
+    return { ok: true, skipped: true, reason: 'quiet_hours', scanned: 0, eligible: 0, sent: 0, skippedRows: [] }
+  }
   const sinceIso = new Date(nowMs - WINDOW_MS).toISOString()
   const { data: rows, error } = await db
     .from('bookings')

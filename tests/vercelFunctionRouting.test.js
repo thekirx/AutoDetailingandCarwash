@@ -28,6 +28,7 @@ const expected = {
   '/api/notification-broadcast-kinds': '/api/notifications?operation=notification-broadcast-kinds',
   '/api/notification-templates': '/api/notifications?operation=notification-templates',
   '/api/birthday-greetings': '/api/notifications?operation=birthday-greetings',
+  '/api/notification-config': '/api/notifications?operation=notification-config',
   '/api/notification-settings': '/api/notifications?operation=notification-settings',
   '/api/plate-lookup': '/api/bookings?operation=plate-lookup',
   '/api/public-inquiry': '/api/customer?operation=public-inquiry',

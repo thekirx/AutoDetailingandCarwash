@@ -47,6 +47,7 @@ const DELEGATING_AUTH_MODULES = [
   'server/lifecycleSmsApi.mjs',
   'server/notificationBroadcastApi.mjs',
   'server/notificationBroadcastKindsApi.mjs',
+  'server/notificationConfigApi.mjs',
   'server/notificationSettingsApi.mjs',
   'server/notificationTemplatesApi.mjs',
   'server/notifyBookingApi.mjs',

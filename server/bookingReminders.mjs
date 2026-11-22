@@ -3,6 +3,8 @@
  * One send per offset per booking, via in-app inbox and Web Push (SMS reserved for live status updates).
  */
 import { sendWebPushToUsers } from './webPush.mjs'
+import { loadNotificationConfig } from './notificationConfigApi.mjs'
+import { isWithinQuietHours } from '../src/lib/notificationConfig.js'
 import { isBookingBoardRow } from '../src/lib/serviceKinds.js'
 import { manilaDayOf, manilaTodayISO } from '../src/lib/bookingLead.js'
 import { daysUntilDue } from '../src/lib/paintMaintenance.js'
@@ -15,6 +17,14 @@ export function reminderOffset(scheduledStart, today = manilaTodayISO()) {
 }
 
 export async function runDetailingBookingReminders(db, today = manilaTodayISO()) {
+  const config = await loadNotificationConfig(db)
+  if (config.booking_reminders_enabled === false) {
+    return { ok: true, skipped: true, reason: 'disabled_by_admin', considered: 0, sent: 0, rows: [] }
+  }
+  if (isWithinQuietHours(config)) {
+    return { ok: true, skipped: true, reason: 'quiet_hours', considered: 0, sent: 0, rows: [] }
+  }
+
   const horizon = new Date(`${today}T00:00:00+08:00`)
   horizon.setUTCDate(horizon.getUTCDate() + 8)
   const { data, error } = await db
@@ -66,17 +76,19 @@ export async function runDetailingBookingReminders(db, today = manilaTodayISO())
         url: '/account',
         tag: `booking-remind-${booking.id}-${days}`,
       })
-      try {
-        await sendWebPushToUsers({
-          userIds: [booking.customer_id],
-          title,
-          body: message,
-          url: '/account',
-          tag: `booking-remind-${booking.id}-${days}`,
-          kind: 'booking_status',
-        })
-      } catch {
-        /* push is best-effort */
+      if (config.push_notifications_enabled !== false) {
+        try {
+          await sendWebPushToUsers({
+            userIds: [booking.customer_id],
+            title,
+            body: message,
+            url: '/account',
+            tag: `booking-remind-${booking.id}-${days}`,
+            kind: 'booking_status',
+          })
+        } catch {
+          /* push is best-effort */
+        }
       }
     }
 

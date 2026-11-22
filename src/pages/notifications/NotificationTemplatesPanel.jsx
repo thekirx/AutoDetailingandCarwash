@@ -349,7 +349,13 @@ export default function NotificationTemplatesPanel() {
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Run failed')
-      toast.success(`Birthday run completed · ${data.scanned || 0} match${data.scanned === 1 ? '' : 'es'} today`)
+      if (data.customers?.skipped || data.skipped) {
+        const reason = data.customers?.reason || data.reason || 'paused'
+        toast.info(`Birthday greetings skipped (${reason === 'quiet_hours' ? 'Manila quiet hours active' : 'disabled in settings'})`)
+      } else {
+        const matches = Number(data.customers?.scanned ?? data.scanned ?? 0) + Number(data.staff?.scanned ?? 0)
+        toast.success(`Birthday run completed · ${matches} match${matches === 1 ? '' : 'es'} today`)
+      }
     } catch (err) {
       toast.error(err.message)
     } finally {

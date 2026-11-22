@@ -5,6 +5,8 @@
 import { BIRTHDAY_GIFT_LABEL, birthdayPerkExpiresAt, birthdayQueryDays, isBirthdayToday, mintBirthdayCode } from '../src/lib/birthdayPerk.js'
 import { CUSTOMER_VOUCHERS_PATH } from '../src/lib/customerAccountNav.js'
 import { applyTemplateText } from '../src/lib/notificationTemplates.js'
+import { isWithinQuietHours } from '../src/lib/notificationConfig.js'
+import { loadNotificationConfig } from './notificationConfigApi.mjs'
 import { loadTemplateMap, templateEnabled } from './notificationTemplatesDb.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
 import { sendWebPushToUsers } from './webPush.mjs'
@@ -227,6 +229,13 @@ export async function grantBirthdayIfDue(db, customer, { now = new Date(), sendG
 }
 
 export async function runBirthdayGreetings(db = admin(), { now = new Date() } = {}) {
+  const config = await loadNotificationConfig(db)
+  if (config.birthday_greetings_enabled === false) {
+    return { year: birthdayQueryDays(now).year, scanned: 0, results: [], skipped: true, reason: 'disabled_by_admin' }
+  }
+  if (isWithinQuietHours(config, now)) {
+    return { year: birthdayQueryDays(now).year, scanned: 0, results: [], skipped: true, reason: 'quiet_hours' }
+  }
   const { year, customers } = await listBirthdayCustomers(db, now)
   const templates = await loadTemplateMap(db)
   const results = []

@@ -11,6 +11,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Settings,
   ShieldCheck,
   Smartphone,
   Trash2,
@@ -69,6 +70,7 @@ import {
 } from '@/components/ui/select'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import { cn } from '@/lib/utils'
+import NotificationSettingsPanel from '@/pages/notifications/NotificationSettingsPanel'
 import NotificationTemplatesPanel from '@/pages/notifications/NotificationTemplatesPanel'
 
 const EMPTY_REMINDER = {
@@ -129,20 +131,28 @@ export default function NotificationsPage() {
   const smsProviderStatus = busybeeProviderStatusLabel(smsHealth)
 
   const tabParam = params.get('tab')
+  const defaultTab = showSuperAdminBalance ? 'settings' : canReminders ? 'reminders' : 'broadcast'
   const tab =
-    tabParam === 'templates' && canReminders
-      ? 'templates'
-      : tabParam === 'broadcast' && canBroadcast
-        ? 'broadcast'
-        : tabParam === 'reminders' && canReminders
-          ? 'reminders'
-          : canReminders
+    tabParam === 'settings' && canReminders
+      ? 'settings'
+      : tabParam === 'templates' && canReminders
+        ? 'templates'
+        : tabParam === 'broadcast' && canBroadcast
+          ? 'broadcast'
+          : tabParam === 'reminders' && canReminders
             ? 'reminders'
-            : 'broadcast'
+            : defaultTab
 
   function setTab(next) {
-    setParams(next === 'reminders' ? {} : { tab: next }, { replace: true })
+    setParams(next === defaultTab ? {} : { tab: next }, { replace: true })
   }
+
+  const visibleTabs = [
+    canReminders ? { id: 'settings', label: 'Settings', icon: Settings } : null,
+    canReminders ? { id: 'reminders', label: 'Reminders', icon: Bell } : null,
+    canReminders ? { id: 'templates', label: 'Templates', icon: ListTree } : null,
+    canBroadcast ? { id: 'broadcast', label: 'Broadcast', icon: Megaphone } : null,
+  ].filter(Boolean)
 
   return (
     <OpsPageShell
@@ -152,7 +162,7 @@ export default function NotificationsPage() {
       icon={Bell}
       description="All shop push and status SMS copy, paint-maintenance reminders, and push broadcasts. Super Admin can monitor BusyBee SMS balance and edit every template."
     >
-      {showSuperAdminBalance ? (
+      {showSuperAdminBalance && tab !== 'settings' ? (
         <aside
           className="rounded-2xl border border-border bg-card px-4 py-3.5 text-sm shadow-xs"
           aria-label="BusyBee SMS Balance"
@@ -198,7 +208,7 @@ export default function NotificationsPage() {
           </div>
         </aside>
       ) : null}
-      {canReminders ? (
+      {canReminders && tab === 'reminders' ? (
         <aside className="rounded-2xl border border-primary/25 bg-primary/[0.06] px-4 py-3 text-sm leading-relaxed">
           <p className="flex items-start gap-2 font-medium text-foreground">
             <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
@@ -217,63 +227,41 @@ export default function NotificationsPage() {
         aria-label="Notification sections"
         className={cn(
           'grid gap-1 rounded-xl border border-border bg-muted/40 p-1',
-          canReminders && canBroadcast ? 'grid-cols-3' : 'grid-cols-2',
+          visibleTabs.length >= 4
+            ? 'grid-cols-2 sm:grid-cols-4'
+            : visibleTabs.length === 3
+              ? 'grid-cols-3'
+              : 'grid-cols-2',
         )}
       >
-        {canReminders ? (
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === 'reminders'}
-            className={cn(
-              'flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition',
-              tab === 'reminders'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-            onClick={() => setTab('reminders')}
-          >
-            <Bell className="size-4" aria-hidden />
-            Reminders
-          </button>
-        ) : null}
-        {canReminders ? (
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === 'templates'}
-            className={cn(
-              'flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition',
-              tab === 'templates'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-            onClick={() => setTab('templates')}
-          >
-            <ListTree className="size-4" aria-hidden />
-            Templates
-          </button>
-        ) : null}
-        {canBroadcast ? (
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tab === 'broadcast'}
-            className={cn(
-              'flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition',
-              canReminders ? '' : 'col-span-2',
-              tab === 'broadcast'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-            onClick={() => setTab('broadcast')}
-          >
-            <Megaphone className="size-4" aria-hidden />
-            Broadcast
-          </button>
-        ) : null}
+        {visibleTabs.map((item) => {
+          const Icon = item.icon
+          const selected = tab === item.id
+          return (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={selected}
+              className={cn(
+                'flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg px-3 text-sm font-semibold transition',
+                visibleTabs.length === 1 && 'col-span-2',
+                selected
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+              onClick={() => setTab(item.id)}
+            >
+              <Icon className="size-4" aria-hidden />
+              {item.label}
+            </button>
+          )
+        })}
       </div>
 
+      {tab === 'settings' && canReminders ? (
+        <NotificationSettingsPanel smsHealth={smsHealth} onSyncExternal={loadSuperAdminSmsBalance} />
+      ) : null}
       {tab === 'reminders' && canReminders ? <ReminderRulesPanel /> : null}
       {tab === 'templates' && canReminders ? <NotificationTemplatesPanel /> : null}
       {tab === 'broadcast' && canBroadcast ? (
