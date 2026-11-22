@@ -46,6 +46,7 @@ import {
   STUDIO_MEDIA_PRESETS,
   uploadContentMedia,
 } from '@/lib/contentMedia'
+import ReasonConfirmDialog from '@/components/ops/ReasonConfirmDialog'
 import { toast } from 'sonner'
 
 /**
@@ -374,6 +375,7 @@ export default function ContentBlockEditor({
   const [dragBlockIndex, setDragBlockIndex] = useState(null)
   const [dragOverIndex, setDragOverIndex] = useState(null)
   const [galleryDrag, setGalleryDrag] = useState(null) // { blockIndex, imgIndex }
+  const [linkDialog, setLinkDialog] = useState(null)
   const paragraphRefs = useRef({})
 
   function commit(next) {
@@ -423,18 +425,26 @@ export default function ContentBlockEditor({
     })
   }
 
+  function applyParagraphLink(index, href, start, end, anchor) {
+    if (!href) return
+    const current = String(rows[index]?.text || '')
+    const token = `[${anchor}](${href.trim()})`
+    const nextText = `${current.slice(0, start)}${token}${current.slice(end)}`
+    update(index, { text: nextText })
+  }
+
   function insertParagraphLink(index, defaultHref = '', defaultLabel = '') {
     const el = paragraphRefs.current[index]
     const current = String(rows[index]?.text || '')
     const start = el && typeof el.selectionStart === 'number' ? el.selectionStart : current.length
     const end = el && typeof el.selectionEnd === 'number' ? el.selectionEnd : current.length
     const selected = current.slice(start, end).trim()
-    const href = defaultHref || window.prompt('Enter internal route (e.g. /book) or full https:// URL:', '/book')
-    if (!href) return
-    const anchor = selected || defaultLabel || href.replace(/^\//, '').replace(/[-/]+/g, ' ') || 'Hakum Guide'
-    const token = `[${anchor}](${href.trim()})`
-    const nextText = `${current.slice(0, start)}${token}${current.slice(end)}`
-    update(index, { text: nextText })
+    if (defaultHref) {
+      const anchor = selected || defaultLabel || defaultHref.replace(/^\//, '').replace(/[-/]+/g, ' ') || 'Hakum Guide'
+      applyParagraphLink(index, defaultHref, start, end, anchor)
+      return
+    }
+    setLinkDialog({ index, start, end, selected, defaultLabel })
   }
 
   async function handleCanvasFilesDrop(fileList, insertAt = rows.length) {
@@ -1360,6 +1370,29 @@ export default function ContentBlockEditor({
             })
           }
           setLibraryTarget(null)
+        }}
+      />
+
+      <ReasonConfirmDialog
+        open={Boolean(linkDialog)}
+        onOpenChange={(open) => {
+          if (!open) setLinkDialog(null)
+        }}
+        title="Insert link"
+        description="Enter an internal route (e.g. /book) or full https:// URL."
+        mode="prompt"
+        inputLabel="Route or URL"
+        placeholder="/book or https://..."
+        defaultValue="/book"
+        required
+        confirmLabel="Insert link"
+        onConfirm={(href) => {
+          if (!linkDialog) return
+          const { index, start, end, selected, defaultLabel } = linkDialog
+          const anchor =
+            selected || defaultLabel || href.replace(/^\//, '').replace(/[-/]+/g, ' ') || 'Hakum Guide'
+          applyParagraphLink(index, href, start, end, anchor)
+          setLinkDialog(null)
         }}
       />
     </div>

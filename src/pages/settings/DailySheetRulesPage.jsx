@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
+import { RefreshCw, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
 import { canEditFinanceBooks } from '@/auth/permissions'
@@ -31,23 +32,36 @@ export default function DailySheetRulesPage() {
   const canWrite = canEditFinanceBooks(profile)
   const [rules, setRules] = useState(DEFAULT_COMPENSATION_RULES)
   const [saving, setSaving] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [savingLeadId, setSavingLeadId] = useState('')
   const [leads, setLeads] = useState([])
   const [rates, setRates] = useState({})
   const [leadError, setLeadError] = useState('')
 
   const load = useCallback(async () => {
-    const [comp, tl] = await Promise.all([
-      supabase.from('compensation_settings').select('*').eq('id', 1).maybeSingle(),
-      supabase.from('staff_profiles').select('id, full_name, branch_slug, daily_rate_minor').eq('role', 'team_lead').eq('is_active', true).order('full_name'),
-    ])
-    if (comp.error) toast.error(comp.error.message)
-    else setRules(normalizeCompensationSettings(comp.data))
-    if (tl.error) {
-      setLeadError(sheetErrorMessage(tl.error))
-    } else {
-      setLeadError('')
-      setLeads(tl.data || [])
-      setRates(Object.fromEntries((tl.data || []).map((r) => [r.id, r.daily_rate_minor ? String(r.daily_rate_minor / 100) : ''])))
+    setLoading(true)
+    try {
+      const [comp, tl] = await Promise.all([
+        supabase.from('compensation_settings').select('*').eq('id', 1).maybeSingle(),
+        supabase
+          .from('staff_profiles')
+          .select('id, full_name, branch_slug, daily_rate_minor')
+          .eq('role', 'team_lead')
+          .eq('is_active', true)
+          .eq('is_archived', false)
+          .order('full_name'),
+      ])
+      if (comp.error) toast.error(comp.error.message)
+      else setRules(normalizeCompensationSettings(comp.data))
+      if (tl.error) {
+        setLeadError(sheetErrorMessage(tl.error))
+      } else {
+        setLeadError('')
+        setLeads(tl.data || [])
+        setRates(Object.fromEntries((tl.data || []).map((r) => [r.id, r.daily_rate_minor ? String(r.daily_rate_minor / 100) : ''])))
+      }
+    } finally {
+      setLoading(false)
     }
   }, [])
 
@@ -60,6 +74,18 @@ export default function DailySheetRulesPage() {
   async function saveRules(e) {
     e.preventDefault()
     if (!canWrite) return
+    for (const f of PCT_FIELDS) {
+      const val = Number(rules[f.key])
+      if (!Number.isFinite(val) || val < 0 || val > 100) {
+        return toast.error(`${f.label} must be between 0 and 100%.`)
+      }
+    }
+    for (const f of WEIGHT_FIELDS) {
+      const val = Number(rules[f.key])
+      if (!Number.isFinite(val) || val < 0) {
+        return toast.error(`${f.label} must be 0 or greater.`)
+      }
+    }
     setSaving(true)
     const { error } = await supabase.from('compensation_settings').upsert(toCompensationSettingsRow(rules), { onConflict: 'id' })
     setSaving(false)
@@ -67,14 +93,24 @@ export default function DailySheetRulesPage() {
     else toast.success('Daily sheet rules saved')
   }
 
+  function resetRuleDefaults() {
+    setRules({ ...DEFAULT_COMPENSATION_RULES })
+    toast.info('Reset to default compensation weights. Click Save rules to apply.')
+  }
+
   async function saveRate(lead) {
     const text = String(rates[lead.id] ?? '').trim()
     const minor = text === '' ? 0 : parsePesosToMinor(text)
     if (minor == null || !Number.isFinite(minor) || minor < 0) return toast.error(`Enter a peso amount for ${lead.full_name}, like 650.`)
-    const { error } = await supabase.from('staff_profiles').update({ daily_rate_minor: minor }).eq('id', lead.id)
-    if (error) return toast.error(error.message)
-    toast.success(`${lead.full_name}: daily rate saved`)
-    load()
+    setSavingLeadId(lead.id)
+    try {
+      const { error } = await supabase.from('staff_profiles').update({ daily_rate_minor: minor }).eq('id', lead.id)
+      if (error) return toast.error(error.message)
+      toast.success(`${lead.full_name}: daily rate saved`)
+      load()
+    } finally {
+      setSavingLeadId('')
+    }
   }
 
   const numberInput = (field, props) => (
@@ -94,11 +130,18 @@ export default function DailySheetRulesPage() {
       className="hakum-daily-sheet-rules"
       eyebrow="Settings"
       title="Daily sheet rules"
+      breadcrumbs={[{ label: 'Settings', to: '/operations/settings' }, { label: 'Daily sheet rules' }]}
       description="How the Daily Sheet suggests crew salaries. Branch Admins can change a suggestion with a reason; Super Admin or ASA approve the sheet."
       actions={
-        <Button type="button" variant="outline" className="min-h-11" asChild>
-          <Link to="/operations/settings">← Company settings</Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button type="button" variant="outline" className="min-h-11 cursor-pointer" disabled={loading} onClick={load}>
+            <RefreshCw className={`mr-1.5 size-4 ${loading ? 'animate-spin' : ''}`} aria-hidden />
+            Refresh
+          </Button>
+          <Button type="button" variant="outline" className="min-h-11" asChild>
+            <Link to="/operations/settings">← Company settings</Link>
+          </Button>
+        </div>
       }
     >
       <Card>
@@ -125,9 +168,15 @@ export default function DailySheetRulesPage() {
               Cash advances are released by the Branch Admin on the Daily Sheet and approved with it. Nothing is deducted automatically.
             </p>
             {canWrite ? (
-              <Button type="submit" className="min-h-11 sm:col-span-2" disabled={saving}>
-                {saving ? 'Saving…' : 'Save rules'}
-              </Button>
+              <div className="flex flex-wrap items-center gap-2 sm:col-span-2">
+                <Button type="button" variant="outline" className="min-h-11 cursor-pointer" onClick={resetRuleDefaults}>
+                  <RotateCcw className="mr-1.5 size-4" aria-hidden />
+                  Reset defaults
+                </Button>
+                <Button type="submit" className="min-h-11 flex-1 cursor-pointer" disabled={saving}>
+                  {saving ? 'Saving…' : 'Save rules'}
+                </Button>
+              </div>
             ) : (
               <p className="text-sm text-muted-foreground sm:col-span-2">Super Admin or ASA with finance write can edit.</p>
             )}
@@ -165,8 +214,14 @@ export default function DailySheetRulesPage() {
                     />
                   </div>
                   {canWrite ? (
-                    <Button type="button" variant="outline" className="min-h-11" onClick={() => saveRate(lead)}>
-                      Save
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="min-h-11 cursor-pointer"
+                      disabled={savingLeadId === lead.id}
+                      onClick={() => saveRate(lead)}
+                    >
+                      {savingLeadId === lead.id ? 'Saving…' : 'Save'}
                     </Button>
                   ) : null}
                 </li>

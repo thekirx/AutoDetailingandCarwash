@@ -18,6 +18,7 @@ import { PRICING_SIZES } from '../lib/servicePricing'
 import { filterPosBayCatalog } from '../lib/serviceKinds'
 import CancellationReasonDialog from './CancellationReasonDialog'
 import CustomerNotesPanel from './CustomerNotesPanel'
+import ReasonConfirmDialog from './ops/ReasonConfirmDialog'
 import { supabase } from '../lib/supabase'
 import {
   formatQueueNumber,
@@ -183,6 +184,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
   const [loadError, setLoadError] = useState('')
   const [actionError, setActionError] = useState('')
   const [cancelOpen, setCancelOpen] = useState(false)
+  const [dialogConfig, setDialogConfig] = useState(null)
   const [vehicleTypeDraft, setVehicleTypeDraft] = useState('medium')
   const [priceOpen, setPriceOpen] = useState(false)
   const [voucherCode, setVoucherCode] = useState('')
@@ -336,7 +338,15 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
 
   const savePrice = () => {
     const amountMinor = parsePesoInputToMinor(price)
-    if (amountMinor < 5000 && !window.confirm('Please confirm this amount is correct. Did you mean a higher peso amount?')) {
+    if (amountMinor < 5000) {
+      setDialogConfig({
+        mode: 'confirm',
+        title: 'Confirm low peso amount',
+        description: 'Please confirm this amount is correct. Did you mean a higher peso amount?',
+        confirmLabel: 'Confirm price',
+        action: 'price',
+        onConfirm: () => updateTicketPrice(ticket, amountMinor, priceReason, user.id),
+      })
       return Promise.resolve()
     }
     return updateTicketPrice(ticket, amountMinor, priceReason, user.id)
@@ -344,9 +354,17 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
   const saveVehicleType = () =>
     updateTicketVehicleType(ticket, vehicleTypeDraft, { servicesCatalog: services })
   const runRedo = () => {
-    const reason = window.prompt('Redo reason (visible to owner in audit)', ticket.redo_reason || '')
-    if (reason === null) return Promise.resolve()
-    return markTicketRedo(ticket, reason)
+    setDialogConfig({
+      mode: 'prompt',
+      title: 'Mark redo',
+      description: 'Redo reason (visible to owner in audit).',
+      inputLabel: 'Redo reason',
+      placeholder: 'Why does this ticket need redo?',
+      defaultValue: ticket.redo_reason || '',
+      confirmLabel: 'Mark redo',
+      action: 'redo',
+      onConfirm: (reason) => markTicketRedo(ticket, reason),
+    })
   }
   const runAddService = async () => {
     const service = services.find((item) => item.id === addServiceId)
@@ -357,9 +375,17 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
     setAddServicePrice('')
   }
   const runOverride = (target) => {
-    const reason = window.prompt(`Move this ticket back to ${STATUS_LABELS[target]}? Reason (visible in audit):`, '')
-    if (reason === null) return Promise.resolve()
-    return adminOverrideTicketStatus(ticket, target, reason)
+    setDialogConfig({
+      mode: 'prompt',
+      title: `Move ticket back to ${STATUS_LABELS[target]}`,
+      description: 'Reason (visible in audit).',
+      inputLabel: 'Override reason',
+      placeholder: 'Why move this status back?',
+      defaultValue: '',
+      confirmLabel: 'Confirm override',
+      action: `override-${target}`,
+      onConfirm: (reason) => adminOverrideTicketStatus(ticket, target, reason),
+    })
   }
   const runStart = async () => {
     if (startBlockedByCrew) {
@@ -548,7 +574,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
                       tone="secondary"
                       disabled={!actions.canMarkRedo}
                       loading={saving === 'redo'}
-                      onClick={() => runAction('redo', runRedo)}
+                      onClick={runRedo}
                     >
                       <ShieldAlert size={17} aria-hidden />
                       Mark redo
@@ -558,11 +584,20 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
                     <ActionButton
                       tone="secondary"
                       loading={saving === 'failqa'}
-                      onClick={() => runAction('failqa', () => {
-                        const reason = window.prompt('Failed QA reason (visible in audit):', '')
-                        if (reason === null) return Promise.resolve()
-                        return markTicketRedo(ticket, reason || 'Failed QA')
-                      })}
+                      onClick={() =>
+                        setDialogConfig({
+                          mode: 'prompt',
+                          title: 'Mark Failed QA',
+                          description: 'Failed QA reason (visible in audit).',
+                          inputLabel: 'Failed QA reason',
+                          placeholder: 'Describe what failed quality check',
+                          defaultValue: '',
+                          confirmLabel: 'Mark Failed QA',
+                          confirmVariant: 'destructive',
+                          action: 'failqa',
+                          onConfirm: (reason) => markTicketRedo(ticket, reason || 'Failed QA'),
+                        })
+                      }
                     >
                       <Undo2 size={17} aria-hidden />
                       Failed QA
@@ -871,6 +906,28 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
             await cancelQueueTicket(ticket, reason)
             setCancelOpen(false)
           })
+        }}
+      />
+
+      <ReasonConfirmDialog
+        open={Boolean(dialogConfig)}
+        onOpenChange={(open) => {
+          if (!open) setDialogConfig(null)
+        }}
+        title={dialogConfig?.title || ''}
+        description={dialogConfig?.description || ''}
+        mode={dialogConfig?.mode || 'prompt'}
+        inputLabel={dialogConfig?.inputLabel || 'Reason'}
+        placeholder={dialogConfig?.placeholder || ''}
+        defaultValue={dialogConfig?.defaultValue || ''}
+        confirmLabel={dialogConfig?.confirmLabel || 'Confirm'}
+        confirmVariant={dialogConfig?.confirmVariant || 'default'}
+        busy={Boolean(dialogConfig?.action && saving === dialogConfig.action)}
+        onConfirm={(val) => {
+          if (!dialogConfig) return
+          const current = dialogConfig
+          setDialogConfig(null)
+          runAction(current.action || 'action', () => current.onConfirm?.(val))
         }}
       />
     </div>

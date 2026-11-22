@@ -25,7 +25,6 @@ import Sheet, { SheetActions } from '@/components/customer/Sheet'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
 import { supabase } from '@/lib/supabase'
-import { getAccessTokenFresh } from '@/lib/authToken'
 import { loadUserSettings, saveSmsOptIn } from '@/lib/userSettings'
 import { isSyntheticCustomerEmail } from '@/lib/customerOnboarding'
 import { isValidCustomerPlate, plateValidationError, PLATE_FIELD_HINT, safeVehiclePhotoUrl } from '@/lib/customerAuth'
@@ -196,7 +195,7 @@ function SmsRow({ smsOptIn, setSmsOptIn }) {
       </span>
       <span className="capp-row-body">
         <strong>Text messages</strong>
-        <em>Reminders and status updates</em>
+        <em>Booking &amp; queue status updates</em>
       </span>
       <button
         type="button"
@@ -729,8 +728,10 @@ export function CarForm({ vehicle, onDone, onCancel }) {
 }
 
 function AlertsSection({ phone, smsOptIn, setSmsOptIn }) {
-  const { rows, markRead } = useUserNotifications()
+  const { rows, unread, markRead, markAllRead } = useUserNotifications()
   const [smsBusy, setSmsBusy] = useState(false)
+  const [inboxBusy, setInboxBusy] = useState(false)
+  const [showAllInbox, setShowAllInbox] = useState(false)
 
   async function toggleSms(next) {
     setSmsBusy(true)
@@ -745,30 +746,19 @@ function AlertsSection({ phone, smsOptIn, setSmsOptIn }) {
     }
   }
 
-  async function sendTestSms() {
-    setSmsBusy(true)
+  async function handleMarkAllRead() {
+    setInboxBusy(true)
     try {
-      const token = await getAccessTokenFresh()
-      if (!token) throw new Error('Sign in again.')
-      const res = await fetch('/api/lifecycle-sms', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ kind: 'self_test' }),
-      })
-      const body = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(body.error || 'Test text failed')
-      const status = body.result?.status
-      if (status === 'duplicate') toast.message('Already sent a test text today')
-      else if (status === 'opted_out') toast.error('SMS is off for this account')
-      else if (status === 'disabled') toast.error('Shop SMS is turned off')
-      else if (status === 'sent' || body.result?.ok) toast.success('Test text sent')
-      else toast.error(body.result?.providerResponse || 'Could not send the test text')
+      await markAllRead()
+      toast.success('Inbox marked as read')
     } catch (err) {
-      toast.error(err.message)
+      toast.error(err.message || 'Could not mark notifications read')
     } finally {
-      setSmsBusy(false)
+      setInboxBusy(false)
     }
   }
+
+  const displayedRows = showAllInbox ? rows : rows.slice(0, 8)
 
   return (
     <>
@@ -782,7 +772,10 @@ function AlertsSection({ phone, smsOptIn, setSmsOptIn }) {
         <div className="capp-pref">
           <div>
             <strong>{smsOptIn ? 'SMS alerts on' : 'SMS alerts off'}</strong>
-            <em>Status texts to {phone || 'your saved number'} when the shop has SMS on.</em>
+            <em>
+              Automatic booking &amp; queue status texts for Detailing, Services &amp; Packages to{' '}
+              {phone || 'your saved number'} when shop SMS is on.
+            </em>
           </div>
           <button
             type="button"
@@ -796,21 +789,41 @@ function AlertsSection({ phone, smsOptIn, setSmsOptIn }) {
             <span />
           </button>
         </div>
-        <button type="button" className="capp-btn capp-btn-ghost" disabled={smsBusy || !smsOptIn} onClick={sendTestSms}>
-          {smsBusy ? 'Sending…' : 'Send test text'}
-        </button>
       </section>
 
       <section className="capp-section" aria-label="Recent alerts">
-        <SectionHead title="Inbox" />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <SectionHead title="Inbox" />
+          <div className="flex items-center gap-2">
+            {unread > 0 ? (
+              <button
+                type="button"
+                className="capp-btn capp-btn-ghost"
+                disabled={inboxBusy}
+                onClick={handleMarkAllRead}
+              >
+                {inboxBusy ? 'Marking…' : 'Mark all read'}
+              </button>
+            ) : null}
+            {rows.length > 8 ? (
+              <button
+                type="button"
+                className="capp-btn capp-btn-ghost"
+                onClick={() => setShowAllInbox((v) => !v)}
+              >
+                {showAllInbox ? 'Show recent' : `Show all (${rows.length})`}
+              </button>
+            ) : null}
+          </div>
+        </div>
         {!rows.length ? (
           <div className="capp-empty">
             <strong>No alerts yet</strong>
-            Enable push or SMS, then send a test.
+            Enable push alerts above, then send a test push.
           </div>
         ) : (
           <div className="capp-group">
-            {rows.slice(0, 8).map((row) => (
+            {displayedRows.map((row) => (
               <Row
                 key={row.id}
                 className={row.read_at ? '' : 'capp-row-new'}

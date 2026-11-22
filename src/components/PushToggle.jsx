@@ -238,6 +238,7 @@ export default function PushToggle({
             type="button"
             role="switch"
             aria-checked={on}
+            aria-label="Push alerts"
             disabled={busy || status === 'loading' || status === 'denied'}
             className={`capp-switch${on ? ' is-on' : ''}`}
             onClick={() => (on ? turnOff() : setOpen(true))}

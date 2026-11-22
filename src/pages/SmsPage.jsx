@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Navigate } from 'react-router-dom'
-import { AlertTriangle, MessageSquareWarning, Pencil, Plus, Trash2 } from 'lucide-react'
+import { Link, Navigate } from 'react-router-dom'
+import { AlertTriangle, MessageSquareWarning, Pencil, Plus, RefreshCw, Settings, Trash2 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canSendCustomerSms, isAdmin } from '@/auth/permissions'
+import { canSendCustomerSms, isAdmin, isSuperAdmin } from '@/auth/permissions'
 import { getSmsNotificationsEnabled, setSmsNotificationsEnabled } from '@/lib/adminApi'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { busybeeProviderStatusLabel, formatBusybeeBalance } from '@/lib/busybeeHealth'
@@ -62,7 +62,11 @@ export default function SmsPage({ embedded = false }) {
       })
         .then(async (r) => ({ ok: r.ok, ...(await r.json().catch(() => ({}))) }))
         .catch((err) => ({ ok: false, error: err.message })),
-      supabase.from('sms_events').select('*').order('created_at', { ascending: false }).limit(30),
+      supabase
+        .from('sms_events')
+        .select('id, phone, event_type, status, provider, provider_response, created_at, sent_at')
+        .order('created_at', { ascending: false })
+        .limit(30),
       getSmsNotificationsEnabled().catch((err) => {
         toast.error(err.message || 'Unable to load SMS toggle')
         return false
@@ -217,15 +221,29 @@ export default function SmsPage({ embedded = false }) {
             </p>
           ) : null}
         </div>
-        <Button
-          type="button"
-          className="min-h-11 w-full shrink-0 sm:w-auto"
-          variant={smsEnabled ? 'default' : 'outline'}
-          disabled={toggling || !isAdmin(profile)}
-          onClick={toggleSms}
-        >
-          {toggling ? 'Saving…' : smsEnabled ? 'Turn SMS off' : 'Turn SMS on'}
-        </Button>
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <Button type="button" variant="outline" className="min-h-11 cursor-pointer" onClick={load}>
+            <RefreshCw className="mr-1.5 size-4" aria-hidden />
+            Refresh
+          </Button>
+          {isSuperAdmin(profile) ? (
+            <Button type="button" variant="outline" className="min-h-11" asChild>
+              <Link to="/operations/notifications?tab=settings">
+                <Settings className="mr-1.5 size-4" aria-hidden />
+                Notification Settings
+              </Link>
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            className="min-h-11 w-full shrink-0 sm:w-auto"
+            variant={smsEnabled ? 'default' : 'outline'}
+            disabled={toggling || !isAdmin(profile)}
+            onClick={toggleSms}
+          >
+            {toggling ? 'Saving…' : smsEnabled ? 'Turn SMS off' : 'Turn SMS on'}
+          </Button>
+        </div>
       </div>
     </div>
   )

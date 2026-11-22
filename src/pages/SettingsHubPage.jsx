@@ -1,9 +1,12 @@
 import { Link, Navigate } from 'react-router-dom'
-import { Bell, ShoppingCart, Sun, Wallet } from 'lucide-react'
+import { Bell, Clock3, Database, ShoppingCart, SlidersHorizontal, Sun, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import {
+  canAccessDataCenter,
   canAccessNotifications,
   canAccessPos,
+  canEditAttendanceRoles,
+  canEditAttendanceSettings,
   isSuperAdmin,
 } from '@/auth/permissions'
 import { canReviewDailySheet } from '@/lib/dailySheet'
@@ -37,6 +40,30 @@ const TILES = [
     to: '/operations/notifications?tab=templates',
     icon: Bell,
     allow: canAccessNotifications,
+  },
+  {
+    key: 'notification-config',
+    title: 'Notification Settings & SMS Policy',
+    description: 'Global BusyBee SMS toggles, category scopes, stage matrix, quiet hours, and device coverage.',
+    to: '/operations/notifications?tab=settings',
+    icon: SlidersHorizontal,
+    allow: isSuperAdmin,
+  },
+  {
+    key: 'attendance-rules',
+    title: 'Attendance & Shift Rules',
+    description: 'Check-in windows, grace period, late weights, and attendance role policies.',
+    to: '/operations/employees?tab=settings',
+    icon: Clock3,
+    allow: (p) => canEditAttendanceSettings(p) || canEditAttendanceRoles(p),
+  },
+  {
+    key: 'system-data',
+    title: 'System & Data Center',
+    description: 'JSON catalog/CRM exports, retention rules, and PITR backup readiness.',
+    to: '/operations/system?tab=data-center',
+    icon: Database,
+    allow: canAccessDataCenter,
   },
 ]
 

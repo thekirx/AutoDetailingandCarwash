@@ -1137,7 +1137,10 @@ export default function BookingBoardPage() {
   if (requiresTeamLeadBranchSetup(profile)) {
     return (
       <section className="rounded-2xl border border-amber-600/30 bg-amber-500/10 p-6 text-amber-950 dark:text-amber-100" role="alert">
-        Branch setup required before viewing bookings. Ask Super Admin to assign your branch.
+        <h1 className="text-lg font-semibold">Branch setup required</h1>
+        <p className="mt-1 text-sm">
+          Ask Super Admin to assign your branch before viewing bookings.
+        </p>
       </section>
     )
   }

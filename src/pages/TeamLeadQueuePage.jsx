@@ -42,6 +42,7 @@ import {
 } from '../queue/queueLogic'
 import { fetchTeamLeadDayBoard, formatMoney, sendTicketToPayment, markTicketRedo } from '../queue/queueApi'
 import QueueTicketEditModal from '../components/QueueTicketEditModal'
+import ReasonConfirmDialog from '../components/ops/ReasonConfirmDialog'
 
 export default function TeamLeadQueuePage() {
   const { profile, canManageQueue, canViewQueueOperations } = useAuth()
@@ -67,6 +68,7 @@ export default function TeamLeadQueuePage() {
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [savingCard, setSavingCard] = useState(null)
   const [cardError, setCardError] = useState('')
+  const [redoTarget, setRedoTarget] = useState(null)
   const today = getLocalCalendarDate()
 
   useEffect(() => {
@@ -181,9 +183,7 @@ export default function TeamLeadQueuePage() {
     }
   }
   const runRedo = (ticket) => {
-    const reason = window.prompt('Redo reason (visible to owner in audit)', ticket.redo_reason || '')
-    if (reason === null) return Promise.resolve()
-    return markTicketRedo(ticket, reason)
+    setRedoTarget(ticket)
   }
 
   const runHistory = async () => {
@@ -388,7 +388,7 @@ export default function TeamLeadQueuePage() {
               saving={savingCard?.id === ticket.booking_id ? savingCard.action : null}
               onOpen={() => setEditBookingId(ticket.booking_id)}
               onSendToPay={() => runCardAction(ticket, 'payment', () => sendTicketToPayment(ticket.booking_id))}
-              onRedo={() => runCardAction(ticket, 'redo', () => runRedo(ticket))} />
+              onRedo={() => runRedo(ticket)} />
           })
           return group.collapsed ? (
             <details className="daylight-queue-group daylight-queue-group-collapsed" key={group.key}>
@@ -399,6 +399,27 @@ export default function TeamLeadQueuePage() {
           ) : <section className="daylight-queue-group" key={group.key}><h2>{heading}</h2><div className="daylight-group-cards">{cards}</div></section>
         }) : <div className="qmgr-empty"><p>No cars match your search or filters.</p>{canManageQueue ? <Link to="/operations/queue/new" className="qmgr-empty-link">Add a car</Link> : null}</div>}
       </div>
+
+      <ReasonConfirmDialog
+        open={Boolean(redoTarget)}
+        onOpenChange={(open) => {
+          if (!open) setRedoTarget(null)
+        }}
+        title="Mark redo"
+        description="Redo reason (visible to owner in audit)."
+        mode="prompt"
+        inputLabel="Redo reason"
+        placeholder="Why does this ticket need redo?"
+        defaultValue={redoTarget?.redo_reason || ''}
+        confirmLabel="Mark redo"
+        busy={Boolean(redoTarget && savingCard?.id === redoTarget.booking_id && savingCard?.action === 'redo')}
+        onConfirm={(reason) => {
+          if (!redoTarget) return
+          const target = redoTarget
+          setRedoTarget(null)
+          runCardAction(target, 'redo', () => markTicketRedo(target, reason))
+        }}
+      />
 
       {canManageQueue ? (
         <QueueTicketEditModal

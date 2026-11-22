@@ -710,8 +710,10 @@ export function printAsPdf(rows, columns, title, subtitle = '') {
   // "noopener" makes window.open return null, so the window could never be written; detach opener by hand.
   const win = window.open('', '_blank')
   if (!win) {
-    alert('Pop-up blocked. Allow pop-ups for this site to export PDF.')
-    return
+    import('sonner')
+      .then(({ toast }) => toast.error('Pop-up blocked. Allow pop-ups for this site to export PDF.'))
+      .catch(() => {})
+    return false
   }
   win.opener = null
   const head = columns.map((c) => `<th>${escapeHtml(c.label)}</th>`).join('')

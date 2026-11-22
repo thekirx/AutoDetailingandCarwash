@@ -10,6 +10,7 @@ import PushToggle from '@/components/PushToggle'
 import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
 import { PRICING_SIZES } from '@/lib/servicePricing'
 import { useAuth } from '@/auth/AuthProvider'
+import { canAccessMyAdvances } from '@/auth/permissions'
 import { plateValidationError, PLATE_FIELD_HINT } from '@/lib/customerAuth'
 import { Button } from '@/components/ui/button'
 import {
@@ -72,6 +73,8 @@ export default function UserSettingsModal({
   const [caBalance, setCaBalance] = useState(null)
 
   const isCustomer = audience === 'customer' || showGarage
+  const showMyAdvances = !isCustomer && Boolean(profile?.id) && canAccessMyAdvances(profile)
+  const customerBirthdayLocked = isCustomer && Boolean(profile?.date_of_birth)
 
   useEffect(() => {
     setMounted(true)
@@ -84,13 +87,15 @@ export default function UserSettingsModal({
     setBirthday(profile?.date_of_birth ? String(profile.date_of_birth).slice(0, 10) : '')
     setPassword('')
     setPassword2('')
-    setCar({ plate_number: '', vehicle_make: '', vehicle_model: '', color: '' })
+    setCar({ plate_number: '', vehicle_make: '', vehicle_model: '', vehicle_type: 'medium', color: '' })
     setTab(initialTab || 'alerts')
-    loadUserSettings()
-      .then((s) => setSmsOptIn(s.sms_opt_in !== false))
-      .catch(() => setSmsOptIn(true))
+    if (isCustomer) {
+      loadUserSettings()
+        .then((s) => setSmsOptIn(s.sms_opt_in !== false))
+        .catch(() => setSmsOptIn(true))
+    }
 
-    if (!isCustomer && profile?.id) {
+    if (showMyAdvances) {
       loadCashAdvanceLedger(profile?.branch_slug || null, profile.id)
         .then((rows) => {
           const balances = cashAdvanceBalances(rows)
@@ -100,7 +105,7 @@ export default function UserSettingsModal({
     } else {
       setCaBalance(null)
     }
-  }, [open, profile, initialTab, isCustomer])
+  }, [open, profile, initialTab, isCustomer, showMyAdvances])
 
   async function toggleSms(next) {
     setSmsBusy(true)
@@ -228,7 +233,7 @@ export default function UserSettingsModal({
               {isCustomer ? 'Your Hakum account' : 'Your preferences'}
             </DialogTitle>
             <DialogDescription className={isCustomer ? 'text-white/75' : undefined}>
-              Theme, push & SMS alerts, email, and password.
+              {isCustomer ? 'Theme, push & status SMS alerts, email, and password.' : 'Theme, push alerts, email, and password.'}
             </DialogDescription>
           </DialogHeader>
         </div>
@@ -298,41 +303,44 @@ export default function UserSettingsModal({
                 </div>
               </div>
 
-              <div className="space-y-2 border-t border-border pt-4">
-                <div className="flex items-center gap-2 text-sm font-semibold">
-                  <Smartphone className="size-4" aria-hidden />
-                  SMS notifications
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Text status updates to your phone when SMS is enabled for the shop.
-                </p>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={smsOptIn}
-                  disabled={smsBusy}
-                  onClick={() => toggleSms(!smsOptIn)}
-                  className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left text-sm font-semibold transition ${
-                    smsOptIn ? 'border-primary/30 bg-primary/10 text-foreground' : 'border-border bg-muted/30 text-muted-foreground'
-                  }`}
-                >
-                  <span>{smsOptIn ? 'SMS alerts on' : 'SMS alerts off'}</span>
-                  <span
-                    className={`relative h-6 w-11 rounded-full transition ${smsOptIn ? 'bg-primary' : 'bg-muted-foreground/40'}`}
-                    aria-hidden
+              {isCustomer ? (
+                <div className="space-y-2 border-t border-border pt-4">
+                  <div className="flex items-center gap-2 text-sm font-semibold">
+                    <Smartphone className="size-4" aria-hidden />
+                    SMS notifications
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Text booking &amp; queue status updates to your phone when SMS is enabled for the shop.
+                  </p>
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={smsOptIn}
+                    aria-label="SMS alerts"
+                    disabled={smsBusy}
+                    onClick={() => toggleSms(!smsOptIn)}
+                    className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-left text-sm font-semibold transition ${
+                      smsOptIn ? 'border-primary/30 bg-primary/10 text-foreground' : 'border-border bg-muted/30 text-muted-foreground'
+                    }`}
                   >
+                    <span>{smsOptIn ? 'SMS alerts on' : 'SMS alerts off'}</span>
                     <span
-                      className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition ${smsOptIn ? 'translate-x-5' : ''}`}
-                    />
-                  </span>
-                </button>
-              </div>
+                      className={`relative h-6 w-11 rounded-full transition ${smsOptIn ? 'bg-primary' : 'bg-muted-foreground/40'}`}
+                      aria-hidden
+                    >
+                      <span
+                        className={`absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition ${smsOptIn ? 'translate-x-5' : ''}`}
+                      />
+                    </span>
+                  </button>
+                </div>
+              ) : null}
             </div>
           ) : null}
 
           {tab === 'account' ? (
             <div className="space-y-5">
-              {!isCustomer && profile?.id ? (
+              {showMyAdvances ? (
                 <div className="rounded-2xl border border-border bg-card p-4 shadow-sm space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
@@ -397,6 +405,7 @@ export default function UserSettingsModal({
                 <form
                   onSubmit={async (e) => {
                     e.preventDefault()
+                    if (customerBirthdayLocked) return
                     setBusy(true)
                     try {
                       await portalAction('update-birthday', { date_of_birth: birthday.trim() })
@@ -415,7 +424,9 @@ export default function UserSettingsModal({
                     Birthday
                   </div>
                   <p className="text-sm text-muted-foreground">
-                    On your birthday you get a greeting and one {BIRTHDAY_GIFT_LABEL} at any Hakum branch.
+                    {customerBirthdayLocked
+                      ? `Locked after the first save. You receive one ${BIRTHDAY_GIFT_LABEL} every birthday.`
+                      : `On your birthday you get a greeting and one ${BIRTHDAY_GIFT_LABEL} at any Hakum branch. Locks after your first save.`}
                   </p>
                   <div className="grid gap-1.5">
                     <Label htmlFor="set-bday">Date of birth</Label>
@@ -424,12 +435,15 @@ export default function UserSettingsModal({
                       type="date"
                       className="min-h-11"
                       value={birthday}
+                      disabled={customerBirthdayLocked || busy}
                       onChange={(e) => setBirthday(e.target.value)}
                     />
                   </div>
-                  <Button type="submit" className="account-btn account-btn-primary min-h-11 w-full" disabled={busy}>
-                    Save birthday
-                  </Button>
+                  {!customerBirthdayLocked ? (
+                    <Button type="submit" className="account-btn account-btn-primary min-h-11 w-full" disabled={busy}>
+                      Save birthday
+                    </Button>
+                  ) : null}
                 </form>
               ) : (
                 <form
@@ -497,7 +511,7 @@ export default function UserSettingsModal({
                 <p className="text-xs text-muted-foreground">
                   {isCustomer
                     ? 'Used for visit status SMS when the shop has SMS on.'
-                    : 'Your mobile for ops alerts. Managers can still change it on People.'}
+                    : 'Your mobile number on file. Managers can also update it on People.'}
                 </p>
                 <Button
                   type="submit"
