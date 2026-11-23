@@ -10,10 +10,11 @@ import { manilaDayOf, manilaTodayISO } from '../src/lib/bookingLead.js'
 import { daysUntilDue } from '../src/lib/paintMaintenance.js'
 import { DETAILING_REMINDER_DAYS, renderDetailingReminderSms } from '../src/lib/detailingBookingSms.js'
 
-export function reminderOffset(scheduledStart, today = manilaTodayISO()) {
+export function reminderOffset(scheduledStart, today = manilaTodayISO(), daysList = DETAILING_REMINDER_DAYS) {
   const day = manilaDayOf(scheduledStart)
   const left = daysUntilDue(day, today)
-  return DETAILING_REMINDER_DAYS.includes(left) ? left : null
+  const allowed = Array.isArray(daysList) && daysList.length ? daysList : DETAILING_REMINDER_DAYS
+  return allowed.includes(left) ? left : null
 }
 
 export async function runDetailingBookingReminders(db, today = manilaTodayISO()) {
@@ -25,8 +26,14 @@ export async function runDetailingBookingReminders(db, today = manilaTodayISO())
     return { ok: true, skipped: true, reason: 'quiet_hours', considered: 0, sent: 0, rows: [] }
   }
 
+  const allowedDays =
+    Array.isArray(config.booking_reminder_days) && config.booking_reminder_days.length
+      ? config.booking_reminder_days
+      : DETAILING_REMINDER_DAYS
+  const maxDaysAhead = Math.max(...allowedDays, 1)
+
   const horizon = new Date(`${today}T00:00:00+08:00`)
-  horizon.setUTCDate(horizon.getUTCDate() + 8)
+  horizon.setUTCDate(horizon.getUTCDate() + maxDaysAhead + 1)
   const { data, error } = await db
     .from('bookings')
     .select('id, customer_id, customer_name, customer_phone, vehicle_make, vehicle_model, vehicle_plate, scheduled_start, status, branch, service_id, services(name, slug, pay_category), assigned_staff_id')
@@ -37,14 +44,14 @@ export async function runDetailingBookingReminders(db, today = manilaTodayISO())
     .limit(400)
   if (error) throw new Error(error.message)
 
-  const due = (data || []).filter((row) => isBookingBoardRow(row) && reminderOffset(row.scheduled_start, today))
+  const due = (data || []).filter((row) => isBookingBoardRow(row) && reminderOffset(row.scheduled_start, today, allowedDays))
   const sent = []
 
   // Batch prior reminder lookup across all due bookings to avoid N+1 per-booking SELECTs.
   const priorSent = new Set()
   if (due.length) {
     const dueIds = due.map((row) => row.id)
-    const eventTypes = DETAILING_REMINDER_DAYS.map((d) => `booking_remind_${d}d`)
+    const eventTypes = allowedDays.map((d) => `booking_remind_${d}d`)
     const { data: priorRows } = await db
       .from('sms_events')
       .select('booking_id, event_type')
@@ -56,7 +63,7 @@ export async function runDetailingBookingReminders(db, today = manilaTodayISO())
   }
 
   for (const booking of due) {
-    const days = reminderOffset(booking.scheduled_start, today)
+    const days = reminderOffset(booking.scheduled_start, today, allowedDays)
     const eventType = `booking_remind_${days}d`
     if (priorSent.has(`${booking.id}|${eventType}`)) continue
 

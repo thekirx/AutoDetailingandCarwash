@@ -1,7 +1,8 @@
+import { recordAutomationJobRuns } from './automationState.mjs'
 import { json, setCors } from './httpUtil.mjs'
 import { runDetailingBookingReminders } from './bookingReminders.mjs'
 import { runRateVisitReminders } from './rateVisitReminders.mjs'
-import { scheduledRunGate } from './scheduledRun.mjs'
+import { resolveRunTrigger, scheduledRunGate } from './scheduledRun.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
 
 /** GET or POST. Vercel cron uses GET. Super Admin may run it by hand. */
@@ -19,9 +20,24 @@ export async function handleBookingRemindersRequest(req, res) {
   if (denied) return json(res, denied.status, { error: denied.error }, req)
 
   try {
+    const trigger = await resolveRunTrigger(req, db)
     const detailing = await runDetailingBookingReminders(db)
     const appUrl = String(process.env.PUBLIC_SITE_URL || process.env.VITE_SITE_URL || '').replace(/\/$/, '')
     const rateVisit = await runRateVisitReminders(db, { appUrl })
+    await recordAutomationJobRuns(db, [
+      {
+        jobKey: 'booking_reminders',
+        trigger,
+        status: detailing.skipped ? 'skipped' : 'ok',
+        summary: detailing.skipped ? detailing.reason : `${detailing.sent || 0} sent · ${detailing.considered || 0} due`,
+      },
+      {
+        jobKey: 'rate_visit',
+        trigger,
+        status: rateVisit.skipped ? 'skipped' : 'ok',
+        summary: rateVisit.skipped ? rateVisit.reason : `${rateVisit.sent || 0} sent · ${rateVisit.eligible || 0} eligible`,
+      },
+    ])
     return json(res, 200, { ...detailing, rateVisit }, req)
   } catch (err) {
     return json(res, 500, { error: String(err.message || err) }, req)

@@ -6,6 +6,26 @@
 
 export const NOTIFICATION_CONFIG_KEY = 'notification_config'
 
+export const AUTOMATION_MODES = Object.freeze([
+  {
+    id: 'hybrid',
+    label: 'Hybrid (Cron + App Sweep)',
+    description: 'Runs via scheduled Vercel/Supabase Cron AND automatically catches due jobs when staff use Operations.',
+  },
+  {
+    id: 'cron_only',
+    label: 'Scheduled Cron Only',
+    description: 'Only executes from Vercel Cron, Supabase pg_cron webhook, or manual Super Admin triggers.',
+  },
+  {
+    id: 'coded_sweep',
+    label: 'Coded App Sweep Only',
+    description: 'Runs purely from Operations activity sweeps and manual triggers without external cron jobs.',
+  },
+])
+
+export const BOOKING_REMINDER_DAY_OPTIONS = Object.freeze([14, 7, 5, 3, 2, 1])
+
 export const STATUS_SMS_SCOPES = Object.freeze([
   {
     id: 'detailing',
@@ -105,6 +125,17 @@ export const DEFAULT_NOTIFICATION_CONFIG = Object.freeze({
   maintenance_reminders_enabled: true,
   birthday_greetings_enabled: true,
   rate_visit_enabled: true,
+  points_shop_expiry_enabled: true,
+  automation_mode: 'hybrid',
+  booking_reminder_days: Object.freeze([7, 3, 1]),
+  maintenance_lead_days: 30,
+  maintenance_interval_days: 30,
+  rate_visit_delay_minutes: 15,
+  rate_visit_window_hours: 6,
+  birthday_include_customers: true,
+  birthday_include_staff: true,
+  points_shop_expiry_notice_days: 2,
+  daily_automation_hour_manila: 8,
   quiet_hours_enabled: false,
   quiet_hours_start: '22:00',
   quiet_hours_end: '07:00',
@@ -115,6 +146,7 @@ export function createDefaultNotificationConfig() {
     ...DEFAULT_NOTIFICATION_CONFIG,
     sms_scopes: { ...DEFAULT_NOTIFICATION_CONFIG.sms_scopes },
     sms_statuses: { ...DEFAULT_NOTIFICATION_CONFIG.sms_statuses },
+    booking_reminder_days: [...DEFAULT_NOTIFICATION_CONFIG.booking_reminder_days],
   }
 }
 
@@ -166,12 +198,52 @@ export function resolveNotificationConfigRows({ configRow = null, smsRow = null 
   return config
 }
 
+function coerceIntInRange(value, min, max, fallback) {
+  const n = Math.round(Number(value))
+  if (!Number.isFinite(n)) return fallback
+  return Math.min(max, Math.max(min, n))
+}
+
+function normalizeReminderDays(value, fallback = DEFAULT_NOTIFICATION_CONFIG.booking_reminder_days) {
+  if (!Array.isArray(value)) return [...fallback]
+  const allowed = new Set(BOOKING_REMINDER_DAY_OPTIONS)
+  const unique = [...new Set(value.map((v) => Math.round(Number(v))).filter((v) => allowed.has(v)))]
+  unique.sort((a, b) => b - a)
+  return unique.length ? unique : [...fallback]
+}
+
+export function buildPgCronSqlSnippet({ origin = 'https://www.hakumautocare.com', tokenPlaceholder = '<YOUR_AUTOMATION_TOKEN>' } = {}) {
+  const cleanOrigin = String(origin || 'https://www.hakumautocare.com').replace(/\/$/, '')
+  return [
+    '-- Run once in Supabase SQL Editor (requires pg_cron + pg_net extensions)',
+    'create extension if not exists pg_cron;',
+    'create extension if not exists pg_net;',
+    '',
+    'select cron.schedule(',
+    "  'hakum-automation-sweep',",
+    "  '*/15 * * * *',",
+    '  $$',
+    '  select net.http_post(',
+    `    url := '${cleanOrigin}/api/notifications?operation=automation-sweep',`,
+    '    headers := jsonb_build_object(',
+    "      'Content-Type', 'application/json',",
+    `      'Authorization', 'Bearer ${tokenPlaceholder}'`,
+    '    ),',
+    "    body := '{\"mode\":\"cron\"}'::jsonb",
+    '  );',
+    '  $$',
+    ');',
+  ].join('\n')
+}
+
 export function normalizeNotificationConfig(raw = {}, legacySmsValue = null) {
   const base = createDefaultNotificationConfig()
   const src = raw && typeof raw === 'object' ? raw : {}
 
   const smsFromLegacy =
     legacySmsValue && typeof legacySmsValue.enabled === 'boolean' ? legacySmsValue.enabled : base.sms_enabled
+  const validModes = new Set(AUTOMATION_MODES.map((m) => m.id))
+  const rawMode = String(src.automation_mode || '').trim().toLowerCase()
 
   return {
     sms_enabled: typeof src.sms_enabled === 'boolean' ? src.sms_enabled : smsFromLegacy,
@@ -196,6 +268,44 @@ export function normalizeNotificationConfig(raw = {}, legacySmsValue = null) {
         : base.birthday_greetings_enabled,
     rate_visit_enabled:
       typeof src.rate_visit_enabled === 'boolean' ? src.rate_visit_enabled : base.rate_visit_enabled,
+    points_shop_expiry_enabled:
+      typeof src.points_shop_expiry_enabled === 'boolean'
+        ? src.points_shop_expiry_enabled
+        : base.points_shop_expiry_enabled,
+    automation_mode: validModes.has(rawMode) ? rawMode : base.automation_mode,
+    booking_reminder_days: normalizeReminderDays(src.booking_reminder_days, base.booking_reminder_days),
+    maintenance_lead_days: coerceIntInRange(src.maintenance_lead_days, 7, 60, base.maintenance_lead_days),
+    maintenance_interval_days: coerceIntInRange(
+      src.maintenance_interval_days,
+      7,
+      90,
+      base.maintenance_interval_days,
+    ),
+    rate_visit_delay_minutes: coerceIntInRange(
+      src.rate_visit_delay_minutes,
+      5,
+      180,
+      base.rate_visit_delay_minutes,
+    ),
+    rate_visit_window_hours: coerceIntInRange(src.rate_visit_window_hours, 1, 24, base.rate_visit_window_hours),
+    birthday_include_customers:
+      typeof src.birthday_include_customers === 'boolean'
+        ? src.birthday_include_customers
+        : base.birthday_include_customers,
+    birthday_include_staff:
+      typeof src.birthday_include_staff === 'boolean' ? src.birthday_include_staff : base.birthday_include_staff,
+    points_shop_expiry_notice_days: coerceIntInRange(
+      src.points_shop_expiry_notice_days,
+      1,
+      5,
+      base.points_shop_expiry_notice_days,
+    ),
+    daily_automation_hour_manila: coerceIntInRange(
+      src.daily_automation_hour_manila,
+      0,
+      23,
+      base.daily_automation_hour_manila,
+    ),
     quiet_hours_enabled:
       typeof src.quiet_hours_enabled === 'boolean' ? src.quiet_hours_enabled : base.quiet_hours_enabled,
     quiet_hours_start: normalizeClockHHMM(src.quiet_hours_start, base.quiet_hours_start),
@@ -231,6 +341,42 @@ export function validateNotificationConfigPatch(patch, baseConfig = DEFAULT_NOTI
       }
     }
     merged.sms_sender_id = rawSender
+  }
+
+  if (patch.automation_mode !== undefined) {
+    const validModes = new Set(AUTOMATION_MODES.map((m) => m.id))
+    const rawMode = String(patch.automation_mode || '').trim().toLowerCase()
+    if (!validModes.has(rawMode)) {
+      return { ok: false, error: 'Automation mode must be hybrid, cron_only, or coded_sweep.' }
+    }
+  }
+
+  if (patch.booking_reminder_days !== undefined) {
+    if (!Array.isArray(patch.booking_reminder_days)) {
+      return { ok: false, error: 'Booking reminder days must be a list of day offsets.' }
+    }
+    const allowed = new Set(BOOKING_REMINDER_DAY_OPTIONS)
+    const validDays = patch.booking_reminder_days.map((d) => Math.round(Number(d))).filter((d) => allowed.has(d))
+    if (!validDays.length) {
+      return { ok: false, error: 'Select at least one detailing reminder offset (e.g. 7, 3, or 1 day).' }
+    }
+  }
+
+  const rangeChecks = [
+    ['maintenance_lead_days', 7, 60, 'Paint maintenance lead days must be between 7 and 60.'],
+    ['maintenance_interval_days', 7, 90, 'Paint maintenance repeat interval must be between 7 and 90 days.'],
+    ['rate_visit_delay_minutes', 5, 180, 'Post-visit review delay must be between 5 and 180 minutes.'],
+    ['rate_visit_window_hours', 1, 24, 'Post-visit review window must be between 1 and 24 hours.'],
+    ['points_shop_expiry_notice_days', 1, 5, 'Points Shop reminder notice must be between 1 and 5 days.'],
+    ['daily_automation_hour_manila', 0, 23, 'Daily automation run hour must be between 00:00 and 23:00 Manila time.'],
+  ]
+  for (const [field, min, max, errMsg] of rangeChecks) {
+    if (patch[field] !== undefined) {
+      const n = Number(patch[field])
+      if (!Number.isFinite(n) || Math.round(n) < min || Math.round(n) > max) {
+        return { ok: false, error: errMsg }
+      }
+    }
   }
 
   const clockPattern = /^([01]\d|2[0-3]):[0-5]\d$/

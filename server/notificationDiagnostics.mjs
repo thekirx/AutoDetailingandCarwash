@@ -4,6 +4,7 @@
  * live BusyBee credit balance, and masked recent SMS delivery telemetry.
  */
 import { busybeeBalance } from './busybee.mjs'
+import { loadAutomationState, sanitizeAutomationState } from './automationState.mjs'
 import { diagnoseVapidConfig } from './webPush.mjs'
 import { emptyPlatformCounts, summarizeSubscriptionsByPlatform } from '../src/lib/pushPlatform.js'
 import { DEFAULT_NOTIFICATION_CONFIG } from '../src/lib/notificationConfig.js'
@@ -30,12 +31,13 @@ export function maskPhoneSuffix(phone) {
 }
 
 export async function gatherNotificationDiagnostics(db, { isSuperAdmin, callerId }) {
-  const [staffRes, pushRes, custPushCountRes, remindersRes, templatesRes] = await Promise.all([
+  const [staffRes, pushRes, custPushCountRes, remindersRes, templatesRes, rawAutomationState] = await Promise.all([
     db.from('staff_profiles').select('id, role, full_name, phone').eq('is_active', true).eq('is_archived', false),
     db.from('push_subscriptions').select('user_id, endpoint, user_agent, updated_at'),
     db.from('customers').select('id', { count: 'exact', head: true }).eq('is_disabled', false).eq('is_archived', false),
     db.from('notification_settings').select('id', { count: 'exact', head: true }).eq('enabled', true),
     db.from('notification_templates').select('key', { count: 'exact', head: true }),
+    loadAutomationState(db),
   ])
 
   const staffRows = staffRes?.data || []
@@ -160,6 +162,7 @@ export async function gatherNotificationDiagnostics(db, { isSuperAdmin, callerId
       active_reminder_rules: Number(remindersRes?.count || 0),
       customized_templates: Number(templatesRes?.count || 0),
     },
+    automation_state: sanitizeAutomationState(rawAutomationState),
     recent_sms_events: recentSmsEvents,
     caller_phone: callerPhone,
   }

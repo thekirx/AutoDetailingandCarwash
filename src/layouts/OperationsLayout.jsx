@@ -69,6 +69,7 @@ import {
 import { internalRoleLabel } from '../auth/internalRoles'
 import { resolvePostLoginPath } from '../auth/authRedirect'
 import { opsNavIsActive, resolveOpsBreadcrumb } from '@/lib/opsNavigationRegistry'
+import { getAccessTokenFresh } from '@/lib/authToken'
 import { supabase } from '@/lib/supabase'
 import NotificationBell from '@/components/NotificationBell'
 import PushToggle from '@/components/PushToggle'
@@ -817,11 +818,46 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
   )
 }
 
+const AUTO_SWEEP_SESSION_KEY = 'hakum.autoSweepLastAt'
+const AUTO_SWEEP_THROTTLE_MS = 10 * 60 * 1000
+
 export default function OperationsLayout() {
   const { profile, user, signOut } = useAuth()
   const navigation = useMemo(() => getOperationsNav(profile), [profile])
   const adminShell = isAdmin(profile) && !isBranchAdmin(profile)
   const role = profile?.role
+
+  useEffect(() => {
+    if (!profile?.id || !profile?.is_active || role === 'customer') return
+    try {
+      const last = Number(globalThis.sessionStorage?.getItem(AUTO_SWEEP_SESSION_KEY) || 0)
+      if (Number.isFinite(last) && Date.now() - last < AUTO_SWEEP_THROTTLE_MS) return
+      globalThis.sessionStorage?.setItem(AUTO_SWEEP_SESSION_KEY, String(Date.now()))
+    } catch {
+      /* ignore storage blocks */
+    }
+    let cancelled = false
+    const timer = setTimeout(async () => {
+      try {
+        const token = await getAccessTokenFresh()
+        if (!token || cancelled) return
+        await fetch('/api/notifications?operation=automation-sweep', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ mode: 'auto' }),
+        })
+      } catch {
+        /* non-blocking background sweep */
+      }
+    }, 2500)
+    return () => {
+      cancelled = true
+      clearTimeout(timer)
+    }
+  }, [profile?.id, profile?.is_active, role])
 
   if (role === ROLES.TEAM_LEAD) {
     return <TeamLeadFloorShell profile={profile} signOut={signOut} />

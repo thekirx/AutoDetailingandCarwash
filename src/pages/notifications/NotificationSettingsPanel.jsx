@@ -4,6 +4,8 @@ import {
   BellRing,
   CheckCircle2,
   Clock,
+  Copy,
+  KeyRound,
   Loader2,
   Monitor,
   Play,
@@ -14,6 +16,8 @@ import {
   ShieldCheck,
   Smartphone,
   TabletSmartphone,
+  Terminal,
+  Trash2,
   Wallet,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -21,8 +25,11 @@ import PushToggle from '@/components/PushToggle'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { formatBusybeeBalance } from '@/lib/busybeeHealth'
 import {
+  AUTOMATION_MODES,
+  BOOKING_REMINDER_DAY_OPTIONS,
   BOOKING_STATUS_CONFIG_META,
   STATUS_SMS_SCOPES,
+  buildPgCronSqlSnippet,
   createDefaultNotificationConfig,
   normalizeNotificationConfig,
 } from '@/lib/notificationConfig'
@@ -116,6 +123,9 @@ export default function NotificationSettingsPanel({
   const [providerHealth, setProviderHealth] = useState(parentSmsHealth)
   const [pushStats, setPushStats] = useState(null)
   const [automationSummary, setAutomationSummary] = useState(null)
+  const [automationState, setAutomationState] = useState(null)
+  const [mintedWebhookToken, setMintedWebhookToken] = useState('')
+  const [rotatingToken, setRotatingToken] = useState(false)
   const [recentEvents, setRecentEvents] = useState([])
 
   const [testPhone, setTestPhone] = useState('')
@@ -146,6 +156,7 @@ export default function NotificationSettingsPanel({
       setProviderHealth(data.provider_health || parentSmsHealth || null)
       setPushStats(data.push_stats || null)
       setAutomationSummary(data.automation_summary || null)
+      setAutomationState(data.automation_state || null)
       setRecentEvents(Array.isArray(data.recent_sms_events) ? data.recent_sms_events : [])
       setTestPhone((prev) => prev || data.caller_phone || '')
     } catch (err) {
@@ -367,12 +378,73 @@ export default function NotificationSettingsPanel({
       } else if (jobKey === 'birthday') {
         const count = Number(data.customers?.scanned ?? data.scanned ?? 0) + Number(data.staff?.scanned ?? 0)
         toast.success(`Birthday check done · ${count} match${count === 1 ? '' : 'es'} today`)
+      } else if (jobKey === 'points_shop') {
+        toast.success(
+          `Points Shop expiry check done · ${data.expired || 0} expired, ${data.notified || 0} notified`,
+        )
+      } else if (jobKey === 'sweep') {
+        const ran = Array.isArray(data.ran) ? data.ran.length : 0
+        toast.success(
+          ran
+            ? `Due automation sweep finished · ran ${ran} job${ran === 1 ? '' : 's'}`
+            : 'All scheduled automations are already up to date.',
+        )
       }
+      await loadConfig()
     } catch (err) {
       toast.error(err.message)
     } finally {
       setRunningJob(null)
     }
+  }
+
+  async function manageWebhookToken(action) {
+    if (!canEdit) return
+    setRotatingToken(true)
+    try {
+      const token = await getAccessTokenFresh()
+      const res = await fetch('/api/notification-config', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ action }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(data.error || 'Could not update webhook scheduler token.')
+      if (data.automation_state) setAutomationState(data.automation_state)
+      if (action === 'rotate_automation_token' && data.token) {
+        setMintedWebhookToken(data.token)
+        toast.success('Webhook scheduler token generated. Copy it now — it is shown once.')
+      } else {
+        setMintedWebhookToken('')
+        toast.success('Webhook scheduler token revoked.')
+      }
+    } catch (err) {
+      toast.error(err.message)
+    } finally {
+      setRotatingToken(false)
+    }
+  }
+
+  function toggleReminderDay(day) {
+    setDraft((prev) => {
+      const current = Array.isArray(prev.booking_reminder_days) ? prev.booking_reminder_days : [7, 3, 1]
+      const exists = current.includes(day)
+      if (exists && current.length <= 1) return prev
+      const next = exists ? current.filter((d) => d !== day) : [...current, day]
+      next.sort((a, b) => b - a)
+      return { ...prev, booking_reminder_days: next }
+    })
+  }
+
+  function copyText(value, label) {
+    if (!value) return
+    navigator.clipboard?.writeText(value).then(
+      () => toast.success(`${label} copied.`),
+      () => toast.error('Copy failed — select and copy manually.'),
+    )
   }
 
   function setField(key, value) {
@@ -639,94 +711,288 @@ export default function NotificationSettingsPanel({
             </CardContent>
           </Card>
 
-          {/* Card 3: Scheduled Push Automations & Manila Quiet Hours */}
+          {/* Card 3: Scheduled Push Automations, Timing & Manila Quiet Hours */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-base font-bold">
                 <Clock className="size-4 text-primary" aria-hidden />
-                Automated Push Programs &amp; Quiet Hours
+                Automated Push Programs &amp; Cadence
               </CardTitle>
               <CardDescription className="text-xs">
-                Control background cron notifications and Manila time quiet windows. Scheduled jobs defer during quiet hours; live checkout/payment alerts send immediately.
+                Configure how background automations run (Cron, Operations App Sweep, or Hybrid), edit reminder cadences, and set Manila quiet hours.
               </CardDescription>
             </CardHeader>
-            <CardContent className="pt-0">
-              <SettingRow
-                id="cfg-booking-reminders"
-                title="Detailing 7 / 3 / 1-Day Advance Reminders"
-                description="Notifies customers via Web Push + Inbox before scheduled ceramic coating, tint, or PPF appointments."
-                checked={draft.booking_reminders_enabled}
-                disabled={!canEdit}
-                onChange={(v) => setField('booking_reminders_enabled', v)}
-              />
-              <SettingRow
-                id="cfg-maint-reminders"
-                title="6-Month Paint Maintenance Reminders"
-                description="Enrolls Ceramic & PPF plates on a recurring 6-month cycle using your custom Reminders rules."
-                checked={draft.maintenance_reminders_enabled}
-                disabled={!canEdit}
-                badge={
-                  automationSummary ? (
-                    <Badge variant="secondary" className="tabular-nums text-[11px]">
-                      {automationSummary.active_reminder_rules} active rules
-                    </Badge>
-                  ) : null
-                }
-                onChange={(v) => setField('maintenance_reminders_enabled', v)}
-              />
-              <SettingRow
-                id="cfg-birthdays"
-                title="Daily Birthday Perks & Greetings"
-                description="Issues 7-day birthday freebies and greetings to matched customers and active staff."
-                checked={draft.birthday_greetings_enabled}
-                disabled={!canEdit}
-                onChange={(v) => setField('birthday_greetings_enabled', v)}
-              />
-              <SettingRow
-                id="cfg-rate-visit"
-                title="Post-Visit Review Prompt (+15 min)"
-                description="Schedules visit rating reminders inside the 6-hour post-completion window."
-                checked={draft.rate_visit_enabled}
-                disabled={!canEdit}
-                onChange={(v) => setField('rate_visit_enabled', v)}
-              />
-              <SettingRow
-                id="cfg-quiet-hours"
-                title="Manila Quiet Hours (UTC+8)"
-                description="Pauses background reminder and birthday crons overnight while keeping bay status alerts live."
-                checked={draft.quiet_hours_enabled}
-                disabled={!canEdit}
-                onChange={(v) => setField('quiet_hours_enabled', v)}
-              >
-                <div className="mt-2 flex flex-wrap items-center gap-2 pt-1">
-                  <div className="flex items-center gap-1.5">
-                    <Label htmlFor="cfg-quiet-start" className="text-xs text-muted-foreground">
-                      From
-                    </Label>
-                    <Input
-                      id="cfg-quiet-start"
-                      type="time"
-                      value={draft.quiet_hours_start}
-                      disabled={!canEdit || !draft.quiet_hours_enabled}
-                      onChange={(e) => setField('quiet_hours_start', e.target.value)}
-                      className="h-8 w-28 tabular-nums text-xs"
-                    />
+            <CardContent className="space-y-4 pt-2">
+              <div className="space-y-2.5 rounded-lg border border-border/80 bg-muted/20 p-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <p className="text-xs font-semibold text-foreground">Automation Execution Engine</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Hybrid runs on scheduled cron (Vercel / Supabase pg_cron) plus automatic Operations sweeps.
+                    </p>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <Label htmlFor="cfg-quiet-end" className="text-xs text-muted-foreground">
-                      Until
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="cfg-daily-hour" className="text-xs text-muted-foreground">
+                      Daily Run (Manila)
                     </Label>
-                    <Input
-                      id="cfg-quiet-end"
-                      type="time"
-                      value={draft.quiet_hours_end}
-                      disabled={!canEdit || !draft.quiet_hours_enabled}
-                      onChange={(e) => setField('quiet_hours_end', e.target.value)}
-                      className="h-8 w-28 tabular-nums text-xs"
-                    />
+                    <select
+                      id="cfg-daily-hour"
+                      value={draft.daily_automation_hour_manila}
+                      disabled={!canEdit}
+                      onChange={(e) => setField('daily_automation_hour_manila', Number(e.target.value))}
+                      className="h-8 rounded-md border border-border bg-background px-2 text-xs tabular-nums text-foreground"
+                    >
+                      {Array.from({ length: 18 }, (_, i) => i + 5).map((h) => (
+                        <option key={h} value={h}>
+                          {String(h).padStart(2, '0')}:00
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
-              </SettingRow>
+                <div className="grid gap-1.5 sm:grid-cols-3">
+                  {AUTOMATION_MODES.map((m) => {
+                    const active = draft.automation_mode === m.id
+                    return (
+                      <button
+                        key={m.id}
+                        type="button"
+                        disabled={!canEdit}
+                        onClick={() => setField('automation_mode', m.id)}
+                        className={cn(
+                          'cursor-pointer rounded-lg border px-2.5 py-2 text-left transition disabled:cursor-not-allowed disabled:opacity-60',
+                          active
+                            ? 'border-primary bg-primary/10 text-foreground'
+                            : 'border-border bg-background text-muted-foreground hover:text-foreground',
+                        )}
+                      >
+                        <p className="text-xs font-semibold text-foreground">{m.label}</p>
+                        <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">{m.description}</p>
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+
+              <div>
+                <SettingRow
+                  id="cfg-booking-reminders"
+                  title="Detailing Advance Reminders"
+                  description="Notifies customers via Web Push + Inbox ahead of scheduled ceramic coating, tint, or PPF appointments."
+                  checked={draft.booking_reminders_enabled}
+                  disabled={!canEdit}
+                  onChange={(v) => setField('booking_reminders_enabled', v)}
+                >
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5 pt-0.5">
+                    <span className="text-[11px] text-muted-foreground">Lead days:</span>
+                    {BOOKING_REMINDER_DAY_OPTIONS.map((day) => {
+                      const selected = (draft.booking_reminder_days || []).includes(day)
+                      return (
+                        <button
+                          key={day}
+                          type="button"
+                          disabled={!canEdit || !draft.booking_reminders_enabled}
+                          onClick={() => toggleReminderDay(day)}
+                          className={cn(
+                            'cursor-pointer rounded-md border px-2 py-0.5 text-[11px] font-semibold tabular-nums transition disabled:cursor-not-allowed disabled:opacity-50',
+                            selected
+                              ? 'border-primary bg-primary text-primary-foreground'
+                              : 'border-border bg-background text-muted-foreground hover:text-foreground',
+                          )}
+                        >
+                          {day}d
+                        </button>
+                      )
+                    })}
+                  </div>
+                </SettingRow>
+
+                <SettingRow
+                  id="cfg-maint-reminders"
+                  title="Paint Maintenance Reminders"
+                  description="Enrolls Ceramic & PPF vehicles on recurring cycles using your custom Reminders rules."
+                  checked={draft.maintenance_reminders_enabled}
+                  disabled={!canEdit}
+                  badge={
+                    automationSummary ? (
+                      <Badge variant="secondary" className="tabular-nums text-[11px]">
+                        {automationSummary.active_reminder_rules} active rules
+                      </Badge>
+                    ) : null
+                  }
+                  onChange={(v) => setField('maintenance_reminders_enabled', v)}
+                >
+                  <div className="mt-1.5 flex flex-wrap items-center gap-3 pt-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <Label htmlFor="cfg-maint-lead" className="text-[11px] text-muted-foreground">
+                        Start lead (days)
+                      </Label>
+                      <Input
+                        id="cfg-maint-lead"
+                        type="number"
+                        min={7}
+                        max={60}
+                        value={draft.maintenance_lead_days}
+                        disabled={!canEdit || !draft.maintenance_reminders_enabled}
+                        onChange={(e) => setField('maintenance_lead_days', Number(e.target.value))}
+                        className="h-7 w-16 tabular-nums text-xs"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Label htmlFor="cfg-maint-interval" className="text-[11px] text-muted-foreground">
+                        Repeat (days)
+                      </Label>
+                      <Input
+                        id="cfg-maint-interval"
+                        type="number"
+                        min={7}
+                        max={90}
+                        value={draft.maintenance_interval_days}
+                        disabled={!canEdit || !draft.maintenance_reminders_enabled}
+                        onChange={(e) => setField('maintenance_interval_days', Number(e.target.value))}
+                        className="h-7 w-16 tabular-nums text-xs"
+                      />
+                    </div>
+                  </div>
+                </SettingRow>
+
+                <SettingRow
+                  id="cfg-birthdays"
+                  title="Daily Birthday Perks & Greetings"
+                  description="Issues 7-day birthday freebies and greetings to matched customers and active staff."
+                  checked={draft.birthday_greetings_enabled}
+                  disabled={!canEdit}
+                  onChange={(v) => setField('birthday_greetings_enabled', v)}
+                >
+                  <div className="mt-1.5 flex flex-wrap items-center gap-3 pt-0.5">
+                    <label className="flex cursor-pointer items-center gap-1.5 text-[11px] text-foreground">
+                      <input
+                        type="checkbox"
+                        checked={draft.birthday_include_customers !== false}
+                        disabled={!canEdit || !draft.birthday_greetings_enabled}
+                        onChange={(e) => setField('birthday_include_customers', e.target.checked)}
+                        className="size-3.5 accent-primary"
+                      />
+                      Customers (7-day voucher)
+                    </label>
+                    <label className="flex cursor-pointer items-center gap-1.5 text-[11px] text-foreground">
+                      <input
+                        type="checkbox"
+                        checked={draft.birthday_include_staff !== false}
+                        disabled={!canEdit || !draft.birthday_greetings_enabled}
+                        onChange={(e) => setField('birthday_include_staff', e.target.checked)}
+                        className="size-3.5 accent-primary"
+                      />
+                      Active Staff (floor greeting)
+                    </label>
+                  </div>
+                </SettingRow>
+
+                <SettingRow
+                  id="cfg-rate-visit"
+                  title="Post-Visit Review Prompt"
+                  description="Delivers Web Push + Inbox rating prompt after visit completion (runs every 15 min on sweep or pg_cron)."
+                  checked={draft.rate_visit_enabled}
+                  disabled={!canEdit}
+                  onChange={(v) => setField('rate_visit_enabled', v)}
+                >
+                  <div className="mt-1.5 flex flex-wrap items-center gap-3 pt-0.5">
+                    <div className="flex items-center gap-1.5">
+                      <Label htmlFor="cfg-rate-delay" className="text-[11px] text-muted-foreground">
+                        Delay (min)
+                      </Label>
+                      <Input
+                        id="cfg-rate-delay"
+                        type="number"
+                        min={5}
+                        max={180}
+                        value={draft.rate_visit_delay_minutes}
+                        disabled={!canEdit || !draft.rate_visit_enabled}
+                        onChange={(e) => setField('rate_visit_delay_minutes', Number(e.target.value))}
+                        className="h-7 w-16 tabular-nums text-xs"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Label htmlFor="cfg-rate-window" className="text-[11px] text-muted-foreground">
+                        Window (hrs)
+                      </Label>
+                      <Input
+                        id="cfg-rate-window"
+                        type="number"
+                        min={1}
+                        max={24}
+                        value={draft.rate_visit_window_hours}
+                        disabled={!canEdit || !draft.rate_visit_enabled}
+                        onChange={(e) => setField('rate_visit_window_hours', Number(e.target.value))}
+                        className="h-7 w-16 tabular-nums text-xs"
+                      />
+                    </div>
+                  </div>
+                </SettingRow>
+
+                <SettingRow
+                  id="cfg-points-expiry"
+                  title="Points Shop Pickup Expiry & Reminders"
+                  description="Refunds expired 10-day merch claims and nudges customers before pickup expiry."
+                  checked={draft.points_shop_expiry_enabled}
+                  disabled={!canEdit}
+                  onChange={(v) => setField('points_shop_expiry_enabled', v)}
+                >
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2 pt-0.5">
+                    <Label htmlFor="cfg-points-notice" className="text-[11px] text-muted-foreground">
+                      Reminder before expiry (days)
+                    </Label>
+                    <Input
+                      id="cfg-points-notice"
+                      type="number"
+                      min={1}
+                      max={5}
+                      value={draft.points_shop_expiry_notice_days}
+                      disabled={!canEdit || !draft.points_shop_expiry_enabled}
+                      onChange={(e) => setField('points_shop_expiry_notice_days', Number(e.target.value))}
+                      className="h-7 w-14 tabular-nums text-xs"
+                    />
+                  </div>
+                </SettingRow>
+
+                <SettingRow
+                  id="cfg-quiet-hours"
+                  title="Manila Quiet Hours (UTC+8)"
+                  description="Pauses background reminder and birthday crons overnight while keeping bay status alerts live."
+                  checked={draft.quiet_hours_enabled}
+                  disabled={!canEdit}
+                  onChange={(v) => setField('quiet_hours_enabled', v)}
+                >
+                  <div className="mt-2 flex flex-wrap items-center gap-2 pt-1">
+                    <div className="flex items-center gap-1.5">
+                      <Label htmlFor="cfg-quiet-start" className="text-xs text-muted-foreground">
+                        From
+                      </Label>
+                      <Input
+                        id="cfg-quiet-start"
+                        type="time"
+                        value={draft.quiet_hours_start}
+                        disabled={!canEdit || !draft.quiet_hours_enabled}
+                        onChange={(e) => setField('quiet_hours_start', e.target.value)}
+                        className="h-8 w-28 tabular-nums text-xs"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Label htmlFor="cfg-quiet-end" className="text-xs text-muted-foreground">
+                        Until
+                      </Label>
+                      <Input
+                        id="cfg-quiet-end"
+                        type="time"
+                        value={draft.quiet_hours_end}
+                        disabled={!canEdit || !draft.quiet_hours_enabled}
+                        onChange={(e) => setField('quiet_hours_end', e.target.value)}
+                        className="h-8 w-28 tabular-nums text-xs"
+                      />
+                    </div>
+                  </div>
+                </SettingRow>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -1024,43 +1290,232 @@ export default function NotificationSettingsPanel({
             </CardContent>
           </Card>
 
-          {/* Card 6: Automation Runners & Recent SMS Ledger */}
+          {/* Card 6: Automation Scheduler, Telemetry & Recent SMS Ledger */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="flex items-center gap-2 text-base font-bold">
                 <CheckCircle2 className="size-4 text-primary" aria-hidden />
-                Manual Automation Checks &amp; SMS Log
+                Automation Scheduler &amp; SMS Log
               </CardTitle>
               <CardDescription className="text-xs">
-                Run due schedules immediately or audit recent BusyBee deliveries (last 4 digits masked).
+                Inspect last run times, trigger any automation manually, or connect Supabase pg_cron 15-minute scheduling.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/80 bg-muted/20 px-3 py-2.5">
+                <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+                  <Badge
+                    variant="outline"
+                    className={
+                      automationState?.cron_secret_configured
+                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                        : 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                    }
+                  >
+                    {automationState?.cron_secret_configured ? 'CRON_SECRET Ready' : 'CRON_SECRET Unset'}
+                  </Badge>
+                  <Badge
+                    variant="outline"
+                    className={
+                      automationState?.webhook_configured
+                        ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                        : 'border-border text-muted-foreground'
+                    }
+                  >
+                    {automationState?.webhook_configured
+                      ? `Webhook ••••${automationState.webhook_token_hint || '••••'}`
+                      : 'No Webhook Token'}
+                  </Badge>
+                  <Badge variant="secondary" className="text-[11px]">
+                    {draft.automation_mode === 'cron_only' ? 'App Sweep Off' : 'Coded Sweep Active'}
+                  </Badge>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="h-8 cursor-pointer text-xs font-semibold"
+                  disabled={runningJob !== null || !canEdit}
+                  onClick={() => triggerJob('sweep', '/api/notifications?operation=automation-sweep')}
+                >
+                  <Play className="mr-1 size-3 text-primary" aria-hidden />
+                  {runningJob === 'sweep' ? 'Sweeping…' : 'Run Due Sweep'}
+                </Button>
+              </div>
+
               <div className="grid gap-2">
                 {[
-                  { key: 'booking', label: 'Booking & Rate Reminders', endpoint: '/api/notifications?operation=booking-reminders' },
-                  { key: 'maintenance', label: 'Paint Maintenance Due', endpoint: '/api/notifications?operation=maintenance-reminders' },
-                  { key: 'birthday', label: 'Birthday Greetings', endpoint: '/api/notifications?operation=birthday-greetings' },
-                ].map((job) => (
-                  <div
-                    key={job.key}
-                    className="flex items-center justify-between gap-2 rounded-lg border border-border/70 px-3 py-2"
-                  >
-                    <span className="text-xs font-semibold text-foreground">{job.label}</span>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="h-8 cursor-pointer text-xs"
-                      disabled={runningJob !== null}
-                      onClick={() => triggerJob(job.key, job.endpoint)}
+                  {
+                    key: 'booking',
+                    stateKeys: ['booking_reminders', 'rate_visit'],
+                    label: 'Booking & Post-Visit Review',
+                    endpoint: '/api/notifications?operation=booking-reminders',
+                  },
+                  {
+                    key: 'maintenance',
+                    stateKeys: ['maintenance_reminders'],
+                    label: 'Paint Maintenance Due',
+                    endpoint: '/api/notifications?operation=maintenance-reminders',
+                  },
+                  {
+                    key: 'birthday',
+                    stateKeys: ['birthday_greetings'],
+                    label: 'Birthday Greetings',
+                    endpoint: '/api/notifications?operation=birthday-greetings',
+                  },
+                  {
+                    key: 'points_shop',
+                    stateKeys: ['points_shop_expiry'],
+                    label: 'Points Shop Pickup Expiry',
+                    endpoint: '/api/notifications?operation=points-shop-expiry',
+                  },
+                ].map((job) => {
+                  const primaryState = automationState?.jobs?.[job.stateKeys[0]]
+                  const reviewState = job.stateKeys[1] ? automationState?.jobs?.[job.stateKeys[1]] : null
+                  return (
+                    <div
+                      key={job.key}
+                      className="flex flex-col gap-2 rounded-lg border border-border/70 px-3 py-2 sm:flex-row sm:items-center sm:justify-between"
                     >
-                      <Play className="mr-1 size-3 text-primary" aria-hidden />
-                      {runningJob === job.key ? 'Running…' : 'Run now'}
-                    </Button>
-                  </div>
-                ))}
+                      <div className="min-w-0 space-y-0.5">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-xs font-semibold text-foreground">{job.label}</span>
+                          {primaryState?.last_trigger ? (
+                            <Badge variant="outline" className="text-[10px]">
+                              {primaryState.last_trigger}
+                            </Badge>
+                          ) : null}
+                        </div>
+                        <p className="truncate text-[11px] text-muted-foreground">
+                          {primaryState?.last_run_at
+                            ? `Last: ${formatManilaTime(primaryState.last_run_at)}${primaryState.last_summary ? ` · ${primaryState.last_summary}` : ''}`
+                            : 'No run recorded yet'}
+                        </p>
+                        {reviewState?.last_run_at ? (
+                          <p className="truncate text-[11px] text-muted-foreground">
+                            Review nudge: {formatManilaTime(reviewState.last_run_at)}
+                            {reviewState.last_summary ? ` · ${reviewState.last_summary}` : ''}
+                          </p>
+                        ) : null}
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-8 shrink-0 cursor-pointer self-end text-xs sm:self-center"
+                        disabled={runningJob !== null}
+                        onClick={() => triggerJob(job.key, job.endpoint)}
+                      >
+                        <Play className="mr-1 size-3 text-primary" aria-hidden />
+                        {runningJob === job.key ? 'Running…' : 'Run now'}
+                      </Button>
+                    </div>
+                  )
+                })}
               </div>
+
+              {canEdit ? (
+                <div className="space-y-3 border-t border-border/70 pt-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                        <Terminal className="size-3.5 text-primary" aria-hidden />
+                        Supabase pg_cron &amp; Webhook Token
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        Generate a hashed Bearer token so Supabase pg_cron or any scheduler can trigger 15-min sweeps without Vercel Pro.
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-8 cursor-pointer text-xs"
+                        disabled={rotatingToken}
+                        onClick={() => manageWebhookToken('rotate_automation_token')}
+                      >
+                        <KeyRound className="mr-1 size-3 text-primary" aria-hidden />
+                        {rotatingToken ? 'Working…' : automationState?.webhook_configured ? 'Rotate Token' : 'Generate Token'}
+                      </Button>
+                      {automationState?.webhook_configured ? (
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 cursor-pointer text-xs text-destructive hover:text-destructive"
+                          disabled={rotatingToken}
+                          onClick={() => manageWebhookToken('revoke_automation_token')}
+                          aria-label="Revoke automation webhook token"
+                        >
+                          <Trash2 className="size-3.5" aria-hidden />
+                        </Button>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  {mintedWebhookToken ? (
+                    <div className="space-y-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-2.5 text-xs">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="font-semibold text-emerald-800 dark:text-emerald-300">
+                          New Token (shown once — save now)
+                        </span>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="h-7 cursor-pointer text-[11px]"
+                          onClick={() => copyText(mintedWebhookToken, 'Automation webhook token')}
+                        >
+                          <Copy className="mr-1 size-3" aria-hidden />
+                          Copy Token
+                        </Button>
+                      </div>
+                      <code className="block break-all rounded bg-background/80 px-2 py-1 font-mono text-[11px] text-foreground">
+                        {mintedWebhookToken}
+                      </code>
+                    </div>
+                  ) : null}
+
+                  <details className="rounded-lg border border-border/70 bg-muted/20 p-2.5 text-xs">
+                    <summary className="cursor-pointer font-medium text-foreground">
+                      Copy Supabase pg_cron + pg_net 15-min SQL setup
+                    </summary>
+                    <div className="mt-2 space-y-2">
+                      <pre className="max-h-48 overflow-auto rounded bg-background p-2 font-mono text-[10px] leading-relaxed text-foreground">
+                        {buildPgCronSqlSnippet({
+                          origin:
+                            typeof window !== 'undefined' && window.location?.origin
+                              ? window.location.origin
+                              : 'https://www.hakumautocare.com',
+                          tokenPlaceholder: mintedWebhookToken || '<YOUR_AUTOMATION_TOKEN>',
+                        })}
+                      </pre>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 cursor-pointer text-[11px]"
+                        onClick={() =>
+                          copyText(
+                            buildPgCronSqlSnippet({
+                              origin:
+                                typeof window !== 'undefined' && window.location?.origin
+                                  ? window.location.origin
+                                  : 'https://www.hakumautocare.com',
+                              tokenPlaceholder: mintedWebhookToken || '<YOUR_AUTOMATION_TOKEN>',
+                            }),
+                            'Supabase pg_cron SQL',
+                          )
+                        }
+                      >
+                        <Copy className="mr-1 size-3" aria-hidden />
+                        Copy SQL Snippet
+                      </Button>
+                    </div>
+                  </details>
+                </div>
+              ) : null}
 
               {canEdit ? (
                 <div className="space-y-2 border-t border-border/70 pt-3">

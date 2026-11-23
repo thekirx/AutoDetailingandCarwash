@@ -68,9 +68,10 @@ const DELEGATED = {
   handleDataCenterRequest: 'requireSuperAdmin() -> staff.role must be exactly BossMich',
   handleNotifyBookingRequest: 'bearer -> staff_profiles -> ALLOWED role allowlist -> 403',
   handleBusybeeRequest: 'bearer -> staff_profiles -> inline role allowlist -> 403',
-  handleBookingRemindersRequest: 'scheduledRunGate -> CRON_SECRET or active BossMich / assistant_super_admin',
-  handleMaintenanceRemindersRequest: 'scheduledRunGate -> CRON_SECRET or active BossMich / assistant_super_admin',
-  handleBirthdayGreetingsRequest: 'scheduledRunGate -> CRON_SECRET or active BossMich / assistant_super_admin',
+  handleBookingRemindersRequest: 'scheduledRunGate -> CRON_SECRET, hashed webhook token, or active BossMich / assistant_super_admin',
+  handleMaintenanceRemindersRequest: 'scheduledRunGate -> CRON_SECRET, hashed webhook token, or active BossMich / assistant_super_admin',
+  handleBirthdayGreetingsRequest: 'scheduledRunGate -> CRON_SECRET, hashed webhook token, or active BossMich / assistant_super_admin',
+  handleAutomationSweepRequest: 'cronAuthorized / webhookTokenMatches / active OPS_SWEEP_ROLES JWT (+ BossMich/ASA gate for force/manual)',
   handleReferralRequest:
     'GET is public by design and returns no customer data: program settings, or an inviter\'s first name for a valid code (rate limited per IP). POST notify -> requireStaff() -> staff_profiles.is_active -> 403, and only pushes for a referral whose qualifying_sale_id is that sale (idempotent via notified_at)',
 }

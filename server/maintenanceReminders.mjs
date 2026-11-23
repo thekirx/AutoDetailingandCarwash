@@ -14,7 +14,9 @@ export async function runMaintenanceReminders(admin, now = new Date()) {
     return { due: 0, sent: 0, failed: 0, skipped: true, reason: 'quiet_hours' }
   }
   const today = manilaTodayISO(now)
-  const horizon = addDaysISO(today, 30)
+  const leadDays = Number(config.maintenance_lead_days) || 30
+  const intervalDays = Number(config.maintenance_interval_days) || 30
+  const horizon = addDaysISO(today, leadDays)
   const { data, error } = await admin
     .from('vehicle_maintenance_schedules')
     .select(
@@ -32,7 +34,7 @@ export async function runMaintenanceReminders(admin, now = new Date()) {
   const { data: services } = await admin.from('services').select('id, slug, name')
   const servicesBySlug = new Map((services || []).map((row) => [String(row.slug || '').toLowerCase(), row]))
 
-  const dueRows = (data || []).filter((item) => maintenanceReminderDue(item, today))
+  const dueRows = (data || []).filter((item) => maintenanceReminderDue(item, today, { leadDays, intervalDays }))
   let sent = 0
   let failed = 0
   for (const row of dueRows) {

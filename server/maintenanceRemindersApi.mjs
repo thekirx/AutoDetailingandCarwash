@@ -1,6 +1,7 @@
+import { recordAutomationJobRuns } from './automationState.mjs'
 import { json, setCors } from './httpUtil.mjs'
 import { runMaintenanceReminders } from './maintenanceReminders.mjs'
-import { scheduledRunGate } from './scheduledRun.mjs'
+import { resolveRunTrigger, scheduledRunGate } from './scheduledRun.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
 
 /** GET or POST. Vercel cron uses GET. Super Admin may run it by hand. */
@@ -18,7 +19,15 @@ export async function handleMaintenanceRemindersRequest(req, res) {
   if (denied) return json(res, denied.status, { error: denied.error }, req)
 
   try {
-    return json(res, 200, await runMaintenanceReminders(db), req)
+    const trigger = await resolveRunTrigger(req, db)
+    const out = await runMaintenanceReminders(db)
+    await recordAutomationJobRuns(db, [{
+      jobKey: 'maintenance_reminders',
+      trigger,
+      status: out.skipped ? 'skipped' : 'ok',
+      summary: out.skipped ? out.reason : `${out.sent || 0} sent · ${out.due || 0} due`,
+    }])
+    return json(res, 200, out, req)
   } catch (err) {
     return json(res, 500, { error: String(err.message || err) }, req)
   }

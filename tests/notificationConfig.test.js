@@ -168,6 +168,44 @@ describe('notification-config API auth boundary & UI wiring', () => {
     assert.match(panel, /Test Mobile Android/)
     assert.match(panel, /Test Mobile iOS/)
     assert.equal(/#[0-9a-f]{6}/i.test(panel), false)
+    assert.match(panel, /automation-sweep/)
+    assert.match(panel, /rotate_automation_token/)
+    assert.match(panel, /booking_reminder_days/)
+    assert.match(panel, /points_shop_expiry_enabled/)
+  })
+
+  it('validates extended automation runner modes, lead days, and review delay bounds', () => {
+    const badMode = validateNotificationConfigPatch({ automation_mode: 'unknown_mode' })
+    assert.equal(badMode.ok, false)
+
+    const emptyDays = validateNotificationConfigPatch({ booking_reminder_days: [] })
+    assert.equal(emptyDays.ok, false)
+
+    const badMaintLead = validateNotificationConfigPatch({ maintenance_lead_days: 90 })
+    assert.equal(badMaintLead.ok, false)
+
+    const badDelay = validateNotificationConfigPatch({ rate_visit_delay_minutes: 1 })
+    assert.equal(badDelay.ok, false)
+
+    const okCfg = validateNotificationConfigPatch({
+      automation_mode: 'hybrid',
+      booking_reminder_days: [1, 14, 3, 3],
+      maintenance_lead_days: 45,
+      maintenance_interval_days: 60,
+      rate_visit_delay_minutes: 30,
+      rate_visit_window_hours: 12,
+      points_shop_expiry_enabled: false,
+      points_shop_expiry_notice_days: 4,
+      daily_automation_hour_manila: 9,
+      birthday_include_customers: true,
+      birthday_include_staff: false,
+    })
+    assert.equal(okCfg.ok, true)
+    assert.deepEqual(okCfg.config.booking_reminder_days, [14, 3, 1])
+    assert.equal(okCfg.config.maintenance_lead_days, 45)
+    assert.equal(okCfg.config.rate_visit_delay_minutes, 30)
+    assert.equal(okCfg.config.points_shop_expiry_enabled, false)
+    assert.equal(okCfg.config.birthday_include_staff, false)
   })
 
   it('classifies Web, Android, and iOS APNs push subscriptions and diagnoses VAPID keys accurately', () => {

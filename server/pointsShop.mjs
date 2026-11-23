@@ -1,7 +1,10 @@
 import { canAccessPos, canManageMerchShop, getBranchScopeList } from '../src/auth/permissions.js'
+import { isWithinQuietHours } from '../src/lib/notificationConfig.js'
 import { normalizePickupCode, pickupCodeMatches, pickupDaysLeft, pickupPath, PICKUP_MASK } from '../src/lib/pointsShop.js'
+import { recordAutomationJobRuns } from './automationState.mjs'
 import { bearer, json, rateLimit, readJsonBody, setCors } from './httpUtil.mjs'
-import { scheduledRunGate } from './scheduledRun.mjs'
+import { loadNotificationConfig } from './notificationConfigApi.mjs'
+import { resolveRunTrigger, scheduledRunGate } from './scheduledRun.mjs'
 import { adminClient } from './supabaseAdmin.mjs'
 import { sendWebPushToUsers } from './webPush.mjs'
 
@@ -86,9 +89,17 @@ export async function sendShopMessage(db, row, event, sendPush = sendWebPushToUs
   catch { return { inbox: true, push: false } }
 }
 export async function runPointsShopExpiry(db, sendPush = sendWebPushToUsers, now = new Date()) {
+  const config = await loadNotificationConfig(db)
+  if (config.points_shop_expiry_enabled === false) {
+    return { expired: 0, notified: 0, skipped: true, reason: 'disabled_by_admin' }
+  }
+  if (isWithinQuietHours(config, now)) {
+    return { expired: 0, notified: 0, skipped: true, reason: 'quiet_hours' }
+  }
+  const noticeDays = Number(config.points_shop_expiry_notice_days) || 2
   const expired = await db.rpc('expire_redemptions')
   if (expired.error) throw expired.error
-  const until = new Date(now.getTime() + 2 * 86400000).toISOString()
+  const until = new Date(now.getTime() + noticeDays * 86400000).toISOString()
   const rows = await db.from('accessory_redemptions')
     .select('id, customer_id, points_spent, branch_slug, expires_at, status, products(name), branches(name)')
     .in('status', ['pending', 'expired']).lte('expires_at', until)
@@ -107,6 +118,14 @@ export async function handlePointsShopExpiryRequest(req, res) {
     const db = adminClient()
     const denied = await scheduledRunGate(req, db)
     if (denied) return json(res, denied.status, { error: denied.error }, req)
-    return json(res, 200, await runPointsShopExpiry(db), req)
+    const trigger = await resolveRunTrigger(req, db)
+    const out = await runPointsShopExpiry(db)
+    await recordAutomationJobRuns(db, [{
+      jobKey: 'points_shop_expiry',
+      trigger,
+      status: out.skipped ? 'skipped' : 'ok',
+      summary: out.skipped ? out.reason : `${out.expired || 0} expired · ${out.notified || 0} notified`,
+    }])
+    return json(res, 200, out, req)
   } catch (err) { return json(res, 500, { error: err.message }, req) }
 }

@@ -1,3 +1,4 @@
+import { webhookTokenMatches } from './automationState.mjs'
 import { bearer } from './httpUtil.mjs'
 import { resolveActiveStaff } from './staffAuth.mjs'
 
@@ -11,12 +12,21 @@ export function cronAuthorized(req) {
   return String(header) === `Bearer ${secret}`
 }
 
+/** Identify how an authorized run was invoked for telemetry logging. */
+export async function resolveRunTrigger(req, db) {
+  if (cronAuthorized(req)) return 'vercel_cron'
+  if (await webhookTokenMatches(req, db)) return 'webhook_cron'
+  return 'manual'
+}
+
 /**
  * Null when the caller may run a scheduled job.
+ * Accepts Vercel CRON_SECRET, hashed Supabase pg_cron webhook token, or BossMich / assistant_super_admin session.
  * Otherwise { status, error } for the handler to send.
  */
 export async function scheduledRunGate(req, db) {
   if (cronAuthorized(req)) return null
+  if (await webhookTokenMatches(req, db)) return null
   const token = bearer(req)
   if (!token) return { status: 401, error: 'Unauthorized' }
   const { data: userData, error } = await db.auth.getUser(token)

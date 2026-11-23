@@ -8,6 +8,11 @@ import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
 import { resolveActiveStaff } from './staffAuth.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
 import { busybeeBalance, busybeeSendSms, normalizePhMobile } from './busybee.mjs'
+import {
+  mintAutomationWebhookToken,
+  revokeAutomationWebhookToken,
+  sanitizeAutomationState,
+} from './automationState.mjs'
 import { gatherNotificationDiagnostics, maskPhoneSuffix } from './notificationDiagnostics.mjs'
 import { diagnoseVapidConfig, sendWebPushToUsers } from './webPush.mjs'
 import {
@@ -289,6 +294,31 @@ export async function handleNotificationConfigRequest(req, res) {
         ok: true,
         notification: inserted,
       }, req)
+    }
+
+    if (body?.action === 'rotate_automation_token') {
+      try {
+        const { token: rawToken, state } = await mintAutomationWebhookToken(db, staff.id)
+        return json(res, 200, {
+          ok: true,
+          token: rawToken,
+          automation_state: sanitizeAutomationState(state),
+        }, req)
+      } catch (err) {
+        return json(res, 500, { error: String(err?.message || err) }, req)
+      }
+    }
+
+    if (body?.action === 'revoke_automation_token') {
+      try {
+        const { state } = await revokeAutomationWebhookToken(db, staff.id)
+        return json(res, 200, {
+          ok: true,
+          automation_state: sanitizeAutomationState(state),
+        }, req)
+      } catch (err) {
+        return json(res, 500, { error: String(err?.message || err) }, req)
+      }
     }
 
     return json(res, 400, { error: 'Unsupported action' }, req)
