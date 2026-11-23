@@ -13,7 +13,10 @@
  */
 
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { describe, it } from 'node:test'
+import { fileURLToPath } from 'node:url'
 
 // Seam 1: RBAC & Permissions
 import {
@@ -621,5 +624,37 @@ describe('Master Test Plan: 9. Multi-User Concurrency & Data Isolation Protectio
     assert.equal(recon.nextQty, 85)
     assert.equal(recon.delta, -15)
     assert.equal(recon.usageQty, 15)
+  })
+})
+
+describe('Master Test Plan: 10. Graphify Plan Document Completeness (Sections A-N & 14 CRUD Domains)', () => {
+  it('covers all 14 CRUD domains, Sections A-N, Daily Sheet cutover RPCs, Monthly Payroll, and live QA guardrails', () => {
+    const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+    const doc = readFileSync(join(root, 'docs/HAKUM_MASTER_TEST_PLAN.md'), 'utf8')
+
+    for (let i = 1; i <= 14; i++) {
+      assert.match(doc, new RegExp(`^### 3\\.${i}\\b`, 'm'), `Missing CRUD domain 3.${i}`)
+    }
+    for (const letter of 'ABCDEFGHIJKLMN') {
+      assert.match(doc, new RegExp(`^### Section ${letter}:`, 'm'), `Missing checklist Section ${letter}`)
+    }
+
+    const requiredTerms = [
+      '09625294043',
+      'QA-',
+      'save_daily_sheet',
+      'submit_daily_sheet',
+      'review_daily_sheet',
+      'reopen_daily_sheet',
+      'complete_pos_sale',
+      'automation-sweep',
+      'www.hakumautocare.com',
+      'hakumauto.vercel.app',
+      '/operations/monthly-payroll',
+      '/operations/payslips',
+    ]
+    for (const term of requiredTerms) {
+      assert.equal(doc.includes(term), true, `Expected master test plan to document ${term}`)
+    }
   })
 })
