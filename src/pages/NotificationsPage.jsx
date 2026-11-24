@@ -1100,6 +1100,8 @@ function BroadcastPanel({ canManageKinds = false }) {
       toast.success(`Sent ${data.sent} · failed ${data.failed}${data.skipped ? ` · skipped ${data.skipped}` : ''}`)
       setForm((f) => ({ ...f, title: '', body: '' }))
       loadHistory()
+    } catch (err) {
+      toast.error(err?.message || 'Unable to send broadcast')
     } finally {
       setSending(false)
     }
@@ -1146,24 +1148,30 @@ function BroadcastPanel({ canManageKinds = false }) {
       toast.success('Broadcast record updated')
       setEditingRow(null)
       loadHistory()
+    } catch (err) {
+      toast.error(err?.message || 'Update failed')
     } finally {
       setSavingEdit(false)
     }
   }
 
   async function deleteBroadcast(id) {
-    const token = await getAccessTokenFresh()
-    const res = await fetch(`/api/notification-broadcast?id=${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-    const data = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      toast.error(data.error || 'Delete failed')
-      return
+    try {
+      const token = await getAccessTokenFresh()
+      const res = await fetch(`/api/notification-broadcast?id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data.error || 'Delete failed')
+        return
+      }
+      toast.success('Broadcast deleted')
+      loadHistory()
+    } catch (err) {
+      toast.error(err?.message || 'Delete failed')
     }
-    toast.success('Broadcast deleted')
-    loadHistory()
   }
 
   const branchRequired =

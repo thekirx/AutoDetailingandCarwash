@@ -20,9 +20,11 @@ describe('rate visit SMS after 15 minutes (Michi C20)', () => {
 
   it('hooks booking-reminders cron and lifecycle.rate_visit template', () => {
     const api = readFileSync(join(root, 'server/bookingRemindersApi.mjs'), 'utf8')
+    const rem = readFileSync(join(root, 'server/rateVisitReminders.mjs'), 'utf8')
     const life = readFileSync(join(root, 'server/lifecycleSms.mjs'), 'utf8')
     const templates = readFileSync(join(root, 'src/lib/notificationTemplates.js'), 'utf8')
     assert.match(api, /runRateVisitReminders/)
+    assert.match(rem, /customers!bookings_customer_id_fkey\(full_name\)/)
     assert.match(life, /rate_visit/)
     assert.match(templates, /lifecycle\.rate_visit/)
   })

@@ -13,7 +13,7 @@ import { notifyStaffEvent } from './notifyOpsEvent.mjs'
 import { sendWebPushToUsers } from './webPush.mjs'
 
 const SELECT =
-  'id, customer_id, customer_name, customer_phone, branch, status, vehicle_plate, vehicle_make, vehicle_model, scheduled_start, reschedule_requested_at, services(name, slug, pay_category), customers(full_name)'
+  'id, customer_id, customer_name, customer_phone, branch, status, vehicle_plate, vehicle_make, vehicle_model, scheduled_start, reschedule_requested_at, services(name, slug, pay_category), customers!bookings_customer_id_fkey(full_name)'
 
 async function tellCustomer(db, booking, sms) {
   const userId = booking.customer_id

@@ -53,7 +53,7 @@ export async function runRateVisitReminders(db, { appUrl = '', nowMs = Date.now(
   const { data: rows, error } = await db
     .from('bookings')
     .select(
-      'id, customer_id, customer_name, vehicle_plate, status, completed_at, for_payment_at, customers(full_name)',
+      'id, customer_id, customer_name, vehicle_plate, status, completed_at, for_payment_at, customers!bookings_customer_id_fkey(full_name)',
     )
     .eq('status', 'completed')
     .eq('is_archived', false)

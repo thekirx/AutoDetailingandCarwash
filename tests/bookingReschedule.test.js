@@ -57,5 +57,7 @@ describe('customer reschedule request', () => {
     const board = read('src/pages/BookingBoardPage.jsx')
     assert.match(board, /reschedule_requested_at = null/)
     assert.match(board, /Call to reschedule/)
+    const reschedule = read('server/bookingReschedule.mjs')
+    assert.match(reschedule, /customers!bookings_customer_id_fkey\(full_name\)/)
   })
 })
