@@ -1,97 +1,136 @@
-/** Add or edit one expense account (expense_categories). Used by Finance → Categories and the New bill form. */
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
+import { supabase } from '@/lib/supabase'
+import { callFinanceOwnerOps } from '@/lib/financeOwnerClient'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { NamedSelect } from '@/components/ui/named-select'
-import { supabase } from '@/lib/supabase'
-import { ACCOUNT_KINDS, buildAccountRow, catalogWriteError, isSalaryAccount } from '@/lib/financeBooks'
+import { Select } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
-const toForm = (c) => ({
-  name: c?.name || '',
-  code: c?.code || '',
-  kind: c?.kind || 'general',
-  is_chemical: Boolean(c?.is_chemical),
-})
+const KIND_OPTIONS = [
+  { value: 'general', label: 'General & administrative' },
+  { value: 'payroll', label: 'Employee salary & incentives (office payroll, not commission %)' },
+  { value: 'chemicals', label: 'Chemicals, apparel & supplies' },
+  { value: 'utilities', label: 'Rent & operating utilities' },
+  { value: 'equipment', label: 'Equipment, tools & repairs' },
+  { value: 'marketing', label: 'Marketing & promotions' },
+]
 
-export default function FinanceAccountDialog({ open, onOpenChange, editing = null, onSaved }) {
+export function FinanceAccountDialog({ open, onOpenChange, account, onSaved }) {
+  const [code, setCode] = useState('')
+  const [name, setName] = useState('')
+  const [kind, setKind] = useState('general')
+  const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    if (!open) return
+    setCode(account?.code != null ? String(account.code) : '')
+    setName(account?.name || '')
+    setKind(account?.kind || 'general')
+  }, [open, account])
+
+  async function save(e) {
+    e?.preventDefault?.()
+    const num = Number.parseInt(String(code).trim(), 10)
+    const cleanName = String(name || '').trim()
+    if (!Number.isFinite(num) || num < 1 || num > 999) {
+      toast.error('Account code must be a whole number from 1 to 999 (e.g. 10 to 21).')
+      return
+    }
+    if (!cleanName) {
+      toast.error('Account name is required.')
+      return
+    }
+    setSaving(true)
+    try {
+      try {
+        await callFinanceOwnerOps({
+          action: 'manage-category',
+          sub_action: 'save',
+          id: account?.id || null,
+          code: num,
+          name: cleanName,
+          kind,
+        })
+      } catch (apiErr) {
+        // Fallback to direct Supabase query if running against local/direct session
+        const payload = { code: num, name: cleanName, kind, active: true }
+        const res = account?.id
+          ? await supabase.from('expense_categories').update(payload).eq('id', account.id)
+          : await supabase.from('expense_categories').insert(payload)
+        if (res.error) throw apiErr || res.error
+      }
+      toast.success(account?.id ? 'Expense category updated.' : 'Expense category created.')
+      onOpenChange(false)
+      await onSaved?.()
+    } catch (err) {
+      toast.error(err?.message || 'Could not save category.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        {open ? <AccountForm key={editing?.id || 'new'} editing={editing} onDone={() => onOpenChange(false)} onSaved={onSaved} /> : null}
+      <DialogContent className="max-w-md border-slate-200/90 bg-white">
+        <DialogHeader>
+          <DialogTitle>{account?.id ? 'Edit expense category' : 'New expense category'}</DialogTitle>
+          <DialogDescription>
+            Standard chart codes use 10–21 (Account 14 is fixed for office payroll, not commission %). Every bill and daily sheet expense line links to a category.
+          </DialogDescription>
+        </DialogHeader>
+        <form onSubmit={save} className="space-y-4 py-1">
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <Label htmlFor="acct-code">Code</Label>
+              <Input
+                id="acct-code"
+                type="number"
+                min="1"
+                max="999"
+                value={code}
+                onChange={(e) => setCode(e.target.value)}
+                placeholder="22"
+                className="mt-1 tabular-nums"
+                required
+              />
+            </div>
+            <div className="col-span-2">
+              <Label htmlFor="acct-name">Category name</Label>
+              <Input
+                id="acct-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="e.g. Shop Consumables"
+                className="mt-1"
+                required
+              />
+            </div>
+          </div>
+          <div>
+            <Label htmlFor="acct-kind">Group / kind</Label>
+            <Select id="acct-kind" value={kind} onChange={(e) => setKind(e.target.value)} className="mt-1">
+              {KIND_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {o.label}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <DialogFooter className="gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+              Cancel
+            </Button>
+            <Button type="submit" className="bg-[#0e1540] text-white hover:bg-[#17205c]" disabled={saving}>
+              {saving ? 'Saving…' : account?.id ? 'Save changes' : 'Create category'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   )
 }
 
-function AccountForm({ editing, onDone, onSaved }) {
-  const [form, setForm] = useState(() => toForm(editing))
-  const [saving, setSaving] = useState(false)
-  const locked = isSalaryAccount(editing)
-  const set = (patch) => setForm((f) => ({ ...f, ...patch }))
+export default FinanceAccountDialog
 
-  async function save(event) {
-    event.preventDefault()
-    const res = buildAccountRow(form)
-    if (!res.ok) return toast.error(res.error)
-    setSaving(true)
-    const q = editing
-      ? supabase.from('expense_categories').update(res.row).eq('id', editing.id)
-      : supabase.from('expense_categories').insert(res.row)
-    const { data, error } = await q.select().single()
-    setSaving(false)
-    if (error) return toast.error(catalogWriteError(error, 'category'))
-    toast.success(editing ? 'Category updated' : 'Category added')
-    onSaved?.(data)
-    onDone()
-  }
-
-  return (
-    <>
-      <DialogHeader>
-        <DialogTitle>{editing ? 'Edit category' : 'Add category'}</DialogTitle>
-        <DialogDescription>
-          The account a bill, expense report or POS sheet line posts to. Code sets the order in every picker; kind sets the P&L group.
-        </DialogDescription>
-      </DialogHeader>
-      <form onSubmit={save} className="grid gap-4 sm:grid-cols-[7rem_1fr]" noValidate>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="acct-code">Code</Label>
-          <Input id="acct-code" maxLength={10} className="min-h-11 tabular-nums" placeholder="e.g. 22" disabled={locked} value={form.code} onChange={(e) => set({ code: e.target.value })} />
-        </div>
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="acct-name">Name</Label>
-          <Input id="acct-name" required maxLength={80} className="min-h-11" placeholder="e.g. Coffee and supplies" autoFocus value={form.name} onChange={(e) => set({ name: e.target.value })} />
-        </div>
-        <div className="flex flex-col gap-2 sm:col-span-2">
-          <Label htmlFor="acct-kind">Kind</Label>
-          <NamedSelect id="acct-kind" value={form.kind} disabled={locked} onChange={(kind) => set({ kind })} options={ACCOUNT_KINDS} className="min-h-11" />
-          {form.kind === 'payroll' ? <p className="text-xs text-muted-foreground">Posted payroll grouping, not commission %.</p> : null}
-        </div>
-        {locked ? (
-          <p className="text-xs text-muted-foreground sm:col-span-2">Shift-close payroll posts salaries to account 14, so its code and kind stay fixed. You can rename it.</p>
-        ) : null}
-        <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm sm:col-span-2">
-          <input
-            type="checkbox"
-            className="size-4 accent-primary"
-            checked={form.is_chemical || form.kind === 'chemicals'}
-            disabled={form.kind === 'chemicals'}
-            onChange={(e) => set({ is_chemical: e.target.checked })}
-          />
-          Needs approval before it can be paid
-        </label>
-        <DialogFooter className="sm:col-span-2">
-          <Button type="button" variant="outline" className="min-h-11 cursor-pointer" onClick={onDone}>
-            Cancel
-          </Button>
-          <Button type="submit" className="min-h-11 cursor-pointer" disabled={saving}>
-            {saving ? 'Saving…' : editing ? 'Save category' : 'Add category'}
-          </Button>
-        </DialogFooter>
-      </form>
-    </>
-  )
-}

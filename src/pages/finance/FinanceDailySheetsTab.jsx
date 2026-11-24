@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { NamedSelect } from '@/components/ui/named-select'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
+import { ROLES } from '@/auth/permissions'
 import { cn } from '@/lib/utils'
 import { filterSheets, formatAccounting, sheetSubmitters, SHEET_STATUS_LABELS } from '@/lib/dailySheet'
 import { listSheets, sheetErrorMessage } from '@/lib/dailySheetApi'
@@ -61,6 +62,7 @@ export default function FinanceDailySheetsTab({
   period = '',
   onPeriod,
   onFilters,
+  onReload,
 }) {
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
@@ -311,6 +313,19 @@ export default function FinanceDailySheetsTab({
                             >
                               Edit &amp; correct
                             </Button>
+                          ) : profile?.role === ROLES.SUPER_ADMIN ? (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="min-h-8 px-2 text-xs font-semibold"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onFilters?.({ sheet: r.id })
+                              }}
+                            >
+                              Edit / Override
+                            </Button>
                           ) : null}
                         </div>
                       </td>
@@ -343,6 +358,7 @@ export default function FinanceDailySheetsTab({
                 profile={profile}
                 onReviewed={() => {
                   load()
+                  onReload?.()
                   onFilters?.({ sheet: '' })
                 }}
               />

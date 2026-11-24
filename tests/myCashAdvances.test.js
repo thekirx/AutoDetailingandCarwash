@@ -36,16 +36,16 @@ describe('my cash advances helpers', () => {
 })
 
 describe('my advances access + route', () => {
-  it('crew and BA can open my-advances; Super Admin cannot', () => {
+  it('crew, BA, and Super Admin (Owner) can open my-advances', () => {
     const staff = { role: ROLES.STAFF }
     const ba = { role: ROLES.ADMIN, branch_slug: 'bacoor' }
     const sa = { role: ROLES.SUPER_ADMIN }
     assert.equal(canAccessMyAdvances(staff), true)
     assert.equal(canAccessMyAdvances(ba), true)
-    assert.equal(canAccessMyAdvances(sa), false)
+    assert.equal(canAccessMyAdvances(sa), true)
     assert.equal(allowRoute(staff, 'my-advances'), true)
     assert.equal(allowRoute(ba, 'my-advances'), true)
-    assert.equal(allowRoute(sa, 'my-advances'), false)
+    assert.equal(allowRoute(sa, 'my-advances'), true)
     assert.ok(getStaffDock(staff).some((i) => i.to === '/operations/my-advances'))
   })
 

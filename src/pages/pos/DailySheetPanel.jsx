@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Camera, Check, CircleAlert, Download, Plus, Printer, RefreshCw, Trash2 } from 'lucide-react'
+import { Camera, Check, CircleAlert, Download, Pencil, Plus, Printer, RefreshCw, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
+import { callFinanceOwnerOps } from '@/lib/financeOwnerClient'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -310,6 +311,9 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
   const isReturned = status === 'returned'
   const isDraft = !sheet || status === 'draft'
   const editable = canEdit && (isDraft || isReturned)
+  const isOwner = profile?.role === ROLES.SUPER_ADMIN
+  const [ownerOverride, setOwnerOverride] = useState(false)
+  const canEditFields = editable || (isOwner && ownerOverride)
   const sheetValues = {
     counted_cash_minor: parsePesosToMinor(countText),
     notes,
@@ -444,6 +448,30 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
     }
   }
 
+  async function saveOwnerOverride() {
+    if (!sheet?.id) return
+    setBusy(true)
+    try {
+      await callFinanceOwnerOps({
+        action: 'override-daily-sheet',
+        sheet_id: sheet.id,
+        counted_cash_minor: sheetValues.counted_cash_minor,
+        notes,
+        status,
+        lines,
+      })
+      setDirty(false)
+      setOwnerOverride(false)
+      toast.success('Owner override saved and Finance books synced.')
+      await load()
+      onReviewed?.()
+    } catch (err) {
+      toast.error(err?.message || 'Could not save Owner override.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   if (loading && !ctx) return <p className="py-10 text-center text-sm text-muted-foreground">Loading the daily sheet…</p>
   if (loadError) {
     return (
@@ -502,8 +530,39 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
               {saveState === 'saving' ? 'Saving…' : saveState === 'saved' && !dirty ? 'Saved' : dirty ? 'Unsaved changes' : ''}
             </span>
           ) : null}
+          {isOwner && !editable && sheet?.id ? (
+            <Button
+              type="button"
+              variant={ownerOverride ? 'secondary' : 'outline'}
+              size="sm"
+              className="min-h-10 gap-1.5"
+              onClick={() => setOwnerOverride((v) => !v)}
+            >
+              <Pencil aria-hidden className="size-3.5" />
+              {ownerOverride ? 'Cancel Owner Override' : 'Owner Edit / Override Sheet'}
+            </Button>
+          ) : null}
         </div>
       </header>
+
+      {isOwner && ownerOverride ? (
+        <div className="ds-banner ds-banner--warn flex flex-wrap items-center justify-between gap-3" role="status">
+          <div>
+            <p className="font-semibold">Owner Direct Edit &amp; Override Mode Active</p>
+            <p className="text-sm">
+              You can directly edit expense lines, categories, crew pay, cash advances, and counted cash on this {status} sheet. Saving automatically recalculates sheet totals and syncs posted Finance bills.
+            </p>
+          </div>
+          <Button
+            type="button"
+            className="min-h-10 bg-[#0e1540] text-white hover:bg-[#17205c]"
+            disabled={busy}
+            onClick={saveOwnerOverride}
+          >
+            {busy ? 'Syncing books…' : 'Save Owner Override & Sync Books'}
+          </Button>
+        </div>
+      ) : null}
 
       {ctx ? (
         <div className="flex flex-wrap gap-2" role="group" aria-label="Close-of-day slip">
@@ -558,7 +617,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
             {expenseLines.length === 0 ? <p className="text-sm text-muted-foreground">No expenses yet.</p> : null}
             <div className="flex flex-col gap-3">
               {expenseLines.map((l, i) =>
-                editable ? (
+                canEditFields ? (
                   <div key={l.id} className="ds-line">
                     <div className="flex flex-col gap-1 sm:col-span-2">
                       <Label htmlFor={`ds-exp-d-${l.id}`} className="text-xs text-muted-foreground">What was it?</Label>
@@ -615,7 +674,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
                 ),
               )}
             </div>
-            {editable ? (
+            {canEditFields ? (
               <Button type="button" variant="outline" className="mt-3 min-h-11 gap-2 self-start" onClick={() => addLine('expense')}>
                 <Plus aria-hidden className="size-4" /> Add expense
               </Button>
@@ -644,7 +703,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
                         {p ? ` (daily ${formatAccounting(p.daily_minor)} · wash ${formatAccounting(p.wash_minor)} · detailing ${formatAccounting(p.detailing_minor)})` : ''}
                       </p>
                     </div>
-                    {editable ? (
+                    {canEditFields ? (
                       <>
                         <AmountInput id={`ds-sal-${l.id}`} label="Pay (₱)" value={l.amountText} onChange={(v) => setAmount(l.id, v)} />
                         <div className="flex flex-col gap-1">
@@ -668,7 +727,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
                       </div>
                     )}
                     {changed ? (
-                      editable ? (
+                      canEditFields ? (
                         <div className="flex flex-col gap-1 sm:col-span-2">
                           <Label htmlFor={`ds-sal-r-${l.id}`} className="text-xs text-muted-foreground">
                             Why change? <s className="ds-num">{formatAccounting(l.suggested_minor)}</s> → {formatAccounting(l.amount_minor)}
@@ -683,7 +742,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
                 )
               })}
             </div>
-            {editable && ctx?.suggestions ? (
+            {canEditFields && ctx?.suggestions ? (
               <Button type="button" variant="outline" className="mt-3 min-h-11 gap-2 self-start" onClick={refreshSuggestions}>
                 <RefreshCw aria-hidden className="size-4" /> Refresh suggested pay
               </Button>
@@ -717,7 +776,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
             {caLines.length === 0 ? <p className="text-sm text-muted-foreground">No cash advances today. You can leave this empty.</p> : null}
             <div className="flex flex-col gap-3">
               {caLines.map((l, i) =>
-                editable ? (
+                canEditFields ? (
                   <div key={l.id} className="ds-line">
                     <div className="flex flex-col gap-1">
                       <Label htmlFor={`ds-ca-k-${l.id}`} className="text-xs text-muted-foreground">Type</Label>
@@ -817,7 +876,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
                 ),
               )}
             </div>
-            {editable ? (
+            {canEditFields ? (
               <div className="mt-3 flex flex-wrap gap-2">
                 <Button type="button" variant="outline" className="min-h-11 gap-2" onClick={() => addLine('ca_release')}>
                   <Plus aria-hidden className="size-4" /> Cash given out
@@ -832,7 +891,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
           <section className="ds-card" aria-label="Cash">
             <SectionHead step={5} title="Cash to collect" hint="Count the cash. That count is compared with cash left. There is no morning float." done={check.sections.cash} />
             <div className="grid gap-4 sm:grid-cols-2">
-              <AmountInput id="ds-count" label="Cash counted (₱)" value={countText} disabled={!editable} onChange={(v) => { setCountText(v); setDirty(true) }} />
+              <AmountInput id="ds-count" label="Cash counted (₱)" value={countText} disabled={!canEditFields} onChange={(v) => { setCountText(v); setDirty(true) }} />
             </div>
             <div className="mt-3">
               <Row label="Total cash transaction"><Money minor={totals.cashTransactionMinor} /></Row>
@@ -847,7 +906,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
               <Label htmlFor="ds-notes" className="text-xs text-muted-foreground">
                 Note {totals.overShortMinor ? '(required — explain the difference)' : '(optional)'}
               </Label>
-              <Textarea id="ds-notes" rows={2} disabled={!editable} value={notes} onChange={(e) => { setNotes(e.target.value); setDirty(true) }} />
+              <Textarea id="ds-notes" rows={2} disabled={!canEditFields} value={notes} onChange={(e) => { setNotes(e.target.value); setDirty(true) }} />
             </div>
           </section>
         </div>
@@ -939,6 +998,19 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
                   Return with a note
                 </Button>
               )}
+            </div>
+          ) : null}
+
+          {isOwner && ownerOverride ? (
+            <div className="ds-summary-actions">
+              <Button
+                type="button"
+                className="ds-submit min-h-11 w-full bg-[#0e1540] text-white hover:bg-[#17205c]"
+                disabled={busy}
+                onClick={saveOwnerOverride}
+              >
+                {busy ? 'Syncing books…' : 'Save Owner Override & Sync Books'}
+              </Button>
             </div>
           ) : null}
 

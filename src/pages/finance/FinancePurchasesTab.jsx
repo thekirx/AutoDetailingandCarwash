@@ -1,10 +1,16 @@
-/** Finance Bills — Xero-style New bill (header + lines), status flow, account filter (URL `acct`), CSV. */
+/** Finance Bills — Xero-style New bill (header + lines), status flow, account filter (URL `acct`), Categories CRUD trigger, Owner Daily-Sheet Bill override, CSV. */
 import { useMemo, useState } from 'react'
-import { Download, Pencil, Plus, Search, Trash2 } from 'lucide-react'
+import { Download, ExternalLink, Pencil, Plus, Search, Settings2, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select } from '@/components/ui/select'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
+import { callFinanceOwnerOps } from '@/lib/financeOwnerClient'
 import FinanceBillForm from './FinanceBillForm'
+import { FinanceCategoriesTab } from './FinanceCategoriesTab'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
@@ -44,17 +50,29 @@ export default function FinancePurchasesTab({
   branches,
   writableBranches,
   canWrite,
+  isSuperAdmin = false,
   range,
   loading,
   onReload,
   onCatalogAdd,
   accountFilter = '',
   onAccountFilter,
+  onOpenSheet,
 }) {
   const [statusFilter, setStatusFilter] = useState('all')
   const [query, setQuery] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [showCategoriesModal, setShowCategoriesModal] = useState(false)
+  const [sheetBillModal, setSheetBillModal] = useState(null)
+  const [sheetBillForm, setSheetBillForm] = useState({
+    title: '',
+    category_id: '',
+    amount_php: '',
+    paid_from: 'cash',
+    bill_reference: '',
+  })
+  const [sheetBillBusy, setSheetBillBusy] = useState(false)
   const vendorName = (id) => vendors.find((v) => v.id === id)?.name || ''
 
   const filtered = useMemo(() => {
@@ -119,6 +137,96 @@ export default function FinancePurchasesTab({
     setShowForm(true)
   }
 
+  async function openDailySheetForBill(row) {
+    if (!row?.daily_sheet_line_id) return
+    try {
+      let sheetId = null
+      try {
+        const res = await callFinanceOwnerOps({
+          action: 'override-sheet-bill',
+          sub_action: 'lookup-sheet',
+          expense_id: row.id,
+        })
+        sheetId = res?.sheet_id || null
+      } catch {
+        const { data } = await supabase
+          .from('daily_sheet_lines')
+          .select('sheet_id')
+          .eq('id', row.daily_sheet_line_id)
+          .maybeSingle()
+        sheetId = data?.sheet_id || null
+      }
+      if (!sheetId) {
+        toast.error('Could not locate the source daily sheet for this bill.')
+        return
+      }
+      onOpenSheet?.(sheetId)
+    } catch (err) {
+      toast.error(err?.message || 'Could not open daily sheet.')
+    }
+  }
+
+  function openSheetBillOverride(row) {
+    setSheetBillModal(row)
+    setSheetBillForm({
+      title: row.title || '',
+      category_id: row.category_id || '',
+      amount_php: ((Number(row.total_minor ?? row.amount_minor ?? 0) || 0) / 100).toFixed(2),
+      paid_from: row.payment_method === 'gcash' ? 'gcash' : 'cash',
+      bill_reference: row.bill_reference || '',
+    })
+  }
+
+  async function saveSheetBillOverride(e) {
+    e?.preventDefault?.()
+    if (!sheetBillModal) return
+    const amountNum = Number.parseFloat(String(sheetBillForm.amount_php || '0'))
+    if (!Number.isFinite(amountNum) || amountNum < 0) {
+      toast.error('Enter a valid amount in PHP.')
+      return
+    }
+    setSheetBillBusy(true)
+    try {
+      await callFinanceOwnerOps({
+        action: 'override-sheet-bill',
+        sub_action: 'update',
+        expense_id: sheetBillModal.id,
+        title: sheetBillForm.title.trim() || 'Expense',
+        category_id: sheetBillForm.category_id || null,
+        amount_minor: Math.round(amountNum * 100),
+        paid_from: sheetBillForm.paid_from === 'gcash' ? 'gcash' : 'cash',
+        bill_reference: sheetBillForm.bill_reference.trim() || null,
+      })
+      toast.success('Daily-sheet bill updated and synced with Daily Sheet & Finance P&L.')
+      setSheetBillModal(null)
+      await onReload?.()
+    } catch (err) {
+      toast.error(err?.message || 'Could not override daily-sheet bill.')
+    } finally {
+      setSheetBillBusy(false)
+    }
+  }
+
+  async function deleteSheetBillOverride(row) {
+    if (!row) return
+    if (!window.confirm(`Delete "${row.title}" from both Finance Bills and its Daily Sheet?`)) return
+    setSheetBillBusy(true)
+    try {
+      await callFinanceOwnerOps({
+        action: 'override-sheet-bill',
+        sub_action: 'delete',
+        expense_id: row.id,
+      })
+      toast.success('Daily-sheet bill removed and sheet totals recalculated.')
+      setSheetBillModal(null)
+      await onReload?.()
+    } catch (err) {
+      toast.error(err?.message || 'Could not delete daily-sheet bill.')
+    } finally {
+      setSheetBillBusy(false)
+    }
+  }
+
   async function transition(row, status) {
     if (!canWrite) return
     const { error } = await supabase.rpc('transition_expense', {
@@ -140,6 +248,10 @@ export default function FinancePurchasesTab({
     // figures that no longer exist in the books. The sanctioned way back is
     // Super Admin reopening the sheet, which voids and re-approves properly.
     if (row.daily_sheet_line_id) {
+      if (isSuperAdmin) {
+        await deleteSheetBillOverride(row)
+        return
+      }
       toast.error('This bill was posted by an approved daily sheet. Reopen that sheet to change it.')
       return
     }
@@ -225,6 +337,17 @@ export default function FinancePurchasesTab({
             ))}
           </select>
           {canWrite ? (
+            <Button
+              type="button"
+              variant="outline"
+              className="min-h-10 cursor-pointer gap-1.5"
+              onClick={() => setShowCategoriesModal(true)}
+            >
+              <Settings2 className="h-4 w-4" aria-hidden="true" />
+              Manage categories
+            </Button>
+          ) : null}
+          {canWrite ? (
             <Button type="button" className="min-h-10 cursor-pointer" onClick={openCreate}>
               <Plus data-icon="inline-start" />
               New bill
@@ -288,7 +411,19 @@ export default function FinancePurchasesTab({
                     </Badge>
                   </div>
                   {row.daily_sheet_line_id ? (
-                    <p className="text-xs text-muted-foreground">From a daily sheet · change it on the sheet</p>
+                    <div className="finance-mobile-actions flex flex-wrap items-center gap-2">
+                      <span className="text-xs text-muted-foreground">From a daily sheet · change it on the sheet</span>
+                      <Button size="sm" variant="outline" className="cursor-pointer gap-1" onClick={() => openDailySheetForBill(row)}>
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        Open sheet
+                      </Button>
+                      {isSuperAdmin || canWrite ? (
+                        <Button size="sm" variant="ghost" className="cursor-pointer gap-1" onClick={() => openSheetBillOverride(row)}>
+                          <Pencil className="h-3.5 w-3.5" />
+                          Edit / Override
+                        </Button>
+                      ) : null}
+                    </div>
                   ) : canWrite ? (
                     <div className="finance-mobile-actions">
                       <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => openEdit(row)}>
@@ -341,9 +476,33 @@ export default function FinancePurchasesTab({
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-wrap gap-2">
+                        <div className="flex flex-wrap items-center gap-1.5">
                           {row.daily_sheet_line_id ? (
-                            <span className="text-xs text-muted-foreground">Daily sheet</span>
+                            <>
+                              <span className="text-xs text-muted-foreground">Daily sheet</span>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                className="h-7 cursor-pointer gap-1 px-2 text-xs"
+                                onClick={() => openDailySheetForBill(row)}
+                              >
+                                <ExternalLink className="h-3 w-3" />
+                                Sheet
+                              </Button>
+                              {isSuperAdmin || canWrite ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 cursor-pointer gap-1 px-2 text-xs"
+                                  onClick={() => openSheetBillOverride(row)}
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                  Override
+                                </Button>
+                              ) : null}
+                            </>
                           ) : null}
                           {canWrite && !row.daily_sheet_line_id ? (
                             <Button size="sm" variant="ghost" className="cursor-pointer" onClick={() => openEdit(row)}>
@@ -371,6 +530,123 @@ export default function FinancePurchasesTab({
           </>
         )}
       </FinancePanel>
+
+      <Dialog open={showCategoriesModal} onOpenChange={setShowCategoriesModal}>
+        <DialogContent className="max-h-[90vh] max-w-4xl overflow-y-auto border-slate-200/90 bg-white">
+          <DialogHeader>
+            <DialogTitle>Manage Expense Categories (CRUD)</DialogTitle>
+            <DialogDescription>
+              Create, edit, archive, or delete expense accounts (10–21+) directly from Bills. Changes sync immediately across Bills, Daily Sheets, and Profit &amp; Loss.
+            </DialogDescription>
+          </DialogHeader>
+          <FinanceCategoriesTab
+            categories={categories}
+            expenses={expenses}
+            canWrite={canWrite}
+            isSuperAdmin={isSuperAdmin}
+            onReload={onReload}
+            onPickCategory={(catId) => {
+              onAccountFilter?.(catId)
+              setShowCategoriesModal(false)
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(sheetBillModal)} onOpenChange={(open) => !open && setSheetBillModal(null)}>
+        <DialogContent className="max-w-md border-slate-200/90 bg-white">
+          <DialogHeader>
+            <DialogTitle>Override Daily-Sheet Bill</DialogTitle>
+            <DialogDescription>
+              Directly edit or delete this Daily-Sheet-originated bill. Saving updates both the Finance Bill and its source Daily Sheet line &amp; totals automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={saveSheetBillOverride} className="space-y-3 py-1">
+            <div>
+              <Label htmlFor="sb-title">Item description</Label>
+              <Input
+                id="sb-title"
+                value={sheetBillForm.title}
+                onChange={(e) => setSheetBillForm((f) => ({ ...f, title: e.target.value }))}
+                className="mt-1"
+                required
+              />
+            </div>
+            <div>
+              <Label htmlFor="sb-category">Expense account / category</Label>
+              <Select
+                id="sb-category"
+                value={sheetBillForm.category_id}
+                onChange={(e) => setSheetBillForm((f) => ({ ...f, category_id: e.target.value }))}
+                className="mt-1"
+              >
+                <option value="">Uncategorized</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.code != null ? `${c.code} · ` : ''}
+                    {c.name}
+                  </option>
+                ))}
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label htmlFor="sb-amount">Amount (PHP)</Label>
+                <Input
+                  id="sb-amount"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={sheetBillForm.amount_php}
+                  onChange={(e) => setSheetBillForm((f) => ({ ...f, amount_php: e.target.value }))}
+                  className="mt-1 tabular-nums"
+                  required
+                />
+              </div>
+              <div>
+                <Label htmlFor="sb-paid-from">Paid from</Label>
+                <Select
+                  id="sb-paid-from"
+                  value={sheetBillForm.paid_from}
+                  onChange={(e) => setSheetBillForm((f) => ({ ...f, paid_from: e.target.value }))}
+                  className="mt-1"
+                >
+                  <option value="cash">Cash</option>
+                  <option value="gcash">GCash</option>
+                </Select>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="sb-ref">Reference (optional)</Label>
+              <Input
+                id="sb-ref"
+                value={sheetBillForm.bill_reference}
+                onChange={(e) => setSheetBillForm((f) => ({ ...f, bill_reference: e.target.value }))}
+                className="mt-1"
+              />
+            </div>
+            <DialogFooter className="flex flex-wrap items-center justify-between gap-2 pt-2">
+              <Button
+                type="button"
+                variant="ghost"
+                className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                disabled={sheetBillBusy}
+                onClick={() => deleteSheetBillOverride(sheetBillModal)}
+              >
+                Delete bill &amp; sheet line
+              </Button>
+              <div className="flex gap-2">
+                <Button type="button" variant="outline" onClick={() => setSheetBillModal(null)} disabled={sheetBillBusy}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="bg-[#0e1540] text-white hover:bg-[#17205c]" disabled={sheetBillBusy}>
+                  {sheetBillBusy ? 'Syncing…' : 'Save & sync sheet'}
+                </Button>
+              </div>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

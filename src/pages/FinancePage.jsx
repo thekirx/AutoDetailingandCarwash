@@ -18,6 +18,7 @@ import {
   Truck,
   Mail,
   ChevronDown,
+  Pencil,
 } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import {
@@ -477,7 +478,11 @@ export default function FinancePage() {
     payroll: FileBarChart,
   }
   const moreActive = moreTabs.some((item) => item.id === tab)
-  const railTabs = reportsOnly ? visibleTabs : primaryTabs
+  const pinnedMoreTabs = visibleTabs.filter(
+    (t) => ['categories', 'salaries', 'approvals'].includes(t.id) && !FINANCE_PRIMARY_TAB_IDS.includes(t.id),
+  )
+  const railTabs = reportsOnly ? visibleTabs : [...primaryTabs, ...pinnedMoreTabs]
+  const isSuperAdmin = profile?.role === ROLES.SUPER_ADMIN
 
   return (
     <OpsPageShell
@@ -493,9 +498,47 @@ export default function FinancePage() {
             <p className="finance-net-value tabular-nums">{loading ? '—' : formatMoney(headlinePl.net)}</p>
             <p className="finance-net-label">{windowLabel}</p>
           </div>
-          <Badge variant={canWrite ? 'default' : 'secondary'} className="finance-role-badge">
-            {canWrite ? 'Can edit' : 'View only'}
-          </Badge>
+          {canWrite ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="finance-role-badge inline-flex cursor-pointer items-center gap-1.5 rounded-full bg-[#0e1540] px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-[#17205c]"
+                title="Quick edit & Owner override actions"
+              >
+                <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+                <span>Can edit</span>
+                <ChevronDown className="h-3.5 w-3.5 opacity-80" aria-hidden="true" />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-60">
+                <DropdownMenuGroup>
+                  {showSheets ? (
+                    <DropdownMenuItem onClick={() => patchSearch({ tab: 'sheets', extras: { status: 'all' } })}>
+                      Edit / Override Daily Sheets
+                    </DropdownMenuItem>
+                  ) : null}
+                  <DropdownMenuItem onClick={() => setTab('purchases')}>
+                    Edit Bills &amp; Sheet Expenses
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTab('categories')}>
+                    Manage Expense Categories (CRUD)
+                  </DropdownMenuItem>
+                  {showSalaries ? (
+                    <DropdownMenuItem onClick={() => setTab('salaries')}>
+                      Run &amp; Edit Monthly Salaries
+                    </DropdownMenuItem>
+                  ) : null}
+                  {showApprovals ? (
+                    <DropdownMenuItem onClick={() => setTab('approvals')}>
+                      Review Approvals &amp; Cash Advances
+                    </DropdownMenuItem>
+                  ) : null}
+                </DropdownMenuGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Badge variant="secondary" className="finance-role-badge">
+              View only
+            </Badge>
+          )}
         </>
       }
     >
@@ -650,6 +693,7 @@ export default function FinancePage() {
               period={datePreset}
               onPeriod={(next) => patchSearch({ period: next })}
               onFilters={(next) => patchSearch({ extras: next })}
+              onReload={load}
             />
           </TabsContent>
         ) : null}
@@ -684,12 +728,14 @@ export default function FinancePage() {
             branches={branches}
             writableBranches={writableBranches.map((b) => ({ ...b, name: labelFinanceBranch(b) }))}
             canWrite={canWrite}
+            isSuperAdmin={isSuperAdmin}
             range={queryRange}
             loading={loading}
             onReload={load}
             onCatalogAdd={onCatalogAdd}
             accountFilter={extras.acct}
             onAccountFilter={(next) => patchSearch({ extras: { ...extras, acct: next } })}
+            onOpenSheet={(sheetId) => patchSearch({ tab: 'sheets', extras: { status: 'all', sheet: sheetId } })}
           />
         </TabsContent>
 
@@ -750,13 +796,20 @@ export default function FinancePage() {
         </TabsContent>
 
         <TabsContent value="categories" className="finance-tab-panel">
-          <FinanceCategoriesTab categories={categories} canWrite={canWrite} onReload={load} />
+          <FinanceCategoriesTab
+            categories={categories}
+            expenses={expenses}
+            canWrite={canWrite}
+            isSuperAdmin={isSuperAdmin}
+            onPickCategory={(catId) => patchSearch({ tab: 'purchases', extras: { ...extras, acct: catId } })}
+            onReload={load}
+          />
         </TabsContent>
 
         {showSalaries ? (
           <TabsContent value="salaries" className="finance-tab-panel">
             <Suspense fallback={<p className="py-6 text-sm text-muted-foreground">Loading monthly salaries…</p>}>
-              <MonthlyPayrollPage embedded />
+              <MonthlyPayrollPage embedded onFinanceSync={load} />
             </Suspense>
           </TabsContent>
         ) : null}

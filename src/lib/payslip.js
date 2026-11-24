@@ -141,3 +141,113 @@ export function payslipStatusLabel(status) {
   if (status === 'received') return 'Received'
   return 'Sent'
 }
+
+/** Inclusive calendar days between two YYYY-MM-DD dates (e.g. 2026-11-01..2026-11-15 = 15, 16..31 = 16). */
+export function daysBetweenInclusive(startIso, endIso) {
+  const [sy, sm, sd] = String(startIso || '').slice(0, 10).split('-').map(Number)
+  const [ey, em, ed] = String(endIso || '').slice(0, 10).split('-').map(Number)
+  if (!sy || !sm || !sd || !ey || !em || !ed) return 15
+  const startUtc = Date.UTC(sy, sm - 1, sd)
+  const endUtc = Date.UTC(ey, em - 1, ed)
+  const diff = Math.round((endUtc - startUtc) / 86_400_000) + 1
+  return diff > 0 ? diff : 1
+}
+
+/** Elapsed calendar days from the day after `lastPeriodEndIso` through `currentEndIso`. */
+export function daysSinceLastPayrollEnd(lastPeriodEndIso, currentEndIso) {
+  if (!lastPeriodEndIso || !currentEndIso) return null
+  const [ly, lm, ld] = String(lastPeriodEndIso).slice(0, 10).split('-').map(Number)
+  const [cy, cm, cd] = String(currentEndIso).slice(0, 10).split('-').map(Number)
+  if (!ly || !lm || !ld || !cy || !cm || !cd) return null
+  const lastUtc = Date.UTC(ly, lm - 1, ld)
+  const curUtc = Date.UTC(cy, cm - 1, cd)
+  const diff = Math.round((curUtc - lastUtc) / 86_400_000)
+  return diff > 0 ? diff : null
+}
+
+/**
+ * Standard & pro-rated semi-monthly cutoff salary computation.
+ * - `prorated_days`: `(monthlySalaryMinor / standardMonthDays) * coveredDays`
+ *   e.g. ₱30,000/mo (₱1,000/day): 15 days = ₱15,000; 16 days = ₱16,000; 31 days = ₱31,000.
+ * - `fixed_half`: `monthlySalaryMinor / 2` (fixed 50% quincena regardless of 13/15/16-day half).
+ */
+export function computeProratedCutoffSalary({
+  monthlySalaryMinor = 0,
+  mode = 'prorated_days',
+  coveredDays = 15,
+  standardMonthDays = 30,
+} = {}) {
+  const base = Math.max(0, Math.round(Number(monthlySalaryMinor) || 0))
+  const days = Math.max(1, Math.min(62, Math.round(Number(coveredDays) || 15)))
+  const divisor = Math.max(1, Math.round(Number(standardMonthDays) || 30))
+  const dailyRateMinor = Math.round(base / divisor)
+  if (mode === 'fixed_half') {
+    return {
+      salaryMinor: Math.round(base / 2),
+      dailyRateMinor,
+      coveredDays: days,
+      mode: 'fixed_half',
+      formulaLabel: '50% fixed quincena (Monthly ÷ 2)',
+    }
+  }
+  const salaryMinor = Math.round((base * days) / divisor)
+  return {
+    salaryMinor,
+    dailyRateMinor,
+    coveredDays: days,
+    mode: 'prorated_days',
+    formulaLabel: `${days}d × ₱${(dailyRateMinor / 100).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/day`,
+  }
+}
+
+/** Summarize cutoff completion, missing staff, and elapsed days since the prior completed payroll. */
+export function evaluateCutoffReadiness({
+  period,
+  slips = [],
+  officeStaff = [],
+  latestPriorPeriodEnd = null,
+} = {}) {
+  const periodDays = period ? daysBetweenInclusive(period.start, period.end) : 15
+  const elapsedDays =
+    latestPriorPeriodEnd && period?.end ? daysSinceLastPayrollEnd(latestPriorPeriodEnd, period.end) : null
+  const recommendedDays = elapsedDays && elapsedDays > 0 && elapsedDays <= 45 ? elapsedDays : periodDays
+  const slipByStaff = new Map((slips || []).map((s) => [s.staff_id, s]))
+  const totalStaff = (officeStaff || []).length
+  let sentCount = 0
+  let receivedCount = 0
+  let signedCount = 0
+  const missingStaff = []
+  for (const person of officeStaff || []) {
+    const s = slipByStaff.get(person.id)
+    if (!s) {
+      missingStaff.push(person)
+      continue
+    }
+    sentCount += 1
+    if (s.status === 'received' || s.status === 'signed') receivedCount += 1
+    if (s.status === 'signed') signedCount += 1
+  }
+  const isComplete = totalStaff > 0 && sentCount >= totalStaff
+  const isDelayed = elapsedDays != null && elapsedDays > periodDays
+  return {
+    periodDays,
+    elapsedDays,
+    recommendedDays,
+    isDelayed,
+    delayExtraDays: isDelayed ? elapsedDays - periodDays : 0,
+    totalStaff,
+    sentCount,
+    receivedCount,
+    signedCount,
+    pendingCount: Math.max(0, totalStaff - sentCount),
+    missingStaff,
+    isComplete,
+    statusLabel: isComplete
+      ? 'Cutoff Completed'
+      : sentCount > 0
+        ? `In Progress (${sentCount}/${totalStaff})`
+        : isDelayed
+          ? `Delayed Cutoff (${elapsedDays}d elapsed)`
+          : 'Ready to Run',
+  }
+}

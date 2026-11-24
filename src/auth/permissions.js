@@ -623,8 +623,9 @@ export function canAccessMyPayslips(profile) {
   return !isDayCrewRole(profile.role)
 }
 
-/** Own cash-advance submissions list (drawer cash, not P&L). */
+/** Own cash-advance submissions list (drawer cash, not P&L); Super Admin also accesses full CA hub. */
 export function canAccessMyAdvances(profile) {
+  if (isSuperAdmin(profile)) return true
   return canSubmitOpsFormKind(profile, 'cash_advance')
 }
 
@@ -1095,7 +1096,7 @@ function buildRewardsNavChildren(profile) {
   if (canManagePeople(profile) || canViewQueueOperations(profile) || (canAccessAttendance(profile) && profile?.role !== ROLES.STAFF)) {
     items.push(nav('Employees', '/operations/employees', 'Users', 'hr', buildEmployeesNavChildren(profile)))
   }
-  if (canAccessMyAdvances(profile) && profile?.role !== ROLES.STAFF) {
+  if (canAccessMyAdvances(profile) && profile?.role !== ROLES.STAFF && !isSuperAdmin(profile)) {
     items.push(nav('My advances', '/operations/my-advances', 'Wallet', 'hr'))
   }
   if (canViewAssignedTasks(profile) && profile?.role !== ROLES.STAFF && !isSuperAdmin(profile)) {

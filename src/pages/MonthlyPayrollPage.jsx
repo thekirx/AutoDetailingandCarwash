@@ -1,13 +1,17 @@
 /**
- * Office payroll: semi-monthly (1st–15th and 16th–end of month).
+ * Office payroll: semi-monthly (1st–15th and 16th–end of month) + Pro-Rated Day Calculator Wizard.
  * Day crew stay on the Daily Sheet.
  * Owner (BossMich), Lucy, Robert, and Super Admin can view, edit, adjust, process,
- * set base monthly salaries, view historical reports, and export CSV/Excel/PDF.
+ * set base monthly salaries, run pro-rated or fixed half-month cutoffs in a filterable table,
+ * and edit or delete historical payslips with automatic Finance Books (`public.expenses`) sync.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import {
+  Calculator,
   Calendar,
+  CheckCircle2,
+  Clock,
   DollarSign,
   Download,
   FileSpreadsheet,
@@ -18,6 +22,8 @@ import {
   Printer,
   RefreshCw,
   Search,
+  Send,
+  Trash2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
@@ -27,7 +33,11 @@ import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { formatAccounting } from '@/lib/dailySheet'
 import { collectPaged } from '@/lib/crmInsights'
 import { downloadCsv, downloadExcel, printAsPdf } from '@/lib/financeData'
+import { callFinanceOwnerOps } from '@/lib/financeOwnerClient'
 import {
+  computeProratedCutoffSalary,
+  daysBetweenInclusive,
+  evaluateCutoffReadiness,
   isDayCrewRole,
   MONTHS,
   officePayrollPeople,
@@ -70,8 +80,9 @@ function formatPesos(minor) {
   return `₱${(Number(minor) / 100).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-export default function MonthlyPayrollPage({ embedded = false } = {}) {
+export default function MonthlyPayrollPage({ embedded = false, onFinanceSync } = {}) {
   const { profile } = useAuth()
+  const isOwner = isSuperAdmin(profile)
   const canWrite = canEditFinanceBooks(profile)
   const isManager = isSuperAdmin(profile) || isAssistantSuperAdmin(profile)
   const scope = getBranchScopeList(profile)
@@ -83,26 +94,47 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
   const [branch, setBranch] = useState('')
   const [drafts, setDrafts] = useState({})
   const [slips, setSlips] = useState([])
+  const [latestPriorEnd, setLatestPriorEnd] = useState(null)
   const [locked, setLocked] = useState(false)
   const [busyId, setBusyId] = useState('')
+  const [batchSending, setBatchSending] = useState(false)
   const [locking, setLocking] = useState(false)
   const [formError, setFormError] = useState('')
+
+  // Run table filters & pro-rata calculator controls
+  const [runSearch, setRunSearch] = useState('')
+  const [runRoleFilter, setRunRoleFilter] = useState('all')
+  const [runStatusFilter, setRunStatusFilter] = useState('all')
+  const [calcMode, setCalcMode] = useState('prorated_days') // 'prorated_days' | 'fixed_half'
+  const [coveredDays, setCoveredDays] = useState(15)
 
   // Base salary editing dialog
   const [editingBaseStaff, setEditingBaseStaff] = useState(null)
   const [baseSalaryInput, setBaseSalaryInput] = useState('')
   const [savingBase, setSavingBase] = useState(false)
 
-  // History / Reports state
+  // History / Reports state + Owner Edit/Delete Payslip Dialog
   const [historySlips, setHistorySlips] = useState([])
   const [loadingHistory, setLoadingHistory] = useState(false)
   const [historyYear, setHistoryYear] = useState(() => String(new Date().getFullYear()))
-  const [historyMonth, setHistoryMonth] = useState('all') // 'all' | '1'..'12'
-  const [historyHalf, setHistoryHalf] = useState('all') // 'all' | '1' | '2'
-  const [historyStatus, setHistoryStatus] = useState('all') // 'all' | 'sent' | 'received' | 'signed'
+  const [historyMonth, setHistoryMonth] = useState('all')
+  const [historyHalf, setHistoryHalf] = useState('all')
+  const [historyStatus, setHistoryStatus] = useState('all')
   const [historySearch, setHistorySearch] = useState('')
+  const [editingHistorySlip, setEditingHistorySlip] = useState(null)
+  const [historyEditForm, setHistoryEditForm] = useState({
+    salary: '',
+    incentive: '',
+    paid_from: 'cash',
+    status: 'sent',
+    note: '',
+    period_start: '',
+    period_end: '',
+    branch: '',
+  })
+  const [savingHistorySlip, setSavingHistorySlip] = useState(false)
 
-  // Jump to specific cutoff dialog / selector
+  // Jump to specific cutoff selector
   const [jumpYear, setJumpYear] = useState(() => String(new Date().getFullYear()))
   const [jumpMonth, setJumpMonth] = useState(() => String(new Date().getMonth() + 1))
   const [jumpHalf, setJumpHalf] = useState(() => (new Date().getDate() <= 15 ? '1' : '2'))
@@ -130,26 +162,36 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
 
   const loadPeriod = useCallback(async () => {
     if (!branch || !period) return
-    const [slipRes, lockRes] = await Promise.all([
+    const targetBranch = branch === 'all' ? branches[0]?.slug || 'bacoor' : branch
+    const [slipRes, lockRes, priorRes] = await Promise.all([
       supabase
         .from('payslips')
         .select('id, staff_id, branch, period_start, period_end, salary_minor, incentive_minor, paid_from, note, status, signed_name, signed_at, created_at')
-        .eq('branch', branch)
+        .eq('branch', targetBranch)
         .eq('period_start', period.start)
         .eq('period_end', period.end),
       supabase
         .from('payroll_period_locks')
         .select('id, branch, period_start, period_end, locked_by, locked_at')
-        .eq('branch', branch)
+        .eq('branch', targetBranch)
         .eq('period_start', period.start)
         .eq('period_end', period.end)
+        .maybeSingle(),
+      supabase
+        .from('payslips')
+        .select('period_end')
+        .eq('branch', targetBranch)
+        .lt('period_end', period.start)
+        .order('period_end', { ascending: false })
+        .limit(1)
         .maybeSingle(),
     ])
     if (slipRes.error) toast.error(slipRes.error.message)
     else setSlips(slipRes.data || [])
     if (lockRes.error) toast.error(lockRes.error.message)
     else setLocked(Boolean(lockRes.data?.id))
-  }, [branch, period])
+    setLatestPriorEnd(priorRes?.data?.period_end || null)
+  }, [branch, branches, period])
 
   const loadHistory = useCallback(async () => {
     setLoadingHistory(true)
@@ -209,6 +251,12 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
   }, [loadPeriod])
 
   useEffect(() => {
+    if (period) {
+      setCoveredDays(daysBetweenInclusive(period.start, period.end))
+    }
+  }, [period])
+
+  useEffect(() => {
     if (viewMode === 'history') {
       loadHistory().catch((e) => toast.error(e.message))
     }
@@ -252,12 +300,24 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
     return map
   }, [slips])
 
+  const readiness = useMemo(
+    () =>
+      evaluateCutoffReadiness({
+        period,
+        slips,
+        officeStaff: office,
+        latestPriorPeriodEnd: latestPriorEnd,
+      }),
+    [period, slips, office, latestPriorEnd],
+  )
+
   function selectPeriod(start) {
     const next = new URLSearchParams(searchParams)
     if (!start || start === periods[0]?.start) next.delete('period')
     else next.set('period', start)
     setSearchParams(next, { replace: true })
     setFormError('')
+    setDrafts({})
   }
 
   function handleJumpPeriod() {
@@ -268,6 +328,19 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
     selectPeriod(targetIso)
   }
 
+  const computeSuggestedSalaryPesos = useCallback(
+    (person, daysOverride = coveredDays, modeOverride = calcMode) => {
+      if (!person?.monthly_salary_minor || person.monthly_salary_minor <= 0) return ''
+      const res = computeProratedCutoffSalary({
+        monthlySalaryMinor: person.monthly_salary_minor,
+        mode: modeOverride,
+        coveredDays: daysOverride,
+      })
+      return pesos(res.salaryMinor)
+    },
+    [coveredDays, calcMode],
+  )
+
   function draftFor(person) {
     if (drafts[person.id]) return drafts[person.id]
     const existing = slipByStaff.get(person.id)
@@ -275,17 +348,12 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
       return {
         salary: pesos(existing.salary_minor),
         incentive: existing.incentive_minor ? pesos(existing.incentive_minor) : '',
-        paidFrom: existing.paid_from || 'cash',
+        paidFrom: existing.paid_from || '',
         note: existing.note || '',
       }
     }
-    // Prefill from monthly_salary_minor / 2 (semi-monthly rate) if set
-    const defaultCutoffSalary =
-      person.monthly_salary_minor > 0
-        ? (Number(person.monthly_salary_minor) / 200).toFixed(2)
-        : ''
     return {
-      salary: defaultCutoffSalary,
+      salary: computeSuggestedSalaryPesos(person),
       incentive: '',
       paidFrom: '',
       note: '',
@@ -293,7 +361,34 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
   }
 
   function patchDraft(id, patch) {
-    setDrafts((cur) => ({ ...cur, [id]: { ...draftFor({ id }), ...cur[id], ...patch } }))
+    const person = staffMap.get(id) || { id }
+    setDrafts((cur) => ({ ...cur, [id]: { ...draftFor(person), ...cur[id], ...patch } }))
+  }
+
+  function applyCalculatorToUnsentDrafts(nextDays = coveredDays, nextMode = calcMode) {
+    const nextDrafts = { ...drafts }
+    let updatedCount = 0
+    for (const person of office) {
+      const existing = slipByStaff.get(person.id)
+      if (existing && existing.status !== 'sent' && !isOwner) continue
+      if (!person.monthly_salary_minor) continue
+      const suggested = computeSuggestedSalaryPesos(person, nextDays, nextMode)
+      const autoNote =
+        nextMode === 'prorated_days'
+          ? `${nextDays}d pro-rated (${formatPesos(Math.round(person.monthly_salary_minor / 30))}/day)`
+          : '50% semi-monthly cutoff'
+      nextDrafts[person.id] = {
+        ...draftFor(person),
+        ...nextDrafts[person.id],
+        salary: suggested,
+        note: nextDrafts[person.id]?.note || autoNote,
+      }
+      updatedCount += 1
+    }
+    setDrafts(nextDrafts)
+    toast.success(
+      `Applied ${nextMode === 'prorated_days' ? `${nextDays}-day pro-rated formula` : '50% fixed quincena'} to ${updatedCount} staff row(s).`,
+    )
   }
 
   async function openEditBaseSalary(person) {
@@ -313,13 +408,9 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
     try {
       await setStaffMonthlySalary(editingBaseStaff.id, minor)
       toast.success(`Base monthly salary for ${editingBaseStaff.full_name} set to ${formatPesos(minor)}/mo.`)
-      // Update local people state
-      setPeople((cur) =>
-        cur.map((p) => (p.id === editingBaseStaff.id ? { ...p, monthly_salary_minor: minor } : p)),
-      )
-      // Update draft salary for this employee to cutoff rate if not already sent
-      const cutoff = (minor / 200).toFixed(2)
-      patchDraft(editingBaseStaff.id, { salary: cutoff })
+      const updatedPerson = { ...editingBaseStaff, monthly_salary_minor: minor }
+      setPeople((cur) => cur.map((p) => (p.id === editingBaseStaff.id ? updatedPerson : p)))
+      patchDraft(editingBaseStaff.id, { salary: computeSuggestedSalaryPesos(updatedPerson) })
       setEditingBaseStaff(null)
     } catch (err) {
       toast.error(err.message || 'Could not update base monthly salary')
@@ -330,11 +421,12 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
 
   async function sendOne(person) {
     setFormError('')
-    if (locked) {
+    const targetBranch = branch === 'all' ? person.branch_slug || branches[0]?.slug || 'bacoor' : branch
+    if (locked && !isOwner) {
       setFormError('This period is locked. Lucy or Owner can unlock it.')
       return
     }
-    if (!branch || !period) {
+    if (!targetBranch || !period) {
       setFormError('Pick a branch and a payroll period.')
       return
     }
@@ -348,7 +440,9 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
     const incentiveText =
       draft.incentive !== undefined && draft.incentive !== ''
         ? draft.incentive
-        : (existing ? pesos(existing.incentive_minor) : '')
+        : existing
+          ? pesos(existing.incentive_minor)
+          : ''
     const minor = parsePesosToMinor(salaryText)
     if (minor == null || minor <= 0) {
       setFormError(`Enter a salary for ${person.full_name}.`)
@@ -364,30 +458,47 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
     const note = (draft.note || existing?.note || '').trim()
     setBusyId(person.id)
     try {
-      const { error } =
-        existing?.status === 'sent'
-          ? await supabase.rpc('update_office_payslip', {
-              p_id: existing.id,
-              p_salary: minor,
-              p_incentive: incentive,
-              p_paid_from: paidFrom,
-              p_note: note || null,
-            })
-          : await supabase.rpc('send_payslip', {
-              p_staff: person.id,
-              p_branch: branch,
-              p_start: period.start,
-              p_end: period.end,
-              p_salary: minor,
-              p_incentive: incentive,
-              p_paid_from: paidFrom,
-              p_note: note || null,
-            })
-      if (error) throw error
+      // If Owner is overriding a received/signed slip or locked period, use the Owner API seam
+      if (isOwner && (locked || (existing && existing.status !== 'sent'))) {
+        await callFinanceOwnerOps({
+          action: 'upsert-payslip',
+          id: existing?.id,
+          staff_id: person.id,
+          branch: targetBranch,
+          period_start: period.start,
+          period_end: period.end,
+          salary_minor: minor,
+          incentive_minor: incentive,
+          paid_from: paidFrom,
+          note: note || null,
+        })
+      } else {
+        const { error } =
+          existing?.status === 'sent'
+            ? await supabase.rpc('update_office_payslip', {
+                p_id: existing.id,
+                p_salary: minor,
+                p_incentive: incentive,
+                p_paid_from: paidFrom,
+                p_note: note || null,
+              })
+            : await supabase.rpc('send_payslip', {
+                p_staff: person.id,
+                p_branch: targetBranch,
+                p_start: period.start,
+                p_end: period.end,
+                p_salary: minor,
+                p_incentive: incentive,
+                p_paid_from: paidFrom,
+                p_note: note || null,
+              })
+        if (error) throw error
+      }
       toast.success(
         `${existing ? 'Saved' : 'Sent'} ${formatAccounting(takeHome)} for ${person.full_name}. Reflected to employee and Finance books.`,
       )
       await loadPeriod()
+      onFinanceSync?.()
     } catch (err) {
       const message = err.message || 'Could not send the payslip'
       setFormError(message)
@@ -397,22 +508,45 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
     }
   }
 
+  async function handleBatchSendUnsent() {
+    const readyList = filteredOffice.filter((person) => {
+      const existing = slipByStaff.get(person.id)
+      if (existing) return false
+      const draft = draftFor(person)
+      const minor = parsePesosToMinor(draft.salary)
+      return minor != null && minor > 0
+    })
+    if (!readyList.length) {
+      return toast.error('No unsent rows have a salary amount greater than ₱0.')
+    }
+    setBatchSending(true)
+    let sent = 0
+    try {
+      for (const person of readyList) {
+        await sendOne(person)
+        sent += 1
+      }
+      toast.success(`Issued ${sent} payslip(s) and posted all to Finance Books.`)
+    } finally {
+      setBatchSending(false)
+    }
+  }
+
   async function toggleLock() {
     if (!period || !branch) return
     const next = !locked
     const verb = next ? 'Lock' : 'Unlock'
-    if (!window.confirm(`${verb} ${period.label} for ${branchMap.get(branch) || branch}?`)) return
     setLocking(true)
     setFormError('')
     try {
       const { error } = await supabase.rpc('set_payroll_period_lock', {
-        p_branch: branch,
+        p_branch: branch === 'all' ? branches[0]?.slug || 'bacoor' : branch,
         p_start: period.start,
         p_end: period.end,
         p_lock: next,
       })
       if (error) throw error
-      toast.success(next ? 'Period locked.' : 'Period unlocked.')
+      toast.success(next ? `${verb}ed period.` : 'Period unlocked.')
       await loadPeriod()
     } catch (err) {
       setFormError(err.message || 'Could not change the lock')
@@ -421,6 +555,94 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
       setLocking(false)
     }
   }
+
+  function openEditHistoryModal(slip) {
+    setEditingHistorySlip(slip)
+    setHistoryEditForm({
+      salary: pesos(slip.salary_minor),
+      incentive: pesos(slip.incentive_minor || 0),
+      paid_from: slip.paid_from === 'gcash' ? 'gcash' : 'cash',
+      status: slip.status || 'sent',
+      note: slip.note || '',
+      period_start: slip.period_start,
+      period_end: slip.period_end,
+      branch: slip.branch,
+    })
+  }
+
+  async function saveHistorySlipEdit(event) {
+    event.preventDefault()
+    if (!editingHistorySlip) return
+    const salMinor = parsePesosToMinor(historyEditForm.salary)
+    const incMinor = String(historyEditForm.incentive || '').trim()
+      ? parsePesosToMinor(historyEditForm.incentive)
+      : 0
+    if (salMinor == null || salMinor <= 0) {
+      return toast.error('Enter a valid salary amount greater than ₱0.')
+    }
+    if (incMinor == null || incMinor < 0) {
+      return toast.error('Incentive must be ₱0 or greater.')
+    }
+    setSavingHistorySlip(true)
+    try {
+      await callFinanceOwnerOps({
+        action: 'upsert-payslip',
+        id: editingHistorySlip.id,
+        staff_id: editingHistorySlip.staff_id,
+        branch: historyEditForm.branch || editingHistorySlip.branch,
+        period_start: historyEditForm.period_start || editingHistorySlip.period_start,
+        period_end: historyEditForm.period_end || editingHistorySlip.period_end,
+        salary_minor: salMinor,
+        incentive_minor: incMinor,
+        paid_from: historyEditForm.paid_from,
+        status: historyEditForm.status,
+        note: historyEditForm.note,
+      })
+      toast.success('Payslip updated and synced with Finance Books (Account 14).')
+      setEditingHistorySlip(null)
+      await Promise.all([loadHistory(), loadPeriod()])
+      onFinanceSync?.()
+    } catch (err) {
+      toast.error(err.message || 'Could not update historical payslip')
+    } finally {
+      setSavingHistorySlip(false)
+    }
+  }
+
+  async function handleDeleteHistorySlip(slip) {
+    if (!isOwner) return toast.error('Only Owner (BossMich) can delete a payslip.')
+    setBusyId(slip.id)
+    try {
+      await callFinanceOwnerOps({
+        action: 'delete-payslip',
+        id: slip.id,
+      })
+      toast.success('Payslip deleted and removed from Finance Books.')
+      await Promise.all([loadHistory(), loadPeriod()])
+      onFinanceSync?.()
+    } catch (err) {
+      toast.error(err.message || 'Could not delete payslip')
+    } finally {
+      setBusyId('')
+    }
+  }
+
+  const filteredOffice = useMemo(() => {
+    return office.filter((person) => {
+      const slip = slipByStaff.get(person.id)
+      if (runRoleFilter !== 'all' && person.role !== runRoleFilter) return false
+      if (runStatusFilter === 'unsent' && slip) return false
+      if (runStatusFilter !== 'all' && runStatusFilter !== 'unsent' && slip?.status !== runStatusFilter) return false
+      if (runSearch.trim()) {
+        const q = runSearch.trim().toLowerCase()
+        const name = String(person.full_name || '').toLowerCase()
+        const rLabel = roleLabel(person.role).toLowerCase()
+        const note = String(slip?.note || drafts[person.id]?.note || '').toLowerCase()
+        if (!name.includes(q) && !rLabel.includes(q) && !note.includes(q)) return false
+      }
+      return true
+    })
+  }, [office, slipByStaff, runRoleFilter, runStatusFilter, runSearch, drafts])
 
   // Filtered history list
   const filteredHistory = useMemo(() => {
@@ -436,8 +658,9 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
         const staff = staffMap.get(slip.staff_id)
         const name = (staff?.full_name || '').toLowerCase()
         const role = (staff?.role || '').toLowerCase()
+        const note = String(slip.note || '').toLowerCase()
         const q = historySearch.toLowerCase()
-        if (!name.includes(q) && !role.includes(q)) return false
+        if (!name.includes(q) && !role.includes(q) && !note.includes(q)) return false
       }
       return true
     })
@@ -496,7 +719,6 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
     }
   }, [slips, office])
 
-  // Export functions
   function getExportColumns(forPrint = false) {
     const money = (minor) => (minor == null ? '' : forPrint ? formatAccounting(minor) : (minor / 100).toFixed(2))
     return [
@@ -549,14 +771,14 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
         {/* View Mode Switcher */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-border pb-3">
           <Tabs value={viewMode} onValueChange={setViewMode} className="w-full sm:w-auto">
-            <TabsList className="grid w-full grid-cols-2 sm:w-80">
+            <TabsList className="grid w-full grid-cols-2 sm:w-96">
               <TabsTrigger value="run" className="gap-2">
                 <DollarSign className="size-4" aria-hidden />
-                Payroll run
+                Payroll Run Wizard
               </TabsTrigger>
               <TabsTrigger value="history" className="gap-2">
                 <History className="size-4" aria-hidden />
-                History & reports
+                History &amp; Editable Ledger
               </TabsTrigger>
             </TabsList>
           </Tabs>
@@ -590,7 +812,7 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
 
         {viewMode === 'run' ? (
           /* =========================================================================
-             VIEW MODE: RUN PAYROLL (ACTIVE RUN)
+             VIEW MODE: RUN PAYROLL WIZARD & TABLE
              ========================================================================= */
           <div className="flex flex-col gap-4">
             {/* Quick Period Tabs & Jump to Cutoff */}
@@ -599,7 +821,6 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
                 <OpsTabList aria-label="Payroll periods" tabs={tabs} />
               </Tabs>
 
-              {/* Jump to specific cutoff */}
               <div className="flex items-center gap-2 shrink-0 bg-muted/40 p-1.5 rounded-xl border border-border">
                 <Calendar className="size-4 text-muted-foreground ml-1" aria-hidden />
                 <span className="text-xs font-medium text-muted-foreground">Jump:</span>
@@ -639,6 +860,143 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
                 </Button>
               </div>
             </div>
+
+            {/* 3-Step Cutoff Readiness & Pro-Rated Salary Calculator Wizard */}
+            <section className="rounded-2xl border border-border bg-card p-4 shadow-xs" aria-label="Payroll calculation wizard">
+              <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+                {/* Step 1: Cutoff Status Check */}
+                <div className="flex flex-col justify-between rounded-xl border border-border/70 bg-muted/20 p-3.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                        Step 1 · Half-Month Check
+                      </span>
+                      <h3 className="text-sm font-bold text-foreground mt-0.5">
+                        {period ? `${period.label} (${readiness.periodDays} calendar days)` : 'Select period'}
+                      </h3>
+                    </div>
+                    <Badge
+                      variant={
+                        readiness.isComplete ? 'default' : readiness.isDelayed ? 'destructive' : 'secondary'
+                      }
+                    >
+                      {readiness.statusLabel}
+                    </Badge>
+                  </div>
+                  <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                    {latestPriorEnd ? (
+                      <p>
+                        Last completed cutoff ended <strong className="text-foreground">{latestPriorEnd}</strong>{' '}
+                        ({readiness.elapsedDays} days elapsed to {period?.end}).
+                      </p>
+                    ) : (
+                      <p>Standard semi-monthly window: {period?.start} to {period?.end}.</p>
+                    )}
+                    {readiness.isDelayed ? (
+                      <p className="text-amber-700 dark:text-amber-300 font-medium">
+                        <Clock className="inline size-3.5 mr-1" aria-hidden />
+                        +{readiness.delayExtraDays} extra day(s) since last payroll — you can pro-rate for {readiness.elapsedDays} days below.
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+
+                {/* Step 2: Pro-Rata vs Fixed Quincena Formula */}
+                <div className="flex flex-col justify-between rounded-xl border border-border/70 bg-muted/20 p-3.5">
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Step 2 · Computation Formula
+                    </span>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <select
+                        value={calcMode}
+                        onChange={(e) => {
+                          const nextMode = e.target.value
+                          setCalcMode(nextMode)
+                          applyCalculatorToUnsentDrafts(coveredDays, nextMode)
+                        }}
+                        className="min-h-9 rounded-lg border border-input bg-background px-2.5 text-xs font-semibold"
+                        aria-label="Payroll computation mode"
+                      >
+                        <option value="prorated_days">Pro-Rated by Days ((Monthly ÷ 30) × Days)</option>
+                        <option value="fixed_half">Fixed 50% Quincena (Monthly ÷ 2)</option>
+                      </select>
+                      {calcMode === 'prorated_days' ? (
+                        <div className="flex items-center gap-1.5">
+                          <Label htmlFor="mp-covered-days" className="text-xs font-medium">Days:</Label>
+                          <Input
+                            id="mp-covered-days"
+                            type="number"
+                            min="1"
+                            max="62"
+                            value={coveredDays}
+                            onChange={(e) => setCoveredDays(Math.max(1, Math.min(62, Number(e.target.value) || 15)))}
+                            className="h-9 w-16 text-center tabular-nums font-bold text-xs"
+                          />
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                  <p className="mt-2 text-[11px] text-muted-foreground">
+                    Example on ₱30,000/mo (₱1,000/day): 15d = <strong className="text-foreground">₱15,000</strong> · 16d ={' '}
+                    <strong className="text-foreground">₱16,000</strong> · 31d = <strong className="text-foreground">₱31,000</strong>.
+                  </p>
+                </div>
+
+                {/* Step 3: Apply Formula & Batch Issue */}
+                <div className="flex flex-col justify-between rounded-xl border border-border/70 bg-muted/20 p-3.5">
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Step 3 · Apply &amp; Issue
+                    </span>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {readiness.isComplete
+                        ? `All ${readiness.totalStaff} office staff have payslips issued for this cutoff.`
+                        : `${readiness.pendingCount} staff member(s) ready to issue for ${period?.label || 'this cutoff'}.`}
+                    </p>
+                  </div>
+                  <div className="mt-2.5 flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="min-h-9 gap-1.5 text-xs"
+                      onClick={() => applyCalculatorToUnsentDrafts(coveredDays, calcMode)}
+                    >
+                      <Calculator className="size-3.5" aria-hidden />
+                      Apply {calcMode === 'prorated_days' ? `${coveredDays}d Pro-Rata` : '50% Quincena'}
+                    </Button>
+                    {readiness.elapsedDays && readiness.elapsedDays !== coveredDays ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="min-h-9 text-xs"
+                        onClick={() => {
+                          setCoveredDays(readiness.elapsedDays)
+                          setCalcMode('prorated_days')
+                          applyCalculatorToUnsentDrafts(readiness.elapsedDays, 'prorated_days')
+                        }}
+                      >
+                        Use {readiness.elapsedDays}d elapsed
+                      </Button>
+                    ) : null}
+                    {readiness.pendingCount > 0 ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="min-h-9 gap-1.5 text-xs"
+                        disabled={batchSending || (locked && !isOwner)}
+                        onClick={handleBatchSendUnsent}
+                      >
+                        <Send className="size-3.5" aria-hidden />
+                        {batchSending ? 'Issuing…' : `Issue Ready (${readiness.pendingCount})`}
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+              </div>
+            </section>
 
             {/* Run KPI Summary Strip */}
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-5 bg-card border border-border rounded-2xl p-4">
@@ -681,8 +1039,8 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
               </div>
             </div>
 
-            {/* Period Details & Lock Section */}
-            <section className="rounded-2xl border border-border bg-card" aria-labelledby="mp-period-heading">
+            {/* Period Details, Filter Bar & Payroll Run Data Table */}
+            <section className="rounded-2xl border border-border bg-card overflow-hidden" aria-labelledby="mp-period-heading">
               <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
@@ -692,11 +1050,16 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
                     <Badge variant={locked ? 'destructive' : 'secondary'} className="font-semibold text-xs">
                       {locked ? 'Locked' : 'Open'}
                     </Badge>
+                    {readiness.isComplete ? (
+                      <Badge variant="default" className="gap-1 text-xs">
+                        <CheckCircle2 className="size-3" aria-hidden /> All Sent
+                      </Badge>
+                    ) : null}
                   </div>
                   <p className="text-sm text-muted-foreground mt-0.5">
                     {locked
-                      ? 'Locked period. Lucy, Robert, or Owner can unlock to make adjustments.'
-                      : 'Fixed cutoff: 1st–15th or 16th–end of month. Lucy or Owner types/adjusts salary & incentive. Approved slips post to Finance.'}
+                      ? 'Locked period. Owner (BossMich) can still override any row or unlock the period.'
+                      : 'Fixed cutoff: 1st–15th or 16th–end of month. Every issued or edited slip automatically posts to Finance Books (Account 14).'}
                   </p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
@@ -713,201 +1076,235 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
                 </div>
               </div>
 
+              {/* Table Filter Bar */}
+              <div className="grid grid-cols-1 gap-3 border-b border-border bg-muted/20 p-3.5 sm:grid-cols-3">
+                <div className="relative">
+                  <Search className="size-4 absolute left-3 top-3.5 text-muted-foreground" aria-hidden />
+                  <Input
+                    placeholder="Smart search staff name, role, or remarks…"
+                    value={runSearch}
+                    onChange={(e) => setRunSearch(e.target.value)}
+                    className="min-h-10 pl-9 bg-background"
+                  />
+                </div>
+                <select
+                  value={runRoleFilter}
+                  onChange={(e) => setRunRoleFilter(e.target.value)}
+                  className="min-h-10 rounded-xl border border-input bg-background px-3 text-sm"
+                  aria-label="Filter by role"
+                >
+                  <option value="all">All office roles</option>
+                  <option value="BossMich">Owner</option>
+                  <option value="assistant_super_admin">General Admin (ASA)</option>
+                  <option value="admin">Branch Admin</option>
+                  <option value="operations_lead">Operations Lead</option>
+                  <option value="sales">Sales</option>
+                  <option value="marketing">Marketing</option>
+                  <option value="video_editor">Video Editor</option>
+                </select>
+                <select
+                  value={runStatusFilter}
+                  onChange={(e) => setRunStatusFilter(e.target.value)}
+                  className="min-h-10 rounded-xl border border-input bg-background px-3 text-sm"
+                  aria-label="Filter by payslip status"
+                >
+                  <option value="all">All statuses ({office.length})</option>
+                  <option value="unsent">Draft / Not yet sent ({readiness.pendingCount})</option>
+                  <option value="sent">Sent</option>
+                  <option value="received">Received</option>
+                  <option value="signed">Signed</option>
+                </select>
+              </div>
+
               {formError ? (
                 <p className="mx-4 mt-4 rounded-xl border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
                   {formError}
                 </p>
               ) : null}
 
-              {office.length ? (
-                <ul className="divide-y divide-border">
-                  {office.map((person) => {
-                    const slip = slipByStaff.get(person.id)
-                    const draft = draftFor(person)
-                    const salaryMinor = slip ? slip.salary_minor : parsePesosToMinor(draft.salary)
-                    const incentiveMinor = slip
-                      ? slip.incentive_minor
-                      : draft.incentive.trim()
-                        ? parsePesosToMinor(draft.incentive)
-                        : 0
-                    const takeHome =
-                      salaryMinor != null && incentiveMinor != null ? payslipTakeHome(salaryMinor, incentiveMinor) : null
-                    const frozen = locked || (slip && slip.status !== 'sent')
+              {filteredOffice.length ? (
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="min-w-[210px]">Employee &amp; Base Rate</TableHead>
+                        <TableHead className="w-36 text-right">Cutoff Salary (₱)</TableHead>
+                        <TableHead className="w-32 text-right">Incentive (₱)</TableHead>
+                        <TableHead className="w-32 text-right">Take-Home</TableHead>
+                        <TableHead className="w-32">Paid With</TableHead>
+                        <TableHead className="min-w-[180px]">Note / Formula</TableHead>
+                        <TableHead className="w-28">Status</TableHead>
+                        <TableHead className="w-36 text-right">Action</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredOffice.map((person) => {
+                        const slip = slipByStaff.get(person.id)
+                        const draft = draftFor(person)
+                        const salaryText = draft.salary !== undefined ? draft.salary : slip ? pesos(slip.salary_minor) : ''
+                        const incentiveText =
+                          draft.incentive !== undefined ? draft.incentive : slip ? pesos(slip.incentive_minor) : ''
+                        const salaryMinor = parsePesosToMinor(salaryText)
+                        const incentiveMinor = String(incentiveText).trim() ? parsePesosToMinor(incentiveText) : 0
+                        const takeHome =
+                          salaryMinor != null && incentiveMinor != null ? payslipTakeHome(salaryMinor, incentiveMinor) : null
+                        const frozen = !isOwner && (locked || (slip && slip.status !== 'sent'))
+                        const dailyRateMinor = person.monthly_salary_minor ? Math.round(person.monthly_salary_minor / 30) : 0
 
-                    return (
-                      <li key={person.id} className="flex flex-col gap-3 p-4 hover:bg-muted/10 transition-colors">
-                        <div className="flex min-w-0 items-start justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <p className="truncate font-semibold text-foreground text-base">{person.full_name}</p>
-                              <Badge variant="outline" className="text-xs">
-                                {roleLabel(person.role)}
-                              </Badge>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-2 mt-1">
-                              <span className="text-xs text-muted-foreground">
-                                {person.monthly_salary_minor > 0 ? (
-                                  <>
-                                    Base monthly:{' '}
-                                    <strong className="text-foreground">{formatPesos(person.monthly_salary_minor)}/mo</strong>{' '}
-                                    <span className="text-muted-foreground">({formatPesos(person.monthly_salary_minor / 2)}/cutoff)</span>
-                                  </>
-                                ) : (
-                                  <span className="text-amber-600 dark:text-amber-400">No default base salary set</span>
-                                )}
-                              </span>
-                              {isManager && !locked ? (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-6 text-xs px-2 text-primary"
-                                  onClick={() => openEditBaseSalary(person)}
-                                >
-                                  <Pencil className="size-3 mr-1" /> Set base
-                                </Button>
-                              ) : null}
-                            </div>
-                          </div>
-                          <p className="shrink-0 text-right text-sm">
-                            <span className="block text-xs uppercase tracking-wider text-muted-foreground font-semibold">Take-home</span>
-                            <span className="tabular-nums font-bold text-lg text-primary">
-                              {takeHome == null ? '—' : formatAccounting(takeHome)}
-                            </span>
-                          </p>
-                        </div>
-
-                        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4 bg-muted/20 p-3 rounded-xl border border-border/60">
-                          <div className="flex flex-col gap-1.5">
-                            <Label htmlFor={`mp-salary-${person.id}`} className="text-xs font-semibold">
-                              Cutoff Salary (₱)
-                            </Label>
-                            <Input
-                              id={`mp-salary-${person.id}`}
-                              name={`salary-${person.id}`}
-                              className="min-h-11 text-right tabular-nums font-medium"
-                              inputMode="decimal"
-                              autoComplete="off"
-                              disabled={frozen}
-                              placeholder="0.00"
-                              value={
-                                frozen && slip
-                                  ? pesos(slip.salary_minor)
-                                  : draft.salary || (slip ? pesos(slip.salary_minor) : '')
-                              }
-                              onChange={(e) => patchDraft(person.id, { salary: e.target.value })}
-                            />
-                          </div>
-                          <div className="flex flex-col gap-1.5">
-                            <Label htmlFor={`mp-incentive-${person.id}`} className="text-xs font-semibold">
-                              Incentive / Adj (₱)
-                            </Label>
-                            <Input
-                              id={`mp-incentive-${person.id}`}
-                              name={`incentive-${person.id}`}
-                              className="min-h-11 text-right tabular-nums"
-                              inputMode="decimal"
-                              autoComplete="off"
-                              disabled={frozen}
-                              placeholder="0.00"
-                              value={
-                                frozen && slip
-                                  ? pesos(slip.incentive_minor)
-                                  : draft.incentive || (slip ? pesos(slip.incentive_minor) : '')
-                              }
-                              onChange={(e) => patchDraft(person.id, { incentive: e.target.value })}
-                            />
-                          </div>
-                          <div className="flex flex-col gap-1.5">
-                            <Label htmlFor={`mp-paid-${person.id}`} className="text-xs font-semibold">
-                              Paid with
-                            </Label>
-                            <NamedSelect
-                              id={`mp-paid-${person.id}`}
-                              name={`paid-${person.id}`}
-                              className="min-h-11"
-                              disabled={frozen}
-                              value={payrollPaidFrom(frozen ? slip?.paid_from : draft.paidFrom, slip?.paid_from)}
-                              onChange={(value) => patchDraft(person.id, { paidFrom: value })}
-                              options={[
-                                { value: 'cash', label: 'Cash' },
-                                { value: 'gcash', label: 'GCash' },
-                              ]}
-                            />
-                          </div>
-                          <div className="flex flex-col gap-1.5">
-                            <Label htmlFor={`mp-note-${person.id}`} className="text-xs font-semibold">
-                              Note / Remarks
-                            </Label>
-                            <Input
-                              id={`mp-note-${person.id}`}
-                              name={`note-${person.id}`}
-                              className="min-h-11"
-                              autoComplete="off"
-                              disabled={frozen}
-                              placeholder="e.g. Regular 1st cutoff pay"
-                              value={frozen && slip ? slip.note || '' : draft.note || slip?.note || ''}
-                              onChange={(e) => patchDraft(person.id, { note: e.target.value })}
-                            />
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between pt-1">
-                          <div>
-                            {slip ? (
-                              <div className="flex flex-wrap items-center gap-2 text-sm">
-                                <Badge variant={slip.status === 'signed' ? 'default' : 'secondary'} className="text-xs">
-                                  {payslipStatusLabel(slip.status)}
-                                </Badge>
-                                <span className="text-xs text-muted-foreground">
-                                  {slip.paid_from === 'gcash' ? 'GCash' : 'Cash'}
-                                  {slip.signed_name ? ` · Signed by ${slip.signed_name}` : ''}
-                                </span>
+                        return (
+                          <TableRow key={person.id} className="align-middle">
+                            <TableCell>
+                              <div className="flex flex-col gap-0.5">
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                  <span className="font-semibold text-foreground">{person.full_name}</span>
+                                  <Badge variant="outline" className="text-[11px]">
+                                    {roleLabel(person.role)}
+                                  </Badge>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                                  {person.monthly_salary_minor > 0 ? (
+                                    <span>
+                                      {formatPesos(person.monthly_salary_minor)}/mo ·{' '}
+                                      <strong className="text-foreground">{formatPesos(dailyRateMinor)}/d</strong>
+                                    </span>
+                                  ) : (
+                                    <span className="text-amber-600 dark:text-amber-400">No base monthly set</span>
+                                  )}
+                                  {isManager && (!locked || isOwner) ? (
+                                    <button
+                                      type="button"
+                                      className="inline-flex items-center text-xs font-medium text-primary hover:underline"
+                                      onClick={() => openEditBaseSalary(person)}
+                                    >
+                                      <Pencil className="size-3 mr-0.5" /> Set base
+                                    </button>
+                                  ) : null}
+                                </div>
                               </div>
-                            ) : (
-                              <p className="text-xs text-muted-foreground">
-                                {locked ? 'Not sent. Period is locked.' : 'Draft ready. Click send to issue payslip.'}
-                              </p>
-                            )}
-                          </div>
-                          <Button
-                            type="button"
-                            className="min-h-11 sm:w-auto"
-                            disabled={frozen || busyId === person.id}
-                            onClick={() => sendOne(person)}
-                          >
-                            {busyId === person.id
-                              ? 'Saving…'
-                              : slip?.status === 'sent' && !locked
-                                ? 'Save changes'
-                                : slip
-                                  ? payslipStatusLabel(slip.status)
-                                  : 'Send payslip'}
-                          </Button>
-                        </div>
-                      </li>
-                    )
-                  })}
-                </ul>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Input
+                                id={`mp-salary-${person.id}`}
+                                name={`salary-${person.id}`}
+                                className="min-h-10 text-right tabular-nums font-medium"
+                                inputMode="decimal"
+                                autoComplete="off"
+                                disabled={frozen}
+                                placeholder="0.00"
+                                value={salaryText}
+                                onChange={(e) => patchDraft(person.id, { salary: e.target.value })}
+                              />
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Input
+                                id={`mp-incentive-${person.id}`}
+                                name={`incentive-${person.id}`}
+                                className="min-h-10 text-right tabular-nums"
+                                inputMode="decimal"
+                                autoComplete="off"
+                                disabled={frozen}
+                                placeholder="0.00"
+                                value={incentiveText}
+                                onChange={(e) => patchDraft(person.id, { incentive: e.target.value })}
+                              />
+                            </TableCell>
+                            <TableCell className="text-right tabular-nums font-bold text-primary whitespace-nowrap">
+                              {takeHome == null ? '—' : formatAccounting(takeHome)}
+                            </TableCell>
+                            <TableCell>
+                              <NamedSelect
+                                id={`mp-paid-${person.id}`}
+                                name={`paid-${person.id}`}
+                                className="min-h-10"
+                                disabled={frozen}
+                                value={payrollPaidFrom(frozen ? slip?.paid_from : draft.paidFrom, slip?.paid_from)}
+                                onChange={(value) => patchDraft(person.id, { paidFrom: value })}
+                                options={[
+                                  { value: 'cash', label: 'Cash' },
+                                  { value: 'gcash', label: 'GCash' },
+                                ]}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                id={`mp-note-${person.id}`}
+                                name={`note-${person.id}`}
+                                className="min-h-10 text-xs"
+                                autoComplete="off"
+                                disabled={frozen}
+                                placeholder={
+                                  calcMode === 'prorated_days'
+                                    ? `${coveredDays}d pro-rated cutoff`
+                                    : 'Regular半month cutoff'
+                                }
+                                value={frozen && slip ? slip.note || '' : draft.note ?? slip?.note ?? ''}
+                                onChange={(e) => patchDraft(person.id, { note: e.target.value })}
+                              />
+                            </TableCell>
+                            <TableCell className="whitespace-nowrap">
+                              {slip ? (
+                                <div className="flex flex-col gap-0.5">
+                                  <Badge
+                                    variant={slip.status === 'signed' ? 'default' : slip.status === 'received' ? 'secondary' : 'outline'}
+                                    className="text-xs w-fit"
+                                  >
+                                    {payslipStatusLabel(slip.status)}
+                                  </Badge>
+                                  {slip.signed_name ? (
+                                    <span className="text-[11px] text-muted-foreground truncate max-w-[110px]">
+                                      {slip.signed_name}
+                                    </span>
+                                  ) : null}
+                                </div>
+                              ) : (
+                                <Badge variant="outline" className="text-xs text-muted-foreground">
+                                  Draft
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right whitespace-nowrap">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant={slip ? 'outline' : 'default'}
+                                className="min-h-10"
+                                disabled={frozen || busyId === person.id}
+                                onClick={() => sendOne(person)}
+                              >
+                                {busyId === person.id
+                                  ? 'Saving…'
+                                  : slip
+                                    ? isOwner && slip.status !== 'sent'
+                                      ? 'Override & Sync'
+                                      : 'Save changes'
+                                    : 'Send payslip'}
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        )
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
               ) : (
                 <p className="p-6 text-sm text-muted-foreground text-center">
-                  No office or admin staff found for this branch. Day crew are paid on the Daily Sheet.
+                  No office or admin staff match the current filter. Day crew are paid on the Daily Sheet.
                 </p>
               )}
             </section>
           </div>
         ) : (
           /* =========================================================================
-             VIEW MODE: PAYROLL HISTORY & EXPORT REPORTS
+             VIEW MODE: PAYROLL HISTORY & EDITABLE FINANCE-SYNCED LEDGER
              ========================================================================= */
           <div className="flex flex-col gap-4">
             {/* Filter Bar */}
             <div className="rounded-2xl border border-border bg-card p-4 flex flex-col gap-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <h2 className="text-lg font-bold text-foreground">Payroll History & Reports</h2>
+                  <h2 className="text-lg font-bold text-foreground">Payroll History &amp; Editable Ledger</h2>
                   <p className="text-sm text-muted-foreground">
-                    Filter historical payroll by year, month, cutoff, branch, and status. Export reports to CSV, Excel, or Print/PDF.
+                    Filter historical payslips by year, month, cutoff, branch, or employee. Any Owner edit or delete automatically updates Finance Books (Account 14).
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-2">
@@ -1014,7 +1411,7 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
                   <div className="relative">
                     <Search className="size-4 absolute left-3 top-3.5 text-muted-foreground" aria-hidden />
                     <Input
-                      placeholder="Search name or role…"
+                      placeholder="Search name, role, or note…"
                       value={historySearch}
                       onChange={(e) => setHistorySearch(e.target.value)}
                       className="min-h-11 pl-9"
@@ -1068,18 +1465,20 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
                       <TableHead>Method</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Remarks</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {filteredHistory.map((s) => {
                       const staff = staffMap.get(s.staff_id)
                       const takeHome = payslipTakeHome(s.salary_minor, s.incentive_minor)
+                      const canEditRow = isOwner || (canWrite && s.status === 'sent')
                       return (
                         <TableRow key={s.id}>
                           <TableCell className="font-medium whitespace-nowrap">
                             {rangeLabel(s.period_start, s.period_end)}
                             <span className="block text-xs text-muted-foreground font-normal">
-                              {s.period_start} to {s.period_end}
+                              {s.period_start} to {s.period_end} ({daysBetweenInclusive(s.period_start, s.period_end)}d)
                             </span>
                           </TableCell>
                           <TableCell className="whitespace-nowrap">{branchMap.get(s.branch) || s.branch}</TableCell>
@@ -1104,12 +1503,41 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
                             ) : null}
                           </TableCell>
                           <TableCell className="text-xs text-muted-foreground max-w-xs truncate">{s.note || '—'}</TableCell>
+                          <TableCell className="text-right whitespace-nowrap">
+                            <div className="flex justify-end gap-1">
+                              {canEditRow ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="min-h-9 gap-1"
+                                  onClick={() => openEditHistoryModal(s)}
+                                >
+                                  <Pencil className="size-3.5" aria-hidden />
+                                  Edit
+                                </Button>
+                              ) : null}
+                              {isOwner ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="min-h-9 text-destructive hover:text-destructive"
+                                  disabled={busyId === s.id}
+                                  onClick={() => handleDeleteHistorySlip(s)}
+                                  aria-label="Delete payslip"
+                                >
+                                  <Trash2 className="size-3.5" />
+                                </Button>
+                              ) : null}
+                            </div>
+                          </TableCell>
                         </TableRow>
                       )
                     })}
                     {!filteredHistory.length && (
                       <TableRow>
-                        <TableCell colSpan={10} className="py-8 text-center text-muted-foreground">
+                        <TableCell colSpan={11} className="py-8 text-center text-muted-foreground">
                           {loadingHistory ? 'Loading payroll history…' : 'No payroll records match the selected filters.'}
                         </TableCell>
                       </TableRow>
@@ -1129,7 +1557,7 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
             <DialogTitle>Set base monthly salary</DialogTitle>
             <DialogDescription>
               Configure default base salary for <strong>{editingBaseStaff?.full_name}</strong> ({roleLabel(editingBaseStaff?.role)}).
-              This rate will automatically prefill each semi-monthly cutoff (half per payroll period).
+              Used for both 50% semi-monthly cutoffs and daily pro-rata calculations (Monthly ÷ 30 × Covered Days).
             </DialogDescription>
           </DialogHeader>
           <form onSubmit={saveBaseSalary} className="flex flex-col gap-4">
@@ -1142,18 +1570,26 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
                 min="0"
                 step="0.01"
                 className="min-h-11 text-right tabular-nums font-semibold"
-                placeholder="20000.00"
+                placeholder="30000.00"
                 value={baseSalaryInput}
                 onChange={(e) => setBaseSalaryInput(e.target.value)}
               />
               {baseSalaryInput && Number(baseSalaryInput) > 0 ? (
-                <p className="text-xs text-muted-foreground bg-muted/40 p-2.5 rounded-lg border border-border">
-                  Semi-monthly cutoff rate:{' '}
-                  <strong className="text-foreground">
-                    {formatPesos(Math.round((Number(baseSalaryInput) / 2) * 100))}
-                  </strong>{' '}
-                  per period (1st–15th and 16th–end of month).
-                </p>
+                <div className="text-xs text-muted-foreground bg-muted/40 p-2.5 rounded-lg border border-border space-y-1">
+                  <p>
+                    50% Quincena (15d):{' '}
+                    <strong className="text-foreground">
+                      {formatPesos(Math.round((Number(baseSalaryInput) / 2) * 100))}
+                    </strong>
+                  </p>
+                  <p>
+                    Daily Pro-Rata Rate (÷ 30):{' '}
+                    <strong className="text-foreground">
+                      {formatPesos(Math.round((Number(baseSalaryInput) / 30) * 100))}/day
+                    </strong>{' '}
+                    (16d = {formatPesos(Math.round(((Number(baseSalaryInput) * 16) / 30) * 100))})
+                  </p>
+                </div>
               ) : null}
             </div>
             <DialogFooter>
@@ -1162,6 +1598,87 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
               </Button>
               <Button type="submit" className="min-h-11" disabled={savingBase}>
                 {savingBase ? 'Saving…' : 'Save base salary'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit / Override Historical Payslip Dialog (Syncs with Finance Expenses) */}
+      <Dialog open={!!editingHistorySlip} onOpenChange={(open) => !open && setEditingHistorySlip(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Payslip &amp; Sync Finance Books</DialogTitle>
+            <DialogDescription>
+              Updating this payslip for{' '}
+              <strong>{staffMap.get(editingHistorySlip?.staff_id)?.full_name || 'Employee'}</strong> automatically updates
+              the corresponding paid salary expense in Finance Books (Account 14 · P&amp;L &amp; Bills).
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={saveHistorySlipEdit} className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="hist-edit-salary">Salary (₱)</Label>
+              <Input
+                id="hist-edit-salary"
+                required
+                inputMode="decimal"
+                className="min-h-11 text-right tabular-nums font-semibold"
+                value={historyEditForm.salary}
+                onChange={(e) => setHistoryEditForm((f) => ({ ...f, salary: e.target.value }))}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="hist-edit-inc">Incentive / Adj (₱)</Label>
+              <Input
+                id="hist-edit-inc"
+                inputMode="decimal"
+                className="min-h-11 text-right tabular-nums"
+                value={historyEditForm.incentive}
+                onChange={(e) => setHistoryEditForm((f) => ({ ...f, incentive: e.target.value }))}
+              />
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="hist-edit-method">Payment Method</Label>
+              <select
+                id="hist-edit-method"
+                value={historyEditForm.paid_from}
+                onChange={(e) => setHistoryEditForm((f) => ({ ...f, paid_from: e.target.value }))}
+                className="min-h-11 rounded-xl border border-input bg-background px-3 text-sm"
+              >
+                <option value="cash">Cash</option>
+                <option value="gcash">GCash</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="hist-edit-status">Status</Label>
+              <select
+                id="hist-edit-status"
+                value={historyEditForm.status}
+                disabled={!isOwner}
+                onChange={(e) => setHistoryEditForm((f) => ({ ...f, status: e.target.value }))}
+                className="min-h-11 rounded-xl border border-input bg-background px-3 text-sm"
+              >
+                <option value="sent">Sent</option>
+                <option value="received">Received</option>
+                <option value="signed">Signed</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
+              <Label htmlFor="hist-edit-note">Remarks / Formula Note</Label>
+              <Input
+                id="hist-edit-note"
+                className="min-h-11"
+                placeholder="e.g. 16d pro-rated adjustment"
+                value={historyEditForm.note}
+                onChange={(e) => setHistoryEditForm((f) => ({ ...f, note: e.target.value }))}
+              />
+            </div>
+            <DialogFooter className="sm:col-span-2">
+              <Button type="button" variant="outline" className="min-h-11" onClick={() => setEditingHistorySlip(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" className="min-h-11" disabled={savingHistorySlip}>
+                {savingHistorySlip ? 'Syncing…' : 'Save & Sync to Finance'}
               </Button>
             </DialogFooter>
           </form>
@@ -1182,6 +1699,9 @@ export default function MonthlyPayrollPage({ embedded = false } = {}) {
         <div className="flex flex-wrap items-center gap-2">
           <Button type="button" variant="outline" className="min-h-11" asChild>
             <Link to="/operations/payslips">My payslips</Link>
+          </Button>
+          <Button type="button" variant="outline" className="min-h-11" asChild>
+            <Link to="/operations/my-advances">Cash advances</Link>
           </Button>
         </div>
       }

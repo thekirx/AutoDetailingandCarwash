@@ -197,6 +197,10 @@ function attachHakumApis(server) {
     const { handleBirthdayGreetingsRequest } = await import('./server/birthdayGreetingsApi.mjs')
     return handleBirthdayGreetingsRequest(req, res)
   })
+  mount('/api/finance', async (req, res) => {
+    const { default: financeGateway } = await import('./api/finance.js')
+    return financeGateway(req, res)
+  })
   mount('/api/send-finance-quote', async (req, res, helpers) => {
     const { handleFinanceQuoteRequest } = await import('./server/sendFinanceQuote.mjs')
     return handleFinanceQuoteRequest(req, res, helpers)
