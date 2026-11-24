@@ -1,3 +1,9 @@
+import {
+  BOOKING_PROJECTIONS,
+  countActiveVoucherHolds,
+  findCustomerBooking,
+  updateBookingRecord,
+} from './bookingRepo.mjs'
 import { sendShopMessage } from './pointsShop.mjs'
 import { shopItems } from '../src/lib/pointsShop.js'
 import { filterOperationalBranches, filterOperationalStockRows } from '../src/lib/inventoryBranchStock.js'
@@ -108,7 +114,7 @@ export async function loadCustomerPortal({ accessToken, origin = '' }) {
         .order('name'),
       admin
         .from('bookings')
-        .select('id, branch, status, vehicle_plate, vehicle_make, vehicle_model, final_price_minor, scheduled_start, created_at, customer_name, service_id, visit_group_id, for_payment_at, completed_at, services(name, slug, pay_category)')
+        .select(BOOKING_PROJECTIONS.portalHistory)
         .eq('customer_id', userId)
         .order('created_at', { ascending: false })
         .limit(40),
@@ -121,7 +127,7 @@ export async function loadCustomerPortal({ accessToken, origin = '' }) {
         .limit(40),
       admin
         .from('bookings')
-        .select('id, branch, status, vehicle_plate, vehicle_make, vehicle_model, scheduled_start, notes, reschedule_requested_at, final_price_minor, queue_number, service_id, visit_group_id, for_payment_at, completed_at, services(name, slug, pay_category)')
+        .select(BOOKING_PROJECTIONS.portalActive)
         .eq('customer_id', userId)
         .in('status', CUSTOMER_ACTIVE_VISIT_STATUSES)
         .order('scheduled_start', { ascending: true }),
@@ -260,6 +266,7 @@ export async function loadCustomerPortal({ accessToken, origin = '' }) {
     const kind = visitKindFromService(row.services)
     return {
       ...row,
+      reschedule_requested_at: row.reschedule_requested_at || null,
       service_name: row.services?.name || null,
       kind,
       queue_label: row.queue_number != null ? formatQueueNumber(row.queue_number, row.services?.pay_category) : null,
@@ -641,7 +648,7 @@ export async function mutateCustomerPortal({ accessToken, body }) {
 
     const { data: booking, error: bookingErr } = await admin
       .from('bookings')
-      .select('id, branch, status, customer_id, customer_name, services(name, slug, pay_category)')
+      .select(BOOKING_PROJECTIONS.portalReview)
       .eq('id', bookingId)
       .eq('customer_id', userId)
       .eq('status', 'completed')
@@ -806,14 +813,10 @@ export async function mutateCustomerPortal({ accessToken, body }) {
     const windowErr = promoVoucherWindowError(voucher, todayKey)
     if (windowErr) throw Object.assign(new Error(windowErr), { status: 400 })
 
-    const { count: holds } = await admin
-      .from('bookings')
-      .select('*', { count: 'exact', head: true })
-      .eq('promo_voucher_id', voucher.id)
-      .not('status', 'in', '("completed","cancelled")')
+    const holds = await countActiveVoucherHolds(admin, voucher.id)
     const maxUses = Math.max(0, Math.floor(Number(voucher.max_uses) || 0))
     const usesCount = Math.max(0, Math.floor(Number(voucher.uses_count) || 0))
-    if (usesCount + (holds || 0) >= maxUses) {
+    if (usesCount + holds >= maxUses) {
       throw Object.assign(new Error('That voucher has no uses left.'), { status: 400 })
     }
 
@@ -877,12 +880,11 @@ export async function mutateCustomerPortal({ accessToken, body }) {
     const shapeErr = promoCodeShapeError(normalized)
     if (shapeErr) throw Object.assign(new Error(shapeErr), { status: 400 })
 
-    const { data: booking, error: bErr } = await admin
-      .from('bookings')
-      .select('id, branch, status, customer_id, service_id, price_minor, final_price_minor, promo_voucher_id, services(name, pay_category, slug, parent_service_id)')
-      .eq('id', bookingId)
-      .eq('customer_id', userId)
-      .maybeSingle()
+    const { data: booking, error: bErr } = await findCustomerBooking(admin, {
+      bookingId,
+      userId,
+      projection: BOOKING_PROJECTIONS.portalVoucher,
+    })
     if (bErr) throw Object.assign(new Error(bErr.message), { status: 400 })
     if (!booking) throw Object.assign(new Error('Booking not found.'), { status: 404 })
     if (['completed', 'cancelled'].includes(booking.status)) {
@@ -904,12 +906,8 @@ export async function mutateCustomerPortal({ accessToken, body }) {
     const windowErr = promoVoucherWindowError(voucher, todayKey)
     if (windowErr) throw Object.assign(new Error(windowErr), { status: 400 })
 
-    const { count: holds } = await admin
-      .from('bookings')
-      .select('*', { count: 'exact', head: true })
-      .eq('promo_voucher_id', voucher.id)
-      .not('status', 'in', '("completed","cancelled")')
-    if (Math.max(0, Number(voucher.uses_count) || 0) + (holds || 0) >= Number(voucher.max_uses)) {
+    const holds = await countActiveVoucherHolds(admin, voucher.id)
+    if (Math.max(0, Number(voucher.uses_count) || 0) + holds >= Number(voucher.max_uses)) {
       throw Object.assign(new Error('That voucher has no uses left.'), { status: 400 })
     }
 
@@ -932,16 +930,18 @@ export async function mutateCustomerPortal({ accessToken, body }) {
     const newPrice = promoDiscountedPriceMinor(listPrice, voucher)
     const discount = listPrice - newPrice
 
-    const { error: updateErr } = await admin
-      .from('bookings')
-      .update({
+    const { error: updateErr } = await updateBookingRecord(
+      admin,
+      booking.id,
+      {
         promo_voucher_id: voucher.id,
         promo_discount_minor: discount,
         final_price_minor: newPrice,
         promo_applied_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-      })
-      .eq('id', booking.id)
+      },
+      'id',
+    )
     if (updateErr) throw Object.assign(new Error(updateErr.message), { status: 400 })
 
     await admin.from('promo_voucher_redemptions').insert({

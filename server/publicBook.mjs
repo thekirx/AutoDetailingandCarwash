@@ -3,6 +3,7 @@ import {
   insertBookingPlaceholderAndNotify,
   resolveOptionalCustomerId,
 } from './detailingBookingIntake.mjs'
+import { countActiveVoucherHolds } from './bookingRepo.mjs'
 import { bearer, json, readJsonBody, setCors, clientIp, rateLimit } from './httpUtil.mjs'
 import { resolveBookingCustomerId } from './publicBookCustomer.mjs'
 import { friendCodeAccountError, normalizeReferral, referralRequiredError } from '../src/lib/referralSource.js'
@@ -161,14 +162,10 @@ export async function handlePublicBookRequest(req, res) {
       const windowErr = promoVoucherWindowError(voucher, todayKey)
       if (windowErr) return json(res, 400, { error: windowErr })
 
-      const { count: holds } = await db
-        .from('bookings')
-        .select('*', { count: 'exact', head: true })
-        .eq('promo_voucher_id', voucher.id)
-        .not('status', 'in', '("completed","cancelled")')
+      const holds = await countActiveVoucherHolds(db, voucher.id)
       const maxUses = Math.max(0, Math.floor(Number(voucher.max_uses) || 0))
       const usesCount = Math.max(0, Math.floor(Number(voucher.uses_count) || 0))
-      if (usesCount + (holds || 0) >= maxUses) {
+      if (usesCount + holds >= maxUses) {
         return json(res, 400, { error: 'That voucher has no uses left.' })
       }
 

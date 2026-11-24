@@ -3,6 +3,12 @@
  * GET list · PATCH reschedule/cancel · POST send reminder
  */
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
+import {
+  BOOKING_PROJECTIONS,
+  findLatestBookingByPlates,
+  findOpenBookingByPlates,
+  insertBookingRecord,
+} from './bookingRepo.mjs'
 import { sendPaintMaintenanceReminder } from './paintMaintenanceNotify.mjs'
 import { notifyBookingStatus } from './notifyBooking.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
@@ -82,14 +88,7 @@ async function processArrival(db, staff, row, body) {
 
   // ponytail: plate match is exact on stored vs normalized spelling; a third spelling ("NKA 9234") slips through.
   if (service?.id && plates.length) {
-    const { data: open } = await db
-      .from('bookings')
-      .select('id, status, branch')
-      .eq('is_archived', false)
-      .eq('service_id', service.id)
-      .in('vehicle_plate', plates)
-      .not('status', 'in', '(completed,cancelled)')
-      .limit(1)
+    const { data: open } = await findOpenBookingByPlates(db, { serviceId: service.id, plates })
     if (open?.[0]) return { status: 409, body: { error: 'This car is already on the Bookings board.', booking: open[0] } }
   }
 
@@ -103,12 +102,7 @@ async function processArrival(db, staff, row, body) {
       ? db.from('customers').select('id, full_name, phone').eq('id', row.customer_id).maybeSingle()
       : Promise.resolve({ data: null }),
     plates.length
-      ? db
-          .from('bookings')
-          .select('customer_id, customer_name, customer_phone, vehicle_make, vehicle_model, vehicle_type')
-          .in('vehicle_plate', plates)
-          .order('created_at', { ascending: false })
-          .limit(1)
+      ? findLatestBookingByPlates(db, plates)
       : Promise.resolve({ data: [] }),
   ])
 
@@ -123,7 +117,7 @@ async function processArrival(db, staff, row, body) {
   })
   if (built.error) return { status: 400, body: { error: built.error } }
 
-  const { data: booking, error } = await db.from('bookings').insert(built.row).select('*, services(name, slug, pay_category)').single()
+  const { data: booking, error } = await insertBookingRecord(db, built.row, BOOKING_PROJECTIONS.notifyFull)
   if (error) return { status: 400, body: { error: error.message } }
 
   let notify = null

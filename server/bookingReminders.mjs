@@ -2,6 +2,7 @@
  * 7 / 3 / 1 day reminders for detailing booked ahead (landing page or a confirmed date).
  * One send per offset per booking, via in-app inbox and Web Push (SMS reserved for live status updates).
  */
+import { listUpcomingDetailingBookings } from './bookingRepo.mjs'
 import { sendWebPushToUsers } from './webPush.mjs'
 import { loadNotificationConfig } from './notificationConfigApi.mjs'
 import { isWithinQuietHours } from '../src/lib/notificationConfig.js'
@@ -34,14 +35,11 @@ export async function runDetailingBookingReminders(db, today = manilaTodayISO())
 
   const horizon = new Date(`${today}T00:00:00+08:00`)
   horizon.setUTCDate(horizon.getUTCDate() + maxDaysAhead + 1)
-  const { data, error } = await db
-    .from('bookings')
-    .select('id, customer_id, customer_name, customer_phone, vehicle_make, vehicle_model, vehicle_plate, scheduled_start, status, branch, service_id, services(name, slug, pay_category), assigned_staff_id')
-    .in('status', ['pending', 'confirmed'])
-    .eq('is_archived', false)
-    .gte('scheduled_start', `${today}T00:00:00+08:00`)
-    .lte('scheduled_start', horizon.toISOString())
-    .limit(400)
+  const { data, error } = await listUpcomingDetailingBookings(db, {
+    fromIso: `${today}T00:00:00+08:00`,
+    toIso: horizon.toISOString(),
+    limit: 400,
+  })
   if (error) throw new Error(error.message)
 
   const due = (data || []).filter((row) => isBookingBoardRow(row) && reminderOffset(row.scheduled_start, today, allowedDays))

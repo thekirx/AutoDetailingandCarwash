@@ -1,10 +1,8 @@
+import { BOOKING_PROJECTIONS, findBookingById } from './bookingRepo.mjs'
 import { notifyBookingStatus } from './notifyBooking.mjs'
 import { bearer, json, readJsonBody, setCors, clientIp, rateLimit } from './httpUtil.mjs'
 import { resolveActiveStaff } from './staffAuth.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
-
-const NOTIFY_BOOKING_COLS =
-  'id, branch, customer_id, customer_name, customer_phone, vehicle_plate, vehicle_make, vehicle_model, vehicle_type, service_id, scheduled_start, estimated_completion, status, queue_date, queue_number, visit_group_id, is_redo, price_minor, payable_minor, progress_photo_urls, is_archived'
 
 const ALLOWED = new Set(['admin', 'BossMich', 'assistant_super_admin', 'team_lead', 'sales', 'operations_lead'])
 
@@ -38,7 +36,7 @@ export async function handleNotifyBookingRequest(req, res) {
     const bookingId = body.booking_id
     if (!bookingId) return json(res, 400, { error: 'booking_id required' })
 
-    const { data: booking, error } = await db.from('bookings').select(NOTIFY_BOOKING_COLS).eq('id', bookingId).single()
+    const { data: booking, error } = await findBookingById(db, bookingId, BOOKING_PROJECTIONS.notifyCols)
     if (error || !booking) return json(res, 404, { error: error?.message || 'Booking not found' })
 
     const status = String(body.status || booking.status).trim()

@@ -1,3 +1,4 @@
+import { BOOKING_PROJECTIONS } from './bookingRepo.mjs'
 import { bearer, json, setCors } from './httpUtil.mjs'
 import { requireActiveStaff } from './staffAuth.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
@@ -155,7 +156,7 @@ export async function runScopedQueries(db, scope, term) {
 
     let q = db
       .from('bookings')
-      .select('id, branch, status, vehicle_plate, vehicle_make, vehicle_model, customer_name, queue_number, scheduled_start, services(name, slug, pay_category)')
+      .select(BOOKING_PROJECTIONS.search)
       .or(orParts.join(','))
       .eq('is_archived', false)
       .order('created_at', { ascending: false })

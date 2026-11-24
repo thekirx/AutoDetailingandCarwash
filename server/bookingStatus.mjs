@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { adminClient as admin } from './supabaseAdmin.mjs'
+import { BOOKING_PROJECTIONS, findBookingById, updateBookingRecord } from './bookingRepo.mjs'
 import { sendBirthdayQueueStart } from './birthdayGreetings.mjs'
 import { notifyBookingPhotosReady, notifyBookingStatus } from './notifyBooking.mjs'
 import { canStaffUpdateBookingStatus } from './bookingStatusAccess.mjs'
@@ -144,11 +145,7 @@ export async function handleBookingStatusRequest(req, res) {
     const status = String(body.status || '').trim()
     if (!bookingId || !status) return json(res, 400, { error: 'booking_id and status required' })
 
-    const { data: existing, error: loadErr } = await db
-      .from('bookings')
-      .select('id, branch, status, customer_name, customer_phone, customer_id, vehicle_plate, service_id, services(name, slug, pay_category)')
-      .eq('id', bookingId)
-      .maybeSingle()
+    const { data: existing, error: loadErr } = await findBookingById(db, bookingId, BOOKING_PROJECTIONS.statusDetail)
     if (loadErr) return json(res, 400, { error: loadErr.message })
     if (!existing) return json(res, 404, { error: 'Booking not found' })
 
@@ -182,15 +179,17 @@ export async function handleBookingStatusRequest(req, res) {
 
       if (existing.status === 'in_progress') {
         const now = new Date().toISOString()
-        const { error: checkErr } = await db
-          .from('bookings')
-          .update({
+        const { error: checkErr } = await updateBookingRecord(
+          db,
+          bookingId,
+          {
             status: 'final_checking',
             final_checking_at: now,
             final_checked_by: staff.id,
             updated_at: now,
-          })
-          .eq('id', bookingId)
+          },
+          'id',
+        )
         if (checkErr) return json(res, 400, { error: checkErr.message })
       }
 
@@ -200,12 +199,8 @@ export async function handleBookingStatusRequest(req, res) {
       })
       if (handoffErr) return json(res, 400, { error: handoffErr.message })
 
-      const { data: booking, error: reloadErr } = await db
-        .from('bookings')
-        .select('*')
-        .eq('id', bookingId)
-        .single()
-      if (reloadErr) return json(res, 400, { error: reloadErr.message })
+      const { data: booking, error: reloadErr } = await findBookingById(db, bookingId, '*')
+      if (reloadErr || !booking) return json(res, 400, { error: reloadErr?.message || 'Booking not found' })
 
       let notify = null
       try {
@@ -277,12 +272,7 @@ export async function handleBookingStatusRequest(req, res) {
       patch.branch = nextBranch
     }
 
-    const { data: booking, error } = await db
-      .from('bookings')
-      .update(patch)
-      .eq('id', bookingId)
-      .select('*, services(name, slug, pay_category)')
-      .single()
+    const { data: booking, error } = await updateBookingRecord(db, bookingId, patch, BOOKING_PROJECTIONS.notifyFull)
     if (error) return json(res, 400, { error: error.message })
 
     let experienceCard = null

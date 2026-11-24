@@ -9,11 +9,9 @@ import {
   renderRescheduleAckSms,
   rescheduleRequestDecision,
 } from '../src/lib/bookingReschedule.js'
+import { claimBookingReschedule, findCustomerBooking } from './bookingRepo.mjs'
 import { notifyStaffEvent } from './notifyOpsEvent.mjs'
 import { sendWebPushToUsers } from './webPush.mjs'
-
-const SELECT =
-  'id, customer_id, customer_name, customer_phone, branch, status, vehicle_plate, vehicle_make, vehicle_model, scheduled_start, reschedule_requested_at, services(name, slug, pay_category), customers!bookings_customer_id_fkey(full_name)'
 
 async function tellCustomer(db, booking, sms) {
   const userId = booking.customer_id
@@ -62,12 +60,7 @@ export async function requestBookingReschedule(db, { userId, bookingId }) {
   const id = String(bookingId || '').trim()
   if (!id) throw Object.assign(new Error('Booking is required.'), { status: 400 })
 
-  const { data: booking, error } = await db
-    .from('bookings')
-    .select(SELECT)
-    .eq('id', id)
-    .eq('customer_id', userId)
-    .maybeSingle()
+  const { data: booking, error } = await findCustomerBooking(db, { bookingId: id, userId })
   if (error) throw Object.assign(new Error(error.message), { status: 400 })
 
   const decision = rescheduleRequestDecision(booking)
@@ -77,15 +70,12 @@ export async function requestBookingReschedule(db, { userId, bookingId }) {
   }
 
   const stamp = new Date().toISOString()
-  const { data: saved, error: saveError } = await db
-    .from('bookings')
-    .update({ reschedule_requested_at: stamp })
-    .eq('id', booking.id)
-    .eq('customer_id', userId)
-    .is('reschedule_requested_at', null)
-    .in('status', [...RESCHEDULE_OPEN_STATUSES])
-    .select('id, reschedule_requested_at')
-    .maybeSingle()
+  const { data: saved, error: saveError } = await claimBookingReschedule(db, {
+    bookingId: booking.id,
+    userId,
+    timestamp: stamp,
+    openStatuses: RESCHEDULE_OPEN_STATUSES,
+  })
   if (saveError) throw Object.assign(new Error(saveError.message), { status: 400 })
   if (!saved) {
     return { ok: true, already: true, message: RESCHEDULE_ACK }

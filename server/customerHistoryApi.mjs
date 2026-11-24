@@ -2,6 +2,7 @@
  * Ops customer History API — plate / phone ledger (bookings + maintenance + POS sales).
  * Branch Admin / TL: scoped to their branch(es). SA / ASA / Sales / Marketing: all branches.
  */
+import { BOOKING_PROJECTIONS } from './bookingRepo.mjs'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
 import { resolveActiveStaff } from './staffAuth.mjs'
 import { adminClient as admin } from './supabaseAdmin.mjs'
@@ -88,8 +89,7 @@ export async function handleCustomerHistoryRequest(req, res) {
     // An explicit branch filter from the client is honored when passed.
     const branchSlugs = explicitBranch
 
-    const bookingSelect =
-      'id, customer_id, customer_name, customer_phone, vehicle_plate, vehicle_make, vehicle_model, branch, status, scheduled_start, scheduled_end, completed_at, created_at, updated_at, final_price_minor, price_minor, notes, service_id, services(name, slug, pay_category)'
+    const bookingSelect = BOOKING_PROJECTIONS.history
 
     // Broad candidate pull (ilike), then normalize-match in process — keeps PostgREST simple + indexed.
     let candidateQ = db.from('bookings').select(bookingSelect).order('created_at', { ascending: false }).limit(80)

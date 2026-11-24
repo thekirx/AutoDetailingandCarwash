@@ -3,6 +3,7 @@
  * and smart detailing forms (`server/publicOpsForm.mjs`).
  */
 import { inferPhPricingSize } from '../src/lib/phVehicleSizes.js'
+import { insertBookingRecord } from './bookingRepo.mjs'
 import { notifyBookingStatus } from './notifyBooking.mjs'
 import { resolveBookingCustomerId } from './publicBookCustomer.mjs'
 
@@ -58,7 +59,7 @@ export async function insertBookingPlaceholderAndNotify({
   customerId = null,
   notifyBooking = notifyBookingStatus,
 }) {
-  const { data: booking, error } = await db.from('bookings').insert(insertRow).select('*').single()
+  const { data: booking, error } = await insertBookingRecord(db, insertRow)
   if (error) {
     throw Object.assign(new Error(error.message), { status: 400 })
   }

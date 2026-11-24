@@ -6,6 +6,7 @@
 import { REVIEW_DELAY_MS } from '../src/lib/visitReviewDelay.js'
 import { isWithinQuietHours } from '../src/lib/notificationConfig.js'
 import { applyTemplateText } from '../src/lib/notificationTemplates.js'
+import { listCompletedBookingsForReview } from './bookingRepo.mjs'
 import { loadNotificationConfig } from './notificationConfigApi.mjs'
 import { loadTemplateMap, templateEnabled } from './notificationTemplatesDb.mjs'
 import { deliverUserNotifications, sendWebPushToUsers } from './webPush.mjs'
@@ -50,17 +51,7 @@ export async function runRateVisitReminders(db, { appUrl = '', nowMs = Date.now(
   const windowMs = windowHours * 60 * 60 * 1000
 
   const sinceIso = new Date(nowMs - windowMs).toISOString()
-  const { data: rows, error } = await db
-    .from('bookings')
-    .select(
-      'id, customer_id, customer_name, vehicle_plate, status, completed_at, for_payment_at, customers!bookings_customer_id_fkey(full_name)',
-    )
-    .eq('status', 'completed')
-    .eq('is_archived', false)
-    .not('customer_id', 'is', null)
-    .gte('completed_at', sinceIso)
-    .order('completed_at', { ascending: true })
-    .limit(200)
+  const { data: rows, error } = await listCompletedBookingsForReview(db, { sinceIso, limit: 200 })
   if (error) throw new Error(error.message)
 
   const candidates = []
