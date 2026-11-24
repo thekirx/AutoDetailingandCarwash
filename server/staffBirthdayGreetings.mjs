@@ -30,7 +30,7 @@ export async function listStaffBirthdaysToday(db, today = new Date()) {
   const { year } = birthdayQueryDays(today)
   const { data, error } = await db
     .from('staff_profiles')
-    .select('id, full_name, date_of_birth, is_active, home_branch')
+    .select('id, full_name, date_of_birth, is_active, branch_slug')
     .eq('is_active', true)
     .eq('is_archived', false)
     .not('date_of_birth', 'is', null)
