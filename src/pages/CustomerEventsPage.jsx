@@ -13,6 +13,8 @@ const FILTERS = [
 ]
 
 function timeRange(ev) {
+  if (ev.is_date_tba) return 'Schedule to be announced'
+  if (!ev.starts_at) return 'Time to be announced'
   const start = new Date(ev.starts_at)
   const opts = { hour: 'numeric', minute: '2-digit' }
   const from = start.toLocaleTimeString('en-PH', opts)
@@ -22,7 +24,7 @@ function timeRange(ev) {
 
 function formOpen(ev) {
   const f = ev.ops_forms
-  return f?.slug && f.public_enabled && f.status === 'published' ? f : null
+  return f?.slug && f.public_enabled && f.status === 'published' && f.kind !== 'event' ? f : null
 }
 
 export default function CustomerEventsPage() {
@@ -38,10 +40,10 @@ export default function CustomerEventsPage() {
     Promise.all([
       supabase
         .from('events')
-        .select('id, title, slug, description, branch, starts_at, ends_at, banner_url, content_blocks, form_id, ops_forms!form_id ( id, name, slug, public_enabled, status )')
+        .select('id, title, slug, description, branch, starts_at, ends_at, is_date_tba, banner_url, content_blocks, form_id, ops_forms!form_id ( id, name, slug, kind, public_enabled, status )')
         .eq('is_published', true)
         .order('starts_at', { ascending: true }),
-      supabase.from('ops_forms').select('id, name, slug, public_enabled, status').eq('is_active', true),
+      supabase.from('ops_forms').select('id, name, slug, kind, public_enabled, status').eq('is_active', true),
     ]).then(([ev, fo]) => {
       if (ev.error) setError(ev.error.message)
       setEvents(ev.data || [])
@@ -54,6 +56,7 @@ export default function CustomerEventsPage() {
   const now = Date.now()
   const shown = useMemo(() => {
     const list = events.filter((ev) => {
+      if (ev.is_date_tba || (!ev.starts_at && !ev.ends_at)) return filter === 'upcoming'
       const end = new Date(ev.ends_at || ev.starts_at).getTime()
       return filter === 'upcoming' ? end >= now : end < now
     })
@@ -62,10 +65,15 @@ export default function CustomerEventsPage() {
 
   if (active) {
     const attached = formOpen(active)
+    const activeWhenLabel = active.is_date_tba
+      ? 'To be announced'
+      : active.starts_at
+        ? new Date(active.starts_at).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+        : 'To be announced'
     return (
       <CustomerAppFrame
         title={active.title}
-        subtitle={`${active.branch ? `${active.branch} · ` : ''}${new Date(active.starts_at).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`}
+        subtitle={`${active.branch ? `${active.branch} · ` : ''}${activeWhenLabel}`}
         onBack={() => setActive(null)}
       >
         {active.banner_url ? <img className="capp-cover" src={active.banner_url} alt="" /> : null}
@@ -106,14 +114,15 @@ export default function CustomerEventsPage() {
         <div className="capp-empty capp-span">{filter === 'upcoming' ? 'No upcoming events. New meets will show here.' : 'No past events yet.'}</div>
       ) : null}
       {shown.map((ev) => {
-        const start = new Date(ev.starts_at)
+        const hasStart = Boolean(ev.starts_at) && !ev.is_date_tba
+        const start = hasStart ? new Date(ev.starts_at) : null
         const attached = formOpen(ev)
         return (
           <article key={ev.id} className="capp-card capp-event">
             <div className="capp-event-head">
               <div className="capp-date" aria-hidden>
-                <small>{start.toLocaleDateString('en-PH', { month: 'short' })}</small>
-                <b>{start.getDate()}</b>
+                <small>{start ? start.toLocaleDateString('en-PH', { month: 'short' }) : 'TBA'}</small>
+                <b>{start ? start.getDate() : '—'}</b>
               </div>
               <div className="min-w-0">
                 <h3>{ev.title}</h3>

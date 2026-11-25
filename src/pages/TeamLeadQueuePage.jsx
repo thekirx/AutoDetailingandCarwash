@@ -44,6 +44,35 @@ import { fetchTeamLeadDayBoard, formatMoney, sendTicketToPayment, markTicketRedo
 import QueueTicketEditModal from '../components/QueueTicketEditModal'
 import ReasonConfirmDialog from '../components/ops/ReasonConfirmDialog'
 
+function mapTeamLeadHistoryRows(visits = []) {
+  return visits
+    .filter((v) => !String(v.id || '').startsWith('sale:') && !String(v.id || '').startsWith('note:'))
+    .map((v) => {
+      const rawId =
+        v.booking_id ||
+        v.bookingId ||
+        (typeof v.id === 'string' && v.id.startsWith('booking:') ? v.id.slice(8) : v.id)
+      return {
+        booking_id: rawId,
+        vehicle_plate: v.vehicle_plate || v.plate,
+        branch: v.branch,
+        notes: v.notes || v.note,
+        status: v.status,
+        final_price_minor: v.final_price_minor ?? v.amountMinor ?? v.total_minor,
+        base_price_minor: v.base_price_minor ?? v.price_minor,
+        service_name:
+          v.service_name ||
+          v.services?.name ||
+          v.title ||
+          (Array.isArray(v.services) ? v.services.join(', ') : ''),
+        created_at: v.created_at || v.visited_at || v.when,
+        customer_phone: v.customer_phone || v.phone,
+        visit_group_id: v.visit_group_id,
+      }
+    })
+    .filter((r) => Boolean(r.booking_id))
+}
+
 export default function TeamLeadQueuePage() {
   const { profile, canManageQueue, canViewQueueOperations } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -213,22 +242,9 @@ export default function TeamLeadQueuePage() {
       })
       const body = await res.json().catch(() => ({}))
       if (res.ok) {
-        const visits = body.visits || body.rows || body.timeline || []
+        const visits = body.bookings || body.visits || body.rows || body.timeline || []
         if (Array.isArray(visits) && visits.length) {
-          const mapped = visits.map((v) => ({
-            booking_id: v.booking_id || v.id,
-            vehicle_plate: v.vehicle_plate || v.plate,
-            branch: v.branch,
-            notes: v.notes,
-            status: v.status,
-            final_price_minor: v.final_price_minor ?? v.total_minor,
-            base_price_minor: v.base_price_minor,
-            service_name: v.service_name || (v.services || []).join(', '),
-            created_at: v.created_at || v.visited_at,
-            customer_phone: v.customer_phone || v.phone,
-            visit_group_id: v.visit_group_id,
-          }))
-          setHistoryRows(groupVisitTickets(mapped))
+          setHistoryRows(groupVisitTickets(mapTeamLeadHistoryRows(visits)))
           return
         }
       }
@@ -302,68 +318,68 @@ export default function TeamLeadQueuePage() {
         {summary.map(item => <div key={item.key}><strong>{loading && !boardTickets.length ? <span className="daylight-number-skeleton" aria-label="Loading" /> : item.value ?? '—'}</strong><span>{item.label}</span>{item.value == null ? <span className="sr-only">Count unavailable for this role</span> : null}</div>)}
       </div>
       {search.trim() || historyOpen ? (
-      <details
-        className="qmgr-history"
-        open={historyOpen}
-        onToggle={(e) => setHistoryOpen(e.currentTarget.open)}
-      >
-        <summary className="qmgr-history-summary">
-          <History size={15} aria-hidden />
-          Plate / phone history
-        </summary>
-        <div className="qmgr-history-body">
-          <label className="qmgr-search">
-            <Search size={16} aria-hidden />
-            <input
-              type="search"
-              value={historyPlate}
-              onChange={(e) => setHistoryPlate(e.target.value)}
-              placeholder="Plate or phone…"
-              enterKeyHint="search"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault()
-                  runHistory()
-                }
-              }}
-            />
-          </label>
-          <button
-            type="button"
-            className="qmgr-history-btn"
-            disabled={historyLoading}
-            onClick={runHistory}
-          >
-            {historyLoading ? 'Searching…' : 'Search'}
-          </button>
-          {historyError ? <p className="qmgr-history-error" role="alert">{historyError}</p> : null}
-          {historyRows ? (
-            <div className="qmgr-history-results">
-              {historyRows.length ? historyRows.map((row) => (
-                <button
-                  key={row.booking_id}
-                  type="button"
-                  className="qmgr-history-row"
-                  onClick={() => setEditBookingId(row.booking_id)}
-                >
-                  <span className="font-semibold">{row.vehicle_plate}</span>
-                  {row.branch ? (
-                    <span className="rounded border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-[10px] uppercase text-muted-foreground">
-                      {row.branch}
+        <details
+          className="qmgr-history"
+          open={historyOpen}
+          onToggle={(e) => setHistoryOpen(e.currentTarget.open)}
+        >
+          <summary className="qmgr-history-summary">
+            <History size={15} aria-hidden />
+            Plate / phone history
+          </summary>
+          <div className="qmgr-history-body">
+            <label className="qmgr-search">
+              <Search size={16} aria-hidden />
+              <input
+                type="search"
+                value={historyPlate}
+                onChange={(e) => setHistoryPlate(e.target.value)}
+                placeholder="Plate or phone…"
+                enterKeyHint="search"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    runHistory()
+                  }
+                }}
+              />
+            </label>
+            <button
+              type="button"
+              className="qmgr-history-btn"
+              disabled={historyLoading}
+              onClick={runHistory}
+            >
+              {historyLoading ? 'Searching…' : 'Search'}
+            </button>
+            {historyError ? <p className="qmgr-history-error" role="alert">{historyError}</p> : null}
+            {historyRows ? (
+              <div className="qmgr-history-results">
+                {historyRows.length ? historyRows.map((row) => (
+                  <button
+                    key={row.booking_id}
+                    type="button"
+                    className="qmgr-history-row"
+                    onClick={() => setEditBookingId(row.booking_id)}
+                  >
+                    <span className="font-semibold">{row.vehicle_plate}</span>
+                    {row.branch ? (
+                      <span className="rounded border border-border bg-muted/60 px-1.5 py-0.5 font-mono text-[10px] uppercase text-muted-foreground">
+                        {row.branch}
+                      </span>
+                    ) : null}
+                    <span className="text-muted-foreground">{({ in_progress: 'Washing', final_checking: 'Final check', for_payment: 'To pay', completed: 'Done' })[row.status] || STATUS_LABELS[row.status] || row.status}</span>
+                    <span className="tabular-nums text-emerald-600 dark:text-emerald-400">
+                      {formatMoney(row.final_price_minor ?? row.base_price_minor ?? 0)}
                     </span>
-                  ) : null}
-                  <span className="text-muted-foreground">{({ in_progress: 'Washing', final_checking: 'Final check', for_payment: 'To pay', completed: 'Done' })[row.status] || STATUS_LABELS[row.status] || row.status}</span>
-                  <span className="tabular-nums text-emerald-600 dark:text-emerald-400">
-                    {formatMoney(row.final_price_minor ?? row.base_price_minor ?? 0)}
-                  </span>
-                </button>
-              )) : (
-                <p className="text-sm text-muted-foreground">No history for that plate or phone.</p>
-              )}
-            </div>
-          ) : null}
-        </div>
-      </details>
+                  </button>
+                )) : (
+                  <p className="text-sm text-muted-foreground">No history for that plate or phone.</p>
+                )}
+              </div>
+            ) : null}
+          </div>
+        </details>
 
       ) : null}
       <p className="daylight-longest-wait">Longest wait <strong>{formatDaylightDuration(longestWait)}</strong></p>

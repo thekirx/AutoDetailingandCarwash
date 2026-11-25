@@ -57,9 +57,11 @@ async function persistNotificationConfig(db, config, actorId, action) {
   await db.from('audit_logs').insert({
     action,
     actor_id: actorId,
+    actor_role: 'BossMich',
     entity_type: 'app_settings',
     entity_id: NOTIFICATION_CONFIG_KEY,
-    details: config,
+    summary: action === 'notification_config_reset' ? 'Notification config reset to defaults' : 'Notification config updated',
+    meta: config,
   })
 }
 

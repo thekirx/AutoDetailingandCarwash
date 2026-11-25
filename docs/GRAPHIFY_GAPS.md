@@ -1,6 +1,6 @@
 # Graphify gap audit — principal fullstack view
 
-Updated **2026-11-21** alongside Daily Sheet cutover, 33-service catalog, Form Results Board, Full 5×5 Branch×Service Local SEO & AI Visibility Audit (`docs/seo-ai-visibility.md`), live DB-backed `/shop` & Legal Nov 2026 updates, live `20261121180000` & `20261121190000` security/catalog migrations, centralized `server/staffAuth.mjs` across `18` API modules, zero-PII unauthenticated lookup, `publicSeoCatalog.js`, Notifications Hub CRUD + Simulator, and Web Push delivery sync (`GRAPHIFY_MEMORY`, `GRAPHIFY_WORKFLOWS`, `GRAPHIFY_SEAMS`).
+Updated **2026-11-25** alongside Daily Sheet cutover, 33-service catalog, Form Results Board, Full 5×5 Branch×Service Local SEO & AI Visibility Audit (`docs/seo-ai-visibility.md`), live DB-backed `/shop` & Legal Nov 2026 updates, live `20261121180000` & `20261121190000` security/catalog migrations, centralized `server/staffAuth.mjs` across `18` API modules, zero-PII unauthenticated lookup, `publicSeoCatalog.js`, Notifications Hub CRUD + Simulator, Web Push delivery sync, and the **Hakum Concierge Movable Deterministic Chatbot** (`HakumChatbot` / `hakumChatbotEngine.js` / `hakumChatbotLiveCatalog.js`, full customer app + product catalog coverage, Owner ON/OFF toggle in `/operations/settings/chatbot` & `public.get_public_chatbot_settings()`) (`GRAPHIFY_MEMORY`, `GRAPHIFY_WORKFLOWS`, `GRAPHIFY_SEAMS`, `GRAPHIFY_FRONTEND`).
 
 ## Verdict
 

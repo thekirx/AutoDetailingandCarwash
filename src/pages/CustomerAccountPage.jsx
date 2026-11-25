@@ -309,7 +309,10 @@ export default function CustomerAccountPage() {
               <div className="capp-desk-actions">
                 {activeVisit ? (
                   <>
-                    <Link className="capp-btn capp-btn-fill" to={customerQueuePath(activeVisit.branch)}>
+                    <Link className="capp-btn capp-btn-fill" to={customerVisitPath(activeVisit.id)}>
+                      Manage visit
+                    </Link>
+                    <Link className="capp-btn capp-btn-ghost" to={customerQueuePath(activeVisit.branch)}>
                       View live queue
                     </Link>
                     <Link className="capp-btn capp-btn-ghost" to={CUSTOMER_BOOK_PATH}>
@@ -372,7 +375,25 @@ export default function CustomerAccountPage() {
           <Skeleton />
         </div>
       ) : activeVisit ? (
-        <ActiveVisitCard variant="live" className="capp-phone-only" visit={activeVisit} branchName={branchLabel(branches, activeVisit.branch)} />
+        <>
+          <ActiveVisitCard variant="live" className="capp-phone-only" visit={activeVisit} branchName={branchLabel(branches, activeVisit.branch)} />
+          {bookings.length > 1 ? (
+            <section className="capp-section capp-span" aria-label="Other active visits">
+              <div className="capp-group">
+                {bookings.slice(1).map((extraVisit) => (
+                  <Row
+                    key={extraVisit.id}
+                    to={customerVisitPath(extraVisit.id)}
+                    icon={Radio}
+                    title={[extraVisit.vehicle_plate, extraVisit.service_name].filter(Boolean).join(' · ') || 'Active visit'}
+                    sub={`${branchLabel(branches, extraVisit.branch) || extraVisit.branch} · ${String(extraVisit.visit?.label || extraVisit.status)}`}
+                    chevron
+                  />
+                ))}
+              </div>
+            </section>
+          ) : null}
+        </>
       ) : (
         <div className="capp-live-card is-empty capp-span capp-phone-only">
           <div className="capp-live-top">
@@ -560,26 +581,33 @@ export default function CustomerAccountPage() {
               </button>
             </div>
             {picking ? (
-              <div className="capp-two capp-activity-dates">
-                <label className="capp-field">
-                  <span>From</span>
-                  <input
-                    type="date"
-                    max={isoDay(Date.now())}
-                    value={range?.from || isoDay(Date.now() - 30 * DAY_MS)}
-                    onChange={(e) => setRange((r) => ({ to: r?.to || isoDay(Date.now()), from: e.target.value }))}
-                  />
-                </label>
-                <label className="capp-field">
-                  <span>To</span>
-                  <input
-                    type="date"
-                    max={isoDay(Date.now())}
-                    value={range?.to || isoDay(Date.now())}
-                    onChange={(e) => setRange((r) => ({ from: r?.from || isoDay(Date.now() - 30 * DAY_MS), to: e.target.value }))}
-                  />
-                </label>
-              </div>
+              <>
+                <div className="capp-two capp-activity-dates">
+                  <label className="capp-field">
+                    <span>From</span>
+                    <input
+                      type="date"
+                      max={isoDay(Date.now())}
+                      value={range?.from || isoDay(Date.now() - 30 * DAY_MS)}
+                      onChange={(e) => setRange((r) => ({ to: r?.to || isoDay(Date.now()), from: e.target.value }))}
+                    />
+                  </label>
+                  <label className="capp-field">
+                    <span>To</span>
+                    <input
+                      type="date"
+                      max={isoDay(Date.now())}
+                      value={range?.to || isoDay(Date.now())}
+                      onChange={(e) => setRange((r) => ({ from: r?.from || isoDay(Date.now() - 30 * DAY_MS), to: e.target.value }))}
+                    />
+                  </label>
+                </div>
+                {range?.from && range?.to && range.from > range.to ? (
+                  <p className="capp-field-error" role="alert">
+                    &ldquo;From&rdquo; date must be on or before &ldquo;To&rdquo; date.
+                  </p>
+                ) : null}
+              </>
             ) : null}
             <div className="capp-group">
               {loading ? (

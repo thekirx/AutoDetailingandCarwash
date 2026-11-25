@@ -65,7 +65,7 @@ function usePlSpan({ enabled, start, end, profile, branchFilter }) {
         ['period_date', false],
         ['branch', true],
         ['line_kind', true],
-      ]).catch(() => []),
+      ]),
     ]).then(
       ([pl, kinds]) => alive && setState({ loading: false, error: '', pl, kinds }),
       (err) => alive && setState({ loading: false, error: err.message || 'Could not load P&L', pl: [], kinds: [] }),
@@ -663,7 +663,14 @@ function TotalRow({
         )}
       </td>
       {comparing ? <td className="text-right tabular-nums">{formatAccounting(prior)}</td> : null}
-      {comparing ? <td className="text-right tabular-nums">{formatDelta(current - prior)}</td> : null}
+      {comparing ? (
+        <td className="text-right tabular-nums">
+          {formatDelta(
+            current - prior,
+            prior ? Math.round(((current - prior) / Math.abs(prior)) * 100) : null,
+          )}
+        </td>
+      ) : null}
     </tr>
   )
 }

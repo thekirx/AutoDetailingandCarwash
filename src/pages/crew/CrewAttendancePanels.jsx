@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   Cake,
   ChevronLeft,
@@ -160,9 +160,10 @@ export function CrewAttendancePanel({
   const [dates, setDates] = useState([])
   const [loading, setLoading] = useState(true)
   const [busy, setBusy] = useState('')
+  const [searchParams] = useSearchParams()
   const [override, setOverride] = useState(null)
   const [myToday, setMyToday] = useState(null)
-  const [search, setSearch] = useState('')
+  const [search, setSearch] = useState(() => searchParams.get('q') || '')
   const [statusFilter, setStatusFilter] = useState('all')
   const [showHeatmap, setShowHeatmap] = useState(true)
   const [page, setPage] = useState(1)
@@ -177,7 +178,7 @@ export function CrewAttendancePanel({
   const [locationAlerts, setLocationAlerts] = useState([])
   const seesLocationAlerts = (showFloor || showRegister) && (isSuperAdmin(profile) || isAssistantSuperAdmin(profile) || profile?.role === ROLES.ADMIN)
   const canOverride = canOverrideAttendance(profile)
-  const scope = getBranchScopeList(profile)
+  const scope = useMemo(() => getBranchScopeList(profile), [profile])
   const today = getLocalCalendarDate()
   const showPayPreview = showFloor && (canManage || isSuperAdmin(profile))
   const matrixPeriod = showRegister ? period : showClock ? 'weekly' : 'daily'
@@ -202,9 +203,9 @@ export function CrewAttendancePanel({
         seesLocationAlerts ? fetchLocationAlerts(branchSlug).catch(() => []) : Promise.resolve([]),
         showClock || showFloor
           ? supabase.rpc('staff_birthdays_month', { p_branch: branchSlug }).then(({ data, error }) => {
-              if (error) throw error
-              return data
-            }).catch(() => null)
+            if (error) throw error
+            return data
+          }).catch(() => null)
           : Promise.resolve(null),
       ])
       setStaffBirthdays(Array.isArray(bdayRes?.people) ? bdayRes.people : [])
@@ -811,187 +812,202 @@ export function CrewAttendancePanel({
               ) : null}
 
               {showRegister ? (
-              <Card className="border-border/80 shadow-sm">
-                <CardHeader className="gap-4 pb-3">
-                  <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto] lg:items-end">
-                    <div className="flex flex-col gap-2">
-                      <Label htmlFor="att-search">Search</Label>
-                      <InputGroup className="min-h-11">
-                        <InputGroupAddon>
-                          <Search aria-hidden />
-                        </InputGroupAddon>
-                        <InputGroupInput
-                          id="att-search"
-                          value={search}
-                          onChange={(e) => setSearch(e.target.value)}
-                          placeholder="Name, role, username, or date…"
-                        />
-                      </InputGroup>
-                    </div>
-                    <div className="flex min-w-[10rem] flex-col gap-2">
-                      <Label htmlFor="att-status">Status</Label>
-                      <NamedSelect
-                        id="att-status"
-                        value={statusFilter}
-                        onChange={setStatusFilter}
-                        options={[
-                          { value: 'all', label: 'All rows' },
-                          { value: 'recorded', label: 'Recorded only' },
-                          { value: 'empty', label: 'Missing only' },
-                          { value: 'present', label: 'Present' },
-                          { value: 'late', label: 'Late' },
-                          { value: 'absent', label: 'Absent' },
-                        ]}
-                        className="min-h-11"
-                      />
-                    </div>
-                    <Button type="button" variant="ghost" className="min-h-11" onClick={() => setShowHeatmap((v) => !v)}>
-                      {showHeatmap ? 'Hide heatmap' : 'Show heatmap'}
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="flex flex-col gap-4">
-                  {showHeatmap ? (
-                    <AttendanceHeatmap
-                      matrix={matrix}
-                      dates={dates}
-                      period={period}
-                      canOverride={canOverride}
-                      onCellClick={(payload) => openOverride(payload)}
-                    />
-                  ) : null}
-
-                  <Separator />
-
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-muted-foreground">
-                      {filteredRows.length === 0
-                        ? '0 rows'
-                        : `Showing ${pageStart + 1}–${Math.min(pageStart + pageSize, filteredRows.length)} of ${filteredRows.length}`}
-                    </p>
-                    <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                      Rows
-                      <NamedSelect
-                        value={String(pageSize)}
-                        onChange={(v) => setPageSize(Number(v))}
-                        options={[10, 25, 50, 100].map((n) => ({ value: String(n), label: String(n) }))}
-                        className="h-9 w-20"
-                      />
-                    </label>
-                  </div>
-
-                  <div className="flex flex-col gap-2.5 md:hidden">
-                    {pagedRows.map((row) => (
-                      <div key={row.key} className="flex flex-col gap-2.5 rounded-xl border border-border/80 bg-card p-3.5 shadow-xs">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <p className="truncate font-semibold text-foreground">{row.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {attendanceRoleLabel(row.role)} · <span className="font-mono tabular-nums">{row.date}</span>
-                            </p>
-                          </div>
-                          <AttendanceStatusBadge status={row.status} />
-                        </div>
-                        <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-                          <span className="font-mono tabular-nums">
-                            In {fmtTime(row.checked_in_at)} · Out {fmtTime(row.checked_out_at)}
-                          </span>
-                          {canOverride ? (
-                            <Button size="sm" variant="outline" className="min-h-11" onClick={() => openOverride(row)}>
-                              Override
-                            </Button>
-                          ) : null}
-                        </div>
+                <Card className="border-border/80 shadow-sm">
+                  <CardHeader className="gap-4 pb-3">
+                    <div className="grid gap-3 lg:grid-cols-[1fr_auto_auto] lg:items-end">
+                      <div className="flex flex-col gap-2">
+                        <Label htmlFor="att-search">Search</Label>
+                        <InputGroup className="min-h-11">
+                          <InputGroupAddon>
+                            <Search aria-hidden />
+                          </InputGroupAddon>
+                          <InputGroupInput
+                            id="att-search"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                            placeholder="Name, role, username, or date…"
+                          />
+                        </InputGroup>
                       </div>
-                    ))}
-                    {!filteredRows.length ? (
-                      <p className="py-8 text-center text-sm text-muted-foreground">No attendance rows match this search or filter.</p>
+                      <div className="flex min-w-[10rem] flex-col gap-2">
+                        <Label htmlFor="att-status">Status</Label>
+                        <NamedSelect
+                          id="att-status"
+                          value={statusFilter}
+                          onChange={setStatusFilter}
+                          options={[
+                            { value: 'all', label: 'All rows' },
+                            { value: 'recorded', label: 'Recorded only' },
+                            { value: 'empty', label: 'Missing only' },
+                            { value: 'present', label: 'Present' },
+                            { value: 'late', label: 'Late' },
+                            { value: 'absent', label: 'Absent' },
+                          ]}
+                          className="min-h-11"
+                        />
+                      </div>
+                      <Button type="button" variant="ghost" className="min-h-11" onClick={() => setShowHeatmap((v) => !v)}>
+                        {showHeatmap ? 'Hide heatmap' : 'Show heatmap'}
+                      </Button>
+                    </div>
+                    {(search.trim() || statusFilter !== 'all') ? (
+                      <div className="flex items-center justify-end">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setSearch('')
+                            setStatusFilter('all')
+                          }}
+                        >
+                          Reset filters
+                        </Button>
+                      </div>
                     ) : null}
-                  </div>
+                  </CardHeader>
+                  <CardContent className="flex flex-col gap-4">
+                    {showHeatmap ? (
+                      <AttendanceHeatmap
+                        matrix={matrix}
+                        dates={dates}
+                        period={period}
+                        canOverride={canOverride}
+                        onCellClick={(payload) => openOverride(payload)}
+                      />
+                    ) : null}
 
-                  <div className="hidden overflow-x-auto rounded-xl border border-border/70 md:block">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Person</TableHead>
-                          <TableHead>Role</TableHead>
-                          <TableHead>Date</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Check in</TableHead>
-                          <TableHead>Check out</TableHead>
-                          <TableHead>Source</TableHead>
-                          <TableHead />
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {pagedRows.map((row) => (
-                          <TableRow key={row.key}>
-                            <TableCell>
-                              <div className="font-medium">{row.name}</div>
-                              {row.username ? <div className="text-xs text-muted-foreground">@{row.username}</div> : null}
-                            </TableCell>
-                            <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
-                              {attendanceRoleLabel(row.role)}
-                            </TableCell>
-                            <TableCell className="whitespace-nowrap font-mono text-sm tabular-nums">{row.date}</TableCell>
-                            <TableCell>
-                              <AttendanceStatusBadge status={row.status} />
-                            </TableCell>
-                            <TableCell className="font-mono text-sm tabular-nums">{fmtTime(row.checked_in_at)}</TableCell>
-                            <TableCell className="font-mono text-sm tabular-nums">{fmtTime(row.checked_out_at)}</TableCell>
-                            <TableCell className="capitalize text-muted-foreground">{row.source || '—'}</TableCell>
-                            <TableCell>
-                              {canOverride ? (
-                                <Button size="sm" variant="secondary" className="min-h-10" onClick={() => openOverride(row)}>
-                                  Override
-                                </Button>
-                              ) : null}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                        {!filteredRows.length && (
-                          <TableRow>
-                            <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
-                              No attendance rows match this search or filter.
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
+                    <Separator />
 
-                  {filteredRows.length > 0 ? (
-                    <nav className="flex flex-wrap items-center justify-between gap-3" aria-label="Attendance pagination">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="min-h-11 gap-1"
-                        disabled={safePage <= 1}
-                        onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      >
-                        <ChevronLeft aria-hidden />
-                        Previous
-                      </Button>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
                       <p className="text-sm font-medium text-muted-foreground">
-                        Page <span className="font-mono tabular-nums text-foreground">{safePage}</span> of{' '}
-                        <span className="font-mono tabular-nums text-foreground">{totalPages}</span>
+                        {filteredRows.length === 0
+                          ? '0 rows'
+                          : `Showing ${pageStart + 1}–${Math.min(pageStart + pageSize, filteredRows.length)} of ${filteredRows.length}`}
                       </p>
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        className="min-h-11 gap-1"
-                        disabled={safePage >= totalPages}
-                        onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                      >
-                        Next
-                        <ChevronRight aria-hidden />
-                      </Button>
-                    </nav>
-                  ) : null}
-                </CardContent>
-              </Card>
+                      <label className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+                        Rows
+                        <NamedSelect
+                          value={String(pageSize)}
+                          onChange={(v) => setPageSize(Number(v))}
+                          options={[10, 25, 50, 100].map((n) => ({ value: String(n), label: String(n) }))}
+                          className="h-9 w-20"
+                        />
+                      </label>
+                    </div>
+
+                    <div className="flex flex-col gap-2.5 md:hidden">
+                      {pagedRows.map((row) => (
+                        <div key={row.key} className="flex flex-col gap-2.5 rounded-xl border border-border/80 bg-card p-3.5 shadow-xs">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="truncate font-semibold text-foreground">{row.name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {attendanceRoleLabel(row.role)} · <span className="font-mono tabular-nums">{row.date}</span>
+                              </p>
+                            </div>
+                            <AttendanceStatusBadge status={row.status} />
+                          </div>
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                            <span className="font-mono tabular-nums">
+                              In {fmtTime(row.checked_in_at)} · Out {fmtTime(row.checked_out_at)}
+                            </span>
+                            {canOverride ? (
+                              <Button size="sm" variant="outline" className="min-h-11" onClick={() => openOverride(row)}>
+                                Override
+                              </Button>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))}
+                      {!filteredRows.length ? (
+                        <p className="py-8 text-center text-sm text-muted-foreground">No attendance rows match this search or filter.</p>
+                      ) : null}
+                    </div>
+
+                    <div className="hidden overflow-x-auto rounded-xl border border-border/70 md:block">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Person</TableHead>
+                            <TableHead>Role</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Status</TableHead>
+                            <TableHead>Check in</TableHead>
+                            <TableHead>Check out</TableHead>
+                            <TableHead>Source</TableHead>
+                            <TableHead />
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {pagedRows.map((row) => (
+                            <TableRow key={row.key}>
+                              <TableCell>
+                                <div className="font-medium">{row.name}</div>
+                                {row.username ? <div className="text-xs text-muted-foreground">@{row.username}</div> : null}
+                              </TableCell>
+                              <TableCell className="whitespace-nowrap text-xs text-muted-foreground">
+                                {attendanceRoleLabel(row.role)}
+                              </TableCell>
+                              <TableCell className="whitespace-nowrap font-mono text-sm tabular-nums">{row.date}</TableCell>
+                              <TableCell>
+                                <AttendanceStatusBadge status={row.status} />
+                              </TableCell>
+                              <TableCell className="font-mono text-sm tabular-nums">{fmtTime(row.checked_in_at)}</TableCell>
+                              <TableCell className="font-mono text-sm tabular-nums">{fmtTime(row.checked_out_at)}</TableCell>
+                              <TableCell className="capitalize text-muted-foreground">{row.source || '—'}</TableCell>
+                              <TableCell>
+                                {canOverride ? (
+                                  <Button size="sm" variant="secondary" className="min-h-10" onClick={() => openOverride(row)}>
+                                    Override
+                                  </Button>
+                                ) : null}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {!filteredRows.length && (
+                            <TableRow>
+                              <TableCell colSpan={8} className="py-10 text-center text-muted-foreground">
+                                No attendance rows match this search or filter.
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </div>
+
+                    {filteredRows.length > 0 ? (
+                      <nav className="flex flex-wrap items-center justify-between gap-3" aria-label="Attendance pagination">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="min-h-11 gap-1"
+                          disabled={safePage <= 1}
+                          onClick={() => setPage((p) => Math.max(1, p - 1))}
+                        >
+                          <ChevronLeft aria-hidden />
+                          Previous
+                        </Button>
+                        <p className="text-sm font-medium text-muted-foreground">
+                          Page <span className="font-mono tabular-nums text-foreground">{safePage}</span> of{' '}
+                          <span className="font-mono tabular-nums text-foreground">{totalPages}</span>
+                        </p>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="min-h-11 gap-1"
+                          disabled={safePage >= totalPages}
+                          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                        >
+                          Next
+                          <ChevronRight aria-hidden />
+                        </Button>
+                      </nav>
+                    ) : null}
+                  </CardContent>
+                </Card>
               ) : null}
             </>
           )}
@@ -1203,10 +1219,12 @@ export function CrewSettingsPanel({ profile }) {
   })
 
   const setLatePercent = (percent) => {
+    const raw = Number(percent)
+    const clamped = Number.isFinite(raw) ? Math.min(100, Math.max(0, raw)) : 0
     setPayRules((r) => ({
       ...r,
       attendance_present_weight: 1,
-      attendance_late_weight: latePayWeightFromPercent(percent),
+      attendance_late_weight: latePayWeightFromPercent(clamped),
     }))
   }
 
@@ -1254,11 +1272,10 @@ export function CrewSettingsPanel({ profile }) {
                       type="button"
                       aria-pressed={active}
                       onClick={() => setLatePercent(preset.percent)}
-                      className={`flex min-h-11 flex-col items-start gap-0.5 rounded-xl border px-4 py-3 text-left text-sm transition active:scale-[0.99] ${
-                        active
-                          ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
-                          : 'border-border bg-card hover:bg-muted/40'
-                      }`}
+                      className={`flex min-h-11 flex-col items-start gap-0.5 rounded-xl border px-4 py-3 text-left text-sm transition active:scale-[0.99] ${active
+                        ? 'border-primary bg-primary/5 ring-2 ring-primary/20'
+                        : 'border-border bg-card hover:bg-muted/40'
+                        }`}
                     >
                       <span className="font-semibold text-foreground">{preset.label}</span>
                       <span className="text-xs text-muted-foreground">

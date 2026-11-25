@@ -46,6 +46,15 @@ export default function SmsPage({ embedded = false }) {
   const [form, setForm] = useState(EMPTY_TEMPLATE_FORM)
   const [tplOpen, setTplOpen] = useState(false)
   const [savingTpl, setSavingTpl] = useState(false)
+  const [eventQuery, setEventQuery] = useState('')
+
+  const filteredEvents = useMemo(() => {
+    const q = eventQuery.trim().toLowerCase()
+    if (!q) return events
+    return events.filter((ev) =>
+      [ev.phone, ev.event_type, ev.status, ev.message].filter(Boolean).join(' ').toLowerCase().includes(q),
+    )
+  }, [events, eventQuery])
 
   const providerLabel = useMemo(() => busybeeProviderStatusLabel(providerHealth), [providerHealth])
   const balanceText = useMemo(() => formatBusybeeBalance(providerHealth), [providerHealth])
@@ -64,9 +73,9 @@ export default function SmsPage({ embedded = false }) {
         .catch((err) => ({ ok: false, error: err.message })),
       supabase
         .from('sms_events')
-        .select('id, phone, event_type, status, provider, provider_response, created_at, sent_at')
+        .select('id, phone, event_type, status, message, provider, provider_response, created_at, sent_at')
         .order('created_at', { ascending: false })
-        .limit(30),
+        .limit(50),
       getSmsNotificationsEnabled().catch((err) => {
         toast.error(err.message || 'Unable to load SMS toggle')
         return false
@@ -156,18 +165,25 @@ export default function SmsPage({ embedded = false }) {
   }
 
   async function deleteTemplate(id) {
-    const token = await getAccessTokenFresh()
-    const res = await fetch(`/api/notifications?operation=sms-templates&id=${encodeURIComponent(id)}`, {
-      method: 'DELETE',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-    const data = await res.json().catch(() => ({}))
-    if (!res.ok) {
-      toast.error(data.error || 'Delete failed')
-      return
+    if (savingTpl) return
+    if (!window.confirm('Delete this reference SMS template?')) return
+    setSavingTpl(true)
+    try {
+      const token = await getAccessTokenFresh()
+      const res = await fetch(`/api/notifications?operation=sms-templates&id=${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data.error || 'Delete failed')
+        return
+      }
+      toast.success('Template deleted')
+      load()
+    } finally {
+      setSavingTpl(false)
     }
-    toast.success('Template deleted')
-    load()
   }
 
   const statusPanel = (
@@ -404,6 +420,7 @@ export default function SmsPage({ embedded = false }) {
                               size="icon"
                               variant="ghost"
                               className="size-10 text-destructive"
+                              disabled={savingTpl}
                               aria-label={`Delete ${t.name}`}
                               onClick={() => deleteTemplate(t.id)}
                             >
@@ -428,8 +445,16 @@ export default function SmsPage({ embedded = false }) {
       </Card>
 
       <Card className="border-border/80 shadow-none">
-        <CardHeader className="pb-3">
+        <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 pb-3">
           <CardTitle className="text-lg">Recent SMS events</CardTitle>
+          <Input
+            type="search"
+            value={eventQuery}
+            onChange={(e) => setEventQuery(e.target.value)}
+            placeholder="Search phone, type, status, message…"
+            aria-label="Filter recent SMS events"
+            className="min-h-10 w-full sm:w-72"
+          />
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>
@@ -443,7 +468,7 @@ export default function SmsPage({ embedded = false }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {events.map((ev) => (
+              {filteredEvents.map((ev) => (
                 <TableRow key={ev.id}>
                   <TableCell className="whitespace-nowrap text-xs tabular-nums">
                     {ev.sent_at || ev.created_at
@@ -453,13 +478,13 @@ export default function SmsPage({ embedded = false }) {
                   <TableCell className="font-mono text-sm">{ev.phone}</TableCell>
                   <TableCell>{ev.event_type}</TableCell>
                   <TableCell>{ev.status}</TableCell>
-                  <TableCell className="max-w-[12rem] truncate text-xs sm:max-w-xs">{ev.message}</TableCell>
+                  <TableCell className="max-w-[12rem] truncate text-xs sm:max-w-xs" title={ev.message || undefined}>{ev.message || '—'}</TableCell>
                 </TableRow>
               ))}
-              {!events.length ? (
+              {!filteredEvents.length ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-muted-foreground">
-                    No SMS events yet.
+                    {events.length ? 'No matching SMS events.' : 'No SMS events yet.'}
                   </TableCell>
                 </TableRow>
               ) : null}

@@ -8,6 +8,7 @@ import { Label } from '@/components/ui/label'
 import { Select } from '@/components/ui/select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
+import { activeAccounts } from '@/lib/financeBooks'
 import { callFinanceOwnerOps } from '@/lib/financeOwnerClient'
 import FinanceBillForm from './FinanceBillForm'
 import { FinanceCategoriesTab } from './FinanceCategoriesTab'
@@ -172,7 +173,7 @@ export default function FinancePurchasesTab({
       title: row.title || '',
       category_id: row.category_id || '',
       amount_php: ((Number(row.total_minor ?? row.amount_minor ?? 0) || 0) / 100).toFixed(2),
-      paid_from: row.payment_method === 'gcash' ? 'gcash' : 'cash',
+      paid_from: row.paid_from === 'gcash' ? 'gcash' : 'cash',
       bill_reference: row.bill_reference || '',
     })
   }
@@ -333,6 +334,7 @@ export default function FinancePurchasesTab({
               <option key={c.id} value={c.id}>
                 {c.code ? `${c.code} · ` : ''}
                 {c.name}
+                {c.is_archived ? ' (Archived)' : ''}
               </option>
             ))}
           </select>
@@ -417,7 +419,7 @@ export default function FinancePurchasesTab({
                         <ExternalLink className="h-3.5 w-3.5" />
                         Open sheet
                       </Button>
-                      {isSuperAdmin || canWrite ? (
+                      {isSuperAdmin ? (
                         <Button size="sm" variant="ghost" className="cursor-pointer gap-1" onClick={() => openSheetBillOverride(row)}>
                           <Pencil className="h-3.5 w-3.5" />
                           Edit / Override
@@ -490,7 +492,7 @@ export default function FinancePurchasesTab({
                                 <ExternalLink className="h-3 w-3" />
                                 Sheet
                               </Button>
-                              {isSuperAdmin || canWrite ? (
+                              {isSuperAdmin ? (
                                 <Button
                                   type="button"
                                   size="sm"
@@ -581,10 +583,11 @@ export default function FinancePurchasesTab({
                 className="mt-1"
               >
                 <option value="">Uncategorized</option>
-                {categories.map((c) => (
+                {activeAccounts(categories, [sheetBillForm.category_id]).map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.code != null ? `${c.code} · ` : ''}
                     {c.name}
+                    {c.is_archived ? ' (Archived)' : ''}
                   </option>
                 ))}
               </Select>

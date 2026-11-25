@@ -336,7 +336,7 @@ export async function updateStaffPerson({
   if (error) throw mapDbError(error)
   if (!data) throw new Error('Staff profile not found.')
 
-  if (['admin', 'team_lead', 'staff', 'marketing', 'investor'].includes(v.role)) {
+  if (['admin', 'team_lead', 'staff', 'marketing', 'investor', 'detailer', 'video_editor', 'sales', 'operations_lead'].includes(v.role)) {
     const slugs = Array.isArray(branch_slugs) && branch_slugs.length
       ? branch_slugs.map(String)
       : v.branch_slug
@@ -1005,14 +1005,19 @@ export async function assignCustomerMembership({ customer_id, tier_id, starts_at
   return data
 }
 
-export async function listCustomersForMembership(limit = 50) {
-  const { data, error } = await supabase
+export async function listCustomersForMembership(limit = 300, query = '') {
+  let q = supabase
     .from('customers')
     .select('id, full_name, email, phone, loyalty_stamps, loyalty_points')
     .eq('role', 'customer')
     .eq('is_archived', false)
     .order('full_name')
-    .limit(limit)
+  const trimmed = String(query || '').trim()
+  if (trimmed) {
+    const safe = trimmed.replace(/[,%]/g, '')
+    q = q.or(`full_name.ilike.%${safe}%,phone.ilike.%${safe}%,email.ilike.%${safe}%`)
+  }
+  const { data, error } = await q.limit(limit)
   if (error) throw mapDbError(error)
   return data || []
 }

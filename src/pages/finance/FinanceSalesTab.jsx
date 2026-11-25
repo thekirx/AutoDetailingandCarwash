@@ -202,6 +202,20 @@ export default function FinanceSalesTab({ salesRows, branchOptions, range, loadi
               </option>
             ))}
           </select>
+          {(query.trim() || method !== 'all') ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="min-h-10 cursor-pointer"
+              onClick={() => {
+                setQuery('')
+                setMethod('all')
+              }}
+            >
+              Reset
+            </Button>
+          ) : null}
           <Button
             type="button"
             variant="outline"

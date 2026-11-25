@@ -1,4 +1,4 @@
-﻿# Customer
+# Customer
 
 **Home:** `/account`  
 **Shell:** Customer capp (mobile-first PWA)  
@@ -6,7 +6,13 @@
 
 ## Nav (dock)
 
-Home · Book · Queue · Blog · More
+Home · Queue · Book · Rewards · Cars (with Settings gear behind Home opening `/account/more`, `/account/vouchers`, `/account/referral`, Events & Blog)
+
+## Hakum Concierge Chatbot
+
+- When enabled by the studio owner, a movable circular **Hakum** badge floats cleanly in the corner on public pages and inside the `/account` customer app without auto-popping or interrupting browsing (drag anywhere by the badge or chat header; tap the target button in the header to reset position).
+- 100% deterministic (zero AI wait time) — offers a 6-category Main Menu, customizable Studio Product Spotlight, interactive **S / M / L / XL** vehicle-size price switcher, suggested chat chips, English/Taglish Q&A for every service & customer workflow, live branch queues, and signed-in account stamp/point/visit status.
+- **Need a real person?** Ask `"Talk to a real person"` or use the Messenger / Facebook links in the chat header or Main Menu to jump straight to **Hakum Auto Care on Facebook** (`https://www.facebook.com/profile.php?id=61573318005308`) or **Messenger** (`https://m.me/61573318005308`).
 
 ## Daily flow
 

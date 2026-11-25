@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { callFinanceOwnerOps } from '@/lib/financeOwnerClient'
+import { buildAccountRow, catalogWriteError, isSalaryAccount } from '@/lib/financeBooks'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -18,6 +19,7 @@ const KIND_OPTIONS = [
 ]
 
 export function FinanceAccountDialog({ open, onOpenChange, account, onSaved }) {
+  const locked14 = isSalaryAccount(account)
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
   const [kind, setKind] = useState('general')
@@ -32,14 +34,19 @@ export function FinanceAccountDialog({ open, onOpenChange, account, onSaved }) {
 
   async function save(e) {
     e?.preventDefault?.()
-    const num = Number.parseInt(String(code).trim(), 10)
-    const cleanName = String(name || '').trim()
-    if (!Number.isFinite(num) || num < 1 || num > 999) {
-      toast.error('Account code must be a whole number from 1 to 999 (e.g. 10 to 21).')
+    const built = buildAccountRow({
+      name,
+      code: locked14 ? '14' : code,
+      kind: locked14 ? 'payroll' : kind,
+      is_chemical: kind === 'chemicals',
+    })
+    if (!built.ok) {
+      toast.error(built.error)
       return
     }
-    if (!cleanName) {
-      toast.error('Account name is required.')
+    const cleanCode = built.row.code
+    if (cleanCode && !/^\d{1,3}$/.test(cleanCode)) {
+      toast.error('Account code should be a 1 to 3 digit number (e.g. 10 to 22).')
       return
     }
     setSaving(true)
@@ -49,17 +56,15 @@ export function FinanceAccountDialog({ open, onOpenChange, account, onSaved }) {
           action: 'manage-category',
           sub_action: 'save',
           id: account?.id || null,
-          code: num,
-          name: cleanName,
-          kind,
+          ...built.row,
         })
       } catch (apiErr) {
-        // Fallback to direct Supabase query if running against local/direct session
-        const payload = { code: num, name: cleanName, kind, active: true }
+        const sortOrder = cleanCode && /^\d+$/.test(cleanCode) ? Number(cleanCode) : 99
+        const payload = { ...built.row, sort_order: sortOrder, ...(account?.id ? {} : { is_archived: false }) }
         const res = account?.id
           ? await supabase.from('expense_categories').update(payload).eq('id', account.id)
           : await supabase.from('expense_categories').insert(payload)
-        if (res.error) throw apiErr || res.error
+        if (res.error) throw new Error(catalogWriteError(res.error, 'category') || apiErr?.message)
       }
       toast.success(account?.id ? 'Expense category updated.' : 'Expense category created.')
       onOpenChange(false)
@@ -86,10 +91,10 @@ export function FinanceAccountDialog({ open, onOpenChange, account, onSaved }) {
               <Label htmlFor="acct-code">Code</Label>
               <Input
                 id="acct-code"
-                type="number"
-                min="1"
-                max="999"
+                type="text"
+                inputMode="numeric"
                 value={code}
+                disabled={locked14}
                 onChange={(e) => setCode(e.target.value)}
                 placeholder="22"
                 className="mt-1 tabular-nums"
@@ -110,13 +115,18 @@ export function FinanceAccountDialog({ open, onOpenChange, account, onSaved }) {
           </div>
           <div>
             <Label htmlFor="acct-kind">Group / kind</Label>
-            <Select id="acct-kind" value={kind} onChange={(e) => setKind(e.target.value)} className="mt-1">
+            <Select id="acct-kind" value={kind} disabled={locked14} onChange={(e) => setKind(e.target.value)} className="mt-1">
               {KIND_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
                   {o.label}
                 </option>
               ))}
             </Select>
+            {locked14 ? (
+              <p className="mt-1 text-xs text-slate-500">
+                Account 14 code and Payroll kind are locked because Daily Sheets and Monthly Salaries post to it automatically. You can rename it here.
+              </p>
+            ) : null}
           </div>
           <DialogFooter className="gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
@@ -133,4 +143,3 @@ export function FinanceAccountDialog({ open, onOpenChange, account, onSaved }) {
 }
 
 export default FinanceAccountDialog
-

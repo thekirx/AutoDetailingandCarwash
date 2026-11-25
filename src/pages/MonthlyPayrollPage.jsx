@@ -6,7 +6,7 @@
  * and edit or delete historical payslips with automatic Finance Books (`public.expenses`) sync.
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, Navigate, useSearchParams } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import {
   Calculator,
   Calendar,
@@ -51,7 +51,6 @@ import {
 import { parsePesosToMinor } from '@/lib/shiftClose'
 import { supabase } from '@/lib/supabase'
 import { fetchBranches } from '@/queue/queueApi'
-import OpsPageShell from '@/components/ops/OpsPageShell'
 import OpsTabList from '@/components/ops/OpsTabBar'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -80,7 +79,7 @@ function formatPesos(minor) {
   return `₱${(Number(minor) / 100).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 }
 
-export default function MonthlyPayrollPage({ embedded = false, onFinanceSync } = {}) {
+export default function MonthlyPayrollPage({ defaultBranch, onFinanceSync } = {}) {
   const { profile } = useAuth()
   const isOwner = isSuperAdmin(profile)
   const canWrite = canEditFinanceBooks(profile)
@@ -91,7 +90,7 @@ export default function MonthlyPayrollPage({ embedded = false, onFinanceSync } =
   const [viewMode, setViewMode] = useState('run') // 'run' | 'history'
   const [branches, setBranches] = useState([])
   const [people, setPeople] = useState([])
-  const [branch, setBranch] = useState('')
+  const [branch, setBranch] = useState(() => defaultBranch || '')
   const [drafts, setDrafts] = useState({})
   const [slips, setSlips] = useState([])
   const [latestPriorEnd, setLatestPriorEnd] = useState(null)
@@ -133,6 +132,8 @@ export default function MonthlyPayrollPage({ embedded = false, onFinanceSync } =
     branch: '',
   })
   const [savingHistorySlip, setSavingHistorySlip] = useState(false)
+  const [deleteSlipTarget, setDeleteSlipTarget] = useState(null)
+  const [deletingSlip, setDeletingSlip] = useState(false)
 
   // Jump to specific cutoff selector
   const [jumpYear, setJumpYear] = useState(() => String(new Date().getFullYear()))
@@ -140,7 +141,7 @@ export default function MonthlyPayrollPage({ embedded = false, onFinanceSync } =
   const [jumpHalf, setJumpHalf] = useState(() => (new Date().getDate() <= 15 ? '1' : '2'))
 
   const periods = useMemo(() => payPeriodList(getLocalCalendarDate(), 6), [])
-  const periodKey = searchParams.get('period') || periods[0]?.start || ''
+  const periodKey = searchParams.get('pperiod') || periods[0]?.start || ''
   const period = useMemo(() => {
     if (periodKey) {
       const parsed = payHalf(periodKey)
@@ -156,9 +157,15 @@ export default function MonthlyPayrollPage({ embedded = false, onFinanceSync } =
     ])
     const scoped = (br || []).filter((b) => scope === null || (Array.isArray(scope) && scope.includes(b.slug)))
     setBranches(scoped)
-    setBranch((cur) => cur || scoped[0]?.slug || '')
+    setBranch((cur) => cur || defaultBranch || scoped[0]?.slug || '')
     setPeople(staff || [])
-  }, [scope])
+  }, [scope, defaultBranch])
+
+  useEffect(() => {
+    if (defaultBranch && branches.some((b) => b.slug === defaultBranch)) {
+      setBranch(defaultBranch)
+    }
+  }, [defaultBranch, branches])
 
   const loadPeriod = useCallback(async () => {
     if (!branch || !period) return
@@ -313,8 +320,8 @@ export default function MonthlyPayrollPage({ embedded = false, onFinanceSync } =
 
   function selectPeriod(start) {
     const next = new URLSearchParams(searchParams)
-    if (!start || start === periods[0]?.start) next.delete('period')
-    else next.set('period', start)
+    if (!start || start === periods[0]?.start) next.delete('pperiod')
+    else next.set('pperiod', start)
     setSearchParams(next, { replace: true })
     setFormError('')
     setDrafts({})
@@ -497,7 +504,7 @@ export default function MonthlyPayrollPage({ embedded = false, onFinanceSync } =
       toast.success(
         `${existing ? 'Saved' : 'Sent'} ${formatAccounting(takeHome)} for ${person.full_name}. Reflected to employee and Finance books.`,
       )
-      await loadPeriod()
+      await Promise.all([loadPeriod(), viewMode === 'history' ? loadHistory() : Promise.resolve()])
       onFinanceSync?.()
     } catch (err) {
       const message = err.message || 'Could not send the payslip'
@@ -609,21 +616,23 @@ export default function MonthlyPayrollPage({ embedded = false, onFinanceSync } =
     }
   }
 
-  async function handleDeleteHistorySlip(slip) {
+  async function confirmDeleteHistorySlip() {
+    if (!deleteSlipTarget) return
     if (!isOwner) return toast.error('Only Owner (BossMich) can delete a payslip.')
-    setBusyId(slip.id)
+    setDeletingSlip(true)
     try {
       await callFinanceOwnerOps({
         action: 'delete-payslip',
-        id: slip.id,
+        id: deleteSlipTarget.id,
       })
       toast.success('Payslip deleted and removed from Finance Books.')
+      setDeleteSlipTarget(null)
       await Promise.all([loadHistory(), loadPeriod()])
       onFinanceSync?.()
     } catch (err) {
       toast.error(err.message || 'Could not delete payslip')
     } finally {
-      setBusyId('')
+      setDeletingSlip(false)
     }
   }
 
@@ -1235,7 +1244,7 @@ export default function MonthlyPayrollPage({ embedded = false, onFinanceSync } =
                                 placeholder={
                                   calcMode === 'prorated_days'
                                     ? `${coveredDays}d pro-rated cutoff`
-                                    : 'Regular半month cutoff'
+                                    : 'Regular half-month cutoff'
                                 }
                                 value={frozen && slip ? slip.note || '' : draft.note ?? slip?.note ?? ''}
                                 onChange={(e) => patchDraft(person.id, { note: e.target.value })}
@@ -1523,8 +1532,8 @@ export default function MonthlyPayrollPage({ embedded = false, onFinanceSync } =
                                   size="sm"
                                   variant="ghost"
                                   className="min-h-9 text-destructive hover:text-destructive"
-                                  disabled={busyId === s.id}
-                                  onClick={() => handleDeleteHistorySlip(s)}
+                                  disabled={deletingSlip || busyId === s.id}
+                                  onClick={() => setDeleteSlipTarget(s)}
                                   aria-label="Delete payslip"
                                 >
                                   <Trash2 className="size-3.5" />
@@ -1684,29 +1693,36 @@ export default function MonthlyPayrollPage({ embedded = false, onFinanceSync } =
           </form>
         </DialogContent>
       </Dialog>
+
+      {/* Confirm Delete Payslip & Sync Finance Dialog */}
+      <Dialog open={Boolean(deleteSlipTarget)} onOpenChange={(open) => !open && setDeleteSlipTarget(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Delete payslip &amp; remove from Finance?</DialogTitle>
+            <DialogDescription>
+              This permanently removes the payslip for{' '}
+              <strong>{staffMap.get(deleteSlipTarget?.staff_id)?.full_name || 'this employee'}</strong> (
+              {deleteSlipTarget ? rangeLabel(deleteSlipTarget.period_start, deleteSlipTarget.period_end) : ''}) and deletes its linked{' '}
+              <strong>Account 14</strong> salary expense from Finance Books &amp; P&amp;L.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" className="min-h-11" onClick={() => setDeleteSlipTarget(null)} disabled={deletingSlip}>
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="min-h-11 bg-rose-600 text-white hover:bg-rose-700"
+              disabled={deletingSlip}
+              onClick={confirmDeleteHistorySlip}
+            >
+              {deletingSlip ? 'Deleting…' : 'Delete & Sync Books'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   )
 
-  if (embedded) return inner
-
-  return (
-    <OpsPageShell
-      className="hakum-monthly-payroll"
-      eyebrow="Finance"
-      title="Payroll"
-      description="Office and admin pay, semi-monthly (1st–15th and 16th–end of month). Lucy, Robert, or Owner types salary and incentive. Crew stay on the Daily Sheet."
-      actions={
-        <div className="flex flex-wrap items-center gap-2">
-          <Button type="button" variant="outline" className="min-h-11" asChild>
-            <Link to="/operations/payslips">My payslips</Link>
-          </Button>
-          <Button type="button" variant="outline" className="min-h-11" asChild>
-            <Link to="/operations/my-advances">Cash advances</Link>
-          </Button>
-        </div>
-      }
-    >
-      {inner}
-    </OpsPageShell>
-  )
+  return inner
 }

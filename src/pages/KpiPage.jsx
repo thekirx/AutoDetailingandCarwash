@@ -72,6 +72,7 @@ export default function KpiPage({ embedded = false } = {}) {
   const [customEnd, setCustomEnd] = useState('')
   const [serviceFilter, setServiceFilter] = useState('all')
   const [loading, setLoading] = useState(true)
+  const [showAllSales, setShowAllSales] = useState(false)
 
   const range = useMemo(() => {
     if (datePreset === 'today') {
@@ -215,8 +216,17 @@ export default function KpiPage({ embedded = false } = {}) {
   }, [profile, range.start, range.end, branchScope, serviceFilter, isCrewKpi])
 
   useEffect(() => {
-    listBranches().then(setBranches).catch(() => {})
-    supabase.from('services').select('id, name, sla_minutes').eq('is_active', true).then(({ data }) => setServices(data || []))
+    listBranches()
+      .then(setBranches)
+      .catch((err) => toast.error(err?.message || 'Unable to load branches'))
+    supabase
+      .from('services')
+      .select('id, name, sla_minutes')
+      .eq('is_active', true)
+      .then(({ data, error }) => {
+        if (error) toast.error(error.message || 'Unable to load services')
+        else setServices(data || [])
+      })
   }, [])
 
   useEffect(() => {
@@ -481,7 +491,7 @@ export default function KpiPage({ embedded = false } = {}) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {sales.slice(0, 40).map((s) => (
+                  {(showAllSales ? sales : sales.slice(0, 40)).map((s) => (
                     <TableRow key={s.id}>
                       <TableCell className="text-sm">{new Date(s.occurred_at).toLocaleString()}</TableCell>
                       <TableCell className="capitalize">{s.branch}</TableCell>
@@ -493,6 +503,14 @@ export default function KpiPage({ embedded = false } = {}) {
                   )}
                 </TableBody>
               </Table>
+              {sales.length > 40 ? (
+                <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{showAllSales ? `Showing all ${sales.length} paid sales` : `Showing latest 40 of ${sales.length} paid sales`}</span>
+                  <Button type="button" size="sm" variant="outline" onClick={() => setShowAllSales((v) => !v)}>
+                    {showAllSales ? 'Show latest 40' : `Show all ${sales.length}`}
+                  </Button>
+                </div>
+              ) : null}
             </CardContent>
           </Card>
         </TabsContent>

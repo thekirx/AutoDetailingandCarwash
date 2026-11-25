@@ -126,20 +126,20 @@ export function ServicesPage() {
             <LoopArrows rail={rail} label="services" />
           </div>
           <LoopStage rail={rail}>
-          <div className="bd-services-rail" ref={rail.trackRef} data-looping="true" role="region" aria-label="Services">
-            {loopSlides(SERVICE_COLUMNS, rail.copies).map(({ item: column, copy, key }) => (
-              <div className="bd-services-col" key={key} aria-hidden={copy || undefined}>
-                {column.map((item) => (
-                  <ServiceRailCard
-                    key={item.key}
-                    item={item}
-                    hidden={copy}
-                    price={item.kind === 'wash' ? prices[WASH_CARD_SERVICE_SLUG[item.id]] : null}
-                  />
-                ))}
-              </div>
-            ))}
-          </div>
+            <div className="bd-services-rail" ref={rail.trackRef} data-looping="true" role="region" aria-label="Services">
+              {loopSlides(SERVICE_COLUMNS, rail.copies).map(({ item: column, copy, key }) => (
+                <div className="bd-services-col" key={key} aria-hidden={copy || undefined}>
+                  {column.map((item) => (
+                    <ServiceRailCard
+                      key={item.key}
+                      item={item}
+                      hidden={copy}
+                      price={item.kind === 'wash' ? prices[WASH_CARD_SERVICE_SLUG[item.id]] : null}
+                    />
+                  ))}
+                </div>
+              ))}
+            </div>
           </LoopStage>
           <LoopBar rail={rail} />
         </div>

@@ -90,10 +90,16 @@ export default function ActiveVisitCard({ visit, branchName, className = '', var
           ))}
         </div>
       ) : null}
-      <Link className="capp-btn capp-btn-ghost capp-btn-block" to={customerQueuePath(visit.branch)}>
-        <Radio size={16} strokeWidth={1.75} aria-hidden />
-        View live queue
-      </Link>
+      <div className="mt-2 flex flex-wrap gap-2">
+        <Link className="capp-btn capp-btn-fill flex-1 justify-center" to={customerVisitPath(visit.id)}>
+          Manage visit
+          <ChevronRight size={16} strokeWidth={2} aria-hidden />
+        </Link>
+        <Link className="capp-btn capp-btn-ghost flex-1 justify-center" to={customerQueuePath(visit.branch)}>
+          <Radio size={16} strokeWidth={1.75} aria-hidden />
+          Live queue
+        </Link>
+      </div>
     </article>
   )
 }

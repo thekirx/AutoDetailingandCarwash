@@ -562,11 +562,8 @@ export async function handleFinanceOwnerOpsRequest(req, res) {
     // 4. OWNER BILL-TO-DAILY-SHEET OVERRIDE (Edit/Delete a sheet-posted Bill in Finance)
     // -------------------------------------------------------------------------
     if (action === 'override-sheet-bill') {
-      if (!isOwner) {
-        return json(res, 403, { error: 'Only the Owner (BossMich) can override a Daily Sheet posted bill.' }, req)
-      }
       const expenseId = String(body.expense_id || '').trim()
-      const subAction = String(body.sub_action || 'update').trim() // 'update' | 'delete'
+      const subAction = String(body.sub_action || 'update').trim() // 'lookup-sheet' | 'update' | 'delete'
       if (!expenseId) return json(res, 400, { error: 'expense_id is required.' }, req)
 
       const { data: expRow, error: expErr } = await db
@@ -577,14 +574,27 @@ export async function handleFinanceOwnerOpsRequest(req, res) {
       if (expErr || !expRow) return json(res, 404, { error: 'Bill / expense row not found.' }, req)
 
       let sheetId = null
+      let lineRow = null
       if (expRow.daily_sheet_line_id) {
-        const { data: lineRow } = await db
+        const { data: foundLine } = await db
           .from('daily_sheet_lines')
           .select('id, sheet_id, kind')
           .eq('id', expRow.daily_sheet_line_id)
           .maybeSingle()
+        lineRow = foundLine || null
         sheetId = lineRow?.sheet_id || null
+      }
 
+      // Read-only sheet lookup runs before any mutation or owner-only check
+      if (subAction === 'lookup-sheet') {
+        return json(res, 200, { ok: true, sheet_id: sheetId }, req)
+      }
+
+      if (!isOwner) {
+        return json(res, 403, { error: 'Only the Owner (BossMich) can override a Daily Sheet posted bill.' }, req)
+      }
+
+      if (expRow.daily_sheet_line_id) {
         if (subAction === 'delete') {
           await db.from('expenses').delete().eq('id', expenseId)
           if (lineRow?.id) {
@@ -605,11 +615,16 @@ export async function handleFinanceOwnerOpsRequest(req, res) {
         }
 
         // Update both expense and daily_sheet_line
+        const rawAmount = body.amount_minor ?? body.total_minor
         const amountMinor =
-          body.total_minor != null ? Math.max(0, Math.round(Number(body.total_minor) || 0)) : expRow.total_minor
+          rawAmount != null ? Math.max(0, Math.round(Number(rawAmount) || 0)) : expRow.total_minor
         const title = body.title != null ? String(body.title).trim() || expRow.title : expRow.title
         const categoryId = body.category_id || expRow.category_id
         const paidFrom = body.paid_from === 'gcash' ? 'gcash' : body.paid_from === 'cash' ? 'cash' : expRow.paid_from
+        const billReference =
+          body.bill_reference !== undefined
+            ? String(body.bill_reference || '').trim() || null
+            : expRow.bill_reference
 
         if (lineRow?.id) {
           await db
@@ -629,6 +644,7 @@ export async function handleFinanceOwnerOpsRequest(req, res) {
             unit_cost_minor: amountMinor,
             total_minor: amountMinor,
             paid_from: paidFrom,
+            bill_reference: billReference,
             updated_at: new Date().toISOString(),
           })
           .eq('id', expenseId)
@@ -636,12 +652,16 @@ export async function handleFinanceOwnerOpsRequest(req, res) {
         if (sheetId) {
           await recomputeAndSyncDailySheet(db, { sheetId, actorId: staff.id, syncApprovedExpenses: false })
         }
+        await db.from('audit_logs').insert({
+          actor_id: staff.id,
+          actor_role: staff.role,
+          action: 'finance.sheet_bill.override',
+          entity_type: 'expenses',
+          entity_id: expenseId,
+          summary: `Owner updated Daily Sheet bill "${title}" and synced sheet ${sheetId || ''}`,
+          details: { amount_minor: amountMinor, category_id: categoryId, paid_from: paidFrom },
+        })
         return json(res, 200, { ok: true, expense_id: expenseId, sheet_id: sheetId }, req)
-      }
-
-      // Resolve sheet_id lookup only
-      if (subAction === 'lookup-sheet') {
-        return json(res, 200, { ok: true, sheet_id: sheetId }, req)
       }
 
       return json(res, 400, { error: 'Bill is not linked to a daily sheet line.' }, req)
@@ -730,6 +750,11 @@ export async function handleFinanceOwnerOpsRequest(req, res) {
           replacementId = fallbackCat?.id || null
         }
 
+        const { count: linkedExpenseCount } = await db
+          .from('expenses')
+          .select('id', { count: 'exact', head: true })
+          .eq('category_id', catId)
+
         if (replacementId) {
           await Promise.all([
             db.from('expenses').update({ category_id: replacementId }).eq('category_id', catId),
@@ -749,10 +774,20 @@ export async function handleFinanceOwnerOpsRequest(req, res) {
           action: 'finance.category.delete',
           entity_type: 'expense_categories',
           entity_id: catId,
-          summary: `Deleted expense category "${existingCat.name}" (reassigned linked items to ${replacementId || 'none'})`,
+          summary: `Deleted expense category "${existingCat.name}" (reassigned ${linkedExpenseCount || 0} bills to ${replacementId || 'none'})`,
         })
 
-        return json(res, 200, { ok: true, deleted_id: catId, reassigned_to: replacementId }, req)
+        return json(
+          res,
+          200,
+          {
+            ok: true,
+            deleted_id: catId,
+            reassigned_to: replacementId,
+            reassigned_expenses: linkedExpenseCount || 0,
+          },
+          req,
+        )
       }
     }
 

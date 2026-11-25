@@ -27,7 +27,7 @@ import { useAuth } from '@/auth/AuthProvider'
 import { supabase } from '@/lib/supabase'
 import { loadUserSettings, saveSmsOptIn } from '@/lib/userSettings'
 import { isSyntheticCustomerEmail } from '@/lib/customerOnboarding'
-import { isValidCustomerPlate, plateValidationError, PLATE_FIELD_HINT, safeVehiclePhotoUrl } from '@/lib/customerAuth'
+import { isValidCustomerPlate, phoneDigits, plateValidationError, PLATE_FIELD_HINT, safeVehiclePhotoUrl } from '@/lib/customerAuth'
 import { VEHICLE_ICON_PRESETS, normalizeVehicleIcon } from '@/lib/ownerRevisionsPhase7'
 import { normalizePricingSize, PRICING_SIZES } from '@/lib/servicePricing'
 import { fetchPortal, initials, portalAction } from '@/lib/customerPortalClient'
@@ -61,13 +61,26 @@ export default function CustomerMorePage() {
   const navigate = useNavigate()
   const { user, profile: authProfile, signOut } = useAuth()
   const [portal, setPortal] = useState(null)
+  const [error, setError] = useState('')
   const [smsOptIn, setSmsOptIn] = useState(null)
   const [signingOut, setSigningOut] = useState(false)
 
   const meta = TAB_TITLES[tab]
   usePageMeta({ title: meta ? meta[0] : 'Settings', description: 'Manage your Hakum account.', path: CUSTOMER_MORE_PATH })
 
-  const load = useCallback(() => fetchPortal().then(setPortal).catch((err) => toast.error(err.message)), [])
+  const load = useCallback(
+    () =>
+      fetchPortal()
+        .then((d) => {
+          setPortal(d)
+          setError('')
+        })
+        .catch((err) => {
+          setError(err.message || 'Could not load your profile.')
+          toast.error(err.message)
+        }),
+    [],
+  )
 
   useEffect(() => {
     load()
@@ -123,6 +136,15 @@ export default function CustomerMorePage() {
       </Link>
 
       {portal ? <ProfileChecklist profile={profile} vehicles={vehicles} /> : null}
+      {error && !portal ? (
+        <div className="capp-empty capp-span" role="alert">
+          <strong>Could not load full profile details</strong>
+          <span>{error}</span>
+          <button type="button" className="capp-btn capp-btn-fill" onClick={load}>
+            Retry
+          </button>
+        </div>
+      ) : null}
 
       <section className="capp-section" aria-label="Account">
         <SectionHead title="Account" />
@@ -316,6 +338,11 @@ function AccountSection({ profile, onUpdated }) {
         className="capp-card"
         onSubmit={(e) => {
           e.preventDefault()
+          const digits = phoneDigits(phone.trim())
+          if (digits.length < 10 || digits.length > 13) {
+            toast.error('Enter a valid PH mobile number (e.g. 09171234567).')
+            return
+          }
           run(() => portalAction('update-phone', { phone: phone.trim() }), 'Phone updated')
         }}
       >
@@ -335,8 +362,8 @@ function AccountSection({ profile, onUpdated }) {
         className="capp-card"
         onSubmit={(e) => {
           e.preventDefault()
-          if (profile?.date_of_birth) return
-          run(() => portalAction('update-birthday', { date_of_birth: birthday.trim() }), birthday.trim() ? 'Birthday saved' : 'Birthday cleared')
+          if (profile?.date_of_birth || !birthday.trim()) return
+          run(() => portalAction('update-birthday', { date_of_birth: birthday.trim() }), 'Birthday saved')
         }}
       >
         <SectionHead title="Birthday" />
@@ -347,10 +374,17 @@ function AccountSection({ profile, onUpdated }) {
         </p>
         <label className="capp-field">
           <span>Date of birth</span>
-          <input type="date" value={birthday} onChange={(e) => setBirthday(e.target.value)} disabled={Boolean(profile?.date_of_birth)} />
+          <input
+            type="date"
+            min="1920-01-01"
+            max={new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' })}
+            value={birthday}
+            onChange={(e) => setBirthday(e.target.value)}
+            disabled={Boolean(profile?.date_of_birth)}
+          />
         </label>
         {profile?.date_of_birth ? null : (
-          <button type="submit" className="capp-btn capp-btn-fill" disabled={busy}>
+          <button type="submit" className="capp-btn capp-btn-fill" disabled={busy || !birthday.trim()}>
             <Cake size={16} strokeWidth={1.75} aria-hidden />
             Save birthday
           </button>
@@ -581,14 +615,14 @@ export function CarForm({ vehicle, onDone, onCancel }) {
   const [car, setCar] = useState(
     vehicle
       ? {
-          plate_number: vehicle.plate_number || '',
-          vehicle_make: vehicle.vehicle_make || '',
-          vehicle_model: vehicle.vehicle_model || '',
-          vehicle_type: normalizePricingSize(vehicle.vehicle_type),
-          color: vehicle.color || '',
-          photo_url: vehicle.photo_url || '',
-          icon: vehicle.icon || '',
-        }
+        plate_number: vehicle.plate_number || '',
+        vehicle_make: vehicle.vehicle_make || '',
+        vehicle_model: vehicle.vehicle_model || '',
+        vehicle_type: normalizePricingSize(vehicle.vehicle_type),
+        color: vehicle.color || '',
+        photo_url: vehicle.photo_url || '',
+        icon: vehicle.icon || '',
+      }
       : EMPTY_CAR,
   )
   const [busy, setBusy] = useState(false)

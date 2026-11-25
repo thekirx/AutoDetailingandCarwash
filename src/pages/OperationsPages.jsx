@@ -590,11 +590,11 @@ function ScopedFloorDashboard() {
     ? [{ slug: 'all', name: 'All branches' }, ...branches]
     : Array.isArray(scopeList) && scopeList.length > 1
       ? [
-          { slug: 'all', name: 'All my branches' },
-          ...(scopedBranchRows.length
-            ? scopedBranchRows
-            : scopeList.map((slug) => ({ slug, name: slug }))),
-        ]
+        { slug: 'all', name: 'All my branches' },
+        ...(scopedBranchRows.length
+          ? scopedBranchRows
+          : scopeList.map((slug) => ({ slug, name: slug }))),
+      ]
       : (Array.isArray(scopeList) ? scopeList : []).map((slug) => ({ slug, name: branches.find((b) => b.slug === slug)?.name || slug }))
 
   const nameOf = (slug) => branches.find((b) => b.slug === slug)?.name || slug
@@ -619,12 +619,12 @@ function ScopedFloorDashboard() {
         investor
           ? `Cars on the floor, cars waiting to pay, and paid sales · ${branchLabel}. View only.`
           : profile?.role === 'admin'
-          ? 'High-level floor summary — waiting cars, final checks, and tickets ready for POS.'
-          : isTeamLeadFloor
-            ? profile?.role === ROLES.STAFF
-              ? `Live jobs on your branch · ${branchLabel}. Queue, crew, and KPI are view-only.`
-              : `Jobs on your branch · ${branchLabel}. Open Queue to assign crew and run tickets.`
-            : 'Branch summary of queue volume, final checks, crew, and handoffs. Open Queue for the full board.'
+            ? 'High-level floor summary — waiting cars, final checks, and tickets ready for POS.'
+            : isTeamLeadFloor
+              ? profile?.role === ROLES.STAFF
+                ? `Live jobs on your branch · ${branchLabel}. Queue, crew, and KPI are view-only.`
+                : `Jobs on your branch · ${branchLabel}. Open Queue to assign crew and run tickets.`
+              : 'Branch summary of queue volume, final checks, crew, and handoffs. Open Queue for the full board.'
       }
       meta={
         live ? (
@@ -667,57 +667,57 @@ function ScopedFloorDashboard() {
       <div className="mt-4">
         <p className="mb-2 text-[10px] font-bold tracking-[0.18em] text-muted-foreground uppercase">Services &amp; Packages</p>
         <div className={`grid gap-3 grid-cols-2 sm:gap-4 ${queueMetricCols}`}>
-        <MetricCard
-          label="Waiting"
-          value={counts.waiting}
-          icon={Clock3}
-          to={queueLink({ lane: 'waiting', branch: branchFilter })}
-          hint="Jump to waiting lane"
-        />
-        <MetricCard
-          label="In Progress"
-          value={counts.in_progress}
-          icon={CarFront}
-          tone="green"
-          to={queueLink({ lane: 'in_progress', branch: branchFilter })}
-          hint="Jump to in progress"
-        />
-        <MetricCard
-          label="Final Checking"
-          value={counts.final_checking}
-          icon={BadgeCheck}
-          tone="amber"
-          to={queueLink({ lane: 'final_checking', branch: branchFilter })}
-          hint="Jump to final check"
-        />
-        {!isTeamLeadFloor ? (
           <MetricCard
-            label="For Payment"
-            value={filteredHandoffs.filter((h) => h.status === 'pending').length}
-            icon={Send}
-            tone="amber"
-            to={canOpenPos ? '/operations/pos' : queueLink({ branch: branchFilter })}
-            hint={investor ? 'Open POS' : canOpenPos ? 'Open POS checkout' : allowRoute(profile, 'queue') ? 'Open queue board' : undefined}
+            label="Waiting"
+            value={counts.waiting}
+            icon={Clock3}
+            to={queueLink({ lane: 'waiting', branch: branchFilter })}
+            hint="Jump to waiting lane"
           />
-        ) : null}
-        {seeRedo ? (
           <MetricCard
-            label="Services Failed QA"
-            value={counts.redo}
-            icon={ShieldAlert}
-            tone="amber"
-            to={queueLink({ lane: 'redo', branch: branchFilter })}
-            hint="Jump to redo lane"
+            label="In Progress"
+            value={counts.in_progress}
+            icon={CarFront}
+            tone="green"
+            to={queueLink({ lane: 'in_progress', branch: branchFilter })}
+            hint="Jump to in progress"
           />
-        ) : null}
-        <MetricCard
-          label="Total Active"
-          value={counts.total}
-          icon={ClipboardList}
-          to={queueLink({ branch: branchFilter })}
-          hint="Open full board"
-        />
-      </div>
+          <MetricCard
+            label="Final Checking"
+            value={counts.final_checking}
+            icon={BadgeCheck}
+            tone="amber"
+            to={queueLink({ lane: 'final_checking', branch: branchFilter })}
+            hint="Jump to final check"
+          />
+          {!isTeamLeadFloor ? (
+            <MetricCard
+              label="For Payment"
+              value={filteredHandoffs.filter((h) => h.status === 'pending').length}
+              icon={Send}
+              tone="amber"
+              to={canOpenPos ? '/operations/pos' : queueLink({ branch: branchFilter })}
+              hint={investor ? 'Open POS' : canOpenPos ? 'Open POS checkout' : allowRoute(profile, 'queue') ? 'Open queue board' : undefined}
+            />
+          ) : null}
+          {seeRedo ? (
+            <MetricCard
+              label="Services Failed QA"
+              value={counts.redo}
+              icon={ShieldAlert}
+              tone="amber"
+              to={queueLink({ lane: 'redo', branch: branchFilter })}
+              hint="Jump to redo lane"
+            />
+          ) : null}
+          <MetricCard
+            label="Total Active"
+            value={counts.total}
+            icon={ClipboardList}
+            to={queueLink({ branch: branchFilter })}
+            hint="Open full board"
+          />
+        </div>
       </div>
       <div className="mt-3">
         <p className="mb-2 text-[10px] font-bold tracking-[0.18em] text-muted-foreground uppercase">Detailing pipeline</p>
@@ -766,7 +766,7 @@ function ScopedFloorDashboard() {
         <Panel title="Services Failed QA" icon={ShieldAlert} className="mt-4 sm:mt-5">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {failedQaTickets.length ? failedQaTickets.map((ticket) => (
-              <TicketCard key={ticket.booking_id} ticket={ticket} timingWarnings={timingWarnings} compact />
+              <TicketCard key={ticket.booking_id} ticket={ticket} timingWarnings={timingWarnings} viewOnly={!canViewQueueBoard(profile)} compact />
             )) : <EmptyLine text="No services currently need QA correction." />}
           </div>
         </Panel>
@@ -819,29 +819,29 @@ function ScopedFloorDashboard() {
       )}
       {!isTeamLeadFloor ? (
         <div className={investor ? 'mt-4 sm:mt-5' : 'mt-4 grid gap-4 xl:grid-cols-[1.1fr_.9fr] sm:mt-5 sm:gap-5'}>
-        {investor ? null : (
-        <Panel title="Crew Availability" icon={Users}>
-          <div className="mb-4 rounded-xl border border-border/80 bg-muted/30 p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div>
-              <p className="text-sm font-bold text-foreground">
-                {formatAttendanceHeadcountStrings(branchFilter === 'all' ? 'All branches' : (branches.find((b) => b.slug === branchFilter)?.name || branchFilter), roleHeadcount).crewLine}
-              </p>
-              <p className="mt-0.5 text-xs font-medium text-muted-foreground">
-                {formatAttendanceHeadcountStrings(branchFilter === 'all' ? 'All branches' : (branches.find((b) => b.slug === branchFilter)?.name || branchFilter), roleHeadcount).adminLine}
-              </p>
-            </div>
-            <Link to="/operations/attendance" className="text-xs font-semibold text-primary hover:underline">
-              View register →
-            </Link>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <CrewList title="Available" rows={(availableStaff || []).filter(isFloorCrew)} empty="No available staff" />
-            <CrewList title="Busy" rows={(busyStaff || []).filter(isFloorCrew)} empty="No busy staff" busy />
-          </div>
-        </Panel>
-        )}
-        <Panel title="Recently Sent To Payment" icon={Send}>
-          <div className="grid gap-3">
+          {investor ? null : (
+            <Panel title="Crew Availability" icon={Users}>
+              <div className="mb-4 rounded-xl border border-border/80 bg-muted/30 p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div>
+                  <p className="text-sm font-bold text-foreground">
+                    {formatAttendanceHeadcountStrings(branchFilter === 'all' ? 'All branches' : (branches.find((b) => b.slug === branchFilter)?.name || branchFilter), roleHeadcount).crewLine}
+                  </p>
+                  <p className="mt-0.5 text-xs font-medium text-muted-foreground">
+                    {formatAttendanceHeadcountStrings(branchFilter === 'all' ? 'All branches' : (branches.find((b) => b.slug === branchFilter)?.name || branchFilter), roleHeadcount).adminLine}
+                  </p>
+                </div>
+                <Link to="/operations/attendance" className="text-xs font-semibold text-primary hover:underline">
+                  View register →
+                </Link>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <CrewList title="Available" rows={(availableStaff || []).filter(isFloorCrew)} empty="No available staff" />
+                <CrewList title="Busy" rows={(busyStaff || []).filter(isFloorCrew)} empty="No busy staff" busy />
+              </div>
+            </Panel>
+          )}
+          <Panel title="Recently Sent To Payment" icon={Send}>
+            <div className="grid gap-3">
               {filteredHandoffs.length ? filteredHandoffs.slice(0, 8).map((handoff) => {
                 const body = (
                   <>
@@ -861,12 +861,12 @@ function ScopedFloorDashboard() {
                 ) : (
                   <div key={handoff.id} className="rounded-2xl border border-border bg-card p-4">
                     {body}
-              </div>
+                  </div>
                 )
               }) : <EmptyLine text="No payment handoffs in this range." />}
-          </div>
-        </Panel>
-      </div>
+            </div>
+          </Panel>
+        </div>
       ) : null}
       {canViewFloorSales ? <Panel title={`Paid sales · ${branchLabel}`} icon={Wallet} className="mt-4 sm:mt-5">
         <p className="mb-3 text-sm text-muted-foreground">
@@ -903,11 +903,11 @@ function ScopedFloorDashboard() {
                         {' · '}
                         {sale.occurred_at ? new Date(sale.occurred_at).toLocaleString() : '—'}
                       </p>
-            </div>
+                    </div>
                     <p className="shrink-0 text-base font-semibold tabular-nums text-foreground sm:text-lg">
                       {formatMoney(sale.total_minor)}
                     </p>
-        </div>
+                  </div>
                 </div>
               )
             })
@@ -928,10 +928,10 @@ function ScopedFloorDashboard() {
               <div key={event.id} className="rounded-2xl border border-border bg-card p-4">
                 <p className="text-sm text-foreground">{event.old_status || 'created'} to {event.new_status}</p>
                 <p className="mt-1 text-xs text-muted-foreground">{event.branch} · {event.notes || 'Status update'} · {new Date(event.created_at).toLocaleString()}</p>
-            </div>
+              </div>
             )) : <EmptyLine text="No queue activity in this range." />}
-        </div>
-      </Panel>
+          </div>
+        </Panel>
       ) : null}
     </OpsPageShell>
   )
@@ -957,6 +957,7 @@ function OperationsQueueBoardPage() {
   const requestedLane = parseQueueLaneParam(searchParams.get('lane'))
   const view = searchParams.get('view') === 'table' ? 'table' : 'board'
   const branchFromUrl = String(searchParams.get('branch') || '').trim()
+  const openFromUrl = String(searchParams.get('open') || '').trim()
   const [branchFilter, setBranchFilter] = useState(() => {
     if (branchFromUrl) return branchFromUrl
     if (seeAll) return 'all'
@@ -966,6 +967,7 @@ function OperationsQueueBoardPage() {
   })
   const [branches, setBranches] = useState([])
   const [editBookingId, setEditBookingId] = useState(null)
+  const openedTicketFromUrl = useRef('')
   const [lanePage, setLanePage] = useState({})
   const [tablePage, setTablePage] = useState(1)
   const [tablePageSize, setTablePageSize] = useState(BOOKING_TABLE_DEFAULT_PAGE_SIZE)
@@ -1034,6 +1036,12 @@ function OperationsQueueBoardPage() {
     if (!branchFromUrl || branchFromUrl === branchFilter) return
     setBranchFilter(branchFromUrl)
   }, [branchFromUrl, branchFilter])
+
+  useEffect(() => {
+    if (!openFromUrl || openedTicketFromUrl.current === openFromUrl || !canManageQueue) return
+    openedTicketFromUrl.current = openFromUrl
+    setEditBookingId(openFromUrl)
+  }, [openFromUrl, canManageQueue])
 
   useEffect(() => {
     if (!focusLane) return undefined
@@ -1110,15 +1118,15 @@ function OperationsQueueBoardPage() {
     ? [{ slug: 'all', name: 'All branches' }, ...branches]
     : Array.isArray(scopeList) && scopeList.length > 1
       ? [
-          { slug: 'all', name: 'All my branches' },
-          ...(scopedBranchRows.length
-            ? scopedBranchRows
-            : scopeList.map((slug) => ({ slug, name: slug }))),
-        ]
+        { slug: 'all', name: 'All my branches' },
+        ...(scopedBranchRows.length
+          ? scopedBranchRows
+          : scopeList.map((slug) => ({ slug, name: slug }))),
+      ]
       : (Array.isArray(scopeList) ? scopeList : []).map((slug) => ({
-          slug,
-          name: branches.find((b) => b.slug === slug)?.name || slug,
-        }))
+        slug,
+        name: branches.find((b) => b.slug === slug)?.name || slug,
+      }))
   const filterBranchItems = selectQueueItems(branchOptions)
   const hideCardPrice = isInvestor(profile)
 
@@ -1346,21 +1354,21 @@ function OperationsQueueBoardPage() {
                       <div className="floor-lane-body">
                         {loading
                           ? Array.from({ length: 2 }, (_, index) => (
-                              <div key={index} className="h-24 animate-pulse rounded-xl bg-muted" />
-                            ))
+                            <div key={index} className="h-24 animate-pulse rounded-xl bg-muted" />
+                          ))
                           : slice.rows.length
                             ? slice.rows.map((ticket) => (
-                                <TicketCard
-                                  key={ticket.booking_id}
-                                  ticket={ticket}
-                                  timingWarnings={timingWarnings}
-                                  onOpen={canOpenTicket(ticket) ? () => openTicket(ticket) : undefined}
-                                  branchName={branchNameBySlug[ticket.branch]}
-                                  showPrice={!hideCardPrice}
-                                  viewOnly={salesView}
-                                  compact
-                                />
-                              ))
+                              <TicketCard
+                                key={ticket.booking_id}
+                                ticket={ticket}
+                                timingWarnings={timingWarnings}
+                                onOpen={canOpenTicket(ticket) ? () => openTicket(ticket) : undefined}
+                                branchName={branchNameBySlug[ticket.branch]}
+                                showPrice={!hideCardPrice}
+                                viewOnly={salesView}
+                                compact
+                              />
+                            ))
                             : (
                               <p className="rounded-xl border border-dashed border-border bg-background/50 p-3 text-center text-sm text-muted-foreground">
                                 Empty
@@ -1999,7 +2007,7 @@ export function NewQueueTicketPage() {
                     <button type="button" className="ntw-review-edit" onClick={() => setStep(editStep)}>Edit</button>
                   </div>
                 ))}
-                              <div className="sm:col-span-2 mt-2">
+                <div className="sm:col-span-2 mt-2">
                   <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
                     Voucher code (optional)
                     <input
@@ -2143,94 +2151,94 @@ export function CrewPage() {
       </div>
 
       {crewTab === 'pool' && (
-            <Panel title="Staff Pool" icon={UserPlus} className="mt-5">
-              {canManageCrew && canManagePeople(profile) ? (
-                <p className="mb-5 rounded-2xl border border-border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
-                  New accounts are created in{' '}
-                  <Link to="/operations/employees?tab=employees" className="font-semibold text-primary underline-offset-4 hover:underline">
-                    Employees
-                  </Link>
-                  . Use this tab to mark present and deploy crew on the floor.
-                </p>
-              ) : null}
-              {canManageCrew && !canManagePeople(profile) ? (
-                <form onSubmit={submitStaff} className="mb-5 grid gap-3 md:grid-cols-2">
-                  <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Staff name
-                    <input value={form.full_name} onChange={(event) => setForm((current) => ({ ...current, full_name: event.target.value }))} required placeholder="Full name" className="min-h-11 rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground outline-none focus:border-ring" />
-                  </label>
-                  <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Username *
-                    <input value={form.username} onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))} required minLength={3} placeholder="login handle" className="min-h-11 rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground outline-none focus:border-ring" />
-                  </label>
-                  <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Email *
-                    <input type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} required placeholder="staff@hakumautocare.com" className="min-h-11 rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground outline-none focus:border-ring" />
-                  </label>
-                  <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Password *
-                    <input type="text" value={form.password} onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))} required minLength={8} placeholder="Temp password (min 8)" className="min-h-11 rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground outline-none focus:border-ring" />
-                  </label>
-                  <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Phone
-                    <input value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} placeholder="09…" className="min-h-11 rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground outline-none focus:border-ring" />
-                  </label>
-                  {canPickBranch && (
-                    <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                      Branch
-                      <select value={form.branch_slug} onChange={(event) => setForm((current) => ({ ...current, branch_slug: event.target.value }))} required className="min-h-11 rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground outline-none">
-                        {branches.map((branch) => <option key={branch.slug} value={branch.slug}>{branch.name}</option>)}
-                      </select>
-                    </label>
-                  )}
-                  <label className="md:col-span-2 flex items-center gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-foreground">
+        <Panel title="Staff Pool" icon={UserPlus} className="mt-5">
+          {canManageCrew && canManagePeople(profile) ? (
+            <p className="mb-5 rounded-2xl border border-border bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+              New accounts are created in{' '}
+              <Link to="/operations/employees?tab=employees" className="font-semibold text-primary underline-offset-4 hover:underline">
+                Employees
+              </Link>
+              . Use this tab to mark present and deploy crew on the floor.
+            </p>
+          ) : null}
+          {canManageCrew && !canManagePeople(profile) ? (
+            <form onSubmit={submitStaff} className="mb-5 grid gap-3 md:grid-cols-2">
+              <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Staff name
+                <input value={form.full_name} onChange={(event) => setForm((current) => ({ ...current, full_name: event.target.value }))} required placeholder="Full name" className="min-h-11 rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground outline-none focus:border-ring" />
+              </label>
+              <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Username *
+                <input value={form.username} onChange={(event) => setForm((current) => ({ ...current, username: event.target.value }))} required minLength={3} placeholder="login handle" className="min-h-11 rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground outline-none focus:border-ring" />
+              </label>
+              <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Email *
+                <input type="email" value={form.email} onChange={(event) => setForm((current) => ({ ...current, email: event.target.value }))} required placeholder="staff@hakumautocare.com" className="min-h-11 rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground outline-none focus:border-ring" />
+              </label>
+              <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Password *
+                <input type="text" value={form.password} onChange={(event) => setForm((current) => ({ ...current, password: event.target.value }))} required minLength={8} placeholder="Temp password (min 8)" className="min-h-11 rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground outline-none focus:border-ring" />
+              </label>
+              <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Phone
+                <input value={form.phone} onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} placeholder="09…" className="min-h-11 rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground outline-none focus:border-ring" />
+              </label>
+              {canPickBranch && (
+                <label className="flex flex-col gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Branch
+                  <select value={form.branch_slug} onChange={(event) => setForm((current) => ({ ...current, branch_slug: event.target.value }))} required className="min-h-11 rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground outline-none">
+                    {branches.map((branch) => <option key={branch.slug} value={branch.slug}>{branch.name}</option>)}
+                  </select>
+                </label>
+              )}
+              <label className="md:col-span-2 flex items-center gap-3 rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm text-foreground">
                 <input type="checkbox" checked={form.present_today} onChange={(event) => setForm((current) => ({ ...current, present_today: event.target.checked }))} />
                 Mark as attended today
               </label>
-                  <button disabled={saving === 'add-staff'} className="md:col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-wait disabled:opacity-60">{saving === 'add-staff' ? <LoaderCircle className="animate-spin" size={16} /> : <Plus size={16} />}Add crew member</button>
+              <button disabled={saving === 'add-staff'} className="md:col-span-2 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground transition hover:opacity-90 disabled:cursor-wait disabled:opacity-60">{saving === 'add-staff' ? <LoaderCircle className="animate-spin" size={16} /> : <Plus size={16} />}Add crew member</button>
             </form>
-              ) : null}
-              <StaffPoolList
-                rows={staffPool}
-                canManage={canManageCrew}
-                canPickBranch={canPickBranch}
-                branches={branches}
-                saving={saving}
-                onAttendance={(member, status) => runCrewAction(`${member.id}-${status}`, () => setStaffAttendance(member, status, profile))}
-                onEdit={(member, patch) => runCrewAction(`${member.id}-edit`, () => updateCrewStaffMember(member.id, patch))}
-                onDeactivate={(member) => {
-                  if (!window.confirm(`Remove ${member.full_name} from the active crew pool?`)) return
-                  return runCrewAction(`${member.id}-off`, () => deactivateCrewStaffMember(member.id))
-                }}
-              />
+          ) : null}
+          <StaffPoolList
+            rows={staffPool}
+            canManage={canManageCrew}
+            canPickBranch={canPickBranch}
+            branches={branches}
+            saving={saving}
+            onAttendance={(member, status) => runCrewAction(`${member.id}-${status}`, () => setStaffAttendance(member, status, profile))}
+            onEdit={(member, patch) => runCrewAction(`${member.id}-edit`, () => updateCrewStaffMember(member.id, patch))}
+            onDeactivate={(member) => {
+              if (!window.confirm(`Remove ${member.full_name} from the active crew pool?`)) return
+              return runCrewAction(`${member.id}-off`, () => deactivateCrewStaffMember(member.id))
+            }}
+          />
         </Panel>
-          )}
-          {crewTab === 'present' && (
-            <div className="mt-5 grid gap-6 xl:grid-cols-2">
-              <Panel title="Present today" icon={CheckCircle2}>
-                <StaffPoolList
-                  rows={presentRows}
-                  canManage={canManageCrew}
-                  canPickBranch={canPickBranch}
-                  branches={branches}
-                  saving={saving}
-                  onAttendance={(member, status) => runCrewAction(`${member.id}-${status}`, () => setStaffAttendance(member, status, profile))}
-                  onEdit={(member, patch) => runCrewAction(`${member.id}-edit`, () => updateCrewStaffMember(member.id, patch))}
-                  onDeactivate={(member) => {
-                    if (!window.confirm(`Remove ${member.full_name} from the active crew pool?`)) return
-                    return runCrewAction(`${member.id}-off`, () => deactivateCrewStaffMember(member.id))
-                  }}
-                />
-        </Panel>
-              <Panel title="Deployable (not on a ticket)" icon={Users}><CrewList rows={availableStaff} empty="No attended staff available" /></Panel>
-      </div>
-          )}
-          {crewTab === 'busy' && (
-            <Panel title="Busy Staff" icon={Users} className="mt-5"><CrewList rows={busyStaff} empty="No busy staff" busy /></Panel>
-          )}
-          {crewTab === 'compensation' && (
-            <CrewCompensationPanel profile={profile} staffPool={staffPool} branchFilter={getBranchScope(profile) || 'all'} />
-          )}
+      )}
+      {crewTab === 'present' && (
+        <div className="mt-5 grid gap-6 xl:grid-cols-2">
+          <Panel title="Present today" icon={CheckCircle2}>
+            <StaffPoolList
+              rows={presentRows}
+              canManage={canManageCrew}
+              canPickBranch={canPickBranch}
+              branches={branches}
+              saving={saving}
+              onAttendance={(member, status) => runCrewAction(`${member.id}-${status}`, () => setStaffAttendance(member, status, profile))}
+              onEdit={(member, patch) => runCrewAction(`${member.id}-edit`, () => updateCrewStaffMember(member.id, patch))}
+              onDeactivate={(member) => {
+                if (!window.confirm(`Remove ${member.full_name} from the active crew pool?`)) return
+                return runCrewAction(`${member.id}-off`, () => deactivateCrewStaffMember(member.id))
+              }}
+            />
+          </Panel>
+          <Panel title="Deployable (not on a ticket)" icon={Users}><CrewList rows={availableStaff} empty="No attended staff available" /></Panel>
+        </div>
+      )}
+      {crewTab === 'busy' && (
+        <Panel title="Busy Staff" icon={Users} className="mt-5"><CrewList rows={busyStaff} empty="No busy staff" busy /></Panel>
+      )}
+      {crewTab === 'compensation' && (
+        <CrewCompensationPanel profile={profile} staffPool={staffPool} branchFilter={getBranchScope(profile) || 'all'} />
+      )}
     </OpsPageShell>
   )
 }
@@ -2346,7 +2354,7 @@ function CrewCompensationPanel({ profile, staffPool, branchFilter }) {
       <p className="mt-3 text-xs text-muted-foreground">
         Estimate from today&apos;s paid wash sales. Pay is posted when SA or ASA approves the Daily Sheet, not from this tab.
       </p>
-      </Panel>
+    </Panel>
   )
 }
 
@@ -2367,9 +2375,9 @@ export function MyTasksPage() {
     setLoading(true)
     const [queueRes, planRes] = await Promise.all([
       supabase
-      .from('queue_assignments')
+        .from('queue_assignments')
         .select('id, booking_id, task_name, task_notes, status, started_at, completed_at, released_at, created_at, bookings(vehicle_plate, branch, status, queue_number, notes)')
-      .eq('staff_id', staffId)
+        .eq('staff_id', staffId)
         .in('status', ['active', 'pending'])
         .order('created_at', { ascending: false }),
       supabase
@@ -2539,7 +2547,7 @@ export function MyTasksPage() {
             const booking = row.bookings
             return (
               <article key={row.id} className="planner-ticket rounded-2xl border border-border bg-card p-4">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-lg font-semibold">{row.task_name || 'Queue service task'}</p>
                     <p className="mt-1 text-xs text-muted-foreground">
@@ -2548,13 +2556,17 @@ export function MyTasksPage() {
                       {booking?.queue_number ? ` · #${formatQueueNumber(booking.queue_number)}` : ''}
                     </p>
                     <p className="mt-1 text-xs capitalize text-muted-foreground">{row.status}{booking?.status ? ` · ticket ${booking.status}` : ''}</p>
-              </div>
+                  </div>
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                    {row.booking_id && !isStaff && (
+                    {row.booking_id && canViewQueueBoard(profile) ? (
                       <Link to={`/operations/queue/${row.booking_id}`} className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-border px-4 py-2 text-sm font-semibold no-underline">
                         Open ticket
                       </Link>
-                    )}
+                    ) : row.booking_id && profile?.role === ROLES.DETAILER ? (
+                      <Link to="/operations/bookings" className="inline-flex min-h-11 items-center justify-center rounded-2xl border border-border px-4 py-2 text-sm font-semibold no-underline">
+                        Open Detailing Board
+                      </Link>
+                    ) : null}
                     {row.status === 'pending' && (
                       <button
                         type="button"
@@ -2575,21 +2587,21 @@ export function MyTasksPage() {
                         {saving === row.id ? 'Saving…' : 'Mark done'}
                       </button>
                     )}
-            </div>
-            </div>
-            {booking?.notes?.trim() ? (
-              <div className="mt-3 flex items-start gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2.5 py-1.5 text-xs font-medium text-amber-950 dark:text-amber-200">
-                <span className="shrink-0 rounded bg-amber-500/20 px-1 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-900 dark:bg-amber-400/20 dark:text-amber-200">Note</span>
-                <span className="break-words leading-relaxed"><span className="font-semibold">Customer instruction:</span> {booking.notes}</span>
-              </div>
-            ) : (
-              <p className="mt-2 text-xs text-muted-foreground/70">No customer notes</p>
-            )}
-            {row.task_notes && <p className="mt-2 text-sm text-muted-foreground"><span className="font-semibold">Task instructions:</span> {row.task_notes}</p>}
-          </article>
+                  </div>
+                </div>
+                {booking?.notes?.trim() ? (
+                  <div className="mt-3 flex items-start gap-1.5 rounded-lg border border-amber-500/25 bg-amber-500/10 px-2.5 py-1.5 text-xs font-medium text-amber-950 dark:text-amber-200">
+                    <span className="shrink-0 rounded bg-amber-500/20 px-1 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-900 dark:bg-amber-400/20 dark:text-amber-200">Note</span>
+                    <span className="break-words leading-relaxed"><span className="font-semibold">Customer instruction:</span> {booking.notes}</span>
+                  </div>
+                ) : (
+                  <p className="mt-2 text-xs text-muted-foreground/70">No customer notes</p>
+                )}
+                {row.task_notes && <p className="mt-2 text-sm text-muted-foreground"><span className="font-semibold">Task instructions:</span> {row.task_notes}</p>}
+              </article>
             )
           }) : <EmptyLine text={loading ? 'Loading…' : empty ? 'No assigned tasks right now.' : 'No queue assignments.'} />}
-      </div>
+        </div>
       </Panel>
     </OpsPageShell>
   )
@@ -2605,7 +2617,7 @@ function ProofSubmit({ row, saving, userId, onSubmit, onSkip }) {
   const [uploading, setUploading] = useState(false)
   const proofRequired = Boolean(row.plan_cards?.proof_required)
   if (!open) {
-  return (
+    return (
       <>
         <button type="button" disabled={saving === row.id} onClick={() => setOpen(true)} className="min-h-11 rounded-2xl bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-40">Submit for review</button>
         {!proofRequired && (

@@ -39,7 +39,10 @@ export default function PosReadOnlyView({ profile }) {
       .select('id, amount_minor, bookings(final_price_minor, price_minor)')
       .eq('status', 'pending')
       .eq('branch', branch)
-      .then(({ data }) => setHandoffs(data || []))
+      .then(({ data, error }) => {
+        if (error) return
+        setHandoffs(data || [])
+      })
   }, [branch])
 
   const branchLabel = branches.find((b) => b.slug === branch)?.name || branch || 'No branch assigned'

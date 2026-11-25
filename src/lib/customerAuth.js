@@ -120,6 +120,10 @@ export function classifyIdentifier(raw) {
   return 'unknown'
 }
 
+export function isSyntheticCustomerEmail(email) {
+  return /@customers\.hakumautocare\.com$/i.test(String(email || '').trim())
+}
+
 /** Resolve Auth email for email/phone only (plate needs server lookup). */
 export function resolveLoginEmail(raw) {
   const kind = classifyIdentifier(raw)

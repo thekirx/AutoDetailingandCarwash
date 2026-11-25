@@ -325,10 +325,10 @@ export async function fetchIncomeCategoryLines({
         (item.item_type === 'product'
           ? 'merch'
           : item.services?.pay_category === 'detailing'
-          ? 'detailing'
-          : item.item_type === 'package'
-          ? 'package'
-          : 'service')
+            ? 'detailing'
+            : item.item_type === 'package'
+              ? 'package'
+              : 'service')
 
       if (lineKind && itemKind !== lineKind) continue
 

@@ -31,7 +31,7 @@ function whenLabel(iso) {
   return d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
-function BookingCarCard({ booking, tone, branchName, expanded, onToggle, next, onAdvance, onOpen, readOnlyHint }) {
+function BookingCarCard({ booking, tone, branchName, expanded, onToggle, next, advancing, onAdvance, onOpen, readOnlyHint }) {
   const plate = String(booking.vehicle_plate || '').trim().toUpperCase() || 'NO PLATE'
   const vehicle = [booking.vehicle_make, booking.vehicle_model].filter(Boolean).join(' ') || 'Vehicle'
   const size = booking.vehicle_type ? String(booking.vehicle_type).replace(/_/g, ' ') : ''
@@ -99,7 +99,13 @@ function BookingCarCard({ booking, tone, branchName, expanded, onToggle, next, o
           ) : null}
           <div className="bk-floor-actions">
             {next ? (
-              <button type="button" className="qmgr-open-btn qmgr-open-btn-primary" onClick={() => onAdvance(booking, next)}>
+              <button
+                type="button"
+                className="qmgr-open-btn qmgr-open-btn-primary gap-2"
+                disabled={advancing}
+                onClick={() => onAdvance(booking, next)}
+              >
+                {advancing ? <LoaderCircle className="size-4 animate-spin" aria-hidden /> : null}
                 {BOOKING_PRIMARY_ACTION_LABELS[next] || 'Advance'}
               </button>
             ) : null}
@@ -200,6 +206,17 @@ export default function BookingFloorBoard({
   const [expandedId, setExpandedId] = useState(null)
   const [maint, setMaint] = useState({ loading: true, schedules: [], canWrite: false, canArrive: false, error: '' })
   const [busyId, setBusyId] = useState(null)
+  const [advancingId, setAdvancingId] = useState(null)
+
+  async function handleAdvance(booking, next) {
+    if (advancingId) return
+    setAdvancingId(booking.id)
+    try {
+      await onAdvance?.(booking, next)
+    } finally {
+      setAdvancingId(null)
+    }
+  }
 
   const loadMaintenance = useCallback(async () => {
     try {
@@ -361,7 +378,8 @@ export default function BookingFloorBoard({
                 expanded={expandedId === booking.id}
                 onToggle={() => setExpandedId((id) => (id === booking.id ? null : booking.id))}
                 next={nextActionFor(booking)}
-                onAdvance={onAdvance}
+                advancing={advancingId === booking.id}
+                onAdvance={handleAdvance}
                 onOpen={onOpen}
                 readOnlyHint={readOnlyHint}
               />

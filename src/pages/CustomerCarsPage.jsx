@@ -14,9 +14,22 @@ import fleetPhoto from '@/assets/services/wash-detailing/fleet-collage.webp'
 export default function CustomerCarsPage() {
   const [params, setParams] = useSearchParams()
   const [portal, setPortal] = useState(null)
+  const [error, setError] = useState('')
   usePageMeta({ title: 'My cars', description: 'Your saved cars, sizes and photos.', path: CUSTOMER_CARS_PATH })
 
-  const load = useCallback(() => fetchPortal().then(setPortal).catch((err) => toast.error(err.message)), [])
+  const load = useCallback(
+    () =>
+      fetchPortal()
+        .then((d) => {
+          setPortal(d)
+          setError('')
+        })
+        .catch((err) => {
+          setError(err.message || 'Could not load your garage.')
+          toast.error(err.message)
+        }),
+    [],
+  )
   useEffect(() => {
     load()
   }, [load])
@@ -37,14 +50,24 @@ export default function CustomerCarsPage() {
       }
       cols
     >
-      <GarageSection
-        vehicles={portal?.vehicles || []}
-        loaded={Boolean(portal)}
-        editId={params.get('vehicle') || ''}
-        startAdding={params.get('add') === '1'}
-        onEdit={(id) => setParams(id ? { vehicle: id } : {}, { replace: true })}
-        onUpdated={load}
-      />
+      {error && !portal ? (
+        <div className="capp-empty capp-span" role="alert">
+          <strong>Could not load your cars</strong>
+          <span>{error}</span>
+          <button type="button" className="capp-btn capp-btn-fill" onClick={load}>
+            Retry
+          </button>
+        </div>
+      ) : (
+        <GarageSection
+          vehicles={portal?.vehicles || []}
+          loaded={Boolean(portal)}
+          editId={params.get('vehicle') || ''}
+          startAdding={params.get('add') === '1'}
+          onEdit={(id) => setParams(id ? { vehicle: id } : {}, { replace: true })}
+          onUpdated={load}
+        />
+      )}
     </CustomerAppFrame>
   )
 }

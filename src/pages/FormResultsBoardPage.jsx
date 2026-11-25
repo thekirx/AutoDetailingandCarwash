@@ -7,6 +7,7 @@ import {
   Check,
   ClipboardList,
   Copy,
+  Download,
   ExternalLink,
   Filter,
   Kanban,
@@ -22,7 +23,9 @@ import { toast } from 'sonner'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import OpsTabList from '@/components/ops/OpsTabBar'
 import { useAuth } from '@/auth/AuthProvider'
-import { canEditDeleteFormResults, getBranchScopeList } from '@/auth/permissions'
+import { canApproveCashAdvance, canEditDeleteFormResults, getBranchScopeList } from '@/auth/permissions'
+import { downloadCsv as downloadCsvText, insightsToCsv } from '@/lib/crmInsightsExport'
+import { notifyOpsEvent } from '@/lib/opsEventNotify'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -104,6 +107,7 @@ export default function FormResultsBoardPage({ embedded = false, initialFormSlug
   const navigate = useNavigate()
   const { profile } = useAuth()
   const isOwner = canEditDeleteFormResults(profile)
+  const approveCash = canApproveCashAdvance(profile)
   const scopeList = getBranchScopeList(profile)
 
   const [loading, setLoading] = useState(true)
@@ -272,13 +276,13 @@ export default function FormResultsBoardPage({ embedded = false, initialFormSlug
 
   const hasActiveFilters = Boolean(
     filters.query ||
-      filters.status !== 'all' ||
-      filters.source !== 'all' ||
-      filters.branch !== 'all' ||
-      filters.datePreset !== 'all' ||
-      filters.dateFrom ||
-      filters.dateTo ||
-      filters.dateField !== 'created',
+    filters.status !== 'all' ||
+    filters.source !== 'all' ||
+    filters.branch !== 'all' ||
+    filters.datePreset !== 'all' ||
+    filters.dateFrom ||
+    filters.dateTo ||
+    filters.dateField !== 'created',
   )
 
   function handleKindChange(nextKind) {
@@ -353,12 +357,12 @@ export default function FormResultsBoardPage({ embedded = false, initialFormSlug
       setActiveItem((prev) =>
         prev
           ? {
-              ...prev,
-              respondentLabel: editDraft.respondentLabel || prev.respondentLabel,
-              status: editDraft.status,
-              calendarAt: editDraft.calendarAt ? new Date(editDraft.calendarAt).toISOString() : prev.calendarAt,
-              payload: { ...editDraft.payload },
-            }
+            ...prev,
+            respondentLabel: editDraft.respondentLabel || prev.respondentLabel,
+            status: editDraft.status,
+            calendarAt: editDraft.calendarAt ? new Date(editDraft.calendarAt).toISOString() : prev.calendarAt,
+            payload: { ...editDraft.payload },
+          }
           : null,
       )
       await load({ silent: true })
@@ -386,6 +390,49 @@ export default function FormResultsBoardPage({ embedded = false, initialFormSlug
     } finally {
       setSaving(false)
     }
+  }
+
+  async function decideCashAdvance(item, action) {
+    if (!approveCash || !item) return
+    setSaving(true)
+    try {
+      const { data, error } = await supabase.rpc('approve_cash_advance', { payload: { id: item.id, action } })
+      if (error) {
+        toast.error(error.message)
+        return
+      }
+      if (action === 'approve') {
+        notifyOpsEvent('cash_advance_approved', item.id)
+        toast.success(`Approved. Code ${data?.approval_code || ''}. The branch admin types it on the Daily Sheet.`)
+      } else {
+        toast.success('Declined. No cash leaves the drawer.')
+      }
+      setActiveItem(null)
+      await load({ silent: true })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  function exportFilteredCsv() {
+    const csvText = insightsToCsv(filteredItems, [
+      { key: 'createdAt', label: 'Submitted' },
+      { key: 'formName', label: 'Form' },
+      { key: 'formKind', label: 'Kind' },
+      { key: 'respondentLabel', label: 'Respondent' },
+      { key: 'branch', label: 'Branch' },
+      { key: 'status', label: 'Status' },
+      { key: 'source', label: 'Source' },
+      {
+        key: 'answers',
+        label: 'Answers',
+        get: (item) =>
+          buildSubmissionAnswerRows(item)
+            .map((r) => `${r.label}: ${r.displayValue}`)
+            .join(' | '),
+      },
+    ])
+    downloadCsvText(`hakum-form-results-${new Date().toISOString().slice(0, 10)}.csv`, csvText)
   }
 
   const pageTitle = formSlug ? targetScope.label : 'Forms Results Board'
@@ -554,9 +601,8 @@ export default function FormResultsBoardPage({ embedded = false, initialFormSlug
                 <button
                   key={preset.id}
                   type="button"
-                  className={`frb-preset-chip ${
-                    !filters.dateFrom && !filters.dateTo && filters.datePreset === preset.id ? 'is-active' : ''
-                  }`}
+                  className={`frb-preset-chip ${!filters.dateFrom && !filters.dateTo && filters.datePreset === preset.id ? 'is-active' : ''
+                    }`}
                   onClick={() =>
                     setFilters((prev) => ({
                       ...prev,
@@ -857,7 +903,33 @@ export default function FormResultsBoardPage({ embedded = false, initialFormSlug
                   <Lock className="size-4 shrink-0" aria-hidden />
                   <span>Read-only inspection. Only Owner (BossMich) can edit or permanently delete submitted responses.</span>
                 </div>
-              ) : (
+              ) : null}
+
+              {activeItem.formKind === 'cash_advance' ? (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border bg-muted/30 px-3.5 py-2.5 text-sm">
+                  {activeItem.payload?.approval_code ? (
+                    <span>
+                      Cash advance code: <strong className="font-mono text-foreground">{activeItem.payload.approval_code}</strong>
+                    </span>
+                  ) : approveCash && activeItem.status !== 'archived' ? (
+                    <>
+                      <span className="text-muted-foreground">Owner / Super Admin cash advance decision</span>
+                      <div className="flex flex-wrap gap-2">
+                        <Button type="button" size="sm" disabled={saving} onClick={() => decideCashAdvance(activeItem, 'approve')}>
+                          Approve advance
+                        </Button>
+                        <Button type="button" size="sm" variant="outline" disabled={saving} onClick={() => decideCashAdvance(activeItem, 'decline')}>
+                          Decline
+                        </Button>
+                      </div>
+                    </>
+                  ) : (
+                    <span className="text-muted-foreground">Status: {formResultStatusLabel(activeItem.status, activeItem.formKind)}</span>
+                  )}
+                </div>
+              ) : null}
+
+              {isOwner ? (
                 <div className="frb-owner-bar">
                   <div className="flex flex-wrap items-center gap-2">
                     <div className="flex items-center gap-2">
@@ -873,14 +945,14 @@ export default function FormResultsBoardPage({ embedded = false, initialFormSlug
                         options={
                           activeItem.isDetailing
                             ? [
-                                activeItem.status,
-                                ...(BOOKING_STATUS_TRANSITIONS[activeItem.status] || []),
-                              ]
-                                .filter((v, i, arr) => v && v !== 'for_payment' && arr.indexOf(v) === i)
-                                .map((s) => ({
-                                  value: s,
-                                  label: formResultStatusLabel(s, 'detailing'),
-                                }))
+                              activeItem.status,
+                              ...(BOOKING_STATUS_TRANSITIONS[activeItem.status] || []),
+                            ]
+                              .filter((v, i, arr) => v && v !== 'for_payment' && arr.indexOf(v) === i)
+                              .map((s) => ({
+                                value: s,
+                                label: formResultStatusLabel(s, 'detailing'),
+                              }))
                             : SUBMISSION_STATUSES.map((s) => ({ value: s.value, label: s.label }))
                         }
                       />
@@ -907,7 +979,7 @@ export default function FormResultsBoardPage({ embedded = false, initialFormSlug
                     Delete permanently
                   </Button>
                 </div>
-              )}
+              ) : null}
 
               {editing && isOwner ? (
                 <form onSubmit={handleSaveEdit} className="grid gap-4">
@@ -1051,6 +1123,17 @@ export default function FormResultsBoardPage({ embedded = false, initialFormSlug
         variant="outline"
         size="sm"
         className="min-h-11"
+        disabled={!filteredItems.length}
+        onClick={exportFilteredCsv}
+      >
+        <Download className="size-3.5" />
+        CSV
+      </Button>
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="min-h-11"
         onClick={() => copyPermanentUrl(permanentUrlPath, 'page')}
       >
         {copiedKey === 'page' ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
@@ -1125,19 +1208,19 @@ function FullFormAnswerView({ item, copiedKey, onCopyLink }) {
 
   const stepGroups = hasSteps
     ? [
-        ...settings.steps.map((step) => ({
-          id: step.id,
-          title: step.title,
-          hint: step.hint,
-          rows: rows.filter((r) => r.step === step.id),
-        })),
-        {
-          id: '__other',
-          title: 'Additional details',
-          hint: '',
-          rows: rows.filter((r) => !settings.steps.some((s) => s.id === r.step)),
-        },
-      ].filter((g) => g.rows.length > 0)
+      ...settings.steps.map((step) => ({
+        id: step.id,
+        title: step.title,
+        hint: step.hint,
+        rows: rows.filter((r) => r.step === step.id),
+      })),
+      {
+        id: '__other',
+        title: 'Additional details',
+        hint: '',
+        rows: rows.filter((r) => !settings.steps.some((s) => s.id === r.step)),
+      },
+    ].filter((g) => g.rows.length > 0)
     : [{ id: 'all', title: 'Complete form responses', hint: '', rows }]
 
   return (
@@ -1154,9 +1237,8 @@ function FullFormAnswerView({ item, copiedKey, onCopyLink }) {
             {group.rows.map((row) => (
               <div
                 key={row.key}
-                className={`frb-answer-cell ${
-                  row.type === 'textarea' || row.displayValue.length > 72 ? 'is-wide' : ''
-                }`}
+                className={`frb-answer-cell ${row.type === 'textarea' || row.displayValue.length > 72 ? 'is-wide' : ''
+                  }`}
               >
                 <dt>
                   <span>{row.label}</span>

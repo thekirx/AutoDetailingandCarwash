@@ -336,29 +336,39 @@ export default function VouchersPage({ embedded = false } = {}) {
   }
 
   async function toggleActive(row) {
-    if (!canMint) return
-    const { error } = await supabase
-      .from('promo_vouchers')
-      .update({ is_active: !row.is_active, updated_at: new Date().toISOString() })
-      .eq('id', row.id)
-    if (error) toast.error(error.message)
-    else {
-      toast.success(row.is_active ? `${row.code} paused.` : `${row.code} turned back on.`)
-      await load({ silent: true })
+    if (!canMint || saving) return
+    setSaving(true)
+    try {
+      const { error } = await supabase
+        .from('promo_vouchers')
+        .update({ is_active: !row.is_active, updated_at: new Date().toISOString() })
+        .eq('id', row.id)
+      if (error) toast.error(error.message)
+      else {
+        toast.success(row.is_active ? `${row.code} paused.` : `${row.code} turned back on.`)
+        await load({ silent: true })
+      }
+    } finally {
+      setSaving(false)
     }
   }
 
   async function deleteUnusedVoucher(row) {
-    if (!canMint || Number(row.uses_count || 0) > 0) return
-    const { error } = await supabase.from('promo_vouchers').delete().eq('id', row.id)
-    setConfirmDeleteId('')
-    if (error) {
-      toast.error(error.message)
-      return
+    if (!canMint || saving || Number(row.uses_count || 0) > 0) return
+    setSaving(true)
+    try {
+      const { error } = await supabase.from('promo_vouchers').delete().eq('id', row.id)
+      setConfirmDeleteId('')
+      if (error) {
+        toast.error(error.message)
+        return
+      }
+      if (editingRow?.id === row.id) resetComposer()
+      toast.success(`Deleted unused voucher ${row.code}.`)
+      await load({ silent: true })
+    } finally {
+      setSaving(false)
     }
-    if (editingRow?.id === row.id) resetComposer()
-    toast.success(`Deleted unused voucher ${row.code}.`)
-    await load({ silent: true })
   }
 
   async function copyCode(row) {
@@ -773,12 +783,12 @@ export default function VouchersPage({ embedded = false } = {}) {
                               <CopyPlus className="size-3.5" aria-hidden />
                               Clone
                             </Button>
-                            <Button type="button" variant="outline" size="sm" onClick={() => toggleActive(row)}>
+                            <Button type="button" variant="outline" size="sm" disabled={saving} onClick={() => toggleActive(row)}>
                               {row.is_active ? 'Turn off' : 'Turn on'}
                             </Button>
                             {canDelete ? (
                               confirmDeleteId === row.id ? (
-                                <Button type="button" variant="destructive" size="sm" onClick={() => deleteUnusedVoucher(row)}>
+                                <Button type="button" variant="destructive" size="sm" disabled={saving} onClick={() => deleteUnusedVoucher(row)}>
                                   Confirm delete
                                 </Button>
                               ) : (
@@ -875,12 +885,12 @@ export default function VouchersPage({ embedded = false } = {}) {
                                   >
                                     <CopyPlus className="size-3.5" aria-hidden />
                                   </Button>
-                                  <Button type="button" variant="outline" size="sm" className="min-h-11" onClick={() => toggleActive(row)}>
+                                  <Button type="button" variant="outline" size="sm" className="min-h-11" disabled={saving} onClick={() => toggleActive(row)}>
                                     {row.is_active ? 'Turn off' : 'Turn on'}
                                   </Button>
                                   {canDelete ? (
                                     confirmDeleteId === row.id ? (
-                                      <Button type="button" variant="destructive" size="sm" className="min-h-11" onClick={() => deleteUnusedVoucher(row)}>
+                                      <Button type="button" variant="destructive" size="sm" className="min-h-11" disabled={saving} onClick={() => deleteUnusedVoucher(row)}>
                                         Confirm
                                       </Button>
                                     ) : (

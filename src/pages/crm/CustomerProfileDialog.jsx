@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { collectPaged } from '@/lib/crmInsights'
 import { isSmsReachable, summarizeCustomerHistory, ticketNotesFromBookings } from '@/lib/crmSmartGroups'
+import { isSyntheticCustomerEmail } from '@/lib/customerAuth'
 import { vehicleIconGlyph } from '@/lib/ownerRevisionsPhase7'
 import { normalizePricingSize, PRICING_SIZES } from '@/lib/servicePricing'
 import { supabase } from '@/lib/supabase'
@@ -172,7 +173,12 @@ export default function CustomerProfileDialog({
               <DialogTitle className="text-xl font-semibold">{customer.full_name || 'Unnamed customer'}</DialogTitle>
               <DialogDescription className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
                 <span className="inline-flex items-center gap-1.5"><Phone className="size-3.5" aria-hidden />{customer.phone || 'No phone'}</span>
-                <span className="inline-flex min-w-0 items-center gap-1.5"><Mail className="size-3.5" aria-hidden /><span className="truncate">{customer.email || 'No email'}</span></span>
+                <span className="inline-flex min-w-0 items-center gap-1.5">
+                  <Mail className="size-3.5" aria-hidden />
+                  <span className="truncate">
+                    {customer.email && !isSyntheticCustomerEmail(customer.email) ? customer.email : 'No email'}
+                  </span>
+                </span>
                 <span>Customer since {fmtDate(customer.created_at)}</span>
                 {customer.date_of_birth ? <span>Birthday {fmtDate(customer.date_of_birth)}</span> : null}
               </DialogDescription>

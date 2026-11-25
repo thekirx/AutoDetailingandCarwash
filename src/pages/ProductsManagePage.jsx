@@ -331,7 +331,8 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
   }
 
   async function toggleActive(row) {
-    if (!assertCanMutate()) return
+    if (saving || !assertCanMutate()) return
+    setSaving(true)
     try {
       await updateProduct(row.id, {
         name: row.name,
@@ -347,18 +348,23 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
       await load()
     } catch (err) {
       toast.error(err.message)
+    } finally {
+      setSaving(false)
     }
   }
 
   async function onArchive(id) {
-    if (!assertCanMutate()) return
+    if (saving || !assertCanMutate()) return
     if (!window.confirm('Archive this item?')) return
+    setSaving(true)
     try {
       await archiveProduct(id)
       toast.success('Item archived')
       await load()
     } catch (err) {
       toast.error(err.message)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -610,7 +616,7 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
             .eq('size_key', '')
           if (error) throw error
         }
-        await supabase.from('product_stock_movements').insert({
+        const { error: moveErr } = await supabase.from('product_stock_movements').insert({
           product_id: productId,
           branch_slug: branchSlug,
           size_key: '',
@@ -619,6 +625,7 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
           movement_type: 'restock',
           created_by: user?.id || profile?.id,
         })
+        if (moveErr) toast.error(moveErr.message || 'Stock updated, but movement log failed')
         toast.success(`Restocked ${product.name} (+${num})`)
         setInlineQuickDraft((s) => ({ ...s, [productId]: '' }))
         await load()
@@ -653,7 +660,7 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
             .eq('size_key', '')
           if (error) throw error
         }
-        await supabase.from('product_stock_movements').insert({
+        const { error: moveErr } = await supabase.from('product_stock_movements').insert({
           product_id: productId,
           branch_slug: branchSlug,
           size_key: '',
@@ -662,6 +669,7 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
           movement_type: 'owner_set',
           created_by: user?.id || profile?.id,
         })
+        if (moveErr) toast.error(moveErr.message || 'Stock updated, but movement log failed')
         toast.success(`Set on-hand for ${product.name} to ${num}`)
         setInlineQuickDraft((s) => ({ ...s, [productId]: '' }))
         await load()
@@ -1361,18 +1369,18 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
                       <Badge variant={row.is_active ? 'secondary' : 'outline'}>{row.is_active ? 'Active' : 'Off'}</Badge>
                     </TableCell>
                     <TableCell className="space-x-1 text-right">
-                      <Button size="sm" variant="outline" onClick={() => openEdit(row)}>
+                      <Button size="sm" variant="outline" disabled={saving} onClick={() => openEdit(row)}>
                         Edit
                       </Button>
                       <Button
                         size="sm"
                         variant="ghost"
-                        disabled={!canMutate}
+                        disabled={saving || !canMutate}
                         onClick={() => toggleActive(row)}
                       >
                         {row.is_active ? 'Deactivate' : 'Activate'}
                       </Button>
-                      <Button size="sm" variant="ghost" disabled={!canMutate} onClick={() => onArchive(row.id)}>
+                      <Button size="sm" variant="ghost" disabled={saving || !canMutate} onClick={() => onArchive(row.id)}>
                         Archive
                       </Button>
                     </TableCell>
@@ -1381,7 +1389,7 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
               })}
               {!visible.length && (
                 <TableRow>
-                  <TableCell colSpan={7} className="py-6 text-center text-muted-foreground">
+                  <TableCell colSpan={8} className="py-6 text-center text-muted-foreground">
                     No items match the chosen branch and filters.
                   </TableCell>
                 </TableRow>

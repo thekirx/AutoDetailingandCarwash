@@ -222,6 +222,8 @@ export default function SuperAdminFloorBoard() {
       supabase.from('expenses').select('id', { count: 'exact', head: true }).eq('status', 'pending_approval'),
     ]).then(([stock, bills]) => {
       if (!current) return
+      if (stock.error) console.warn('restock_requests count:', stock.error.message)
+      if (bills.error) console.warn('expenses approval count:', bills.error.message)
       setPendingApprovals((Number(stock.count) || 0) + (Number(bills.count) || 0))
     })
     return () => {
@@ -507,8 +509,13 @@ export default function SuperAdminFloorBoard() {
                   className="rounded-2xl border border-rose-500/25 bg-rose-500/[0.06] p-4"
                 >
                   <p className="truncate font-semibold text-foreground">
-                    {job.customer_name || 'Customer'}
-                    {qNum ? ` · ${qNum}` : ''}
+                    <Link
+                      to={`/operations/queue/${job.booking_id}`}
+                      className="hover:underline"
+                    >
+                      {job.customer_name || 'Customer'}
+                      {qNum ? ` · ${qNum}` : ''}
+                    </Link>
                   </p>
                   <p className="mt-1 truncate text-xs text-muted-foreground">
                     {job.branch} · {job.vehicle_plate || '—'} · {job.service_name || 'Service'}

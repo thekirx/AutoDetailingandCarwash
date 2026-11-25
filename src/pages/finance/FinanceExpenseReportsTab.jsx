@@ -124,11 +124,25 @@ export default function FinanceExpenseReportsTab({
       notes: form.notes.trim() || null,
     })
     setBusy(false)
-    if (lineErr) toast.error(lineErr.message)
-    else {
+    if (lineErr) {
+      await supabase.from('expense_reports').delete().eq('id', report.id)
+      toast.error(lineErr.message)
+    } else {
       toast.success('Draft expense report created')
       setForm((f) => ({ ...f, amountPesos: '', notes: '', title: '' }))
       setCreateOpen(false)
+      load()
+    }
+  }
+
+  async function deleteDraft(id) {
+    if (!window.confirm('Delete this draft expense report?')) return
+    setBusy(true)
+    const { error } = await supabase.from('expense_reports').delete().eq('id', id)
+    setBusy(false)
+    if (error) toast.error(error.message)
+    else {
+      toast.success('Draft deleted')
       load()
     }
   }
@@ -314,9 +328,16 @@ export default function FinanceExpenseReportsTab({
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {canWrite && (r.status === 'draft' || r.status === 'rejected') ? (
-                      <Button type="button" size="sm" className="min-h-10 cursor-pointer" disabled={busy} onClick={() => submit(r.id)}>
-                        Submit
-                      </Button>
+                      <>
+                        <Button type="button" size="sm" className="min-h-10 cursor-pointer" disabled={busy} onClick={() => submit(r.id)}>
+                          Submit
+                        </Button>
+                        {r.status === 'draft' ? (
+                          <Button type="button" size="sm" variant="outline" className="min-h-10 cursor-pointer" disabled={busy} onClick={() => deleteDraft(r.id)}>
+                            Delete draft
+                          </Button>
+                        ) : null}
+                      </>
                     ) : null}
                     {isSuperAdmin(profile) && r.status === 'submitted' ? (
                       <>

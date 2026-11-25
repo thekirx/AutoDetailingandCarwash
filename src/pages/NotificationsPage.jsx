@@ -313,6 +313,7 @@ function ReminderRulesPanel() {
   const [ruleOpen, setRuleOpen] = useState(false)
   const [query, setQuery] = useState('')
   const [scopeFilter, setScopeFilter] = useState('all')
+  const [ruleStatusFilter, setRuleStatusFilter] = useState('all')
   const [togglingId, setTogglingId] = useState(null)
 
   const detailingServices = useMemo(() => filterFloorDetailingServices(services), [services])
@@ -494,6 +495,8 @@ function ReminderRulesPanel() {
     const q = query.trim().toLowerCase()
     return settings.filter((s) => {
       if (scopeFilter !== 'all' && s.scope !== scopeFilter) return false
+      if (ruleStatusFilter === 'enabled' && s.enabled === false) return false
+      if (ruleStatusFilter === 'paused' && s.enabled !== false) return false
       if (!q) return true
       const svc = services.find((x) => x.id === s.service_id)
       const br = branches.find((x) => x.slug === s.branch_slug)
@@ -505,7 +508,7 @@ function ReminderRulesPanel() {
         String(s.scope || '').toLowerCase().includes(q)
       )
     })
-  }, [settings, query, scopeFilter, services, branches])
+  }, [settings, query, scopeFilter, ruleStatusFilter, services, branches])
 
   return (
     <div className="flex flex-col gap-5">
@@ -767,6 +770,22 @@ function ReminderRulesPanel() {
                   onClick={() => setScopeFilter(sc.id)}
                 >
                   {sc.label}
+                </Button>
+              ))}
+              {[
+                ['all', 'All'],
+                ['enabled', 'Active'],
+                ['paused', 'Paused'],
+              ].map(([id, label]) => (
+                <Button
+                  key={id}
+                  type="button"
+                  size="sm"
+                  variant={ruleStatusFilter === id ? 'secondary' : 'ghost'}
+                  className="h-8 px-2.5 text-xs cursor-pointer"
+                  onClick={() => setRuleStatusFilter(id)}
+                >
+                  {label}
                 </Button>
               ))}
             </div>
@@ -1598,6 +1617,25 @@ function BroadcastPanel({ canManageKinds = false }) {
               </DialogHeader>
               <form onSubmit={saveBroadcastEdit} className="grid gap-3">
                 <div className="grid gap-2">
+                  <Label htmlFor="edit-bc-kind">Kind</Label>
+                  <Select
+                    value={editingRow.kind || 'custom'}
+                    onValueChange={(v) => setEditingRow({ ...editingRow, kind: v })}
+                    items={kinds.map((k) => ({ value: k.slug, label: k.label }))}
+                  >
+                    <SelectTrigger id="edit-bc-kind" className="min-h-11 cursor-pointer">
+                      <SelectValue placeholder="Pick kind" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {kinds.map((k) => (
+                        <SelectItem key={k.slug} value={k.slug}>
+                          {k.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid gap-2">
                   <Label htmlFor="edit-bc-title">Title</Label>
                   <Input
                     id="edit-bc-title"
@@ -1659,7 +1697,14 @@ function BroadcastKindsManager({ kinds, onChanged }) {
   const [draft, setDraft] = useState(empty)
   const [kindOpen, setKindOpen] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [statusFilter, setStatusFilter] = useState('all')
   const editing = Boolean(draft.id)
+
+  const filteredKinds = useMemo(() => {
+    if (statusFilter === 'active') return kinds.filter((k) => k.is_active !== false)
+    if (statusFilter === 'archived') return kinds.filter((k) => k.is_active === false)
+    return kinds
+  }, [kinds, statusFilter])
 
   async function save(e) {
     e.preventDefault()
@@ -1728,6 +1773,30 @@ function BroadcastKindsManager({ kinds, onChanged }) {
     onChanged?.()
   }
 
+  async function restore(id) {
+    setSaving(true)
+    try {
+      const token = await getAccessTokenFresh()
+      const res = await fetch('/api/notification-broadcast-kinds', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ id, is_active: true }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        toast.error(data.error || 'Restore failed')
+        return
+      }
+      toast.success('Kind restored')
+      onChanged?.()
+    } finally {
+      setSaving(false)
+    }
+  }
+
   return (
     <Card className="border-border/80 shadow-none">
       <CardHeader className="flex flex-row flex-wrap items-start justify-between gap-3">
@@ -1735,10 +1804,30 @@ function BroadcastKindsManager({ kinds, onChanged }) {
           <CardTitle className="text-lg">Broadcast kinds</CardTitle>
           <CardDescription>Create, edit, or archive kinds used in the compose dropdown (SA / ASA).</CardDescription>
         </div>
-        <Button type="button" className="min-h-11" onClick={() => { setDraft(empty); setKindOpen(true) }}>
-          <Plus size={16} className="mr-1.5" aria-hidden />
-          Add kind
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1" role="group" aria-label="Filter broadcast kinds">
+            {[
+              ['all', 'All'],
+              ['active', 'Active'],
+              ['archived', 'Archived'],
+            ].map(([id, label]) => (
+              <Button
+                key={id}
+                type="button"
+                size="sm"
+                variant={statusFilter === id ? 'secondary' : 'ghost'}
+                className="h-9 px-2.5 text-xs"
+                onClick={() => setStatusFilter(id)}
+              >
+                {label}
+              </Button>
+            ))}
+          </div>
+          <Button type="button" className="min-h-11" onClick={() => { setDraft(empty); setKindOpen(true) }}>
+            <Plus size={16} className="mr-1.5" aria-hidden />
+            Add kind
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>
         <Dialog open={kindOpen} onOpenChange={(open) => { setKindOpen(open); if (!open) setDraft(empty) }}>
@@ -1776,6 +1865,16 @@ function BroadcastKindsManager({ kinds, onChanged }) {
               className="min-h-11"
               value={draft.description}
               onChange={(e) => setDraft({ ...draft, description: e.target.value })}
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="kind-order">Display order</Label>
+            <Input
+              id="kind-order"
+              type="number"
+              className="min-h-11"
+              value={draft.display_order}
+              onChange={(e) => setDraft({ ...draft, display_order: e.target.value })}
             />
           </div>
           <div className="flex flex-col gap-2">
@@ -1827,10 +1926,10 @@ function BroadcastKindsManager({ kinds, onChanged }) {
         </Dialog>
 
         <ul className="divide-y divide-border rounded-xl border border-border">
-          {kinds.length === 0 ? (
-            <li className="p-4 text-sm text-muted-foreground">No kinds yet.</li>
+          {filteredKinds.length === 0 ? (
+            <li className="p-4 text-sm text-muted-foreground">No matching kinds.</li>
           ) : (
-            kinds.map((k) => (
+            filteredKinds.map((k) => (
               <li key={k.id || k.slug} className="flex items-start justify-between gap-3 p-3">
                 <div className="min-w-0">
                   <p className="text-sm font-semibold">
@@ -1871,10 +1970,22 @@ function BroadcastKindsManager({ kinds, onChanged }) {
                       size="icon"
                       variant="ghost"
                       className="size-10 cursor-pointer text-destructive"
+                      disabled={saving}
                       aria-label={`Archive ${k.label}`}
                       onClick={() => deactivate(k.id)}
                     >
                       <Trash2 className="size-4" />
+                    </Button>
+                  ) : k.id ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-9 cursor-pointer text-xs"
+                      disabled={saving}
+                      onClick={() => restore(k.id)}
+                    >
+                      Restore
                     </Button>
                   ) : null}
                 </div>

@@ -39,6 +39,9 @@ export function PlanningEventsPanel({ canEdit, highlightId }) {
   const [createOpen, setCreateOpen] = useState(false)
   const [studioOpen, setStudioOpen] = useState(false)
   const [studioDraft, setStudioDraft] = useState(null)
+  const [eventQuery, setEventQuery] = useState('')
+  const [eventBranch, setEventBranch] = useState('all')
+  const [eventStatus, setEventStatus] = useState('all')
   const [form, setForm] = useState({
     title: '',
     description: '',
@@ -120,6 +123,9 @@ export function PlanningEventsPanel({ canEdit, highlightId }) {
     if (!canEdit) return
     const title = form.title.trim()
     if (!title || !form.starts_at) return toast.error('Title and start required')
+    if (form.ends_at && new Date(form.ends_at) < new Date(form.starts_at)) {
+      return toast.error('End date/time must be on or after start')
+    }
     const tempId = crypto.randomUUID()
     const slug = slugifyEventTitle(title, tempId)
     const res = await saveCmsEvent(
@@ -177,7 +183,14 @@ export function PlanningEventsPanel({ canEdit, highlightId }) {
     else load()
   }
 
-  const visibleEvents = canEdit ? events : events.filter((ev) => ev.is_published)
+  const visibleEvents = (canEdit ? events : events.filter((ev) => ev.is_published)).filter((ev) => {
+    if (eventStatus === 'published' && !ev.is_published) return false
+    if (eventStatus === 'draft' && ev.is_published) return false
+    if (eventBranch !== 'all' && String(ev.branch || '') !== eventBranch) return false
+    const q = eventQuery.trim().toLowerCase()
+    if (!q) return true
+    return [ev.title, ev.description, ev.branch, ev.ops_forms?.name].filter(Boolean).join(' ').toLowerCase().includes(q)
+  })
 
   function shareUrl(ev) {
     return `${window.location.origin}/events/${ev.slug}`
@@ -284,6 +297,39 @@ export function PlanningEventsPanel({ canEdit, highlightId }) {
           ) : null}
         </CardHeader>
         <CardContent>
+          <div className="mb-4 grid gap-2 sm:grid-cols-3">
+            <Input
+              type="search"
+              value={eventQuery}
+              onChange={(e) => setEventQuery(e.target.value)}
+              placeholder="Search events…"
+              aria-label="Search events"
+              className="min-h-10"
+            />
+            <Select value={eventBranch} onValueChange={setEventBranch}>
+              <SelectTrigger className="min-h-10" aria-label="Filter events by branch">
+                <SelectValue placeholder="All branches" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All branches</SelectItem>
+                {branchOptions.map((b) => (
+                  <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {canEdit ? (
+              <Select value={eventStatus} onValueChange={setEventStatus}>
+                <SelectTrigger className="min-h-10" aria-label="Filter events by status">
+                  <SelectValue placeholder="All statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="published">Published</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                </SelectContent>
+              </Select>
+            ) : null}
+          </div>
           <div className="planning-event-list">
             {visibleEvents.map((ev) => (
               <article key={`m-${ev.id}`} className={`planning-event-card planner-ticket${ev.id === highlightId ? ' is-highlight' : ''}`}>

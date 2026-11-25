@@ -21,7 +21,7 @@ import {
 import { packagesForService, bookedDetailingServiceId } from '@/lib/detailingPackages'
 import { pointsLabel } from '@/lib/loyaltyPoints'
 import { seedBookingFromVehicle } from '@/lib/uiDeadControls'
-import { plateValidationError, PLATE_FIELD_HINT } from '@/lib/customerAuth'
+import { phoneDigits, plateValidationError, PLATE_FIELD_HINT } from '@/lib/customerAuth'
 import { earliestBookableDay } from '@/lib/bookingLead'
 import { branchDistanceKm } from '@/lib/branchGeo'
 import { formatDistanceKm, loadCustomerBranch, loadCustomerPin, resolveCustomerBranchChoice } from '@/lib/customerLocation'
@@ -239,13 +239,15 @@ export default function CustomerBookPage() {
   const sizeLabel = PRICING_SIZES.find((s) => s.slug === form.vehicle_type)?.label || form.vehicle_type
   const branchRow = branches.find((b) => b.slug === form.branch)
   const savedCar = vehicles.find((v) => v.plate_number === form.vehicle_plate) || null
-  const showCarFields = otherCar || !vehicles.length || !savedCar
+  const missingSavedMakeModel = Boolean(savedCar) && (!String(form.vehicle_make || '').trim() || !String(form.vehicle_model || '').trim())
+  const showCarFields = otherCar || !vehicles.length || !savedCar || missingSavedMakeModel
 
   /* Car first (size comes from My cars), Ceramic asks whether the car is already coated, then the
      customer picks the package (priced for their car), a sub-package only when the service has them,
      then the schedule, the branch + where they heard about us, and the summary with the price last. */
   const steps = bookingFamilySteps(familyKey, { hasPackages: packages.length > 0 && !assess })
   const stepId = steps[Math.min(step, steps.length - 1)]
+  const reviewDigits = phoneDigits(form.customer_phone)
   const stepReady =
     stepId === 'coated'
       ? Boolean(coated)
@@ -254,12 +256,17 @@ export default function CustomerBookPage() {
         : stepId === 'package'
       ? Boolean(form.package_id)
       : stepId === 'car'
-        ? !plateValidationError(form.vehicle_plate)
+        ? !plateValidationError(form.vehicle_plate) && Boolean(String(form.vehicle_make || '').trim() && String(form.vehicle_model || '').trim())
         : stepId === 'when'
           ? Boolean(day && time)
           : stepId === 'details'
             ? Boolean(form.branch) && !referralRequiredError(form) && !friendCodeAccountError(form, authProfile?.role === 'customer' ? user?.id : null)
-            : Boolean(form.customer_first_name && form.customer_phone)
+            : Boolean(
+                String(form.customer_first_name || '').trim() &&
+                  String(form.customer_last_name || '').trim() &&
+                  reviewDigits.length >= 10 &&
+                  reviewDigits.length <= 13,
+              )
 
   async function applyVoucherDirect(rawCode) {
     const code = normalizePromoCode(rawCode)
@@ -353,7 +360,7 @@ export default function CustomerBookPage() {
         body: JSON.stringify({
         ...form,
         service_id: assess ? form.service_id : bookedDetailingServiceId(form.service_id, form.package_id, packages),
-        scheduled_start: `${day}T${time}`,
+        scheduled_start: `${day}T${time}:00+08:00`,
         voucher_code: appliedVoucher && !assess ? appliedVoucher.code : undefined,
         needs_assessment: assess || undefined,
       }),
@@ -414,7 +421,16 @@ export default function CustomerBookPage() {
               </span>
             </button>
           ))}
-          {!services.length ? <div className="capp-empty">No detailing services are open for booking right now.</div> : null}
+          {!services.length && !error ? <div className="capp-empty">No detailing services are open for booking right now.</div> : null}
+          {error && !flowOpen ? (
+            <div className="capp-empty" role="alert">
+              <strong>Could not load services</strong>
+              <span>{error}</span>
+              <button type="button" className="capp-btn capp-btn-fill" onClick={() => window.location.reload()}>
+                Retry
+              </button>
+            </div>
+          ) : null}
         </div>
       )}
 
@@ -564,7 +580,10 @@ export default function CustomerBookPage() {
                       role="radio"
                       aria-checked={pkg.id === form.package_id}
                       className="capp-opt"
-                      onClick={() => set('package_id', pkg.id)}
+                      onClick={() => {
+                        set('package_id', pkg.id)
+                        setAppliedVoucher(null)
+                      }}
                     >
                       <span className="capp-opt-rd" aria-hidden />
                       <span className="capp-row-body">

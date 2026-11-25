@@ -354,17 +354,19 @@ export default function NotificationSettingsPanel({
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: '{}',
+        body: JSON.stringify(jobKey === 'sweep' ? { mode: 'manual', force: true } : {}),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(data.error || 'Automation run failed.')
       if (data.skipped || data.customers?.skipped) {
         const reason = data.reason || data.customers?.reason
-        toast.info(
-          reason === 'quiet_hours'
-            ? 'Skipped — Manila Quiet Hours are currently active.'
-            : 'Skipped — automation toggle is paused in settings.',
-        )
+        const skipMessages = {
+          quiet_hours: 'Skipped — Manila Quiet Hours are currently active.',
+          cron_only_mode: 'Skipped — Automation mode is set to Cron Only.',
+          cooldown: 'Skipped — Sweep cooldown is active; try again shortly.',
+          up_to_date: 'All scheduled automations are already up to date.',
+        }
+        toast.info(skipMessages[reason] || 'Skipped — automation toggle is paused in settings.')
         return
       }
       if (jobKey === 'booking') {

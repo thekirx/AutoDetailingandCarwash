@@ -11,7 +11,8 @@ import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
 import { PRICING_SIZES } from '@/lib/servicePricing'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessMyAdvances } from '@/auth/permissions'
-import { plateValidationError, PLATE_FIELD_HINT } from '@/lib/customerAuth'
+import { isSyntheticCustomerEmail } from '@/lib/customerOnboarding'
+import { phoneDigits, plateValidationError, PLATE_FIELD_HINT } from '@/lib/customerAuth'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -82,7 +83,7 @@ export default function UserSettingsModal({
 
   useEffect(() => {
     if (!open) return
-    setEmail(profile?.email || '')
+    setEmail(isSyntheticCustomerEmail(profile?.email) ? '' : profile?.email || '')
     setPhone(profile?.phone || '')
     setBirthday(profile?.date_of_birth ? String(profile.date_of_birth).slice(0, 10) : '')
     setPassword('')
@@ -92,7 +93,9 @@ export default function UserSettingsModal({
     if (isCustomer) {
       loadUserSettings()
         .then((s) => setSmsOptIn(s.sms_opt_in !== false))
-        .catch(() => setSmsOptIn(true))
+        .catch((err) => {
+          toast.error(err?.message || 'Could not load notification settings')
+        })
     }
 
     if (showMyAdvances) {
@@ -101,7 +104,10 @@ export default function UserSettingsModal({
           const balances = cashAdvanceBalances(rows)
           setCaBalance(balances[0] || null)
         })
-        .catch(() => setCaBalance(null))
+        .catch((err) => {
+          setCaBalance(null)
+          toast.error(err?.message || 'Could not load cash advance balance')
+        })
     } else {
       setCaBalance(null)
     }
@@ -122,12 +128,19 @@ export default function UserSettingsModal({
 
   async function saveEmail(e) {
     e.preventDefault()
+    const trimmed = email.trim().toLowerCase()
+    if (!trimmed || !trimmed.includes('@') || isSyntheticCustomerEmail(trimmed)) {
+      toast.error('Enter a real personal email address.')
+      return
+    }
     setBusy(true)
     try {
-      const { error } = await supabase.auth.updateUser({ email: email.trim() })
+      const { error } = await supabase.auth.updateUser({ email: trimmed })
       if (error) throw error
       if (isCustomer) {
-        await portalAction('sync-email', { email: email.trim() })
+        await portalAction('sync-email', { email: trimmed })
+      } else if (profile?.id) {
+        await supabase.from('staff_profiles').update({ login_email: trimmed }).eq('id', profile.id)
       }
       toast.success('Check your inbox to confirm the new email')
       onUpdated?.()
@@ -140,6 +153,13 @@ export default function UserSettingsModal({
 
   async function savePhone(e) {
     e.preventDefault()
+    if (isCustomer) {
+      const digits = phoneDigits(phone.trim())
+      if (digits.length < 10 || digits.length > 13) {
+        toast.error('Enter a valid PH mobile number (e.g. 09171234567).')
+        return
+      }
+    }
     setBusy(true)
     try {
       if (isCustomer) {

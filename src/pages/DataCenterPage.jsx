@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { AlertTriangle, Database, Download, ShieldCheck, Upload } from 'lucide-react'
 import { toast } from 'sonner'
@@ -73,6 +73,7 @@ export default function DataCenterPage({ embedded = false } = {}) {
   const [importConfirm, setImportConfirm] = useState('')
   const [importBundle, setImportBundle] = useState(null)
   const [dryRun, setDryRun] = useState(null)
+  const importInputRef = useRef(null)
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -112,6 +113,10 @@ export default function DataCenterPage({ embedded = false } = {}) {
       a.click()
       URL.revokeObjectURL(url)
       toast.success('Export downloaded — store this file offline (Drive / safe folder).')
+      const errCount = bundle?.errors && typeof bundle.errors === 'object' ? Object.keys(bundle.errors).length : 0
+      if (errCount > 0) {
+        toast.warning(`${errCount} table(s) returned partial export warnings — inspect bundle.errors.`)
+      }
       await load()
     } catch (err) {
       toast.error(err.message)
@@ -152,6 +157,7 @@ export default function DataCenterPage({ embedded = false } = {}) {
       if (!isDryRun) {
         setImportConfirm('')
         setImportBundle(null)
+        if (importInputRef.current) importInputRef.current.value = ''
         await load()
       }
     } catch (err) {
@@ -215,11 +221,11 @@ export default function DataCenterPage({ embedded = false } = {}) {
       {overdue ? (
         <Card className="border-amber-500/40 bg-amber-500/10">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-amber-100">
+            <CardTitle className="flex items-center gap-2 text-amber-950 dark:text-amber-100">
               <AlertTriangle className="size-5" aria-hidden />
               Backup reminder
             </CardTitle>
-            <CardDescription className="text-amber-100/80">
+            <CardDescription className="text-amber-900 dark:text-amber-100/80">
               {status?.backup_reminder?.message}
               {status?.settings?.last_export_at
                 ? ` Last export ${daysSince(status.settings.last_export_at)} day(s) ago.`
@@ -317,11 +323,27 @@ export default function DataCenterPage({ embedded = false } = {}) {
             </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-col gap-3">
-            <Input type="file" accept="application/json,.json" onChange={(e) => onImportFile(e.target.files?.[0])} />
+            <Input ref={importInputRef} type="file" accept="application/json,.json" onChange={(e) => onImportFile(e.target.files?.[0])} />
             {importBundle ? (
-              <p className="text-xs text-muted-foreground">
-                Loaded export from {importBundle.exported_at || 'unknown'} · v{importBundle.version}
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                <span>
+                  Loaded export from {importBundle.exported_at || 'unknown'} · v{importBundle.version}
+                </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-xs"
+                  onClick={() => {
+                    setImportBundle(null)
+                    setDryRun(null)
+                    setImportConfirm('')
+                    if (importInputRef.current) importInputRef.current.value = ''
+                  }}
+                >
+                  Clear file
+                </Button>
+              </div>
             ) : null}
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={() => runImport(true)} disabled={!!busy || !importBundle}>
@@ -356,7 +378,7 @@ export default function DataCenterPage({ embedded = false } = {}) {
 
       <Card className="border-red-500/30">
         <CardHeader>
-          <CardTitle className="text-red-200">Standard purge</CardTitle>
+          <CardTitle className="text-red-700 dark:text-red-200">Standard purge</CardTitle>
           <CardDescription>
             Archive-first for tickets, vehicles, and customers. Logs use retention (90 days ops / 365 days audit). Blocked
             rows stay — live bookings and finance transactions are never deleted this way. Type DELETE to confirm.

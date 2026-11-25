@@ -6,7 +6,13 @@
 `/home` (`noindex`), `/services`, `/services/:slug` (`ppf`, `ceramic`, `tint`, `wash-detailing`), `/tint-finder`, `/shop`, `/book` (detailing), `/queue`, `/branches`, `/branches/:citySlug` (`bacoor`, `batangas`, `imus`, `cavite`, `dasmarinas`), `/branches/:citySlug/:serviceSlug` (`car-wash`, `auto-detailing`, `ceramic-coating`, `ppf`, `window-tint`), `/partnerships`, `/contact`, `/complaints` (`noindex`), `/events`, `/events/:slug`, `/blog`, `/blog/:slug`, `/f/:slug`, legal (`/terms` `/privacy` `/cookies`), `/403` `/404`.
 
 ### Customer (ProtectedRoute role=customer)
-`/account`, `/account/blog`, `/account/events`, `/account/queue`, `/account/book`, `/account/loyalty`, `/account/more`; auth `/signin` `/signup` `/account/set-password`.
+`/account` (Home & active visit card + past visits/purchases), `/account/queue` (live queue + branch weather), `/account/book` (2+ calendar day detailing booking wizard), `/account/visit` & `/account/visit/:id` (live step timeline, voucher apply & one-time reschedule request), `/account/pickup/:id` (points shop handover pickup code), `/account/loyalty` (10-slot stamp track, Visit 6–30 milestones, member tier, points shop), `/account/referral` (friend code share/copy), `/account/vouchers` (birthday free wash claim `BDxxxx` & `VKxxxx` promo code verifier), `/account/cars` (Digital Garage with plate, vehicle size & icon presets), `/account/more` (Profile lock birthdate, BusyBee SMS opt-in, Web Push, Dark/Light theme, PWA install), `/account/events`, `/account/blog`; auth `/signin` `/signup` `/account/set-password`.
+
+### Customer Concierge Chatbot (Movable, Deterministic — No AI)
+- Host: `src/components/HakumChatbotHost.jsx` mounted in `src/App.jsx` for all public + `/account/*` customer app screens (strictly excluded on `/operations/*`, `/admin/*`, `/app`, and `/queue/*/tv`).
+- Widget: `src/components/HakumChatbot.jsx` + `src/components/HakumChatbot.css` (draggable pointer UI with `localStorage` position persistence, viewport clamping, Double-Bezel obsidian-glass panel, Main Menu 6-category grid, non-invasive Studio Spotlight promo card, interactive `S/M/L/XL` vehicle-size price switcher, scrollable suggested prompt pills, and direct **Facebook Messenger** (`https://m.me/61573318005308`) & **Hakum Facebook Page** (`https://www.facebook.com/profile.php?id=61573318005308`) human handoff links).
+- Engine & Data: `src/lib/hakumChatbotEngine.js`, `src/data/hakumChatbotKnowledge.js`, `src/lib/hakumChatbotLiveCatalog.js`, `src/lib/chatbotSettingsRules.js`, `src/lib/chatbotSettings.js`.
+- Owner Control: `/operations/settings/chatbot` (`src/pages/settings/ChatbotSettingsPage.jsx`, Super Admin `BossMich` only via `isSuperAdmin`) persisting ON/OFF visibility, greeting, accent preset, Facebook/Messenger handoff URLs, featured product spotlight, and suggested prompts to `app_settings.chatbot_widget` (read publicly via `SECURITY DEFINER` RPC `get_public_chatbot_settings()`).
 
 ### Kiosk
 `/queue/:branch`, `/queue/:branch/tv` (narrow `SECURITY DEFINER` RPCs: `get_public_queue_counts`, `get_public_queue_floor`, `get_public_home_stats`).
@@ -35,7 +41,7 @@
 | bookings | bookings |
 | planning | planning |
 | roadmap | roadmap |
-| settings, settings/pos, settings/payroll | settings |
+| settings, settings/pos, settings/tint-finder, settings/chatbot, settings/daily-sheet | settings (tint-finder & chatbot restricted to `BossMich`) |
 | content | content |
 | notifications, broadcast | notifications |
 | history | history |

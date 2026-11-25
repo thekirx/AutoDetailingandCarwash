@@ -1,6 +1,6 @@
 # Graphify — Hakum knowledge graph
 
-Persistent memory for this repo. Updated **2026-11-21** from code AST + product markdown + live schema dumps.
+Persistent memory for this repo. Updated **2026-11-25** from code AST + product markdown + live schema dumps + customer concierge/chatbot & product catalog coverage.
 
 ## Use it (agents and humans)
 

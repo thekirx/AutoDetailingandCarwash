@@ -80,15 +80,17 @@ export default function HistoryPage() {
   const { profile } = useAuth()
   const [searchParams] = useSearchParams()
   const urlQ = searchParams.get('q') || ''
+  const urlBranch = searchParams.get('branch') || 'all'
+  const urlStatus = searchParams.get('status') || 'all'
   const [q, setQ] = useState(urlQ)
   const autoRanQRef = useRef('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [searched, setSearched] = useState(false)
   const [kinds, setKinds] = useState(['booking', 'maintenance', 'sale', 'note'])
-  const [status, setStatus] = useState('all')
+  const [status, setStatus] = useState(urlStatus)
   const [serviceKind, setServiceKind] = useState('all')
-  const [branch, setBranch] = useState('all')
+  const [branch, setBranch] = useState(urlBranch)
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const [selected, setSelected] = useState(null)
@@ -138,7 +140,7 @@ export default function HistoryPage() {
         return
       }
       setResult(data)
-      setBranch('all')
+      if (!searchParams.get('branch')) setBranch('all')
       if (!data.counts?.events) {
         toast.message('No visits found for that plate or number.')
       }
@@ -148,7 +150,7 @@ export default function HistoryPage() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [searchParams])
 
   useEffect(() => {
     const clean = urlQ.trim()
@@ -192,8 +194,7 @@ export default function HistoryPage() {
       title="History"
       icon={History}
       description={
-        `Look up a plate or mobile number — full visit ledger with services, packages, bookings, POS, and paint maintenance.${
-          !allBranches ? ' Showing your branch only.' : ''
+        `Look up a plate or mobile number — full visit ledger with services, packages, bookings, POS, and paint maintenance.${!allBranches ? ' Showing your branch only.' : ''
         }`
       }
     >
@@ -408,10 +409,34 @@ export default function HistoryPage() {
                 </div>
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Showing <span className="font-semibold text-foreground tabular-nums">{timeline.length}</span> of{' '}
-              <span className="tabular-nums">{result.counts?.events ?? 0}</span> events
-            </p>
+            {from && to && from > to ? (
+              <p className="text-xs font-medium text-destructive" role="alert">
+                From date cannot be after To date.
+              </p>
+            ) : null}
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">
+                Showing <span className="font-semibold text-foreground tabular-nums">{timeline.length}</span> of{' '}
+                <span className="tabular-nums">{result.counts?.events ?? 0}</span> events
+              </p>
+              {(kinds.length < 4 || status !== 'all' || serviceKind !== 'all' || branch !== 'all' || from || to) ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setKinds(['booking', 'maintenance', 'sale', 'note'])
+                    setStatus('all')
+                    setServiceKind('all')
+                    setBranch('all')
+                    setFrom('')
+                    setTo('')
+                  }}
+                >
+                  Reset filters
+                </Button>
+              ) : null}
+            </div>
           </div>
 
           {timeline.length === 0 ? (

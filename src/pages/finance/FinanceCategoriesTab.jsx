@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
-import { Archive, Edit3, ExternalLink, Plus, RotateCcw, Search, Trash2 } from 'lucide-react'
+import { Archive, Edit3, ExternalLink, Lock, Plus, RotateCcw, Search, Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
 import { callFinanceOwnerOps } from '@/lib/financeOwnerClient'
+import { catalogWriteError, isSalaryAccount } from '@/lib/financeBooks'
 import { formatMoney } from '@/queue/queueApi'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -57,14 +58,15 @@ export function FinanceCategoriesTab({
   }, [expenses])
 
   const sortedCategories = useMemo(() => {
-    return [...categories].sort((a, b) => (Number(a.code) || 999) - (Number(b.code) || 999))
+    return [...categories].sort((a, b) => (Number(a.code) || 999) - (Number(b.code) || 999) || String(a.name || '').localeCompare(String(b.name || '')))
   }, [categories])
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase()
     return sortedCategories.filter((c) => {
-      if (statusFilter === 'active' && c.active === false) return false
-      if (statusFilter === 'archived' && c.active !== false) return false
+      const archived = Boolean(c.is_archived)
+      if (statusFilter === 'active' && archived) return false
+      if (statusFilter === 'archived' && !archived) return false
       if (kindFilter !== 'all' && (c.kind || 'general') !== kindFilter) return false
       if (!q) return true
       const hay = `${c.code ?? ''} ${c.name || ''} ${c.kind || ''}`.toLowerCase()
@@ -77,7 +79,7 @@ export function FinanceCategoriesTab({
     let archivedCount = 0
     let totalWindowMinor = 0
     for (const c of sortedCategories) {
-      if (c.active === false) archivedCount += 1
+      if (c.is_archived) archivedCount += 1
       else activeCount += 1
       totalWindowMinor += statsByCat.get(c.id)?.totalMinor || 0
     }
@@ -95,24 +97,28 @@ export function FinanceCategoriesTab({
 
   async function toggleArchive(c) {
     if (!canWrite) return
+    if (isSalaryAccount(c)) {
+      toast.error('Account 14 must stay active for payroll posting.')
+      return
+    }
     setBusyId(c.id)
-    const nextActive = c.active === false
+    const nextArchived = !c.is_archived
     try {
       try {
         await callFinanceOwnerOps({
           action: 'manage-category',
           sub_action: 'archive',
           id: c.id,
-          active: nextActive,
+          is_archived: nextArchived,
         })
       } catch (apiErr) {
         const { error } = await supabase
           .from('expense_categories')
-          .update({ active: nextActive })
+          .update({ is_archived: nextArchived })
           .eq('id', c.id)
-        if (error) throw apiErr || error
+        if (error) throw new Error(catalogWriteError(error, 'category') || apiErr?.message)
       }
-      toast.success(nextActive ? `${c.name} restored.` : `${c.name} archived.`)
+      toast.success(nextArchived ? `${c.name} archived.` : `${c.name} restored.`)
       await onReload?.()
     } catch (err) {
       toast.error(err?.message || 'Could not update category status.')
@@ -122,7 +128,13 @@ export function FinanceCategoriesTab({
   }
 
   function openDeleteModal(c) {
-    const fallback = sortedCategories.find((x) => x.id !== c.id && x.active !== false) || sortedCategories.find((x) => x.id !== c.id)
+    if (isSalaryAccount(c)) {
+      toast.error('Account 14 cannot be deleted because Daily Sheets and Monthly Payroll post to it.')
+      return
+    }
+    const fallback =
+      sortedCategories.find((x) => x.id !== c.id && !x.is_archived) ||
+      sortedCategories.find((x) => x.id !== c.id)
     setReassignToId(fallback?.id || '')
     setDeleteTarget(c)
   }
@@ -246,7 +258,8 @@ export function FinanceCategoriesTab({
               <TableBody>
                 {filtered.map((c) => {
                   const stat = statsByCat.get(c.id) || { totalMinor: 0, count: 0 }
-                  const isArchived = c.active === false
+                  const isArchived = Boolean(c.is_archived)
+                  const locked14 = isSalaryAccount(c)
                   return (
                     <TableRow key={c.id} className={isArchived ? 'bg-slate-50/60 text-slate-500' : ''}>
                       <TableCell className="font-mono text-xs font-semibold tabular-nums">
@@ -254,8 +267,11 @@ export function FinanceCategoriesTab({
                       </TableCell>
                       <TableCell className="font-medium text-slate-900">
                         {c.name}
-                        {Number(c.code) === 14 ? (
-                          <span className="ml-2 text-[11px] font-normal text-slate-500">(Default Payroll Account)</span>
+                        {locked14 ? (
+                          <span className="ml-2 inline-flex items-center gap-1 text-[11px] font-normal text-slate-500">
+                            <Lock className="h-3 w-3" aria-hidden="true" />
+                            Payroll account
+                          </span>
                         ) : null}
                       </TableCell>
                       <TableCell className="text-xs text-slate-600">
@@ -298,27 +314,29 @@ export function FinanceCategoriesTab({
                                 <Edit3 className="h-3.5 w-3.5" />
                                 Edit
                               </Button>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 gap-1 px-2 text-xs text-slate-600"
-                                disabled={busyId === c.id}
-                                onClick={() => toggleArchive(c)}
-                              >
-                                {isArchived ? (
-                                  <>
-                                    <RotateCcw className="h-3.5 w-3.5" />
-                                    Restore
-                                  </>
-                                ) : (
-                                  <>
-                                    <Archive className="h-3.5 w-3.5" />
-                                    Archive
-                                  </>
-                                )}
-                              </Button>
-                              {isSuperAdmin || canWrite ? (
+                              {!locked14 ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 gap-1 px-2 text-xs text-slate-600"
+                                  disabled={busyId === c.id}
+                                  onClick={() => toggleArchive(c)}
+                                >
+                                  {isArchived ? (
+                                    <>
+                                      <RotateCcw className="h-3.5 w-3.5" />
+                                      Restore
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Archive className="h-3.5 w-3.5" />
+                                      Archive
+                                    </>
+                                  )}
+                                </Button>
+                              ) : null}
+                              {(isSuperAdmin || canWrite) && !locked14 ? (
                                 <Button
                                   type="button"
                                   size="sm"
@@ -386,7 +404,7 @@ export function FinanceCategoriesTab({
                     <option key={c.id} value={c.id}>
                       {c.code != null ? `${c.code} · ` : ''}
                       {c.name}
-                      {c.active === false ? ' (Archived)' : ''}
+                      {c.is_archived ? ' (Archived)' : ''}
                     </option>
                   ))}
               </Select>
@@ -412,4 +430,3 @@ export function FinanceCategoriesTab({
 }
 
 export default FinanceCategoriesTab
-

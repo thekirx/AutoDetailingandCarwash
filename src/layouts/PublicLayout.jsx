@@ -29,7 +29,7 @@ const BREDESIGN_ROUTES = ['/home', '/services', '/tint-finder', '/branches', '/p
 function PublicSiteHeader({ open, setOpen, isSignedIn, isCustomer, className = '' }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [accountOpen, setAccountOpen] = useState(false)
-  const { user, profile, signOut } = useAuth()
+  const { user, profile, signOut, refreshProfile } = useAuth()
   const navigate = useNavigate()
 
   const displayName =
@@ -175,6 +175,7 @@ function PublicSiteHeader({ open, setOpen, isSignedIn, isCustomer, className = '
             onOpenChange={setSettingsOpen}
             profile={profile}
             audience={isOps ? 'ops' : 'customer'}
+            onUpdated={refreshProfile}
           />
         </>
       ) : null}

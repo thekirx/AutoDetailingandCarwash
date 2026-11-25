@@ -413,15 +413,20 @@ export default function BookingBoardPage() {
   const referralStaff = useReferralStaff()
   const [branches, setBranches] = useState([])
   const [services, setServices] = useState([])
-  const [branchFilter, setBranchFilter] = useState(canSeeAllBranches(profile) ? 'all' : (getBranchScopeList(profile)?.[0] || 'all'))
+  const urlBranch = String(searchParams.get('branch') || '').trim()
+  const urlStatus = String(searchParams.get('status') || '').trim()
+  const scopeList = getBranchScopeList(profile)
+  const [branchFilter, setBranchFilter] = useState(() => {
+    if (urlBranch && (canSeeAllBranches(profile) || (scopeList && scopeList.includes(urlBranch)))) return urlBranch
+    return canSeeAllBranches(profile) ? 'all' : (scopeList?.[0] || 'all')
+  })
   const linkedDay = /^\d{4}-\d{2}-\d{2}$/.test(searchParams.get('date') || '') ? searchParams.get('date') : ''
   const [datePreset, setDatePreset] = useState(linkedDay ? 'specific' : 'week')
   const [specificDate, setSpecificDate] = useState(linkedDay || todayISO())
   const [customStart, setCustomStart] = useState(linkedDay)
   const [customEnd, setCustomEnd] = useState(linkedDay)
   const [searchQuery, setSearchQuery] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [kindFilter, setKindFilter] = useState('detailing')
+  const [statusFilter, setStatusFilter] = useState(() => urlStatus || 'all')
   const [tableSort, setTableSort] = useState({ key: 'start', dir: 'asc' })
   const [tablePage, setTablePage] = useState(1)
   // Controlled: react-big-calendar's uncontrolled wrapper drops navigation after a StrictMode remount.
@@ -443,8 +448,15 @@ export default function BookingBoardPage() {
       .select('id, full_name, branch_slug')
       .eq('is_active', true)
       .eq('role', 'detailer')
-      .then(({ data }) => {
+      .then(({ data, error }) => {
+        if (error) {
+          toast.error(error.message)
+          return
+        }
         if (!stop) setDetailers(data || [])
+      })
+      .catch((err) => {
+        if (!stop) toast.error(err?.message || 'Could not load detailers')
       })
     return () => {
       stop = true
@@ -565,7 +577,7 @@ export default function BookingBoardPage() {
           branch: preferredBranchSlug(scoped) || pickDefaultBranchSlug(profile, scoped),
         }
       })
-    }).catch(() => {})
+    }).catch(() => { })
     fetchServices()
       .then((rows) => setServices(rows || []))
       .catch(() => setServices([]))
@@ -632,15 +644,15 @@ export default function BookingBoardPage() {
     const map = Object.fromEntries(COLUMNS.map((c) => [c.id, []]))
     const source = searchQuery.trim()
       ? bookings.filter((b) =>
-          matchesBookingSmartSearch(
-            {
-              ...b,
-              status_label: detailingBoardStatusLabel(b.status) || STATUS_LABELS[b.status],
-            },
-            searchQuery,
-            branchNameBySlug,
-          ),
-        )
+        matchesBookingSmartSearch(
+          {
+            ...b,
+            status_label: detailingBoardStatusLabel(b.status) || STATUS_LABELS[b.status],
+          },
+          searchQuery,
+          branchNameBySlug,
+        ),
+      )
       : bookings
     for (const booking of source) {
       const key = map[booking.status] ? booking.status : 'pending'
@@ -668,18 +680,18 @@ export default function BookingBoardPage() {
   const filteredBookings = useMemo(() => {
     const searched = searchQuery.trim()
       ? bookings.filter((b) =>
-          matchesBookingSmartSearch(
-            {
-              ...b,
-              status_label: detailingBoardStatusLabel(b.status) || STATUS_LABELS[b.status],
-            },
-            searchQuery,
-            branchNameBySlug,
-          ),
-        )
+        matchesBookingSmartSearch(
+          {
+            ...b,
+            status_label: detailingBoardStatusLabel(b.status) || STATUS_LABELS[b.status],
+          },
+          searchQuery,
+          branchNameBySlug,
+        ),
+      )
       : bookings
-    return filterBookingList(searched, { status: statusFilter, kind: kindFilter })
-  }, [bookings, searchQuery, statusFilter, kindFilter, branchNameBySlug])
+    return filterBookingList(searched, { status: statusFilter, kind: 'detailing' })
+  }, [bookings, searchQuery, statusFilter, branchNameBySlug])
 
   const sortedBookings = useMemo(
     () => sortBookingTableRows(filteredBookings, { ...tableSort, branchNames: branchNameBySlug }),
@@ -692,7 +704,7 @@ export default function BookingBoardPage() {
 
   useEffect(() => {
     setTablePage(1)
-  }, [searchQuery, statusFilter, kindFilter, tablePageSize, datePreset, branchFilter])
+  }, [searchQuery, statusFilter, tablePageSize, datePreset, branchFilter])
 
   useEffect(() => {
     if (tableSlice.page !== tablePage) setTablePage(tableSlice.page)
@@ -874,9 +886,9 @@ export default function BookingBoardPage() {
       (branchFilter !== 'all'
         ? branchFilter
         : preferredBranchSlug(formBranches) ||
-          pickDefaultBranchSlug(profile, formBranches) ||
-          formBranches[0]?.slug ||
-          '')
+        pickDefaultBranchSlug(profile, formBranches) ||
+        formBranches[0]?.slug ||
+        '')
     const slug = String(prefill.serviceSlug || '').toLowerCase()
     const defaultService =
       (slug && formServices.find((s) => String(s.slug || '').toLowerCase() === slug)?.id) ||
@@ -926,7 +938,7 @@ export default function BookingBoardPage() {
   const openedFromUrl = useRef('')
   const returnToQueue = useRef(false)
   useEffect(() => {
-    if (!openFromUrl || openedFromUrl.current === openFromUrl || !canEdit || !services.length) return
+    if (!openFromUrl || openedFromUrl.current === openFromUrl || (!canEdit && !canSchedule) || !services.length) return
     openedFromUrl.current = openFromUrl
     supabase
       .from('bookings')
@@ -941,7 +953,7 @@ export default function BookingBoardPage() {
       })
     // ponytail: fire once per id; openEdit closes over current services.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openFromUrl, canEdit, services])
+  }, [openFromUrl, canEdit, canSchedule, services])
   useEffect(() => {
     if (formOpen || !returnToQueue.current) return
     returnToQueue.current = false
@@ -1148,9 +1160,9 @@ export default function BookingBoardPage() {
   const branchOptions = canSeeAllBranches(profile)
     ? [{ slug: 'all', name: 'All branches' }, ...formBranchOptions]
     : (getBranchScopeList(profile) || []).map((slug) => ({
-        slug,
-        name: branches.find((b) => b.slug === slug)?.name || slug,
-      }))
+      slug,
+      name: branches.find((b) => b.slug === slug)?.name || slug,
+    }))
 
   const filterBranchItems = selectItems(branchOptions.map((b) => ({ value: b.slug, label: b.name })))
   const formBranchItems = selectItems(branchSelectOptions)
@@ -1170,15 +1182,12 @@ export default function BookingBoardPage() {
     { value: 'all', label: 'All statuses' },
     ...visibleColumns.map((c) => ({ value: c.id, label: c.label })),
   ])
-  const kindFilterItems = selectItems([
-    { value: 'detailing', label: 'Detailing (ceramic · tint · PPF)' },
-  ])
   const editingNext = editing
     ? getBookingPrimaryNextStatus(editing.status, {
-        canSeePayment,
-        canCheckIn,
-        detailingPipeline: true,
-      })
+      canSeePayment,
+      canCheckIn,
+      detailingPipeline: true,
+    })
     : null
   const rangeLabel =
     datePreset === 'all'
@@ -1215,29 +1224,27 @@ export default function BookingBoardPage() {
         isBranchAdmin(profile)
           ? 'Detailing pipeline (view only) · check in paint-maintenance arrivals'
           : isMarketing
-          ? 'Read-only detailing pipeline · ceramic · tint · PPF · paint maintenance'
-          : formBookingsOnly
-            ? 'Detailing pipeline · ceramic · tint · PPF · wash stays on Queue'
-            : `${rangeLabel} · detailing only`
+            ? 'Read-only detailing pipeline · ceramic · tint · PPF · paint maintenance'
+            : formBookingsOnly
+              ? 'Detailing pipeline · ceramic · tint · PPF · wash stays on Queue'
+              : `${rangeLabel} · detailing only`
       }
       icon={CalendarDays}
       meta={floorLayout ? null : <span className="tabular-nums">{rangeLabel}</span>}
       actions={
         <>
-          {tab !== 'list' ? (
-            <div className="bk-search-wrap w-full sm:w-64">
-              <Label htmlFor="bk-smart-search" className="sr-only">Search bookings</Label>
-              <Input
-                id="bk-smart-search"
-                type="search"
-                className="bk-smart-search min-h-11 w-full"
-                placeholder="Search name, phone, plate, branch…"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                autoComplete="off"
-              />
-            </div>
-          ) : null}
+          <div className="bk-search-wrap w-full sm:w-64">
+            <Label htmlFor="bk-smart-search" className="sr-only">Search bookings</Label>
+            <Input
+              id="bk-smart-search"
+              type="search"
+              className="bk-smart-search min-h-11 w-full"
+              placeholder="Search name, phone, plate, branch…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              autoComplete="off"
+            />
+          </div>
           {(canSeeAllBranches(profile) || branchOptions.length > 1) && (
             <Select value={branchFilter} onValueChange={setBranchFilter} items={filterBranchItems}>
               <SelectTrigger className="min-h-11 w-full cursor-pointer sm:w-44" aria-label="Filter by branch">
@@ -1309,137 +1316,137 @@ export default function BookingBoardPage() {
               readOnlyHint={isTeamLead ? 'Payment handoff happens at POS.' : 'View only — Team Lead moves stages.'}
             />
           ) : (
-          <div className="bk-board">
-            <div className="bk-board-toolbar">
-              <p className="bk-board-hint">Tap a card to open it. Tap a stage chip to focus or jump.</p>
-              <div className="bk-board-controls">
-                <button
-                  type="button"
-                  className={cn('bk-status-chip', showEmptyLanes && 'bk-status-chip-active')}
-                  aria-pressed={showEmptyLanes}
-                  onClick={() => setShowEmptyLanes((v) => !v)}
-                >
-                  <span>{showEmptyLanes ? 'Hide empty' : `Show empty (${visibleColumns.filter((c) => !grouped[c.id]?.length).length})`}</span>
-                </button>
-                <div className="bk-seg-group" role="group" aria-label="Board layout">
+            <div className="bk-board">
+              <div className="bk-board-toolbar">
+                <p className="bk-board-hint">Tap a card to open it. Tap a stage chip to focus or jump.</p>
+                <div className="bk-board-controls">
                   <button
                     type="button"
-                    className={cn('bk-seg-btn', boardLayout === 'grid' && 'is-active')}
-                    aria-pressed={boardLayout === 'grid'}
-                    onClick={() => setBoardLayout('grid')}
+                    className={cn('bk-status-chip', showEmptyLanes && 'bk-status-chip-active')}
+                    aria-pressed={showEmptyLanes}
+                    onClick={() => setShowEmptyLanes((v) => !v)}
                   >
-                    <LayoutGrid className="size-3.5" aria-hidden="true" />
-                    <span>Grid</span>
+                    <span>{showEmptyLanes ? 'Hide empty' : `Show empty (${visibleColumns.filter((c) => !grouped[c.id]?.length).length})`}</span>
                   </button>
-                  <button
-                    type="button"
-                    className={cn('bk-seg-btn', boardLayout === 'columns' && 'is-active')}
-                    aria-pressed={boardLayout === 'columns'}
-                    onClick={() => setBoardLayout('columns')}
-                  >
-                    <Columns3 className="size-3.5" aria-hidden="true" />
-                    <span>Columns</span>
-                  </button>
+                  <div className="bk-seg-group" role="group" aria-label="Board layout">
+                    <button
+                      type="button"
+                      className={cn('bk-seg-btn', boardLayout === 'grid' && 'is-active')}
+                      aria-pressed={boardLayout === 'grid'}
+                      onClick={() => setBoardLayout('grid')}
+                    >
+                      <LayoutGrid className="size-3.5" aria-hidden="true" />
+                      <span>Grid</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={cn('bk-seg-btn', boardLayout === 'columns' && 'is-active')}
+                      aria-pressed={boardLayout === 'columns'}
+                      onClick={() => setBoardLayout('columns')}
+                    >
+                      <Columns3 className="size-3.5" aria-hidden="true" />
+                      <span>Columns</span>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div className="bk-status-strip" role="toolbar" aria-label="Filter bookings by status">
-              <button
-                type="button"
-                className={cn('bk-status-chip', focusedBoardStatus === 'all' && 'bk-status-chip-active')}
-                aria-pressed={focusedBoardStatus === 'all'}
-                onClick={() => setBoardFilter('all')}
-              >
-                <span>All</span>
-                <span className="bk-status-chip-count">
-                  {visibleColumns.reduce((sum, col) => sum + (grouped[col.id]?.length || 0), 0)}
-                </span>
-              </button>
-              {visibleColumns.map((col) => {
-                const active = focusedBoardStatus === col.id
-                const n = grouped[col.id]?.length || 0
-                return (
-                  <button
-                    key={col.id}
-                    type="button"
-                    className={cn('bk-status-chip', active && 'bk-status-chip-active')}
-                    aria-pressed={active}
-                    aria-controls={bookingLaneDomId(col.id)}
-                    onClick={() => {
-                      const next = active ? 'all' : col.id
-                      setBoardFilter(next)
-                      if (n === 0 && next !== 'all') setShowEmptyLanes(true)
-                      if (next !== 'all') scrollBookingLaneIntoView(col.id)
-                    }}
-                  >
-                    <span>{col.shortLabel || col.label}</span>
-                    <span className="bk-status-chip-count">{n}</span>
-                  </button>
-                )
-              })}
-            </div>
-
-            {(() => {
-              const anyPopulated = visibleColumns.some((c) => (grouped[c.id]?.length || 0) > 0)
-              const columnsToRender = visibleColumns.filter((col) => {
-                const count = grouped[col.id]?.length || 0
-                if (focusedBoardStatus !== 'all') {
-                  return boardLayout === 'columns' ? (showEmptyLanes || !anyPopulated || count > 0 || col.id === focusedBoardStatus) : col.id === focusedBoardStatus
-                }
-                return showEmptyLanes || !anyPopulated || count > 0
-              })
-              const canOpenCard = canEdit || canEditServicePrice || canSchedule
-              const hideCardPrice = isInvestor(profile)
-              return (
-                <div
-                  className={cn('booking-lane-board', boardLayout === 'grid' && 'bk-board-grid')}
-                  role="region"
-                  aria-label="Booking columns"
+              <div className="bk-status-strip" role="toolbar" aria-label="Filter bookings by status">
+                <button
+                  type="button"
+                  className={cn('bk-status-chip', focusedBoardStatus === 'all' && 'bk-status-chip-active')}
+                  aria-pressed={focusedBoardStatus === 'all'}
+                  onClick={() => setBoardFilter('all')}
                 >
-                  {columnsToRender.map((col) => {
-                    const laneFocused = focusedBoardStatus === 'all' || col.id === focusedBoardStatus
-                    return (
-                      <section
-                        key={col.id}
-                        id={bookingLaneDomId(col.id)}
-                        className={cn('floor-lane', laneFocused ? 'bk-lane-focused' : 'bk-lane-dimmed')}
-                        aria-label={`${col.label} column`}
-                        aria-current={col.id === focusedBoardStatus ? 'true' : undefined}
-                      >
-                        <div className="mb-2 flex items-start justify-between gap-1">
-                          <h2 className="floor-lane-title font-bold text-muted-foreground uppercase" title={col.label}>
-                            {col.shortLabel || col.label}
-                          </h2>
-                          <Badge variant="secondary" className="shrink-0 tabular-nums text-[10px]">{grouped[col.id].length}</Badge>
-                        </div>
-                        <div className="floor-lane-body">
-                          {grouped[col.id].map((booking) => (
-                            <BookingStageTicket
-                              key={booking.id}
-                              booking={booking}
-                              variant="lane"
-                              tone={col.tone}
-                              canOpen={canOpenCard}
-                              onOpen={openEdit}
-                              branchName={branchNameBySlug[booking.branch]}
-                              staffName={booking.assigned_staff_id ? staffNameById[booking.assigned_staff_id] : ''}
-                              showPrice={!hideCardPrice}
-                            />
-                          ))}
-                          {!grouped[col.id].length && (
-                            <p className="rounded-xl border border-dashed border-border bg-background/50 p-3 text-center text-sm text-muted-foreground">
-                              Empty
-                            </p>
-                          )}
-                        </div>
-                      </section>
-                    )
-                  })}
-                </div>
-              )
-            })()}
-          </div>
+                  <span>All</span>
+                  <span className="bk-status-chip-count">
+                    {visibleColumns.reduce((sum, col) => sum + (grouped[col.id]?.length || 0), 0)}
+                  </span>
+                </button>
+                {visibleColumns.map((col) => {
+                  const active = focusedBoardStatus === col.id
+                  const n = grouped[col.id]?.length || 0
+                  return (
+                    <button
+                      key={col.id}
+                      type="button"
+                      className={cn('bk-status-chip', active && 'bk-status-chip-active')}
+                      aria-pressed={active}
+                      aria-controls={bookingLaneDomId(col.id)}
+                      onClick={() => {
+                        const next = active ? 'all' : col.id
+                        setBoardFilter(next)
+                        if (n === 0 && next !== 'all') setShowEmptyLanes(true)
+                        if (next !== 'all') scrollBookingLaneIntoView(col.id)
+                      }}
+                    >
+                      <span>{col.shortLabel || col.label}</span>
+                      <span className="bk-status-chip-count">{n}</span>
+                    </button>
+                  )
+                })}
+              </div>
+
+              {(() => {
+                const anyPopulated = visibleColumns.some((c) => (grouped[c.id]?.length || 0) > 0)
+                const columnsToRender = visibleColumns.filter((col) => {
+                  const count = grouped[col.id]?.length || 0
+                  if (focusedBoardStatus !== 'all') {
+                    return boardLayout === 'columns' ? (showEmptyLanes || !anyPopulated || count > 0 || col.id === focusedBoardStatus) : col.id === focusedBoardStatus
+                  }
+                  return showEmptyLanes || !anyPopulated || count > 0
+                })
+                const canOpenCard = canEdit || canEditServicePrice || canSchedule
+                const hideCardPrice = isInvestor(profile)
+                return (
+                  <div
+                    className={cn('booking-lane-board', boardLayout === 'grid' && 'bk-board-grid')}
+                    role="region"
+                    aria-label="Booking columns"
+                  >
+                    {columnsToRender.map((col) => {
+                      const laneFocused = focusedBoardStatus === 'all' || col.id === focusedBoardStatus
+                      return (
+                        <section
+                          key={col.id}
+                          id={bookingLaneDomId(col.id)}
+                          className={cn('floor-lane', laneFocused ? 'bk-lane-focused' : 'bk-lane-dimmed')}
+                          aria-label={`${col.label} column`}
+                          aria-current={col.id === focusedBoardStatus ? 'true' : undefined}
+                        >
+                          <div className="mb-2 flex items-start justify-between gap-1">
+                            <h2 className="floor-lane-title font-bold text-muted-foreground uppercase" title={col.label}>
+                              {col.shortLabel || col.label}
+                            </h2>
+                            <Badge variant="secondary" className="shrink-0 tabular-nums text-[10px]">{grouped[col.id].length}</Badge>
+                          </div>
+                          <div className="floor-lane-body">
+                            {grouped[col.id].map((booking) => (
+                              <BookingStageTicket
+                                key={booking.id}
+                                booking={booking}
+                                variant="lane"
+                                tone={col.tone}
+                                canOpen={canOpenCard}
+                                onOpen={openEdit}
+                                branchName={branchNameBySlug[booking.branch]}
+                                staffName={booking.assigned_staff_id ? staffNameById[booking.assigned_staff_id] : ''}
+                                showPrice={!hideCardPrice}
+                              />
+                            ))}
+                            {!grouped[col.id].length && (
+                              <p className="rounded-xl border border-dashed border-border bg-background/50 p-3 text-center text-sm text-muted-foreground">
+                                Empty
+                              </p>
+                            )}
+                          </div>
+                        </section>
+                      )
+                    })}
+                  </div>
+                )
+              })()}
+            </div>
           )}
         </TabsContent>
 
@@ -1468,14 +1475,9 @@ export default function BookingBoardPage() {
                     ))}
                   </SelectContent>
                 </Select>
-                <Select value={kindFilter} onValueChange={setKindFilter} items={kindFilterItems}>
-                  <SelectTrigger id="bk-table-kind" className="min-h-11 w-full cursor-pointer sm:w-44" aria-label="Service family">
-                    <SelectValue placeholder="Detailing" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="detailing">Detailing (ceramic · tint · PPF)</SelectItem>
-                  </SelectContent>
-                </Select>
+                <span className="inline-flex min-h-11 items-center rounded-md border border-border bg-muted/40 px-3 text-xs font-medium text-muted-foreground">
+                  Detailing (ceramic · tint · PPF)
+                </span>
               </div>
             </div>
 

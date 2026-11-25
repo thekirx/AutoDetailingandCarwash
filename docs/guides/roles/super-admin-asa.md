@@ -20,7 +20,7 @@ Retired from this nav: **Console** (off since the Floor Board became the landing
 5. System & Data (`/operations/system`) — **Audit log** and **Data Center** (SA).  
 6. Employees (`/operations/employees`) — expandable dropdown for **Attendance**, **Register**, **Employee list**, **RBAC & roles**, and **Settings**.  
 7. Customers (`/operations/crm`) — expandable dropdown for **Directory**, **Transfer car**, **Inquiries**, and **SMS**.  
-8. Settings → Account — save your own birthday (required; locks after first save). Attendance shows the month birthday board.  
+8. Settings (`/operations/settings`) — Owner (`BossMich`) can toggle the **Hakum Concierge Chatbot** ON or OFF globally across public and customer app pages and customize its greeting, accent preset, Facebook/Messenger human handoff URLs (`https://www.facebook.com/profile.php?id=61573318005308`), non-invasive featured product spotlight, and suggested prompts at `/operations/settings/chatbot` (`app_settings.chatbot_widget`), manage **Tint Finder** (`/operations/settings/tint-finder`), save birthday once under Account, and set Daily Sheet / POS / Attendance rules.  
 9. Notifications (`/operations/notifications`)
 
 ## ASA

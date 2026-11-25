@@ -32,7 +32,9 @@ const URGENCY_LABEL = {
  */
 export default function DetailingMaintenancePanel({ branchFilter = 'all', canCreateBooking = false, onArrived }) {
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [schedules, setSchedules] = useState([])
+  const [statusScope, setStatusScope] = useState('active')
   const [canWrite, setCanWrite] = useState(false)
   const [canArrive, setCanArrive] = useState(false)
   const [canEditTypes, setCanEditTypes] = useState(false)
@@ -45,20 +47,24 @@ export default function DetailingMaintenancePanel({ branchFilter = 'all', canCre
 
   const load = useCallback(async () => {
     setLoading(true)
+    setLoadError('')
     try {
       const token = await getAccessTokenFresh()
       if (!token) {
+        setLoadError('Sign in required')
         toast.error('Sign in required')
         return
       }
-      const q = new URLSearchParams({ status: 'active' })
+      const q = new URLSearchParams({ status: statusScope })
       if (branchFilter && branchFilter !== 'all') q.set('branch', branchFilter)
       const res = await fetch(`/api/maintenance-schedules?${q}`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       const body = await res.json().catch(() => ({}))
       if (!res.ok) {
-        toast.error(body.error || 'Unable to load maintenance schedules')
+        const msg = body.error || 'Unable to load maintenance schedules'
+        setLoadError(msg)
+        toast.error(msg)
         return
       }
       setSchedules(body.schedules || [])
@@ -84,10 +90,14 @@ export default function DetailingMaintenancePanel({ branchFilter = 'all', canCre
         dues[row.id] = String(row.next_due_at || '').slice(0, 10)
       }
       setDraftDue(dues)
+    } catch (err) {
+      const msg = err?.message || 'Unable to load maintenance schedules'
+      setLoadError(msg)
+      toast.error(msg)
     } finally {
       setLoading(false)
     }
-  }, [branchFilter])
+  }, [branchFilter, statusScope])
 
   useEffect(() => {
     load()
@@ -96,6 +106,7 @@ export default function DetailingMaintenancePanel({ branchFilter = 'all', canCre
   const visible = useMemo(() => {
     const q = search.trim()
     const searched = q ? schedules.filter((row) => matchesMaintenanceSearch(row, q)) : schedules
+    if (statusScope !== 'active') return searched
     if (q) {
       if (filter === 'all' || filter === 'action') return searched
       return searched.filter((row) => maintenanceUrgency(row.next_due_at) === filter)
@@ -103,7 +114,7 @@ export default function DetailingMaintenancePanel({ branchFilter = 'all', canCre
     const actionable = searched.filter((row) => maintenanceNeedsOpsAttention(row))
     if (filter === 'action' || filter === 'all') return actionable
     return actionable.filter((row) => maintenanceUrgency(row.next_due_at) === filter)
-  }, [schedules, filter, search])
+  }, [schedules, filter, search, statusScope])
 
   const counts = useMemo(() => {
     const pool = search.trim() ? schedules.filter((row) => matchesMaintenanceSearch(row, search)) : schedules.filter((row) => maintenanceNeedsOpsAttention(row))
@@ -289,6 +300,14 @@ export default function DetailingMaintenancePanel({ branchFilter = 'all', canCre
       </section>
 
       <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+        {loadError ? (
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive" role="alert">
+            <span>{loadError}</span>
+            <Button type="button" size="sm" variant="outline" onClick={load}>
+              Retry
+            </Button>
+          </div>
+        ) : null}
         <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-sm font-bold tracking-wide text-foreground uppercase">Vehicle schedules</h2>
@@ -308,30 +327,55 @@ export default function DetailingMaintenancePanel({ branchFilter = 'all', canCre
                 aria-label="Search maintenance schedules"
               />
             </label>
-            <div className="flex flex-wrap gap-1" role="toolbar" aria-label="Filter by urgency">
-            {[
-              ['action', 'Needs action'],
-              ['overdue', 'Overdue'],
-              ['due_soon', 'Due soon'],
-              ['upcoming', 'Upcoming'],
-            ].map(([id, label]) => (
-              <button
-                key={id}
-                type="button"
-                className={cn(
-                  'min-h-10 cursor-pointer rounded-full border px-3 text-xs font-semibold transition',
-                  filter === id
-                    ? 'border-primary bg-primary/10 text-primary'
-                    : 'border-border text-muted-foreground hover:text-foreground',
-                )}
-                aria-pressed={filter === id}
-                onClick={() => setFilter(id)}
-              >
-                {label}{' '}
-                <span className="tabular-nums opacity-70">{counts[id] ?? 0}</span>
-              </button>
-            ))}
+            <div className="flex flex-wrap gap-1" role="toolbar" aria-label="Filter by schedule status">
+              {[
+                ['active', 'Active'],
+                ['cancelled', 'Cancelled'],
+                ['completed', 'Completed'],
+                ['all', 'All'],
+              ].map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={cn(
+                    'min-h-9 cursor-pointer rounded-full border px-3 text-xs font-semibold transition',
+                    statusScope === id
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border text-muted-foreground hover:text-foreground',
+                  )}
+                  aria-pressed={statusScope === id}
+                  onClick={() => setStatusScope(id)}
+                >
+                  {label}
+                </button>
+              ))}
             </div>
+            {statusScope === 'active' ? (
+              <div className="flex flex-wrap gap-1" role="toolbar" aria-label="Filter by urgency">
+              {[
+                ['action', 'Needs action'],
+                ['overdue', 'Overdue'],
+                ['due_soon', 'Due soon'],
+                ['upcoming', 'Upcoming'],
+              ].map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  className={cn(
+                    'min-h-10 cursor-pointer rounded-full border px-3 text-xs font-semibold transition',
+                    filter === id
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border text-muted-foreground hover:text-foreground',
+                  )}
+                  aria-pressed={filter === id}
+                  onClick={() => setFilter(id)}
+                >
+                  {label}{' '}
+                  <span className="tabular-nums opacity-70">{counts[id] ?? 0}</span>
+                </button>
+              ))}
+              </div>
+            ) : null}
           </div>
         </div>
 
@@ -441,16 +485,29 @@ export default function DetailingMaintenancePanel({ branchFilter = 'all', canCre
                           </Link>
                         </Button>
                         ) : null}
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="min-h-11 cursor-pointer text-muted-foreground"
-                          disabled={busy}
-                          onClick={() => patchSchedule(row.id, { status: 'cancelled' })}
-                        >
-                          Cancel schedule
-                        </Button>
+                        {row.status === 'cancelled' ? (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="min-h-11 cursor-pointer"
+                            disabled={busy}
+                            onClick={() => patchSchedule(row.id, { status: 'scheduled' })}
+                          >
+                            Restore schedule
+                          </Button>
+                        ) : row.status !== 'completed' ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="min-h-11 cursor-pointer text-muted-foreground"
+                            disabled={busy}
+                            onClick={() => patchSchedule(row.id, { status: 'cancelled' })}
+                          >
+                            Cancel schedule
+                          </Button>
+                        ) : null}
                       </div>
                     ) : (
                       <p className="flex items-center gap-1.5 text-xs text-muted-foreground">

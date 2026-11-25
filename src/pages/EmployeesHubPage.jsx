@@ -91,7 +91,7 @@ export default function EmployeesHubPage() {
   }
 
   function openAddEmployeeModal() {
-    if (tab !== 'employees' && tab !== 'access') {
+    if (tab !== 'employees') {
       setShellTab('employees')
     }
     setCreateSignal((n) => n + 1)

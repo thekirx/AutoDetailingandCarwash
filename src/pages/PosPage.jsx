@@ -203,7 +203,10 @@ function PosCounterPage() {
   }, [catalogReady, saving, handoffs, activeHandoff])
 
   const load = useCallback(async () => {
-    if (!branch) return
+    if (!branch) {
+      setCatalogReady(true)
+      return
+    }
     setCatalogReady(false)
     const today = getLocalCalendarDate()
     const [svc, prod, stats, handoffRes, compRes, posSettingsRes] = await Promise.all([
@@ -790,6 +793,8 @@ function PosCounterPage() {
     setSplitOn(false)
     setSplitCashText('')
     setSplitGcashText('')
+    setCashTendered('')
+    setVoucherCode('')
   }
 
   function applyCartDiscount() {
@@ -1223,7 +1228,11 @@ function PosCounterPage() {
         line.from_handoff ? { ...line, unit_price_minor: next, list_price_minor: next, price_minor: next } : line,
       )
       if (handoff?.id) {
-        await supabase.from('pos_handoffs').update({ amount_minor: next }).eq('id', handoff.id)
+        const { error: handoffUpdErr } = await supabase
+          .from('pos_handoffs')
+          .update({ amount_minor: next })
+          .eq('id', handoff.id)
+        if (handoffUpdErr) toast.error(handoffUpdErr.message)
       }
       if (splitOn) {
         setCart(saleCart)

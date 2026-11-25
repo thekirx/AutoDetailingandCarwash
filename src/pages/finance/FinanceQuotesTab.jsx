@@ -36,6 +36,7 @@ export default function FinanceQuotesTab({ canWrite, branches = [] }) {
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
   const [query, setQuery] = useState('')
+  const [quoteQuery, setQuoteQuery] = useState('')
   const [selectedId, setSelectedId] = useState('')
   const [createOpen, setCreateOpen] = useState(false)
   const [form, setForm] = useState({
@@ -89,6 +90,18 @@ export default function FinanceQuotesTab({ canWrite, branches = [] }) {
     () => customers.find((c) => c.id === selectedId) || null,
     [customers, selectedId],
   )
+
+  const filteredQuotes = useMemo(() => {
+    const q = quoteQuery.trim().toLowerCase()
+    if (!q) return quotes
+    return quotes.filter((row) =>
+      [row.customers?.full_name, row.customers?.email, row.meta?.to, row.meta?.title, row.meta?.branch]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+        .includes(q),
+    )
+  }, [quotes, quoteQuery])
 
   async function sendQuote(event) {
     event.preventDefault()
@@ -241,15 +254,30 @@ export default function FinanceQuotesTab({ canWrite, branches = [] }) {
       <FinancePanel
         title="Recent quotations"
         description="Stored after each send (or preview)."
-        actions={canWrite ? (
-          <Button type="button" className="min-h-11 cursor-pointer" onClick={() => setCreateOpen(true)}>
-            <Plus data-icon="inline-start" />
-            New quotation
-          </Button>
-        ) : null}
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Input
+              type="search"
+              value={quoteQuery}
+              onChange={(e) => setQuoteQuery(e.target.value)}
+              placeholder="Filter quotations…"
+              aria-label="Filter recent quotations"
+              className="min-h-10 w-48"
+            />
+            {canWrite ? (
+              <Button type="button" className="min-h-11 cursor-pointer" onClick={() => setCreateOpen(true)}>
+                <Plus data-icon="inline-start" />
+                New quotation
+              </Button>
+            ) : null}
+          </div>
+        }
       >
-        {!quotes.length ? (
-          <FinanceEmpty title="No quotations yet" body="Send a quote to a CRM customer to build history." />
+        {!filteredQuotes.length ? (
+          <FinanceEmpty
+            title={quotes.length ? 'No matching quotations' : 'No quotations yet'}
+            body={quotes.length ? 'Try another search term or clear the filter.' : 'Send a quote to a CRM customer to build history.'}
+          />
         ) : (
           <div className="finance-table-wrap">
             <Table>
@@ -262,7 +290,7 @@ export default function FinanceQuotesTab({ canWrite, branches = [] }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {quotes.map((q) => (
+                {filteredQuotes.map((q) => (
                   <TableRow key={q.id}>
                     <TableCell className="tabular-nums">{new Date(q.sent_at).toLocaleString()}</TableCell>
                     <TableCell>{q.customers?.full_name || '—'}</TableCell>

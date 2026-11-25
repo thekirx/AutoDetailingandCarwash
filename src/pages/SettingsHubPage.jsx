@@ -1,5 +1,5 @@
 import { Link, Navigate } from 'react-router-dom'
-import { Bell, Clock3, Database, ShoppingCart, SlidersHorizontal, Sun, Wallet } from 'lucide-react'
+import { Bell, Bot, Clock3, Database, ShoppingCart, SlidersHorizontal, Sun, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import {
   canAccessDataCenter,
@@ -17,6 +17,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 /** Policy destinations only — People / Branches / Audit / Content stay in Command nav. */
 const TILES = [
   { key: 'tint-finder', title: 'Tint Finder', description: 'Page title, film specifications, package prices, recommendation rules, and customer requests.', to: '/operations/settings/tint-finder', icon: Sun, allow: isSuperAdmin },
+  {
+    key: 'chatbot',
+    title: 'Hakum Concierge Chatbot',
+    description: 'Turn the movable customer chatbot ON/OFF and customize its greeting across public and customer screens.',
+    to: '/operations/settings/chatbot',
+    icon: Bot,
+    allow: isSuperAdmin,
+  },
   {
     key: 'pos',
     title: 'POS settings',

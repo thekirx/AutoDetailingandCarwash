@@ -87,7 +87,8 @@ export function BlogListSection() {
       .in('status', ['published', 'scheduled'])
       .order('published_at', { ascending: false })
       .limit(200)
-    if (e) setError('')
+    if (e) setError(e.message || 'Stories are temporarily unavailable. Please try again.')
+    else setError('')
     setDbPosts(data || [])
   }, [canEdit])
 
@@ -392,9 +393,12 @@ export function BlogListSection() {
 
           <div className="bd-catalog">
             {error ? (
-              <p className="bd-state is-error" role="alert">
-                {error}
-              </p>
+              <div className="bd-state is-error" role="alert" style={{ gridColumn: '1 / -1' }}>
+                <p>{error}</p>
+                <button type="button" className="bd-btn bd-btn-quiet" style={{ marginTop: 10 }} onClick={loadBlogs}>
+                  Retry
+                </button>
+              </div>
             ) : null}
             {gridPosts.length === 0 && !featuredPost ? (
               <p className="bd-state" style={{ gridColumn: '1 / -1' }}>

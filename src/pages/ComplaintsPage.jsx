@@ -14,7 +14,7 @@ export default function ComplaintsPage() {
     path: '/complaints',
     noindex: true,
   })
-  const { branches, loading: branchesLoading } = usePublicBranches()
+  const { branches, loading: branchesLoading, error: branchesError } = usePublicBranches()
   const [status, setStatus] = useState('idle')
   const [error, setError] = useState('')
   const [guard, setGuard] = useState(() => createPublicFormGuard())
@@ -118,6 +118,11 @@ export default function ComplaintsPage() {
             />
           </label>
           <FormLegalNotice id="complaint-legal" className="form-legal-notice booking-span-2" />
+          {branchesError ? (
+            <p className="form-error">
+              Branches could not load ({branchesError}). Please refresh the page to pick a branch.
+            </p>
+          ) : null}
           {error && <p className="form-error">{error}</p>}
           <button disabled={status === 'loading' || branchesLoading || !form.branch} className="button button-blue">{status === 'loading' ? 'Submitting…' : 'Submit complaint'}</button>
         </form>

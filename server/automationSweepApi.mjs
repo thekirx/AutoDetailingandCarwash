@@ -30,7 +30,7 @@ const OPS_SWEEP_ROLES = new Set([
   'assistant_super_admin',
   'admin',
   'team_lead',
-  'ops_lead',
+  'operations_lead',
   'sales',
   'staff',
 ])

@@ -11,6 +11,7 @@ import NotFoundPage from './pages/NotFoundPage'
 import OpsIndexRedirect from './pages/OpsIndexRedirect'
 import InAppNotificationListener from './components/InAppNotificationListener'
 import PwaUpdateBanner from './components/PwaUpdateBanner'
+import HakumChatbotHost from './components/HakumChatbotHost'
 
 const PublicLandingPage = lazy(() => import('./pages/PublicLandingPage'))
 const ServiceDetailPage = lazy(() => import('./pages/ServiceDetailPage'))
@@ -70,6 +71,7 @@ const AccessDeniedPage = lazy(() => import('./pages/AccessDeniedPage'))
 const SettingsHubPage = lazy(() => import('./pages/SettingsHubPage'))
 const PosSettingsPage = lazy(() => import('./pages/settings/PosSettingsPage'))
 const TintFinderSettingsPage = lazy(() => import('./pages/settings/TintFinderSettingsPage'))
+const ChatbotSettingsPage = lazy(() => import('./pages/settings/ChatbotSettingsPage'))
 const DailySheetRulesPage = lazy(() => import('./pages/settings/DailySheetRulesPage'))
 const NotificationsPage = lazy(() => import('./pages/NotificationsPage'))
 const AttendancePage = lazy(() => import('./pages/AttendancePage'))
@@ -80,7 +82,6 @@ const ReportsPage = lazy(() => import('./pages/ReportsPage'))
 const MembershipsPage = lazy(() => import('./pages/MembershipsPage'))
 const VouchersPage = lazy(() => import('./pages/VouchersPage'))
 const RewardsPage = lazy(() => import('./pages/RewardsPage'))
-const MonthlyPayrollPage = lazy(() => import('./pages/MonthlyPayrollPage'))
 const MyPayslipsPage = lazy(() => import('./pages/MyPayslipsPage'))
 const ApprovalsPage = lazy(() => import('./pages/ApprovalsPage'))
 const KpiPage = lazy(() => import('./pages/KpiPage'))
@@ -215,6 +216,7 @@ export default function App() {
     <Suspense fallback={<RouteFallback />}>
       <InAppNotificationListener />
       <PwaUpdateBanner />
+      <HakumChatbotHost />
       <Routes>
         <Route path="/" element={<RootEntry />} />
         <Route path="/app" element={<AppShellGate />} />
@@ -312,7 +314,7 @@ export default function App() {
             <Route path="inventory" element={gate('inventory', <InventoryPage />)} />
             <Route path="approvals" element={gate('approvals', <FinanceHubRedirect tab="approvals" fallback={<ApprovalsPage />} />)} />
             <Route path="finance" element={gate('finance', <FinancePage />)} />
-            <Route path="monthly-payroll" element={gate('monthly-payroll', <FinanceHubRedirect tab="salaries" fallback={<MonthlyPayrollPage />} />)} />
+            <Route path="monthly-payroll" element={gate('monthly-payroll', <FinanceHubRedirect tab="salaries" fallback={<Navigate to="/operations/access-denied" replace />} />)} />
             <Route path="my-pay" element={<Navigate to="/operations" replace />} />
             <Route path="payslips" element={gate('payslips', <MyPayslipsPage />)} />
             <Route path="payroll" element={<Navigate to="/operations/monthly-payroll" replace />} />
@@ -327,6 +329,7 @@ export default function App() {
             <Route path="roadmap" element={<Navigate to="/operations" replace />} />
             <Route path="settings" element={gate('settings', <SettingsHubPage />)} />
             <Route path="settings/tint-finder" element={gate('settings', <TintFinderSettingsPage />)} />
+            <Route path="settings/chatbot" element={gate('settings', <ChatbotSettingsPage />)} />
             <Route path="settings/pos" element={gate('settings', <PosSettingsPage />)} />
             <Route path="settings/daily-sheet" element={gate('settings', <DailySheetRulesPage />)} />
             <Route path="settings/payroll" element={<Navigate to="/operations/settings/daily-sheet" replace />} />

@@ -623,9 +623,9 @@ export function rankOpenBranchesForOrigin(originCoords, branches = []) {
   const effective = openBranches.length
     ? openBranches
     : [
-        { slug: 'bacoor', name: 'Bacoor', address: 'RFC Molino', latitude: BRANCH_MAP_LISTINGS.bacoor.lat, longitude: BRANCH_MAP_LISTINGS.bacoor.lng },
-        { slug: 'batangas', name: 'Batangas', address: 'PNP Batangas', latitude: BRANCH_MAP_LISTINGS.batangas.lat, longitude: BRANCH_MAP_LISTINGS.batangas.lng },
-      ]
+      { slug: 'bacoor', name: 'Bacoor', address: 'RFC Molino', latitude: BRANCH_MAP_LISTINGS.bacoor.lat, longitude: BRANCH_MAP_LISTINGS.bacoor.lng },
+      { slug: 'batangas', name: 'Batangas', address: 'PNP Batangas', latitude: BRANCH_MAP_LISTINGS.batangas.lat, longitude: BRANCH_MAP_LISTINGS.batangas.lng },
+    ]
 
   return effective
     .map((branch) => {
@@ -717,16 +717,16 @@ export function buildBranchCityJsonLd(cityPage, { hours = [], origin = PRODUCTIO
       },
       ...(Array.isArray(cityPage.qa) && cityPage.qa.length
         ? [
-            {
-              '@type': 'FAQPage',
-              '@id': `${pageUrl}#faq`,
-              mainEntity: cityPage.qa.map((item) => ({
-                '@type': 'Question',
-                name: item.q,
-                acceptedAnswer: { '@type': 'Answer', text: item.a },
-              })),
-            },
-          ]
+          {
+            '@type': 'FAQPage',
+            '@id': `${pageUrl}#faq`,
+            mainEntity: cityPage.qa.map((item) => ({
+              '@type': 'Question',
+              name: item.q,
+              acceptedAnswer: { '@type': 'Answer', text: item.a },
+            })),
+          },
+        ]
         : []),
     ],
   }
@@ -1766,20 +1766,20 @@ export function buildBranchServiceJsonLd(page, { hours = [], origin = PRODUCTION
         areaServed: cityPage?.corridors || [page.cityName],
         ...(relatedCatalogItems.length
           ? {
-              hasOfferCatalog: {
-                '@type': 'OfferCatalog',
-                name: `${page.serviceLabel} Packages — ${page.cityName}`,
-                itemListElement: relatedCatalogItems.map((item, idx) => ({
-                  '@type': 'Offer',
-                  position: idx + 1,
-                  itemOffered: {
-                    '@type': 'Service',
-                    name: item.name,
-                    description: item.summary,
-                  },
-                })),
-              },
-            }
+            hasOfferCatalog: {
+              '@type': 'OfferCatalog',
+              name: `${page.serviceLabel} Packages — ${page.cityName}`,
+              itemListElement: relatedCatalogItems.map((item, idx) => ({
+                '@type': 'Offer',
+                position: idx + 1,
+                itemOffered: {
+                  '@type': 'Service',
+                  name: item.name,
+                  description: item.summary,
+                },
+              })),
+            },
+          }
           : {}),
       },
       {
@@ -1794,16 +1794,16 @@ export function buildBranchServiceJsonLd(page, { hours = [], origin = PRODUCTION
       },
       ...(Array.isArray(page.qa) && page.qa.length
         ? [
-            {
-              '@type': 'FAQPage',
-              '@id': `${pageUrl}#faq`,
-              mainEntity: page.qa.map((item) => ({
-                '@type': 'Question',
-                name: item.q,
-                acceptedAnswer: { '@type': 'Answer', text: item.a },
-              })),
-            },
-          ]
+          {
+            '@type': 'FAQPage',
+            '@id': `${pageUrl}#faq`,
+            mainEntity: page.qa.map((item) => ({
+              '@type': 'Question',
+              name: item.q,
+              acceptedAnswer: { '@type': 'Answer', text: item.a },
+            })),
+          },
+        ]
         : []),
     ],
   }

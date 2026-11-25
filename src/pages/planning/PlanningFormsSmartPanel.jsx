@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   ArrowDown,
   ArrowUp,
@@ -255,6 +255,7 @@ async function notifyComplaintIfNeeded(form, payload, submissionId) {
 
 export default function PlanningFormsSmartPanel({ canEdit, lists, resultsId }) {
   const { profile } = useAuth()
+  const [, setSearchParams] = useSearchParams()
   const manageTemplates = canEdit && canManageOpsFormTemplates(profile)
   const canEditDeleteSubmissions = canEditDeleteFormResults(profile)
   const approveCash = canApproveCashAdvance(profile)
@@ -909,7 +910,19 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, resultsId }) {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={resultsOpen} onOpenChange={setResultsOpen}>
+      <Dialog
+        open={resultsOpen}
+        onOpenChange={(open) => {
+          setResultsOpen(open)
+          if (!open && resultsId) {
+            setSearchParams((prev) => {
+              const next = new URLSearchParams(prev)
+              next.delete('results')
+              return next
+            }, { replace: true })
+          }
+        }}
+      >
         <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Results · {resultsForm?.name || 'Form'}</DialogTitle>

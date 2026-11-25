@@ -68,10 +68,11 @@ export default function EventsPage() {
     }
     const { data, error: e } = await supabase
       .from('events')
-      .select('id, title, description, branch, starts_at, ends_at, banner_url, slug, form_id, is_date_tba, is_published, content_blocks, ops_forms!form_id ( id, name, slug, public_enabled, status )')
+      .select('id, title, description, branch, starts_at, ends_at, banner_url, slug, form_id, is_date_tba, is_published, content_blocks, ops_forms!form_id ( id, name, slug, kind, public_enabled, status )')
       .eq('is_published', true)
       .order('starts_at')
     if (e) setError('Events are temporarily unavailable. Please check back soon.')
+    else setError('')
     setEvents(data || [])
   }, [canEdit])
 
@@ -205,7 +206,7 @@ export default function EventsPage() {
           ) : null}
           {visibleEvents.map((item) => {
             const attached = item.ops_forms
-            const formOpen = attached?.slug && attached.public_enabled && attached.status === 'published'
+            const formOpen = attached?.slug && attached.public_enabled && attached.status === 'published' && attached.kind !== 'event'
             const isPublished = item.is_published !== false
             return (
               <article key={item.id} className="bd-event-row bd-reveal">

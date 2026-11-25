@@ -352,7 +352,7 @@ export default function CustomerSignUpPage() {
                 aria-describedby={errors.date_of_birth ? 'err-bday' : 'bday-help'}
               />
               <p id="bday-help" className="hakum-auth-hint">
-                Used only for your birthday perk. You can change it later in Settings.
+                Used only for your birthday perk. It locks once saved (ask our team if it ever needs fixing).
               </p>
               <FieldError id="err-bday" message={errors.date_of_birth} />
             </label>

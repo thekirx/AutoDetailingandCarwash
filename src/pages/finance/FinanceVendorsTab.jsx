@@ -51,18 +51,22 @@ export default function FinanceVendorsTab({ canManage, onVendorsChange }) {
   }, [rows])
 
   async function toggleActive(row) {
-    if (!canManage) return
+    if (!canManage || loading) return
+    setLoading(true)
     const { error } = await supabase
       .from('vendors')
       .update({ is_active: !row.is_active, updated_at: new Date().toISOString() })
       .eq('id', row.id)
+    setLoading(false)
     if (error) toast.error(catalogWriteError(error, 'vendor'))
     else load()
   }
 
   async function remove(row) {
-    if (!canManage || !window.confirm(`Delete vendor "${row.name}"? Bills from them will show no vendor. Deactivate instead to keep the name on old bills.`)) return
+    if (!canManage || loading || !window.confirm(`Delete vendor "${row.name}"? Bills from them will show no vendor. Deactivate instead to keep the name on old bills.`)) return
+    setLoading(true)
     const { error } = await supabase.from('vendors').delete().eq('id', row.id)
+    setLoading(false)
     if (error) toast.error(catalogWriteError(error, 'vendor'))
     else {
       toast.success('Vendor deleted')

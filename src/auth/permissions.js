@@ -257,9 +257,9 @@ export function canAccessFinance(profile) {
   return profile?.role === ROLES.ADMIN
 }
 
-/** Books hub entry: finance_view or the legacy reports grant (Finance → Reports tab). */
+/** Books hub entry: finance_view, reports, or finance_write / Monthly salaries. */
 export function canOpenFinanceHub(profile) {
-  return canAccessFinance(profile) || canAccessReports(profile)
+  return canAccessFinance(profile) || canAccessReports(profile) || canEditFinanceBooks(profile)
 }
 
 /** POS counter writes: expenses and detailing salary drafts. Branch Admin is included. */

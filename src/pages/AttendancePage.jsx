@@ -46,7 +46,15 @@ export default function AttendancePage() {
   const tab = tabs.some((t) => t.id === tabParam) ? tabParam : tabs[0]?.id || 'clock'
 
   function setTab(next) {
-    setParams(next === tabs[0]?.id ? {} : { tab: next }, { replace: true })
+    setParams(
+      (prev) => {
+        const p = new URLSearchParams(prev)
+        if (next === tabs[0]?.id) p.delete('tab')
+        else p.set('tab', next)
+        return p
+      },
+      { replace: true },
+    )
   }
 
   return (

@@ -131,7 +131,9 @@ export default function InquiriesPage({ embedded = false } = {}) {
   const [statusFilter, setStatusFilter] = useState('all')
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
+  const [busyId, setBusyId] = useState('')
   const [loadError, setLoadError] = useState('')
+  const [query, setQuery] = useState('')
 
   const allowed = canAccessInquiries(profile)
   const active = useMemo(() => TABS.find((t) => t.key === tab) || TABS[0], [tab])
@@ -166,13 +168,17 @@ export default function InquiriesPage({ embedded = false } = {}) {
   }, [active])
 
   const setPartnershipStatus = useCallback(async (id, status) => {
+    setBusyId(id)
     const { error } = await supabase.from('partnership_inquiries').update({ status }).eq('id', id)
+    setBusyId('')
     if (error) setLoadError(error.message)
     else load()
   }, [load])
 
   const setComplaintStatus = useCallback(async (id, status) => {
+    setBusyId(id)
     const { error } = await supabase.from('complaints').update({ status }).eq('id', id)
+    setBusyId('')
     if (error) setLoadError(error.message)
     else load()
   }, [load])
@@ -183,32 +189,39 @@ export default function InquiriesPage({ embedded = false } = {}) {
       setLoadError('Complaint has no description to promote')
       return
     }
-    const name = String(row.customer_name || '').trim()
-    let customerId = null
-    if (name) {
-      const { data: hits } = await supabase
-        .from('customers')
-        .select('id, full_name')
-        .ilike('full_name', `%${name}%`)
-        .limit(5)
-      customerId = hits?.[0]?.id || null
-    }
-    const { error } = await supabase.from('customer_notes').insert({
-      customer_id: customerId,
-      note_type: 'complaint',
-      body: body.slice(0, 4000),
-      complaint_id: row.id,
-      created_by: (await supabase.auth.getUser()).data?.user?.id || null,
-    })
-    if (error) setLoadError(error.message)
-    else {
-      setLoadError('')
-      toast.success(customerId ? 'Promoted to customer note' : 'Promoted note (match customer in CRM if needed)')
+    setBusyId(row.id)
+    try {
+      const name = String(row.customer_name || '').trim()
+      let customerId = null
+      if (name) {
+        const { data: hits } = await supabase
+          .from('customers')
+          .select('id, full_name')
+          .ilike('full_name', `%${name}%`)
+          .limit(5)
+        customerId = hits?.[0]?.id || null
+      }
+      const { error } = await supabase.from('customer_notes').insert({
+        customer_id: customerId,
+        note_type: 'complaint',
+        body: body.slice(0, 4000),
+        complaint_id: row.id,
+        created_by: (await supabase.auth.getUser()).data?.user?.id || null,
+      })
+      if (error) setLoadError(error.message)
+      else {
+        setLoadError('')
+        toast.success(customerId ? 'Promoted to customer note' : 'Promoted note (match customer in CRM if needed)')
+      }
+    } finally {
+      setBusyId('')
     }
   }, [])
 
   const setContactStatus = useCallback(async (id, status) => {
+    setBusyId(id)
     const { error } = await supabase.from('contact_inquiries').update({ status }).eq('id', id)
+    setBusyId('')
     if (error) setLoadError(error.message)
     else load()
   }, [load])
@@ -224,8 +237,16 @@ export default function InquiriesPage({ embedded = false } = {}) {
   if (!allowed) return <Navigate to="/operations/access-denied" replace />
 
   const Renderer = ROW_RENDERERS[active.key]
-  const filteredRows =
-    statusFilter === 'all' ? rows : rows.filter((row) => String(row.status || '') === statusFilter)
+  const trimmedQ = query.trim().toLowerCase()
+  const filteredRows = rows.filter((row) => {
+    if (statusFilter !== 'all' && String(row.status || '') !== statusFilter) return false
+    if (!trimmedQ) return true
+    return [row.name, row.customer_name, row.email, row.phone, row.contact_number, row.subject, row.category, row.city, row.branch, row.message, row.description]
+      .filter(Boolean)
+      .join(' ')
+      .toLowerCase()
+      .includes(trimmedQ)
+  })
 
   const inner = (
     <>
@@ -259,24 +280,34 @@ export default function InquiriesPage({ embedded = false } = {}) {
         </Suspense>
       ) : (
         <>
-          <div className="inquiries-status-filters" role="group" aria-label="Filter by status">
-            <button
-              type="button"
-              className={statusFilter === 'all' ? 'is-active' : undefined}
-              onClick={() => setStatusFilter('all')}
-            >
-              All
-            </button>
-            {statusOptions.map((status) => (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="inquiries-status-filters" role="group" aria-label="Filter by status">
               <button
-                key={status}
                 type="button"
-                className={statusFilter === status ? 'is-active' : undefined}
-                onClick={() => setStatusFilter(status)}
+                className={statusFilter === 'all' ? 'is-active' : undefined}
+                onClick={() => setStatusFilter('all')}
               >
-                {status}
+                All
               </button>
-            ))}
+              {statusOptions.map((status) => (
+                <button
+                  key={status}
+                  type="button"
+                  className={statusFilter === status ? 'is-active' : undefined}
+                  onClick={() => setStatusFilter(status)}
+                >
+                  {status}
+                </button>
+              ))}
+            </div>
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder={`Search ${active.label.toLowerCase()}…`}
+              aria-label={`Search ${active.label.toLowerCase()}`}
+              className="min-h-10 w-full rounded-lg border border-border bg-background px-3 text-sm sm:w-64"
+            />
           </div>
 
           <Card>
@@ -285,16 +316,17 @@ export default function InquiriesPage({ embedded = false } = {}) {
                 {active.label} —{' '}
                 {loading
                   ? 'loading…'
-                  : statusFilter === 'all'
+                  : statusFilter === 'all' && !trimmedQ
                     ? `${rows.length} total`
-                    : `${filteredRows.length} of ${rows.length} · ${statusFilter}`}
+                    : `${filteredRows.length} of ${rows.length}${statusFilter !== 'all' ? ` · ${statusFilter}` : ''}`}
               </CardTitle>
             </CardHeader>
             <CardContent>
               {loadError ? (
-                <p className="inquiries-error">
-                  Could not load {active.label.toLowerCase()} inquiries: {loadError}
-                </p>
+                <div className="inquiries-error flex flex-wrap items-center justify-between gap-2" role="alert">
+                  <span>Could not load {active.label.toLowerCase()} inquiries: {loadError}</span>
+                  <button type="button" onClick={load} className="underline">Retry</button>
+                </div>
               ) : loading ? (
                 <p className="inquiries-empty">Loading…</p>
               ) : !filteredRows.length ? (
@@ -302,24 +334,26 @@ export default function InquiriesPage({ embedded = false } = {}) {
                   <Inbox size={28} aria-hidden="true" />
                   <p>
                     {rows.length
-                      ? `No ${active.label.toLowerCase()} inquiries with status “${statusFilter}”.`
+                      ? `No ${active.label.toLowerCase()} inquiries match the current filter.`
                       : `No ${active.label.toLowerCase()} inquiries yet.`}
                   </p>
                 </div>
               ) : (
                 <ul className="inquiry-list">
                   {filteredRows.map((row) => (
-                    <li key={row.id} className="inquiry-row">
+                    <li key={row.id} className="inquiry-row" aria-busy={busyId === row.id || undefined}>
                       <Renderer
                         row={row}
                         onStatus={
-                          active.key === 'partnership'
-                            ? setPartnershipStatus
-                            : active.key === 'complaints'
-                              ? setComplaintStatus
-                              : setContactStatus
+                          busyId === row.id
+                            ? () => {}
+                            : active.key === 'partnership'
+                              ? setPartnershipStatus
+                              : active.key === 'complaints'
+                                ? setComplaintStatus
+                                : setContactStatus
                         }
-                        onPromote={active.key === 'complaints' ? promoteComplaintToNote : undefined}
+                        onPromote={active.key === 'complaints' && busyId !== row.id ? promoteComplaintToNote : undefined}
                       />
                     </li>
                   ))}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { toast } from 'sonner'
 import {
   ArrowRight,
   BadgeCheck,
@@ -207,19 +208,20 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
       if (data.ticket) {
         const lines = await fetchVisitLines(data.ticket).catch(() => [])
         setVisitLines(lines)
-        const { data: promo } = await supabase
+        const { data: promo, error: promoErr } = await supabase
           .from('bookings')
           .select('promo_voucher_id, promo_discount_minor, promo_vouchers(code, title)')
           .eq('id', bookingId)
           .maybeSingle()
+        if (promoErr) toast.error(promoErr.message || 'Unable to load voucher details')
         setPromoApplied(
           promo?.promo_voucher_id
             ? {
-                id: promo.promo_voucher_id,
-                code: promo.promo_vouchers?.code,
-                title: promo.promo_vouchers?.title,
-                discount_minor: promo.promo_discount_minor,
-              }
+              id: promo.promo_voucher_id,
+              code: promo.promo_vouchers?.code,
+              title: promo.promo_vouchers?.title,
+              discount_minor: promo.promo_discount_minor,
+            }
             : null,
         )
       } else {
@@ -241,7 +243,9 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
       .then((rows) => {
         if (!cancelled) setServices(rows)
       })
-      .catch(() => {})
+      .catch((err) => {
+        if (!cancelled) toast.error(err?.message || 'Could not load services catalog')
+      })
     return () => {
       cancelled = true
     }
@@ -538,7 +542,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
             <Panel title="2 · Status actions" icon={ArrowRight} className={variant === 'modal' ? 'shadow-none' : ''}>
               <div className={variant === 'modal' ? 'queue-action-stack' : 'grid gap-2.5'}>
                 <ActionButton
-                  disabled={!actions.canStart}
+                  disabled={Boolean(saving) || !actions.canStart}
                   loading={saving === 'start'}
                   onClick={() => runAction('start', runStart)}
                 >
@@ -552,7 +556,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
                 <div className={variant === 'modal' ? 'queue-action-secondary' : 'contents'}>
                   <ActionButton
                     tone="secondary"
-                    disabled={!actions.canFinalCheck}
+                    disabled={Boolean(saving) || !actions.canFinalCheck}
                     loading={saving === 'check'}
                     onClick={() => runAction('check', () => updateTicketStatus(ticket, 'final_checking'))}
                   >
@@ -561,7 +565,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
                   {canPushToPayment ? (
                     <ActionButton
                       tone="secondary"
-                      disabled={!actions.canSendToPayment}
+                      disabled={Boolean(saving) || !actions.canSendToPayment}
                       loading={saving === 'payment'}
                       onClick={() => runAction('payment', () => sendTicketToPayment(ticket.booking_id))}
                     >
@@ -572,7 +576,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
                   {showRedoBtn ? (
                     <ActionButton
                       tone="secondary"
-                      disabled={!actions.canMarkRedo}
+                      disabled={Boolean(saving) || !actions.canMarkRedo}
                       loading={saving === 'redo'}
                       onClick={runRedo}
                     >
@@ -583,6 +587,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
                   {showFailedQa && actions.canMarkFailedQa ? (
                     <ActionButton
                       tone="secondary"
+                      disabled={Boolean(saving)}
                       loading={saving === 'failqa'}
                       onClick={() =>
                         setDialogConfig({
@@ -608,7 +613,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
                   <button
                     type="button"
                     className="floor-touch-btn inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl border border-destructive/40 bg-destructive/10 px-5 py-3 font-semibold text-destructive transition disabled:opacity-40 active:scale-[0.98]"
-                    disabled={saving === 'cancel'}
+                    disabled={Boolean(saving)}
                     onClick={() => setCancelOpen(true)}
                   >
                     Cancel ticket
@@ -698,7 +703,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
               </label>
               <ActionButton
                 loading={saving === 'size'}
-                disabled={vehicleTypeDraft === normalizeVehicleType(ticket.vehicle_type || 'medium')}
+                disabled={Boolean(saving) || vehicleTypeDraft === normalizeVehicleType(ticket.vehicle_type || 'medium')}
                 onClick={() => runAction('size', saveVehicleType)}
               >
                 Save car size
@@ -781,7 +786,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
                   className="mt-2 min-h-12 w-full rounded-xl border border-border bg-background px-3 py-3 text-base text-foreground outline-none focus:border-primary/60"
                 />
               </label>
-              <ActionButton loading={saving === 'add-service'} onClick={() => runAction('add-service', runAddService)}>
+              <ActionButton loading={saving === 'add-service'} disabled={Boolean(saving)} onClick={() => runAction('add-service', runAddService)}>
                 Add to visit
               </ActionButton>
             </div>
@@ -817,6 +822,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
                 </label>
                 <ActionButton
                   loading={saving === 'voucher'}
+                  disabled={Boolean(saving)}
                   onClick={() =>
                     runAction('voucher', async () => {
                       const { data, error } = await supabase.rpc('apply_booking_promo_voucher', {
@@ -880,7 +886,7 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
                   className="mt-2 min-h-12 w-full rounded-xl border border-border bg-background px-4 py-3 text-base text-foreground outline-none focus:border-primary/60"
                 />
               </label>
-              <ActionButton loading={saving === 'price'} onClick={() => runAction('price', savePrice)}>
+              <ActionButton loading={saving === 'price'} disabled={Boolean(saving)} onClick={() => runAction('price', savePrice)}>
                 Save price
               </ActionButton>
             </div>

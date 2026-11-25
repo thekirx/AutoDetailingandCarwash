@@ -580,24 +580,9 @@ export default function CrmPage() {
       const pushJson = await pushRes.json().catch(() => ({}))
       if (!pushRes.ok) throw new Error(pushJson.error || 'Unable to send inbox/push.')
 
-      let smsNote = ''
-      if (messageForm.sendSms && selected.phone) {
-        const smsRes = await fetch('/api/busybee', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ phone: selected.phone, message: `Hakum Auto Care: ${body}` }),
-        })
-        const smsJson = await smsRes.json().catch(() => ({}))
-        if (!smsRes.ok || smsJson.ok === false) {
-          smsNote = ` · SMS failed (${smsJson.error || smsJson.status || 'provider'})`
-        } else {
-          smsNote = ' · SMS queued'
-        }
-      }
-
-      toast.success(`Notification sent${smsNote} (push ${pushJson.sent ?? 0})`)
+      toast.success(`Notification sent (push ${pushJson.sent ?? 0})`)
       setMessageOpen(false)
-      setMessageForm({ title: '', body: '', sendSms: true })
+      setMessageForm({ title: '', body: '', sendSms: false })
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -1341,7 +1326,7 @@ export default function CrmPage() {
             </DialogHeader>
             <form onSubmit={sendCustomerMessage} className="flex flex-col gap-4">
               <p className="text-sm text-muted-foreground">
-                Sends inbox + web push. Optional SMS uses their phone on file.
+                Sends In-App Inbox + Web Push to this customer&apos;s Hakum account. (BusyBee SMS is reserved strictly for booking &amp; floor status updates.)
               </p>
               <div className="flex flex-col gap-2">
                 <Label>Title</Label>
@@ -1351,15 +1336,6 @@ export default function CrmPage() {
                 <Label>Message</Label>
                 <Input className="min-h-11" required value={messageForm.body} onChange={(e) => setMessageForm({ ...messageForm, body: e.target.value })} placeholder="Your car is ready for pickup…" />
               </div>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={messageForm.sendSms}
-                  disabled={!selected?.phone}
-                  onChange={(e) => setMessageForm({ ...messageForm, sendSms: e.target.checked })}
-                />
-                Also send SMS{selected?.phone ? ` to ${selected.phone}` : ' (no phone on file)'}
-              </label>
               <DialogFooter>
                 <Button type="button" variant="outline" className="min-h-11" onClick={() => setMessageOpen(false)}>Cancel</Button>
                 <Button type="submit" className="min-h-11" disabled={saving}>{saving ? 'Sending…' : 'Send notification'}</Button>

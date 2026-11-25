@@ -16,7 +16,13 @@ import { adminClient } from './supabaseAdmin.mjs'
 import { getQueueCounts, buildVisitProgress, formatQueueNumber, normalizePlate } from '../src/queue/queueLogic.js'
 import { isBookingBoardService } from '../src/lib/serviceKinds.js'
 import { maintenanceNeedsOpsAttention } from '../src/lib/paintMaintenance.js'
-import { isValidCustomerPlate, plateValidationError, safeVehiclePhotoUrl } from '../src/lib/customerAuth.js'
+import {
+  canonicalPhMobile,
+  isValidCustomerPlate,
+  phoneDigits,
+  plateValidationError,
+  safeVehiclePhotoUrl,
+} from '../src/lib/customerAuth.js'
 import { buildLoyaltyProgress } from '../src/lib/loyaltyLogic.js'
 import { buildThumbReview } from '../src/lib/serviceReviews.js'
 import { thumbDownComplaintPayload } from '../src/lib/opsForms.js'
@@ -607,14 +613,19 @@ export async function mutateCustomerPortal({ accessToken, body }) {
   }
 
   if (action === 'update-phone') {
-    const phone = String(body.phone || '').trim()
-    if (phone.length < 7) throw Object.assign(new Error('Valid phone required.'), { status: 400 })
+    const raw = String(body.phone || '').trim()
+    const digits = phoneDigits(raw)
+    if (digits.length < 10 || digits.length > 13) {
+      throw Object.assign(new Error('Enter a valid PH mobile number (e.g. 09171234567).'), { status: 400 })
+    }
+    const phone = canonicalPhMobile(raw) || digits
+    const variants = [...new Set([phone, digits, raw].filter(Boolean))]
     const { data: taken } = await admin
       .from('customers')
       .select('id')
       .eq('role', 'customer')
       .eq('is_archived', false)
-      .eq('phone', phone)
+      .in('phone', variants)
       .neq('id', userId)
       .limit(1)
       .maybeSingle()

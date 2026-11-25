@@ -128,7 +128,7 @@ export default function PlanningBoardPage() {
   const [loading, setLoading] = useState(true)
   const [view, setView] = useState('board')
   const [filtersOpen, setFiltersOpen] = useState(false)
-  const [q, setQ] = useState('')
+  const [q, setQ] = useState(searchParams.get('q') || '')
   const [status, setStatus] = useState('all')
   const [categoryId, setCategoryId] = useState('all')
   const [assigneeId, setAssigneeId] = useState('all')
@@ -298,12 +298,12 @@ export default function PlanningBoardPage() {
       canEdit ? collectPaged(bookingsPage).then((list) => list.filter(isBookingBoardRow)) : [],
       canEdit
         ? supabase
-            .from('ops_form_submissions')
-            .select('id, form_id, due_at, calendar_at, ops_forms ( name )')
-            .not('calendar_at', 'is', null)
-            .gte('calendar_at', from)
-            .lt('calendar_at', to)
-            .then(rows)
+          .from('ops_form_submissions')
+          .select('id, form_id, due_at, calendar_at, ops_forms ( name )')
+          .not('calendar_at', 'is', null)
+          .gte('calendar_at', from)
+          .lt('calendar_at', to)
+          .then(rows)
         : [],
     ])
       .then(([events, bookings, forms]) => {
@@ -374,12 +374,14 @@ export default function PlanningBoardPage() {
   }, [visibleCards, calSources, calExtra, calCursor])
 
   function setTab(next) {
+    setCardId(null)
     setSearchParams((prev) => {
       const params = new URLSearchParams(prev)
       if (next === 'board') params.delete('tab')
       else params.set('tab', next)
       if (board?.id) params.set('board', board.id)
       params.delete('create')
+      params.delete('card')
       return params
     }, { replace: true })
   }
@@ -452,300 +454,300 @@ export default function PlanningBoardPage() {
       />
 
       <div className="planner-v2">
-      <Tabs value={tab} onValueChange={setTab}>
-        <OpsTabList tabs={planningTabs} aria-label="Planner Board" />
-      </Tabs>
+        <Tabs value={tab} onValueChange={setTab}>
+          <OpsTabList tabs={planningTabs} aria-label="Planner Board" />
+        </Tabs>
 
-      {tab === 'board' && (
-        <div className="planner-v2-body">
-          <section className={`planner-v2-rail ${filtersOpen ? 'is-filters-open' : ''}`} aria-label="Task filters and view">
-            <div className="planner-v2-rail-top">
-              <label className="planner-v2-rail-search">
-                <span>Search</span>
-                <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={canEdit ? 'Search title or note…' : 'Search your tasks…'} />
-              </label>
+        {tab === 'board' && (
+          <div className="planner-v2-body">
+            <section className={`planner-v2-rail ${filtersOpen ? 'is-filters-open' : ''}`} aria-label="Task filters and view">
+              <div className="planner-v2-rail-top">
+                <label className="planner-v2-rail-search">
+                  <span>Search</span>
+                  <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={canEdit ? 'Search title or note…' : 'Search your tasks…'} />
+                </label>
 
-              {canEdit && boards.length > 0 && (
-                <label className="planner-v2-rail-board">
-                  <span>Board</span>
-                  <select value={board?.id || ''} onChange={(e) => setSearchParams((p) => { const n = new URLSearchParams(p); n.set('board', e.target.value); return n }, { replace: true })}>
-                    {boards.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                {canEdit && boards.length > 0 && (
+                  <label className="planner-v2-rail-board">
+                    <span>Board</span>
+                    <select value={board?.id || ''} onChange={(e) => setSearchParams((p) => { const n = new URLSearchParams(p); n.set('board', e.target.value); return n }, { replace: true })}>
+                      {boards.map((b) => <option key={b.id} value={b.id}>{b.name}</option>)}
+                    </select>
+                  </label>
+                )}
+
+                <div className="planner-v2-rail-actions">
+                  <span className="planner-v2-count" aria-live="polite">
+                    {visibleCards.length} {visibleCards.length === 1 ? 'task' : 'tasks'}
+                  </span>
+                  <div className="planner-v2-view-toggle" role="group" aria-label="Layout view">
+                    <Button type="button" size="sm" variant={view === 'board' ? 'default' : 'outline'} onClick={() => setView('board')}>
+                      <LayoutList className="size-3.5" /> Board
+                    </Button>
+                    <Button type="button" size="sm" variant={view === 'table' ? 'default' : 'outline'} onClick={() => setView('table')}>
+                      <Table2 className="size-3.5" /> Table
+                    </Button>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={filtersOpen || activeFilterCount > 0 ? 'secondary' : 'outline'}
+                    className="planner-v2-filter-toggle"
+                    aria-expanded={filtersOpen}
+                    onClick={() => setFiltersOpen((prev) => !prev)}
+                  >
+                    <Filter className="size-3.5" /> Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+                  </Button>
+                  {activeFilterCount > 0 && (
+                    <Button type="button" size="sm" variant="ghost" onClick={resetFilters}>
+                      <RotateCcw className="size-3.5" /> Reset
+                    </Button>
+                  )}
+                  {canEdit && (
+                    <Button type="button" size="sm" variant="outline" onClick={() => setTab('configure')}>
+                      <Settings2 className="size-3.5" /> Configure
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              <div className="planner-v2-rail-filters">
+                <label>
+                  <span>Status</span>
+                  <select value={status} onChange={(e) => setStatus(e.target.value)}>
+                    {STATUS_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
                   </select>
                 </label>
-              )}
-
-              <div className="planner-v2-rail-actions">
-                <span className="planner-v2-count" aria-live="polite">
-                  {visibleCards.length} {visibleCards.length === 1 ? 'task' : 'tasks'}
-                </span>
-                <div className="planner-v2-view-toggle" role="group" aria-label="Layout view">
-                  <Button type="button" size="sm" variant={view === 'board' ? 'default' : 'outline'} onClick={() => setView('board')}>
-                    <LayoutList className="size-3.5" /> Board
-                  </Button>
-                  <Button type="button" size="sm" variant={view === 'table' ? 'default' : 'outline'} onClick={() => setView('table')}>
-                    <Table2 className="size-3.5" /> Table
-                  </Button>
-                </div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={filtersOpen || activeFilterCount > 0 ? 'secondary' : 'outline'}
-                  className="planner-v2-filter-toggle"
-                  aria-expanded={filtersOpen}
-                  onClick={() => setFiltersOpen((prev) => !prev)}
-                >
-                  <Filter className="size-3.5" /> Filters{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
-                </Button>
-                {activeFilterCount > 0 && (
-                  <Button type="button" size="sm" variant="ghost" onClick={resetFilters}>
-                    <RotateCcw className="size-3.5" /> Reset
-                  </Button>
+                {canEdit && (
+                  <label>
+                    <span>List</span>
+                    <select value={listFilter} onChange={(e) => setListFilter(e.target.value)}>
+                      <option value="all">Any list</option>
+                      {lists.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}
+                    </select>
+                  </label>
                 )}
                 {canEdit && (
-                  <Button type="button" size="sm" variant="outline" onClick={() => setTab('configure')}>
-                    <Settings2 className="size-3.5" /> Configure
-                  </Button>
+                  <label>
+                    <span>Category</span>
+                    <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
+                      <option value="all">Any category</option>
+                      <option value="none">Uncategorized</option>
+                      {visibleCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </label>
                 )}
-              </div>
-            </div>
-
-            <div className="planner-v2-rail-filters">
-              <label>
-                <span>Status</span>
-                <select value={status} onChange={(e) => setStatus(e.target.value)}>
-                  {STATUS_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-                </select>
-              </label>
-              {canEdit && (
-                <label>
-                  <span>List</span>
-                  <select value={listFilter} onChange={(e) => setListFilter(e.target.value)}>
-                    <option value="all">Any list</option>
-                    {lists.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}
-                  </select>
-                </label>
-              )}
-              {canEdit && (
-                <label>
-                  <span>Category</span>
-                  <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
-                    <option value="all">Any category</option>
-                    <option value="none">Uncategorized</option>
-                    {visibleCategories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
-                </label>
-              )}
-              {canEdit && (
-                <label>
-                  <span>Assignee</span>
-                  <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
-                    <option value="all">Anyone</option>
-                    <option value="unassigned">Unassigned</option>
-                    {staff.map((s) => <option key={s.id} value={s.id}>{s.full_name}</option>)}
-                  </select>
-                </label>
-              )}
-              <label>
-                <span>Deadline</span>
-                <select value={due} onChange={(e) => setDue(e.target.value)}>
-                  {DUE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-                </select>
-              </label>
-            </div>
-          </section>
-
-          <div className="min-w-0">
-            {!visibleCards.length ? (
-              <div className="planner-empty">
-                <strong>{canEdit ? 'No tasks match' : activeFilterCount > 0 ? 'No matching assigned tasks' : 'Nothing assigned to you'}</strong>
-                <p>{canEdit ? 'Clear a filter or create a new task.' : activeFilterCount > 0 ? 'Try clearing filters to see all assigned tasks.' : 'When someone assigns you work, it shows up here.'}</p>
-                {activeFilterCount > 0 ? (
-                  <Button type="button" variant="outline" onClick={resetFilters}>Clear filters</Button>
-                ) : (
-                  canEdit && <Button type="button" onClick={() => openCard('new')}>New task</Button>
+                {canEdit && (
+                  <label>
+                    <span>Assignee</span>
+                    <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)}>
+                      <option value="all">Anyone</option>
+                      <option value="unassigned">Unassigned</option>
+                      {staff.map((s) => <option key={s.id} value={s.id}>{s.full_name}</option>)}
+                    </select>
+                  </label>
                 )}
+                <label>
+                  <span>Deadline</span>
+                  <select value={due} onChange={(e) => setDue(e.target.value)}>
+                    {DUE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+                  </select>
+                </label>
               </div>
-            ) : view === 'board' ? (
-              canEdit ? (
-                <div className="planner-v2-cols" style={{ '--planning-list-cols': Math.min(Math.max(lists.length, 1), 5) }}>
-                  {lists.map((list) => {
-                    const col = visibleCards.filter((c) => c.list_id === list.id)
-                    const doneInLane = col.filter((c) => cardWorkflowStatus(c) === 'done').length
-                    return (
-                      <section key={list.id} className="planner-v2-lane">
-                        <header className="planner-v2-lane-head">
-                          <h2>
-                            <span>{list.title}</span>
-                            <span className="planner-v2-lane-count">{col.length}</span>
-                          </h2>
-                          {col.length > 0 && doneInLane > 0 && (
-                            <span className="planner-v2-lane-done">{doneInLane}/{col.length} done</span>
+            </section>
+
+            <div className="min-w-0">
+              {!visibleCards.length ? (
+                <div className="planner-empty">
+                  <strong>{canEdit ? 'No tasks match' : activeFilterCount > 0 ? 'No matching assigned tasks' : 'Nothing assigned to you'}</strong>
+                  <p>{canEdit ? 'Clear a filter or create a new task.' : activeFilterCount > 0 ? 'Try clearing filters to see all assigned tasks.' : 'When someone assigns you work, it shows up here.'}</p>
+                  {activeFilterCount > 0 ? (
+                    <Button type="button" variant="outline" onClick={resetFilters}>Clear filters</Button>
+                  ) : (
+                    canEdit && <Button type="button" onClick={() => openCard('new')}>New task</Button>
+                  )}
+                </div>
+              ) : view === 'board' ? (
+                canEdit ? (
+                  <div className="planner-v2-cols" style={{ '--planning-list-cols': Math.min(Math.max(lists.length, 1), 5) }}>
+                    {lists.map((list) => {
+                      const col = visibleCards.filter((c) => c.list_id === list.id)
+                      const doneInLane = col.filter((c) => cardWorkflowStatus(c) === 'done').length
+                      return (
+                        <section key={list.id} className="planner-v2-lane">
+                          <header className="planner-v2-lane-head">
+                            <h2>
+                              <span>{list.title}</span>
+                              <span className="planner-v2-lane-count">{col.length}</span>
+                            </h2>
+                            {col.length > 0 && doneInLane > 0 && (
+                              <span className="planner-v2-lane-done">{doneInLane}/{col.length} done</span>
+                            )}
+                          </header>
+                          {col.length ? (
+                            <div className="planner-v2-lane-cards">
+                              {col.map((card) => (
+                                <PlannerTaskCard
+                                  key={card.id}
+                                  card={card}
+                                  category={categoryMap.get(card.category_id)}
+                                  onOpen={openCard}
+                                />
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="planner-v2-lane-empty">
+                              {activeFilterCount > 0 ? 'No matching tasks' : 'No tasks yet'}
+                            </p>
                           )}
-                        </header>
-                        {col.length ? (
+                        </section>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <div className="planner-v2-cols" style={{ '--planning-list-cols': Math.min(Math.max(ASSIGNED_LANE_ORDER.filter((st) => visibleCards.some((c) => cardWorkflowStatus(c) === st)).length, 1), 4) }}>
+                    {ASSIGNED_LANE_ORDER.map((statusKey) => {
+                      const col = visibleCards.filter((c) => cardWorkflowStatus(c) === statusKey)
+                      if (!col.length) return null
+                      const meta = STATUS_META[statusKey] || STATUS_META.todo
+                      return (
+                        <section key={statusKey} className="planner-v2-lane">
+                          <header className="planner-v2-lane-head">
+                            <h2>
+                              <span>{meta.label}</span>
+                              <span className="planner-v2-lane-count">{col.length}</span>
+                            </h2>
+                          </header>
                           <div className="planner-v2-lane-cards">
                             {col.map((card) => (
                               <PlannerTaskCard
                                 key={card.id}
                                 card={card}
                                 category={categoryMap.get(card.category_id)}
+                                showListBadge
                                 onOpen={openCard}
                               />
                             ))}
                           </div>
-                        ) : (
-                          <p className="planner-v2-lane-empty">
-                            {activeFilterCount > 0 ? 'No matching tasks' : 'No tasks yet'}
-                          </p>
-                        )}
-                      </section>
-                    )
-                  })}
-                </div>
-              ) : (
-                <div className="planner-v2-cols" style={{ '--planning-list-cols': Math.min(Math.max(ASSIGNED_LANE_ORDER.filter((st) => visibleCards.some((c) => cardWorkflowStatus(c) === st)).length, 1), 4) }}>
-                  {ASSIGNED_LANE_ORDER.map((statusKey) => {
-                    const col = visibleCards.filter((c) => cardWorkflowStatus(c) === statusKey)
-                    if (!col.length) return null
-                    const meta = STATUS_META[statusKey] || STATUS_META.todo
-                    return (
-                      <section key={statusKey} className="planner-v2-lane">
-                        <header className="planner-v2-lane-head">
-                          <h2>
-                            <span>{meta.label}</span>
-                            <span className="planner-v2-lane-count">{col.length}</span>
-                          </h2>
-                        </header>
-                        <div className="planner-v2-lane-cards">
-                          {col.map((card) => (
-                            <PlannerTaskCard
-                              key={card.id}
-                              card={card}
-                              category={categoryMap.get(card.category_id)}
-                              showListBadge
-                              onOpen={openCard}
-                            />
-                          ))}
-                        </div>
-                      </section>
-                    )
-                  })}
-                </div>
-              )
-            ) : (
-              <div className="planner-v2-table-wrap">
-                <table className="planner-v2-table">
-                  <thead>
-                    <tr>
-                      <th>Task</th>
-                      <th>List</th>
-                      <th>Who</th>
-                      <th>Due</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {visibleCards.map((card) => {
-                      const wf = cardWorkflowStatus(card)
-                      const meta = STATUS_META[wf] || STATUS_META.unassigned
-                      const names = (card.plan_card_assignees || []).map((x) => x.staff_profiles?.full_name).filter(Boolean)
-                      const dueMeta = cardDueMeta(card.due_at, wf)
-                      return (
-                        <tr key={card.id} onClick={() => openCard(card.id)}>
-                          <td className="planner-v2-table-title">
-                            <button type="button" className="planner-v2-row-link" onClick={(e) => { e.stopPropagation(); openCard(card.id) }}>
-                              {card.title}
-                            </button>
-                          </td>
-                          <td>{card.list_title}</td>
-                          <td>{names.length ? (names.length > 2 ? `${names[0]} +${names.length - 1}` : names.join(', ')) : '—'}</td>
-                          <td>
-                            {dueMeta ? <span className={`planner-v2-due ${dueMeta.tone}`}>{dueMeta.label}</span> : '—'}
-                          </td>
-                          <td>
-                            <span className={`planner-v2-pill ${meta.tone}`}>{meta.label}</span>
-                          </td>
-                        </tr>
+                        </section>
                       )
                     })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                  </div>
+                )
+              ) : (
+                <div className="planner-v2-table-wrap">
+                  <table className="planner-v2-table">
+                    <thead>
+                      <tr>
+                        <th>Task</th>
+                        <th>List</th>
+                        <th>Who</th>
+                        <th>Due</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {visibleCards.map((card) => {
+                        const wf = cardWorkflowStatus(card)
+                        const meta = STATUS_META[wf] || STATUS_META.unassigned
+                        const names = (card.plan_card_assignees || []).map((x) => x.staff_profiles?.full_name).filter(Boolean)
+                        const dueMeta = cardDueMeta(card.due_at, wf)
+                        return (
+                          <tr key={card.id} onClick={() => openCard(card.id)}>
+                            <td className="planner-v2-table-title">
+                              <button type="button" className="planner-v2-row-link" onClick={(e) => { e.stopPropagation(); openCard(card.id) }}>
+                                {card.title}
+                              </button>
+                            </td>
+                            <td>{card.list_title}</td>
+                            <td>{names.length ? (names.length > 2 ? `${names[0]} +${names.length - 1}` : names.join(', ')) : '—'}</td>
+                            <td>
+                              {dueMeta ? <span className={`planner-v2-due ${dueMeta.tone}`}>{dueMeta.label}</span> : '—'}
+                            </td>
+                            <td>
+                              <span className={`planner-v2-pill ${meta.tone}`}>{meta.label}</span>
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {tab === 'calendar' && (
-        <CalendarMonth
-          cursor={calCursor}
-          onCursor={setCalCursor}
-          items={calItems}
-          sources={calSources}
-          onSources={setCalSources}
-          canEdit={canEdit}
-        />
-      )}
+        {tab === 'calendar' && (
+          <CalendarMonth
+            cursor={calCursor}
+            onCursor={setCalCursor}
+            items={calItems}
+            sources={calSources}
+            onSources={setCalSources}
+            canEdit={canEdit}
+          />
+        )}
 
-      {tab === 'forms' && (
-        <PlanningFormsSmartPanel
-          canEdit={canEdit}
-          lists={lists}
-          resultsId={searchParams.get('results')}
-        />
-      )}
+        {tab === 'forms' && (
+          <PlanningFormsSmartPanel
+            canEdit={canEdit}
+            lists={lists}
+            resultsId={searchParams.get('results')}
+          />
+        )}
 
-      {tab === 'results' && (
-        <Suspense fallback={<p className="py-6 text-sm text-muted-foreground">Loading form results…</p>}>
-          <FormResultsBoardPage embedded initialFormSlug={searchParams.get('results') || ''} />
-        </Suspense>
-      )}
+        {tab === 'results' && (
+          <Suspense fallback={<p className="py-6 text-sm text-muted-foreground">Loading form results…</p>}>
+            <FormResultsBoardPage embedded initialFormSlug={searchParams.get('results') || ''} />
+          </Suspense>
+        )}
 
-      {tab === 'events' && (
-        <PlanningEventsPanel
-          canEdit={canEdit}
-          highlightId={searchParams.get('event')}
-        />
-      )}
+        {tab === 'events' && (
+          <PlanningEventsPanel
+            canEdit={canEdit}
+            highlightId={searchParams.get('event')}
+          />
+        )}
 
-      {tab === 'review' && canEdit && (
-        <PlanningReviewPanel items={reviewItems} canEdit={canEdit} onChanged={load} />
-      )}
+        {tab === 'review' && canEdit && (
+          <PlanningReviewPanel items={reviewItems} canEdit={canEdit} onChanged={load} />
+        )}
 
-      {tab === 'configure' && canEdit && (
-        <PlanningConfigurePanel
-          boards={boards}
-          board={board}
-          lists={lists}
-          categories={categories}
-          templates={templates}
-          canEdit={canEdit}
-          viewerRole={profile?.role}
-          onChanged={load}
-          onSelectBoard={(id) => {
-            setSearchParams((prev) => {
-              const params = new URLSearchParams(prev)
-              params.set('board', id)
-              params.set('tab', 'configure')
-              return params
-            }, { replace: true })
-          }}
-        />
-      )}
+        {tab === 'configure' && canEdit && (
+          <PlanningConfigurePanel
+            boards={boards}
+            board={board}
+            lists={lists}
+            categories={categories}
+            templates={templates}
+            canEdit={canEdit}
+            viewerRole={profile?.role}
+            onChanged={load}
+            onSelectBoard={(id) => {
+              setSearchParams((prev) => {
+                const params = new URLSearchParams(prev)
+                params.set('board', id)
+                params.set('tab', 'configure')
+                return params
+              }, { replace: true })
+            }}
+          />
+        )}
 
-      {activeCard && (
-        <TaskModal
-          card={activeCard.id === 'new' ? null : activeCard}
-          listId={defaultPlanListId(lists)}
-          lists={lists}
-          categories={visibleCategories}
-          checklistTemplates={templates}
-          canEdit={canEdit}
-          onClose={() => openCard(null)}
-          onSaved={load}
-          onDeleted={load}
-        />
-      )}
+        {activeCard && (
+          <TaskModal
+            card={activeCard.id === 'new' ? null : activeCard}
+            listId={defaultPlanListId(lists)}
+            lists={lists}
+            categories={visibleCategories}
+            checklistTemplates={templates}
+            canEdit={canEdit}
+            onClose={() => openCard(null)}
+            onSaved={load}
+            onDeleted={load}
+          />
+        )}
       </div>
     </OpsPageShell>
   )

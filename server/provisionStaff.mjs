@@ -156,7 +156,7 @@ export async function provisionStaffAccount({ accessToken, body, siteOrigin }) {
   if (createError) {
     // Existing email — look up and update password if temp provided
     let page = 1
-    for (;;) {
+    for (; ;) {
       const { data: listed, error: listError } = await admin.auth.admin.listUsers({ page, perPage: 100 })
       if (listError) throw listError
       authUser = listed.users.find((u) => (u.email || '').toLowerCase() === email) || null
@@ -190,9 +190,9 @@ export async function provisionStaffAccount({ accessToken, body, siteOrigin }) {
       is_archived: false,
       ...(caller.role === SUPER
         ? {
-            is_supervisor: Boolean(body.is_supervisor),
-            reports_to: body.reports_to && body.reports_to !== authUser.id ? String(body.reports_to) : null,
-          }
+          is_supervisor: Boolean(body.is_supervisor),
+          reports_to: body.reports_to && body.reports_to !== authUser.id ? String(body.reports_to) : null,
+        }
         : {}),
     },
     { onConflict: 'id' },
@@ -585,14 +585,14 @@ export async function manageSiteContent({ accessToken, body }) {
       existing
         ? admin.from('blogs').update(p).eq('id', targetId).select(BLOG_SELECT_COLS).maybeSingle()
         : admin
-            .from('blogs')
-            .insert({ id: targetId, ...p, created_by: user.id })
-            .select(BLOG_SELECT_COLS)
-            .maybeSingle()
+          .from('blogs')
+          .insert({ id: targetId, ...p, created_by: user.id })
+          .select(BLOG_SELECT_COLS)
+          .maybeSingle()
 
     let { data, error } = await writeAdmin(payload)
     if (error && /column .* does not exist|schema cache/i.test(error.message || '')) {
-      ;({ data, error } = await writeAdmin(basePayload))
+      ; ({ data, error } = await writeAdmin(basePayload))
     }
     if (error) throw Object.assign(new Error(error.message), { status: 400 })
 
@@ -611,7 +611,7 @@ export async function manageSiteContent({ accessToken, body }) {
             'https://www.hakumautocare.com/blog',
           ],
         }),
-      }).catch(() => {})
+      }).catch(() => { })
     }
 
     return { data }
@@ -690,16 +690,16 @@ export async function manageSiteContent({ accessToken, body }) {
 
     const mutation = existing
       ? admin
-          .from('events')
-          .update(payload)
-          .eq('id', targetId)
-          .select('id, title, description, branch, starts_at, ends_at, is_published, is_date_tba, slug, form_id, banner_url, content_blocks, ops_forms!form_id ( id, name, slug, public_enabled, status )')
-          .maybeSingle()
+        .from('events')
+        .update(payload)
+        .eq('id', targetId)
+        .select('id, title, description, branch, starts_at, ends_at, is_published, is_date_tba, slug, form_id, banner_url, content_blocks, ops_forms!form_id ( id, name, slug, public_enabled, status )')
+        .maybeSingle()
       : admin
-          .from('events')
-          .insert({ id: targetId, ...payload })
-          .select('id, title, description, branch, starts_at, ends_at, is_published, is_date_tba, slug, form_id, banner_url, content_blocks, ops_forms!form_id ( id, name, slug, public_enabled, status )')
-          .maybeSingle()
+        .from('events')
+        .insert({ id: targetId, ...payload })
+        .select('id, title, description, branch, starts_at, ends_at, is_published, is_date_tba, slug, form_id, banner_url, content_blocks, ops_forms!form_id ( id, name, slug, public_enabled, status )')
+        .maybeSingle()
 
     const { data, error } = await mutation
     if (error) throw Object.assign(new Error(error.message), { status: 400 })

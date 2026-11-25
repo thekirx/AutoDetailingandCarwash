@@ -36,6 +36,7 @@ export default function FinanceCorporateTab({ profile, range }) {
   const [hqExpenses, setHqExpenses] = useState([])
   const [balances, setBalances] = useState([])
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [form, setForm] = useState({ period: '', period_date: '', amount: '', note: '' })
   const [createOpen, setCreateOpen] = useState(false)
 
@@ -93,12 +94,14 @@ export default function FinanceCorporateTab({ profile, range }) {
     if (!period) return toast.error('Period label is required')
     if (!Number.isFinite(pesos)) return toast.error('Enter a valid amount')
     const amount_minor = Math.round(pesos * 100)
+    setSaving(true)
     const { error } = await supabase.from('corporate_balances').insert({
       period,
       period_date: form.period_date || null,
       amount_minor,
       note: form.note.trim() || null,
     })
+    setSaving(false)
     if (error) toast.error(error.message)
     else {
       toast.success('Corporate balance saved')
@@ -197,11 +200,11 @@ export default function FinanceCorporateTab({ profile, range }) {
               />
             </div>
             <DialogFooter className="sm:col-span-2">
-              <Button type="button" variant="outline" className="min-h-11 cursor-pointer" onClick={() => setCreateOpen(false)}>
+              <Button type="button" variant="outline" className="min-h-11 cursor-pointer" onClick={() => setCreateOpen(false)} disabled={saving}>
                 Cancel
               </Button>
-              <Button type="submit" className="min-h-11 cursor-pointer">
-                Save balance
+              <Button type="submit" className="min-h-11 cursor-pointer" disabled={saving}>
+                {saving ? 'Saving…' : 'Save balance'}
               </Button>
             </DialogFooter>
           </form>

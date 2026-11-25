@@ -113,7 +113,8 @@ export default function MembershipsPage({ embedded = false } = {}) {
   const [programForm, setProgramForm] = useState(emptyProgramForm)
   const [tierForm, setTierForm] = useState(emptyTier)
   const [milestoneForm, setMilestoneForm] = useState(emptyMilestone)
-  const [assignForm, setAssignForm] = useState({ customer_id: '', tier_id: '' })
+  const [assignForm, setAssignForm] = useState({ customer_id: '', tier_id: '', starts_at: '', ends_at: '' })
+  const [customerSearch, setCustomerSearch] = useState('')
   const [createOpen, setCreateOpen] = useState('')
   const [editingTier, setEditingTier] = useState(null)
   const [editingMilestone, setEditingMilestone] = useState(null)
@@ -146,6 +147,13 @@ export default function MembershipsPage({ embedded = false } = {}) {
   }, [load, profile])
 
   const activeTiers = useMemo(() => tiers.filter((t) => t.is_active), [tiers])
+  const filteredAssignCustomers = useMemo(() => {
+    const q = customerSearch.trim().toLowerCase()
+    if (!q) return customers
+    return customers.filter((c) =>
+      [c.full_name, c.phone, c.email].filter(Boolean).join(' ').toLowerCase().includes(q),
+    )
+  }, [customers, customerSearch])
 
   if (!canAccessMemberships(profile)) return <Navigate to="/operations/access-denied" replace />
 
@@ -299,11 +307,16 @@ export default function MembershipsPage({ embedded = false } = {}) {
 
   async function onAssignMembership(event) {
     event.preventDefault()
+    if (assignForm.starts_at && assignForm.ends_at && assignForm.ends_at < assignForm.starts_at) {
+      toast.error('End date must be on or after start date')
+      return
+    }
     setSaving(true)
     try {
       await assignCustomerMembership(assignForm)
       toast.success('Membership assigned')
-      setAssignForm((f) => ({ ...f, customer_id: '' }))
+      setAssignForm((f) => ({ ...f, customer_id: '', starts_at: '', ends_at: '' }))
+      setCustomerSearch('')
       setCreateOpen('')
       await load()
     } catch (err) {
@@ -798,13 +811,24 @@ export default function MembershipsPage({ embedded = false } = {}) {
           </DialogHeader>
           <form onSubmit={onAssignMembership} className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
-              <Label>Customer</Label>
+              <Label htmlFor="assign-cust-search">Find customer</Label>
+              <Input
+                id="assign-cust-search"
+                type="search"
+                value={customerSearch}
+                onChange={(e) => setCustomerSearch(e.target.value)}
+                placeholder="Search customer by name or phone…"
+                className="min-h-10"
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>Customer ({filteredAssignCustomers.length})</Label>
               <Select value={assignForm.customer_id} onValueChange={(v) => setAssignForm({ ...assignForm, customer_id: v })}>
                 <SelectTrigger className="min-h-11 w-full"><SelectValue placeholder="Select customer" /></SelectTrigger>
                 <SelectContent>
-                  {customers.map((c) => (
+                  {filteredAssignCustomers.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
-                      {c.full_name || c.email || c.phone} · {c.loyalty_stamps ?? 0} stamps
+                      {c.full_name || c.phone || 'Customer'} · {c.loyalty_stamps ?? 0} stamps
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -820,6 +844,28 @@ export default function MembershipsPage({ embedded = false } = {}) {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="assign-starts">Starts</Label>
+                <Input
+                  id="assign-starts"
+                  type="date"
+                  className="min-h-10"
+                  value={assignForm.starts_at}
+                  onChange={(e) => setAssignForm({ ...assignForm, starts_at: e.target.value })}
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="assign-ends">Ends (optional)</Label>
+                <Input
+                  id="assign-ends"
+                  type="date"
+                  className="min-h-10"
+                  value={assignForm.ends_at}
+                  onChange={(e) => setAssignForm({ ...assignForm, ends_at: e.target.value })}
+                />
+              </div>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" className="min-h-11" onClick={() => setCreateOpen('')}>Cancel</Button>

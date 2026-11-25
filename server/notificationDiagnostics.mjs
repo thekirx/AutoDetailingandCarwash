@@ -12,6 +12,7 @@ import { DEFAULT_NOTIFICATION_CONFIG } from '../src/lib/notificationConfig.js'
 const ROLE_LABELS = Object.freeze({
   BossMich: 'Super Admin / Owner',
   assistant_super_admin: 'Assistant Super Admin',
+  operations_lead: 'Ops Lead',
   ops_lead: 'Ops Lead',
   admin: 'Branch Admin',
   team_lead: 'Team Lead',

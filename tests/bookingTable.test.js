@@ -107,7 +107,7 @@ describe('booking table ledger', () => {
     assert.match(page, /isBookingBoardRow/)
     assert.match(page, /filterFloorDetailingServices/)
     assert.doesNotMatch(page, /SelectItem value="wash"/)
-    assert.match(page, /useState\('detailing'\)/)
+    assert.match(page, /useState\('detailing'\)|kind:\s*'detailing'/)
   })
 
   it('detailing board has no List tab; the table stays the searchable roster', () => {

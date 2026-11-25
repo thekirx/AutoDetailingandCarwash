@@ -4,7 +4,7 @@ import { Link, Navigate } from 'react-router-dom'
 import { Check, RefreshCw, Search, Trash2, Wallet, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessMyAdvances, canApproveCashAdvance, isSuperAdmin } from '@/auth/permissions'
+import { canAccessMyAdvances, canAccessMyPayslips, canApproveCashAdvance, canEditFinanceBooks, isSuperAdmin } from '@/auth/permissions'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -494,12 +494,23 @@ export default function MyCashAdvancesPage({ embedded = false } = {}) {
       title="My advances"
       description="Ask for an amount here. After it is approved, the branch records the cash on the Daily Sheet. This page shows what you still owe."
       actions={
-        <Button type="button" variant="outline" className="min-h-11 gap-2" asChild>
-          <Link to="/operations/payslips">
-            <Wallet className="size-4" aria-hidden />
-            Back to Payslips
-          </Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {canEditFinanceBooks(profile) ? (
+            <Button type="button" variant="outline" className="min-h-11 gap-2" asChild>
+              <Link to="/operations/finance?tab=salaries">
+                Monthly Salaries (Finance)
+              </Link>
+            </Button>
+          ) : null}
+          {canAccessMyPayslips(profile) ? (
+            <Button type="button" variant="outline" className="min-h-11 gap-2" asChild>
+              <Link to="/operations/payslips">
+                <Wallet className="size-4" aria-hidden />
+                Payslips
+              </Link>
+            </Button>
+          ) : null}
+        </div>
       }
     >
       {inner}

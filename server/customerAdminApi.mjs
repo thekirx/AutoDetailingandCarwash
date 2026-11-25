@@ -58,9 +58,10 @@ async function writeAudit(admin, staffId, action, targetId, metadata) {
   await admin.from('audit_logs').insert({
     actor_id: staffId,
     action,
-    target_table: metadata?.target_table || 'customers',
-    target_id: targetId,
-    metadata,
+    entity_type: metadata?.target_table || 'customers',
+    entity_id: targetId == null ? null : String(targetId),
+    summary: metadata?.summary || `${action} (${metadata?.target_table || 'customers'})`,
+    meta: metadata || {},
   })
 }
 

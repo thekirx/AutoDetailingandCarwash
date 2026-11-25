@@ -1,6 +1,7 @@
 /** Finance › Home — Xero-style business overview: accounts watchlist, net profit YTD, sheets waiting, recent payments. */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from 'recharts'
+import { Button } from '@/components/ui/button'
 import { ChartContainer, ChartLegend, ChartLegendContent, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart'
 import { supabase } from '@/lib/supabase'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
@@ -188,7 +189,21 @@ export default function FinanceHomeTab({ profile, branchFilter = 'all', branchNa
           </div>
         </FinancePanel>
 
-        <FinancePanel title="Recent payments" description="Latest paid bills and posted expenses">
+        <FinancePanel
+          title="Recent payments"
+          description="Latest paid bills and posted expenses"
+          actions={
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="min-h-9 cursor-pointer"
+              onClick={() => onDrill?.({ tab: 'purchases', period: 'year' })}
+            >
+              View all
+            </Button>
+          }
+        >
           {state.payments.length ? (
             <ul className="flex flex-col divide-y divide-border">
               {state.payments.map((p) => (

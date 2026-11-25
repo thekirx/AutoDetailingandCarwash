@@ -3,10 +3,16 @@ import { Link, Navigate } from 'react-router-dom'
 import { RefreshCw, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
-import { canEditFinanceBooks } from '@/auth/permissions'
+import { canAccessSettings, canEditFinanceBooks } from '@/auth/permissions'
+import { writeAudit } from '@/lib/audit'
 import { canReviewDailySheet } from '@/lib/dailySheet'
 import { sheetErrorMessage } from '@/lib/dailySheetApi'
-import { DEFAULT_COMPENSATION_RULES, normalizeCompensationSettings, toCompensationSettingsRow } from '@/lib/compensation'
+import {
+  DEFAULT_COMPENSATION_RULES,
+  PAYOUT_FREQUENCIES,
+  normalizeCompensationSettings,
+  toCompensationSettingsRow,
+} from '@/lib/compensation'
 import { parsePesosToMinor } from '@/lib/shiftClose'
 import { supabase } from '@/lib/supabase'
 import OpsPageShell from '@/components/ops/OpsPageShell'
@@ -20,11 +26,13 @@ const PCT_FIELDS = [
   { key: 'ceramic_crew_split_pct', label: 'Detailing crew split %' },
   { key: 'ceramic_crew_solo_pct', label: 'Detailing crew solo %' },
   { key: 'ceramic_detailer_split_pct', label: 'Detailer split %' },
+  { key: 'ceramic_card_fee_pct', label: 'Detailing card fee deduction %' },
 ]
 const WEIGHT_FIELDS = [
   { key: 'attendance_present_weight', label: 'Present attendance weight' },
   { key: 'attendance_late_weight', label: 'Late attendance weight' },
 ]
+const WEEKDAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
 /** Settings → Daily sheet rules: how the sheet suggests crew salaries (compensation_settings) + Team Lead daily rates. */
 export default function DailySheetRulesPage() {
@@ -71,6 +79,10 @@ export default function DailySheetRulesPage() {
 
   if (!canReviewDailySheet(profile)) return <Navigate to="/operations/access-denied" replace />
 
+  const hasSettings = canAccessSettings(profile)
+  const backTo = hasSettings ? '/operations/settings' : '/operations/finance?tab=daily_sheets'
+  const backLabel = hasSettings ? '← Company settings' : '← Daily sheets'
+
   async function saveRules(e) {
     e.preventDefault()
     if (!canWrite) return
@@ -86,11 +98,25 @@ export default function DailySheetRulesPage() {
         return toast.error(`${f.label} must be 0 or greater.`)
       }
     }
+    const shirtMinor = Number(rules.ceramic_shirt_deduction_minor)
+    if (!Number.isFinite(shirtMinor) || shirtMinor < 0) {
+      return toast.error('Detailing shirt deduction must be ₱0 or greater.')
+    }
     setSaving(true)
-    const { error } = await supabase.from('compensation_settings').upsert(toCompensationSettingsRow(rules), { onConflict: 'id' })
+    const payload = toCompensationSettingsRow(rules)
+    const { error } = await supabase.from('compensation_settings').upsert(payload, { onConflict: 'id' })
     setSaving(false)
     if (error) toast.error(error.message)
-    else toast.success('Daily sheet rules saved')
+    else {
+      await writeAudit({
+        action: 'update',
+        entityType: 'compensation_settings',
+        entityId: '1',
+        summary: 'Updated daily sheet compensation rules',
+        meta: payload,
+      })
+      toast.success('Daily sheet rules saved')
+    }
   }
 
   function resetRuleDefaults() {
@@ -106,6 +132,13 @@ export default function DailySheetRulesPage() {
     try {
       const { error } = await supabase.from('staff_profiles').update({ daily_rate_minor: minor }).eq('id', lead.id)
       if (error) return toast.error(error.message)
+      await writeAudit({
+        action: 'update',
+        entityType: 'staff_profile',
+        entityId: lead.id,
+        summary: `Updated Team Lead daily rate for ${lead.full_name}`,
+        meta: { daily_rate_minor: minor },
+      })
       toast.success(`${lead.full_name}: daily rate saved`)
       load()
     } finally {
@@ -130,7 +163,7 @@ export default function DailySheetRulesPage() {
       className="hakum-daily-sheet-rules"
       eyebrow="Settings"
       title="Daily sheet rules"
-      breadcrumbs={[{ label: 'Settings', to: '/operations/settings' }, { label: 'Daily sheet rules' }]}
+      breadcrumbs={[{ label: hasSettings ? 'Settings' : 'Finance', to: backTo }, { label: 'Daily sheet rules' }]}
       description="How the Daily Sheet suggests crew salaries. Branch Admins can change a suggestion with a reason; Super Admin or ASA approve the sheet."
       actions={
         <div className="flex flex-wrap items-center gap-2">
@@ -139,7 +172,7 @@ export default function DailySheetRulesPage() {
             Refresh
           </Button>
           <Button type="button" variant="outline" className="min-h-11" asChild>
-            <Link to="/operations/settings">← Company settings</Link>
+            <Link to={backTo}>{backLabel}</Link>
           </Button>
         </div>
       }
@@ -154,16 +187,66 @@ export default function DailySheetRulesPage() {
             {PCT_FIELDS.map((f) => (
               <div key={f.key} className="flex flex-col gap-1.5">
                 <Label htmlFor={`rule-${f.key}`}>{f.label}</Label>
-                {numberInput(f, { min: 0, max: 100, step: 1 })}
+                {numberInput(f, { min: 0, max: 100, step: 0.5 })}
                 {f.hint ? <p className="text-xs text-muted-foreground">{f.hint}</p> : null}
               </div>
             ))}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="rule-shirt-deduction">Detailing shirt deduction (₱)</Label>
+              <Input
+                id="rule-shirt-deduction"
+                type="number"
+                min={0}
+                step="1"
+                className="min-h-11"
+                disabled={!canWrite}
+                value={String(Math.round((Number(rules.ceramic_shirt_deduction_minor) || 0) / 100))}
+                onChange={(e) =>
+                  setRules((r) => ({
+                    ...r,
+                    ceramic_shirt_deduction_minor: Math.max(0, Math.round(Number(e.target.value || 0) * 100)),
+                  }))
+                }
+              />
+            </div>
             {WEIGHT_FIELDS.map((f) => (
               <div key={f.key} className="flex flex-col gap-1.5">
                 <Label htmlFor={`rule-${f.key}`}>{f.label}</Label>
                 {numberInput(f, { min: 0, step: 0.1 })}
               </div>
             ))}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="rule-payout-frequency">Commission payout schedule</Label>
+              <select
+                id="rule-payout-frequency"
+                className="min-h-11 rounded-md border border-input bg-background px-3 text-sm"
+                disabled={!canWrite}
+                value={rules.payout_frequency}
+                onChange={(e) => setRules((r) => ({ ...r, payout_frequency: e.target.value }))}
+              >
+                {PAYOUT_FREQUENCIES.map((freq) => (
+                  <option key={freq} value={freq} className="capitalize">
+                    {freq}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="rule-payout-weekday">Payout weekday</Label>
+              <select
+                id="rule-payout-weekday"
+                className="min-h-11 rounded-md border border-input bg-background px-3 text-sm"
+                disabled={!canWrite}
+                value={String(rules.payout_weekday ?? 5)}
+                onChange={(e) => setRules((r) => ({ ...r, payout_weekday: Number(e.target.value) }))}
+              >
+                {WEEKDAY_LABELS.map((label, idx) => (
+                  <option key={label} value={String(idx)}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </div>
             <p className="text-xs text-muted-foreground sm:col-span-2">
               Cash advances are released by the Branch Admin on the Daily Sheet and approved with it. Nothing is deducted automatically.
             </p>

@@ -168,6 +168,8 @@ export default function BranchesManagePage() {
   }
 
   async function setStatus(row, status) {
+    if (saving) return
+    setSaving(true)
     try {
       await updateBranch({
         slug: row.slug,
@@ -182,21 +184,27 @@ export default function BranchesManagePage() {
       await load()
     } catch (err) {
       toast.error(err.message)
+    } finally {
+      setSaving(false)
     }
   }
 
   async function onArchive(slug) {
+    if (saving) return
     if (!canCreate) {
       toast.error('Only Super Admin can archive company sites.')
       return
     }
     if (!window.confirm(`Archive branch ${slug}? Staff scoped here keep their slug until reassigned.`)) return
+    setSaving(true)
     try {
       await archiveBranch(slug)
       toast.success('Branch archived')
       await load()
     } catch (err) {
       toast.error(err.message)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -205,12 +213,12 @@ export default function BranchesManagePage() {
     const current = statusFromRow(row)
     return (
       <div className="flex justify-end gap-2">
-        <Button size="sm" variant="outline" className="min-h-11 xl:min-h-8" onClick={() => startEdit(row)}>
+        <Button size="sm" variant="outline" className="min-h-11 xl:min-h-8" disabled={saving} onClick={() => startEdit(row)}>
           <Pencil size={14} aria-hidden /> Edit
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={<Button size="sm" variant="outline" className="min-h-11 min-w-11 xl:min-h-8 xl:min-w-8" />}
+            render={<Button size="sm" variant="outline" className="min-h-11 min-w-11 xl:min-h-8 xl:min-w-8" disabled={saving} />}
             aria-label={`More actions for ${row.name}`}
           >
             <MoreHorizontal size={16} aria-hidden />

@@ -99,7 +99,7 @@ export function AuthProvider({ children }) {
 
     const { data, error } = await supabase
       .from('customers')
-      .select('id, full_name, email, phone, role, is_archived')
+      .select('id, full_name, email, phone, date_of_birth, role, is_archived')
       .eq('id', user.id)
       .eq('is_archived', false)
       .maybeSingle()

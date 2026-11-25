@@ -72,7 +72,7 @@ export default function CustomerVouchersPage() {
   const ready = Boolean(birthday?.perk)
   const used = Boolean(birthday?.used)
   const isToday = Boolean(birthday?.is_today)
-  const canClaim = isToday && Boolean(birthday?.date_of_birth) && !used
+  const canClaim = isToday && Boolean(birthday?.date_of_birth) && !used && !ready
 
   async function claimBirthday() {
     setBusy('birthday')
@@ -92,7 +92,11 @@ export default function CustomerVouchersPage() {
     <CustomerAppFrame title="Vouchers" subtitle="Birthday wash and service vouchers." cols>
       {error ? (
         <div className="capp-empty capp-span" role="alert">
-          <strong>{error}</strong>
+          <strong>Could not load vouchers</strong>
+          <span>{error}</span>
+          <button type="button" className="capp-btn capp-btn-fill" onClick={reload}>
+            Retry
+          </button>
         </div>
       ) : null}
       {!data && !error ? (
@@ -128,7 +132,7 @@ export default function CustomerVouchersPage() {
                 disabled={!canClaim || busy === 'birthday'}
                 onClick={claimBirthday}
               >
-                {used ? 'Used this year' : 'Claim free car wash'}
+                {used ? 'Used this year' : ready ? 'Claimed & ready' : 'Claim free car wash'}
               </button>
             </div>
           </section>

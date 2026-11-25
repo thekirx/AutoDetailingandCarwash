@@ -33,7 +33,8 @@ export default function CustomerBlogPage() {
       .in('status', ['published', 'scheduled'])
       .order('published_at', { ascending: false })
       .limit(100)
-    if (e) setError('')
+    if (e) setError(e.message || 'Stories are temporarily unavailable. Please try again.')
+    else setError('')
     const merged = mergeBlogPostsWithGuides(data || [])
     setPosts(merged)
     setActive((prev) => {
@@ -75,9 +76,13 @@ export default function CustomerBlogPage() {
         </div>
       ) : null}
       {error ? (
-        <p className="capp-empty capp-span" role="alert">
-          {error}
-        </p>
+        <div className="capp-empty capp-span" role="alert">
+          <strong>Could not load stories</strong>
+          <span>{error}</span>
+          <button type="button" className="capp-btn capp-btn-fill" onClick={loadPosts}>
+            Retry
+          </button>
+        </div>
       ) : null}
       {!loading && !posts.length && !error ? <div className="capp-empty capp-span">No posts yet. Check back after the next bay story.</div> : null}
       {posts.map((post) => (

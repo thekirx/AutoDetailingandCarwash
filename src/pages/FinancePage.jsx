@@ -809,7 +809,7 @@ export default function FinancePage() {
         {showSalaries ? (
           <TabsContent value="salaries" className="finance-tab-panel">
             <Suspense fallback={<p className="py-6 text-sm text-muted-foreground">Loading monthly salaries…</p>}>
-              <MonthlyPayrollPage embedded onFinanceSync={load} />
+              <MonthlyPayrollPage embedded onFinanceSync={load} defaultBranch={branchFilter !== 'all' ? branchFilter : undefined} />
             </Suspense>
           </TabsContent>
         ) : null}

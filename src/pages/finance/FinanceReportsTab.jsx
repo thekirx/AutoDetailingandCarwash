@@ -170,9 +170,9 @@ export default function FinanceReportsTab({
     })
     let retentionRows = retentionRes.data || []
     if (allSites) retentionRows = rollupRetentionByCustomer(retentionRows)
-    retentionRows = retentionInWindow(retentionRows, range).slice(0, 50)
-    setRetention(retentionRows)
-    setRetentionSummary(retentionBuckets(retentionRows))
+    const windowedRetention = retentionInWindow(retentionRows, range)
+    setRetentionSummary(retentionBuckets(windowedRetention))
+    setRetention(windowedRetention.slice(0, 50))
     setShiftCloses(shiftRes.data || [])
 
     try {

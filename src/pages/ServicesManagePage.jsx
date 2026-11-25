@@ -321,34 +321,46 @@ export default function ServicesManagePage({
 
   async function toggleActive(row) {
     if (!assertCanMutate()) return
+    setSaving(true)
     try {
       const edit = formFromService(row)
       await updateService(row.id, {
         name: row.name,
         slug: row.slug,
+        description: row.description,
         price: edit.price,
         size_prices: sizePayloadFromForm(edit),
         pay_category: row.pay_category || 'general',
         display_order: row.display_order,
         is_active: !row.is_active,
+        salary_pct: row.salary_pct,
+        duration_minutes: row.duration_minutes,
+        sla_minutes: row.sla_minutes,
+        points_award: row.points_award,
+        parent_service_id: row.parent_service_id,
         included_service_ids: row.included_service_ids || [],
       })
       toast.success(row.is_active ? 'Deactivated' : 'Activated')
       await load()
     } catch (err) {
       toast.error(err.message)
+    } finally {
+      setSaving(false)
     }
   }
 
   async function onArchive(id) {
     if (!assertCanMutate()) return
     if (!window.confirm('Archive this catalog item?')) return
+    setSaving(true)
     try {
       await archiveService(id)
       toast.success('Archived')
       await load()
     } catch (err) {
       toast.error(err.message)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -686,13 +698,13 @@ export default function ServicesManagePage({
                       <TableCell>{s.is_active ? <Badge>Active</Badge> : <Badge variant="secondary">Inactive</Badge>}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button size="sm" variant="outline" className="min-h-11" onClick={() => setEditing(formFromService(s))}>
+                          <Button size="sm" variant="outline" className="min-h-11" disabled={saving} onClick={() => setEditing(formFromService(s))}>
                             Edit
                           </Button>
-                          <Button size="sm" variant="ghost" className="min-h-11" onClick={() => toggleActive(s)}>
+                          <Button size="sm" variant="ghost" className="min-h-11" disabled={!canMutate || saving} onClick={() => toggleActive(s)}>
                             {s.is_active ? 'Deactivate' : 'Activate'}
                           </Button>
-                          <Button size="sm" variant="ghost" className="min-h-11" onClick={() => onArchive(s.id)}>
+                          <Button size="sm" variant="ghost" className="min-h-11" disabled={!canMutate || saving} onClick={() => onArchive(s.id)}>
                             Archive
                           </Button>
                         </div>

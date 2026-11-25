@@ -189,7 +189,7 @@ export default function CustomerSignInPage() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${accessToken}` },
             body: JSON.stringify({ kind: 'welcome', site_origin: window.location.origin }),
-          }).catch(() => {})
+          }).catch(() => { })
         }
 
         if (sessionData.user.user_metadata?.must_set_password) {
@@ -247,7 +247,7 @@ export default function CustomerSignInPage() {
       await finishWithSession(sessionData, data.access_token)
     } catch (err) {
       setError(err.message)
-      await signOut().catch(() => {})
+      await signOut().catch(() => { })
     } finally {
       setSubmitting(false)
     }
@@ -397,8 +397,8 @@ export default function CustomerSignInPage() {
         {setupStatus === 'ready' ? <p className="hakum-auth-hint hakum-auth-hint--ok">Account found. Enter your password.</p> : null}
         {setupStatus === 'unknown' ? (
           <p className="hakum-auth-hint">
-            No account for that number yet.{' '}
-            <Link to={activateSignupHref(identifier.trim())}>Create one</Link> to track visits.
+            No account for that {idMode === 'phone' ? 'number' : 'email or plate'} yet.{' '}
+            <Link to={idMode === 'phone' ? activateSignupHref(identifier.trim()) : '/signup'}>Create one</Link> to track visits.
           </p>
         ) : null}
 

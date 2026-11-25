@@ -298,14 +298,14 @@ export async function saveCmsBlog(editorState, profileOrOptions = null) {
     existingId
       ? supabase.from('blogs').update(payload).eq('id', existingId).select(BLOG_SELECT_COLS).maybeSingle()
       : supabase
-          .from('blogs')
-          .insert({ ...payload, created_by: profile?.id || null })
-          .select(BLOG_SELECT_COLS)
-          .maybeSingle()
+        .from('blogs')
+        .insert({ ...payload, created_by: profile?.id || null })
+        .select(BLOG_SELECT_COLS)
+        .maybeSingle()
 
   let { data, error } = await writeDirect(row)
   if (error && /column .* does not exist|schema cache/i.test(error.message || '')) {
-    ;({ data, error } = await writeDirect(baseRow))
+    ; ({ data, error } = await writeDirect(baseRow))
   }
   if (!error) {
     const saved = data || row
@@ -332,14 +332,14 @@ export async function deleteCmsBlog(postOrId, profile = null) {
   const slug = isStringArg ? (id ? '' : postOrId.trim()) : String(postOrId?.slug || '').trim()
   const isBuiltIn = Boolean(slug && findBuiltInBlogPost(slug))
 
-  // If this is a built-in guide with no DB row yet, or if deleting a built-in guide,
-  // archive it in the DB so it is hidden from public pages unless restored.
-  if (isBuiltIn && !id) {
+  // Keep built-in SEO guides archived in the DB so they stay hidden instead of resurrecting from code defaults.
+  if (isBuiltIn) {
     const builtIn = findBuiltInBlogPost(slug)
     return saveCmsBlog(
       {
         ...builtIn,
-        id: null,
+        ...(id ? { id } : {}),
+        slug,
         status: 'archived',
         is_published: false,
       },

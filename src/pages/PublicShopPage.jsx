@@ -131,7 +131,7 @@ export default function PublicShopPage() {
         if (!active || error || !Array.isArray(data)) return
         setLiveRows(data.map(mapLiveCatalogRow))
       })
-      .catch(() => {})
+      .catch(() => { })
     return () => {
       active = false
     }

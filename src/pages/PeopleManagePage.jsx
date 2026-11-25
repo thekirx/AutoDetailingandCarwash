@@ -270,8 +270,10 @@ export default function PeopleManagePage({ embedded = false, view = 'all', openC
       const scopedPeople = filterPeopleForProfile(p, profile)
       setPeople(scopedPeople)
       setBranches(scopedBranches)
-      if (!defs?.error && Array.isArray(defs?.data)) setRoleDefs(defs.data)
-      if (!ov?.error && Array.isArray(ov?.data)) setOverrides(ov.data)
+      if (defs?.error) toast.error(defs.error.message || 'Unable to load custom role templates')
+      else if (Array.isArray(defs?.data)) setRoleDefs(defs.data)
+      if (ov?.error) toast.error(ov.error.message || 'Unable to load temporary Team Lead overrides')
+      else if (Array.isArray(ov?.data)) setOverrides(ov.data)
       const defaultBranch = pickDefaultBranchSlug(profile, scopedBranches)
       setForm((f) => ({
         ...f,
@@ -564,6 +566,22 @@ export default function PeopleManagePage({ embedded = false, view = 'all', openC
                     <SelectItem value="all">All statuses</SelectItem>
                   </SelectContent>
                 </Select>
+                {(dirQuery.trim() || dirBranch || dirStatus !== 'active' || dirTab !== 'all') ? (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="min-h-11 shrink-0"
+                    onClick={() => {
+                      setDirQuery('')
+                      setDirBranch('')
+                      setDirStatus('active')
+                      setDirTab('all')
+                    }}
+                  >
+                    Reset filters
+                  </Button>
+                ) : null}
               </div>
             </CardHeader>
 
@@ -857,6 +875,51 @@ export default function PeopleManagePage({ embedded = false, view = 'all', openC
                     <span className="font-mono text-xs text-muted-foreground">({d.role_key})</span> →{' '}
                     <Badge variant="secondary">{ROLE_LABELS[d.baseline_template] || d.baseline_template}</Badge>
                   </span>
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={saving}
+                      onClick={() => {
+                        setRoleDefForm({
+                          role_key: d.role_key,
+                          label: d.label || '',
+                          baseline_template: d.baseline_template || 'staff',
+                          grants: normalizeAssistantGrants(d.grants || {}),
+                        })
+                        setRoleOpen(true)
+                      }}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="text-destructive"
+                      disabled={saving}
+                      onClick={async () => {
+                        if (!window.confirm(`Archive custom role "${d.label}" (${d.role_key})?`)) return
+                        setSaving(true)
+                        try {
+                          const { error } = await supabase
+                            .from('role_definitions')
+                            .update({ is_active: false, updated_at: new Date().toISOString() })
+                            .eq('role_key', d.role_key)
+                          if (error) throw error
+                          toast.success('Role template archived')
+                          await load()
+                        } catch (err) {
+                          toast.error(err.message)
+                        } finally {
+                          setSaving(false)
+                        }
+                      }}
+                    >
+                      Archive
+                    </Button>
+                  </div>
                 </li>
               ))}
               {!roleDefs.length ? <li className="text-muted-foreground">No custom role templates defined yet.</li> : null}
@@ -867,12 +930,19 @@ export default function PeopleManagePage({ embedded = false, view = 'all', openC
     </div>
   ) : null
 
+  function handleRoleDialogChange(open) {
+    setRoleOpen(open)
+    if (!open) {
+      setRoleDefForm({ role_key: '', label: '', baseline_template: 'staff', grants: { ...DEFAULT_ASSISTANT_GRANTS } })
+    }
+  }
+
   const modals = (
     <>
-      <Dialog open={roleOpen} onOpenChange={setRoleOpen}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={roleOpen} onOpenChange={handleRoleDialogChange}>
+        <DialogContent className="max-h-[90svh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>New custom role</DialogTitle>
+            <DialogTitle>{roleDefs.some((d) => d.role_key === roleDefForm.role_key) ? 'Edit custom role' : 'New custom role'}</DialogTitle>
             <DialogDescription>Baseline system template plus a grants overlay.</DialogDescription>
           </DialogHeader>
           <form
@@ -931,12 +1001,13 @@ export default function PeopleManagePage({ embedded = false, view = 'all', openC
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
-              Grant keys whitelist: {ASSISTANT_GRANT_KEYS.slice(0, 6).join(', ')}…
-            </p>
+            <AssistantGrantsEditor
+              grants={normalizeAssistantGrants(roleDefForm.grants)}
+              onChange={(grants) => setRoleDefForm((f) => ({ ...f, grants }))}
+            />
             <DialogFooter>
               <Button type="button" variant="outline" className="min-h-11" onClick={() => setRoleOpen(false)}>Cancel</Button>
-              <Button type="submit" className="min-h-11">Save definition</Button>
+              <Button type="submit" className="min-h-11" disabled={saving}>{saving ? 'Saving…' : 'Save definition'}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -1141,8 +1212,16 @@ export default function PeopleManagePage({ embedded = false, view = 'all', openC
               </div>
             ) : null}
             <div className="flex flex-col gap-2">
-              <Label htmlFor="p-pass">Temporary password (optional)</Label>
-              <Input id="p-pass" type="text" className="min-h-11" value={form.temporary_password} onChange={(e) => setForm((f) => ({ ...f, temporary_password: e.target.value }))} />
+              <Label htmlFor="p-pass">Temporary password (optional, min 8 characters)</Label>
+              <Input
+                id="p-pass"
+                type="text"
+                minLength={8}
+                className="min-h-11"
+                value={form.temporary_password}
+                onChange={(e) => setForm((f) => ({ ...f, temporary_password: e.target.value }))}
+                placeholder="Min 8 characters if set"
+              />
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" className="min-h-11" onClick={() => setCreateOpen(false)}>Cancel</Button>
@@ -1253,11 +1332,12 @@ export default function PeopleManagePage({ embedded = false, view = 'all', openC
                 <Label>Temporary password</Label>
                 <Input
                   type="text"
+                  minLength={8}
                   autoComplete="new-password"
                   className="min-h-11"
                   value={editing.temporary_password || ''}
                   onChange={(e) => setEditing((r) => ({ ...r, temporary_password: e.target.value }))}
-                  placeholder="Leave blank to keep current password"
+                  placeholder="Leave blank to keep current password (min 8 chars)"
                 />
               </div>
               {isSuperAdmin(profile) ? (

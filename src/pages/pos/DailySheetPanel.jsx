@@ -335,7 +335,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
     const seen = new Map()
     for (const a of ctx?.attendance || []) seen.set(a.staff_id, a.full_name || 'Staff')
     for (const s of ctx?.staff || []) {
-      if (!seen.has(s.id) && (!s.branch_slug || s.branch_slug === branch)) seen.set(s.id, s.full_name || 'Staff')
+      if (!seen.has(s.id) && (!s.branch_slug || s.branch_slug === activeBranch)) seen.set(s.id, s.full_name || 'Staff')
     }
     const priorMap = new Map(priorBalances.map((r) => [r.staffId, r]))
     return [...seen.entries()].map(([value, name]) => {
@@ -344,7 +344,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
       const debtHint = remaining > 0 ? ` · owes ₱${(remaining / 100).toLocaleString('en-PH', { minimumFractionDigits: 2 })}` : ''
       return { value, label: `${name}${debtHint}` }
     })
-  }, [ctx, branch, priorBalances])
+  }, [ctx, activeBranch, priorBalances])
   const staffName = (id) => staffOptions.find((o) => o.value === id)?.label || lines.find((l) => l.staff_id === id)?.staff_name || 'Staff'
 
   function patchLine(id, patch) {
@@ -647,7 +647,7 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
                         editable
                         onUpload={async (file) => {
                           try {
-                            patchLine(l.id, { receipt_path: await uploadReceipt({ branch, date, file }) })
+                            patchLine(l.id, { receipt_path: await uploadReceipt({ branch: activeBranch, date: activeDate, file }) })
                           } catch (err) {
                             toast.error(sheetErrorMessage(err))
                           }

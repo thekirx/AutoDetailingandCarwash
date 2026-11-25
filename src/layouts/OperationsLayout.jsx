@@ -828,7 +828,16 @@ export default function OperationsLayout() {
   const role = profile?.role
 
   useEffect(() => {
-    if (!profile?.id || !profile?.is_active || role === 'customer') return
+    const allowedAutoSweepRoles = new Set([
+      ROLES.SUPER_ADMIN,
+      ROLES.ASSISTANT_SUPER_ADMIN,
+      ROLES.ADMIN,
+      ROLES.TEAM_LEAD,
+      ROLES.OPERATIONS_LEAD,
+      ROLES.SALES,
+      ROLES.STAFF,
+    ])
+    if (!profile?.id || !profile?.is_active || !allowedAutoSweepRoles.has(role)) return
     try {
       const last = Number(globalThis.sessionStorage?.getItem(AUTO_SWEEP_SESSION_KEY) || 0)
       if (Number.isFinite(last) && Date.now() - last < AUTO_SWEEP_THROTTLE_MS) return
