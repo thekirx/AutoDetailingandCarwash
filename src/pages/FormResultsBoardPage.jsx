@@ -20,6 +20,7 @@ import {
   X,
 } from 'lucide-react'
 import { toast } from 'sonner'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import OpsTabList from '@/components/ops/OpsTabBar'
 import { useAuth } from '@/auth/AuthProvider'
@@ -97,6 +98,14 @@ function statusBadgeVariant(status) {
   return 'secondary'
 }
 
+function isoToLocalDatetimeInput(iso) {
+  if (!iso) return ''
+  const d = new Date(iso)
+  if (Number.isNaN(d.getTime())) return String(iso).slice(0, 16)
+  const pad = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
 export default function FormResultsBoardPage({ embedded = false, initialFormSlug = '' } = {}) {
   const { formSlug: routeSlug } = useParams()
   const [embeddedSlug, setEmbeddedSlug] = useState(initialFormSlug)
@@ -125,6 +134,7 @@ export default function FormResultsBoardPage({ embedded = false, initialFormSlug
   const [editDraft, setEditDraft] = useState({ respondentLabel: '', status: 'new', calendarAt: '', payload: {} })
   const [saving, setSaving] = useState(false)
   const [copiedKey, setCopiedKey] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState(null)
 
   const load = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setLoading(true)
@@ -301,7 +311,7 @@ export default function FormResultsBoardPage({ embedded = false, initialFormSlug
     setEditDraft({
       respondentLabel: item.respondentLabel || '',
       status: item.status || (item.isDetailing ? 'pending' : 'new'),
-      calendarAt: item.calendarAt ? String(item.calendarAt).slice(0, 16) : '',
+      calendarAt: item.calendarAt ? isoToLocalDatetimeInput(item.calendarAt) : '',
       payload: { ...(item.payload || {}) },
     })
   }
@@ -349,7 +359,7 @@ export default function FormResultsBoardPage({ embedded = false, initialFormSlug
         id: activeItem.id,
         status: editDraft.status,
         respondent_label: editDraft.respondentLabel,
-        calendar_at: editDraft.calendarAt || null,
+        calendar_at: editDraft.calendarAt ? new Date(editDraft.calendarAt).toISOString() : null,
         payload: editDraft.payload,
       })
       toast.success('Response updated')
@@ -373,16 +383,13 @@ export default function FormResultsBoardPage({ embedded = false, initialFormSlug
     }
   }
 
-  async function handleDeleteItem(item) {
-    if (!isOwner || !item) {
-      toast.error('Only Owner can edit or delete form responses.')
-      return
-    }
-    if (!window.confirm(`Permanently delete submission from "${item.respondentLabel}"?`)) return
+  async function performDeleteItem(item) {
+    if (!isOwner || !item) return
     setSaving(true)
     try {
       await deleteFormSubmissionAsOwner(item.id)
       toast.success('Response deleted')
+      setDeleteTarget(null)
       setActiveItem(null)
       await load({ silent: true })
     } catch (err) {
@@ -390,6 +397,14 @@ export default function FormResultsBoardPage({ embedded = false, initialFormSlug
     } finally {
       setSaving(false)
     }
+  }
+
+  function handleDeleteItem(item) {
+    if (!isOwner || !item) {
+      toast.error('Only Owner can edit or delete form responses.')
+      return
+    }
+    setDeleteTarget(item)
   }
 
   async function decideCashAdvance(item, action) {
@@ -1101,6 +1116,18 @@ export default function FormResultsBoardPage({ embedded = false, initialFormSlug
           ) : null}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => {
+          if (!open && !saving) setDeleteTarget(null)
+        }}
+        title={`Delete submission from "${deleteTarget?.respondentLabel || 'respondent'}"?`}
+        description="This permanently deletes the saved form response and its answers."
+        confirmLabel={saving ? 'Deleting…' : 'Delete response'}
+        pending={saving}
+        onConfirm={() => performDeleteItem(deleteTarget)}
+      />
     </>
   )
 

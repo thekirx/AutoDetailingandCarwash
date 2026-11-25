@@ -26,6 +26,7 @@ export default function TintFinderSettingsPage() {
   const [notice, setNotice] = useState('')
   const [saving, setSaving] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [updatingLeadId, setUpdatingLeadId] = useState('')
   const [statusFilter, setStatusFilter] = useState('all')
   const [leadQuery, setLeadQuery] = useState('')
 
@@ -108,13 +109,20 @@ export default function TintFinderSettingsPage() {
   }
 
   async function setStatus(id, status) {
-    const { data, error: err } = await supabase.from('tint_finder_leads').update({ status }).eq('id', id).select('id').single()
-    if (err || !data) {
-      toast.error('Unable to update this request. Please try again.')
-      return setError('Unable to update this request. Please try again.')
+    if (updatingLeadId === id) return
+    setUpdatingLeadId(id)
+    try {
+      const { data, error: err } = await supabase.from('tint_finder_leads').update({ status }).eq('id', id).select('id').single()
+      if (err || !data) {
+        toast.error('Unable to update this request. Please try again.')
+        setError('Unable to update this request. Please try again.')
+        return
+      }
+      setLeads((rows) => rows.map((r) => (r.id === id ? { ...r, status } : r)))
+      toast.success(`Request marked ${status}`)
+    } finally {
+      setUpdatingLeadId('')
     }
-    setLeads((rows) => rows.map((r) => (r.id === id ? { ...r, status } : r)))
-    toast.success(`Request marked ${status}`)
   }
 
   return (
@@ -139,9 +147,12 @@ export default function TintFinderSettingsPage() {
       }
     >
       {error && (
-        <p role="alert" className="text-sm text-destructive">
-          {error}
-        </p>
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <span>{error}</span>
+          <Button type="button" variant="outline" size="sm" className="min-h-10" onClick={load} disabled={loading}>
+            Retry
+          </Button>
+        </div>
       )}
       {notice && (
         <p role="status" className="text-sm text-primary">
@@ -507,6 +518,7 @@ export default function TintFinderSettingsPage() {
                       className={`${selectClass} max-w-40`}
                       aria-label={`Status for ${l.name}`}
                       value={l.status}
+                      disabled={updatingLeadId === l.id}
                       onChange={(e) => setStatus(l.id, e.target.value)}
                     >
                       {['new', 'contacted', 'closed'].map((s) => (

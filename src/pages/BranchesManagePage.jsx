@@ -17,6 +17,7 @@ import {
 import { cn } from '@/lib/utils'
 import BranchLocationPicker from '@/components/BranchLocationPicker'
 import BranchLaunchDialog from '@/components/ops/BranchLaunchDialog'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -68,6 +69,7 @@ export default function BranchesManagePage() {
   const [hours, setHours] = useState(() => defaultWeekHours(''))
   const [saving, setSaving] = useState(false)
   const [launch, setLaunch] = useState(null)
+  const [archiveTargetSlug, setArchiveTargetSlug] = useState(null)
   const [query, setQuery] = useState('')
   const [statusFilter, setStatusFilter] = useState('current')
 
@@ -189,17 +191,22 @@ export default function BranchesManagePage() {
     }
   }
 
-  async function onArchive(slug) {
+  function onArchive(slug) {
     if (saving) return
     if (!canCreate) {
       toast.error('Only Super Admin can archive company sites.')
       return
     }
-    if (!window.confirm(`Archive branch ${slug}? Staff scoped here keep their slug until reassigned.`)) return
+    setArchiveTargetSlug(slug)
+  }
+
+  async function confirmArchiveBranch() {
+    if (!archiveTargetSlug || saving) return
     setSaving(true)
     try {
-      await archiveBranch(slug)
+      await archiveBranch(archiveTargetSlug)
       toast.success('Branch archived')
+      setArchiveTargetSlug(null)
       await load()
     } catch (err) {
       toast.error(err.message)
@@ -599,6 +606,19 @@ export default function BranchesManagePage() {
         </DialogContent>
       </Dialog>
       <BranchLaunchDialog branch={launch} onClose={() => setLaunch(null)} />
+
+      <ConfirmDialog
+        open={Boolean(archiveTargetSlug)}
+        onOpenChange={(open) => {
+          if (!open) setArchiveTargetSlug(null)
+        }}
+        title={`Archive branch ${archiveTargetSlug || ''}?`}
+        description="Staff scoped here keep their slug until reassigned."
+        confirmLabel="Archive"
+        destructive
+        pending={saving}
+        onConfirm={confirmArchiveBranch}
+      />
     </OpsPageShell>
   )
 }

@@ -67,6 +67,7 @@ export default function DataCenterPage({ embedded = false } = {}) {
   })
   const [status, setStatus] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [busy, setBusy] = useState('')
   const [purgeTarget, setPurgeTarget] = useState('archived_bookings')
   const [purgeConfirm, setPurgeConfirm] = useState('')
@@ -77,10 +78,13 @@ export default function DataCenterPage({ embedded = false } = {}) {
 
   const load = useCallback(async () => {
     setLoading(true)
+    setLoadError('')
     try {
       setStatus(await dataCenter('status'))
     } catch (err) {
-      toast.error(err.message)
+      const msg = err.message || 'Unable to load Data Center status.'
+      setLoadError(msg)
+      toast.error(msg)
       setStatus(null)
     } finally {
       setLoading(false)
@@ -214,6 +218,15 @@ export default function DataCenterPage({ embedded = false } = {}) {
           </p>
           <Button variant="outline" className="min-h-11 shrink-0" onClick={load} disabled={loading}>
             {loading ? 'Refreshing…' : 'Refresh'}
+          </Button>
+        </div>
+      ) : null}
+
+      {loadError ? (
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <span>{loadError}</span>
+          <Button type="button" variant="outline" size="sm" className="min-h-10" onClick={load} disabled={loading}>
+            Retry
           </Button>
         </div>
       ) : null}
@@ -385,7 +398,13 @@ export default function DataCenterPage({ embedded = false } = {}) {
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3 sm:max-w-lg">
-          <Select value={purgeTarget} onValueChange={setPurgeTarget}>
+          <Select
+            value={purgeTarget}
+            onValueChange={(v) => {
+              setPurgeTarget(v)
+              setPurgeConfirm('')
+            }}
+          >
             <SelectTrigger>
               <SelectValue />
             </SelectTrigger>

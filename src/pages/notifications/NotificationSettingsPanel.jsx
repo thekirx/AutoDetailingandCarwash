@@ -35,6 +35,7 @@ import {
 } from '@/lib/notificationConfig'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -134,6 +135,8 @@ export default function NotificationSettingsPanel({
   const [activeNotifTest, setActiveNotifTest] = useState('')
   const [lastNotifResult, setLastNotifResult] = useState(null)
   const [runningJob, setRunningJob] = useState(null)
+  const [resetConfirmOpen, setResetConfirmOpen] = useState(false)
+  const [revokeTokenConfirmOpen, setRevokeTokenConfirmOpen] = useState(false)
 
   const isDirty = useMemo(
     () => JSON.stringify(draft) !== JSON.stringify(savedConfig),
@@ -215,6 +218,7 @@ export default function NotificationSettingsPanel({
       const normalized = normalizeNotificationConfig(data.config)
       setSavedConfig(normalized)
       setDraft(normalized)
+      setResetConfirmOpen(false)
       toast.success('Notification configuration restored to defaults.')
       if (onSyncExternal) await onSyncExternal()
     } catch (err) {
@@ -537,7 +541,7 @@ export default function NotificationSettingsPanel({
                 size="sm"
                 className="min-h-10 cursor-pointer"
                 disabled={resetting || saving}
-                onClick={resetDefaults}
+                onClick={() => setResetConfirmOpen(true)}
               >
                 <RotateCcw className="mr-1.5 size-3.5" aria-hidden />
                 {resetting ? 'Resetting…' : 'Reset defaults'}
@@ -1405,7 +1409,7 @@ export default function NotificationSettingsPanel({
                         size="sm"
                         variant="outline"
                         className="h-8 shrink-0 cursor-pointer self-end text-xs sm:self-center"
-                        disabled={runningJob !== null}
+                        disabled={runningJob !== null || !canEdit}
                         onClick={() => triggerJob(job.key, job.endpoint)}
                       >
                         <Play className="mr-1 size-3 text-primary" aria-hidden />
@@ -1447,7 +1451,7 @@ export default function NotificationSettingsPanel({
                           variant="ghost"
                           className="h-8 cursor-pointer text-xs text-destructive hover:text-destructive"
                           disabled={rotatingToken}
-                          onClick={() => manageWebhookToken('revoke_automation_token')}
+                          onClick={() => setRevokeTokenConfirmOpen(true)}
                           aria-label="Revoke automation webhook token"
                         >
                           <Trash2 className="size-3.5" aria-hidden />
@@ -1562,6 +1566,31 @@ export default function NotificationSettingsPanel({
           </Card>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={resetConfirmOpen}
+        onOpenChange={setResetConfirmOpen}
+        title="Reset notification settings to defaults?"
+        description="Quiet hours, status SMS toggles, and automation cadences will return to default settings."
+        confirmLabel="Reset defaults"
+        destructive
+        pending={resetting}
+        onConfirm={resetDefaults}
+      />
+
+      <ConfirmDialog
+        open={revokeTokenConfirmOpen}
+        onOpenChange={setRevokeTokenConfirmOpen}
+        title="Revoke automation webhook token?"
+        description="External cron jobs using the current bearer token will fail until you generate a new one."
+        confirmLabel="Revoke token"
+        destructive
+        pending={rotatingToken}
+        onConfirm={async () => {
+          await manageWebhookToken('revoke_automation_token')
+          setRevokeTokenConfirmOpen(false)
+        }}
+      />
     </div>
   )
 }

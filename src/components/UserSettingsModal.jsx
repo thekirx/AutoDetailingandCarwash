@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Cake, KeyRound, LogOut, Mail, Moon, Phone, Plus, Settings, Sun, Smartphone, Wallet } from 'lucide-react'
+import { Cake, Eye, EyeOff, KeyRound, LogOut, Mail, Moon, Phone, Plus, Settings, Sun, Smartphone, Wallet } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { toast } from 'sonner'
 import { supabase } from '@/lib/supabase'
@@ -67,6 +67,8 @@ export default function UserSettingsModal({
   const birthdayLocked = Boolean(profile?.date_of_birth_locked_at && profile?.date_of_birth)
   const [password, setPassword] = useState('')
   const [password2, setPassword2] = useState('')
+  const [showPw, setShowPw] = useState(false)
+  const [showPw2, setShowPw2] = useState(false)
   const [smsOptIn, setSmsOptIn] = useState(true)
   const [smsBusy, setSmsBusy] = useState(false)
   const [car, setCar] = useState({ plate_number: '', vehicle_make: '', vehicle_model: '', vehicle_type: 'medium', color: '' })
@@ -140,7 +142,8 @@ export default function UserSettingsModal({
       if (isCustomer) {
         await portalAction('sync-email', { email: trimmed })
       } else if (profile?.id) {
-        await supabase.from('staff_profiles').update({ login_email: trimmed }).eq('id', profile.id)
+        const { error: staffErr } = await supabase.from('staff_profiles').update({ login_email: trimmed }).eq('id', profile.id)
+        if (staffErr) throw staffErr
       }
       toast.success('Check your inbox to confirm the new email')
       onUpdated?.()
@@ -549,11 +552,31 @@ export default function UserSettingsModal({
                 </div>
                 <div className="grid gap-1.5">
                   <Label htmlFor="set-pw">New password</Label>
-                  <Input id="set-pw" type="password" autoComplete="new-password" className="min-h-11" value={password} onChange={(e) => setPassword(e.target.value)} />
+                  <div className="relative">
+                    <Input id="set-pw" type={showPw ? 'text' : 'password'} autoComplete="new-password" className="min-h-11 pr-11" value={password} onChange={(e) => setPassword(e.target.value)} />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-muted-foreground hover:text-foreground"
+                      aria-label={showPw ? 'Hide new password' : 'Show new password'}
+                      onClick={() => setShowPw((v) => !v)}
+                    >
+                      {showPw ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+                    </button>
+                  </div>
                 </div>
                 <div className="grid gap-1.5">
                   <Label htmlFor="set-pw2">Confirm password</Label>
-                  <Input id="set-pw2" type="password" autoComplete="new-password" className="min-h-11" value={password2} onChange={(e) => setPassword2(e.target.value)} />
+                  <div className="relative">
+                    <Input id="set-pw2" type={showPw2 ? 'text' : 'password'} autoComplete="new-password" className="min-h-11 pr-11" value={password2} onChange={(e) => setPassword2(e.target.value)} />
+                    <button
+                      type="button"
+                      className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-muted-foreground hover:text-foreground"
+                      aria-label={showPw2 ? 'Hide confirm password' : 'Show confirm password'}
+                      onClick={() => setShowPw2((v) => !v)}
+                    >
+                      {showPw2 ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+                    </button>
+                  </div>
                 </div>
                 <Button type="submit" className={isCustomer ? 'account-btn account-btn-primary min-h-11 w-full' : 'min-h-11 w-full'} disabled={busy}>
                   Change password

@@ -25,6 +25,7 @@ import ContentBlockEditor, { MediaDropzoneField } from '@/components/content/Con
 import ContentBlockRenderer from '@/components/content/ContentBlockRenderer'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
 import {
   Dialog,
   DialogContent,
@@ -91,6 +92,8 @@ export default function ContentStudioModal({
   const [recoverableDraft, setRecoverableDraft] = useState(null)
   const [tagInput, setTagInput] = useState('')
   const [showAdvancedSeo, setShowAdvancedSeo] = useState(false)
+  const [pendingTemplate, setPendingTemplate] = useState(null)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const dirtyRef = useRef(false)
 
   const draftKey = useMemo(() => {
@@ -170,14 +173,7 @@ export default function ContentStudioModal({
       ? slugifyContentTitle(draft.title || 'new-post')
       : slugifyEventTitle(draft.title || 'new-event'))
 
-  function applyBlogTemplate(tpl) {
-    if (!tpl) return
-    const hasCustomContent = normalizeBlocks(draft.content_blocks).some(
-      (b) => String(b.text || '').trim() || String(b.url || '').trim(),
-    )
-    if (hasCustomContent && !window.confirm(`Replace existing blocks with "${tpl.label}" format?`)) {
-      return
-    }
+  function commitBlogTemplate(tpl) {
     updateDraft({
       template_key: tpl.key,
       category: tpl.category || draft.category,
@@ -185,6 +181,18 @@ export default function ContentStudioModal({
       content_blocks: normalizeBlocks(tpl.blocks),
     })
     toast.success(`Applied "${tpl.label}" article format`)
+  }
+
+  function applyBlogTemplate(tpl) {
+    if (!tpl) return
+    const hasCustomContent = normalizeBlocks(draft.content_blocks).some(
+      (b) => String(b.text || '').trim() || String(b.url || '').trim(),
+    )
+    if (hasCustomContent) {
+      setPendingTemplate(tpl)
+      return
+    }
+    commitBlogTemplate(tpl)
   }
 
   function addTagsFromInput(rawVal) {
@@ -244,15 +252,18 @@ export default function ContentStudioModal({
     }
   }
 
-  async function handleDelete() {
-    const label = isBlog ? 'blog post' : 'event'
-    if (!window.confirm(`Delete "${draft.title || label}"?`)) return
+  function handleDelete() {
+    setDeleteConfirmOpen(true)
+  }
+
+  async function confirmDeleteContent() {
     setSaving(true)
     try {
       if (isBlog) await deleteCmsBlog(draft, profile)
       else await deleteCmsEvent(draft.id)
       clearAutosaveDraft(kind, draftKey)
       toast.success(`${isBlog ? 'Blog post' : 'Event'} deleted`)
+      setDeleteConfirmOpen(false)
       onDeleted?.(draft)
       onOpenChange?.(false)
     } catch (err) {
@@ -1106,6 +1117,33 @@ export default function ContentStudioModal({
           </div>
         </div>
       </DialogContent>
+
+      <ConfirmDialog
+        open={Boolean(pendingTemplate)}
+        onOpenChange={(open) => {
+          if (!open) setPendingTemplate(null)
+        }}
+        title={`Replace existing blocks with "${pendingTemplate?.label || 'template'}" format?`}
+        description="Your current content blocks will be replaced by the template blocks."
+        confirmLabel="Replace blocks"
+        onConfirm={() => {
+          if (!pendingTemplate) return
+          const tpl = pendingTemplate
+          setPendingTemplate(null)
+          commitBlogTemplate(tpl)
+        }}
+      />
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title={`Delete "${draft?.title || (isBlog ? 'blog post' : 'event')}"?`}
+        description="This permanently removes it."
+        confirmLabel="Delete"
+        destructive
+        pending={saving}
+        onConfirm={confirmDeleteContent}
+      />
     </Dialog>
   )
 }

@@ -392,7 +392,12 @@ export default function BranchInventoryPage({
       return
     }
     if (!assertCanMutate()) return
-    const next = applyOwnerSetQty(ownerQty[product.id])
+    const rawQty = String(ownerQty[product.id] ?? '').trim()
+    if (rawQty === '' || !Number.isFinite(Number(rawQty)) || Number(rawQty) < 0) {
+      toast.error('Enter a valid non-negative on-hand quantity.')
+      return
+    }
+    const next = applyOwnerSetQty(rawQty)
     setSaving(true)
     try {
       const current = unsizedStockByProduct[product.id]

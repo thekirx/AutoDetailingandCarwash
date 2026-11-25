@@ -1,4 +1,4 @@
-﻿# Sales
+# Sales
 
 **Home:** `/operations/bookings`  
 **Shell:** FloorAppShell  
@@ -7,7 +7,7 @@
 
 ## Dock
 
-Detailing Board · Carwash Board · CRM · Planner · History
+Detailing Board · Carwash Board · CRM · Planner · History · More: Payslips
 
 ## Daily flow
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Plus } from 'lucide-react'
 import { toast } from 'sonner'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
 import { useAuth } from '@/auth/AuthProvider'
 import { isSuperAdmin } from '@/auth/permissions'
 import OpsPageShell from '@/components/ops/OpsPageShell'
@@ -53,7 +54,9 @@ export default function CarsCatalogPage({ embedded = false } = {}) {
   const [addForm, setAddForm] = useState(emptyForm)
   const [addOpen, setAddOpen] = useState(false)
   const [editForm, setEditForm] = useState(emptyForm)
+  const [editSizeManual, setEditSizeManual] = useState(false)
   const [editing, setEditing] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const [saving, setSaving] = useState(false)
   const [search, setSearch] = useState('')
   const [activeFilter, setActiveFilter] = useState('all')
@@ -90,6 +93,7 @@ export default function CarsCatalogPage({ embedded = false } = {}) {
 
   function openEdit(row) {
     setEditing(row)
+    setEditSizeManual(false)
     setEditForm({
       make: row.make,
       model: row.model,
@@ -99,6 +103,7 @@ export default function CarsCatalogPage({ embedded = false } = {}) {
 
   function closeEdit() {
     setEditing(null)
+    setEditSizeManual(false)
     setEditForm(emptyForm)
   }
 
@@ -186,9 +191,12 @@ export default function CarsCatalogPage({ embedded = false } = {}) {
     }
   }
 
-  async function removeRow(row) {
-    if (!window.confirm(`Delete ${row.make} ${row.model}?`)) return
+  async function performRemoveRow(row) {
+    if (!row) return
+    setSaving(true)
     const { error } = await supabase.from('vehicle_catalog').delete().eq('id', row.id)
+    setSaving(false)
+    setDeleteTarget(null)
     if (error) toast.error(error.message)
     else {
       await writeAudit({
@@ -203,6 +211,10 @@ export default function CarsCatalogPage({ embedded = false } = {}) {
       if (editing?.id === row.id) closeEdit()
       load()
     }
+  }
+
+  function removeRow(row) {
+    setDeleteTarget(row)
   }
 
   const inner = (
@@ -379,7 +391,11 @@ export default function CarsCatalogPage({ embedded = false } = {}) {
                 value={editForm.make}
                 onChange={(e) => {
                   const make = e.target.value
-                  setEditForm({ ...editForm, make, size_slug: inferPhPricingSize(make, editForm.model) })
+                  setEditForm((prev) => ({
+                    ...prev,
+                    make,
+                    size_slug: editSizeManual ? prev.size_slug : inferPhPricingSize(make, prev.model),
+                  }))
                 }}
                 placeholder="Toyota"
               />
@@ -392,15 +408,26 @@ export default function CarsCatalogPage({ embedded = false } = {}) {
                 value={editForm.model}
                 onChange={(e) => {
                   const model = e.target.value
-                  setEditForm({ ...editForm, model, size_slug: inferPhPricingSize(editForm.make, model) })
+                  setEditForm((prev) => ({
+                    ...prev,
+                    model,
+                    size_slug: editSizeManual ? prev.size_slug : inferPhPricingSize(prev.make, model),
+                  }))
                 }}
                 placeholder="Vios"
               />
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="edit-size">Size</Label>
-              <SizeSelect id="edit-size" value={editForm.size_slug} onChange={(size_slug) => setEditForm({ ...editForm, size_slug })} />
-              <p className="text-xs text-muted-foreground">Auto-fills from the PH chart when make or model changes. Override if this bay prices it differently.</p>
+              <SizeSelect
+                id="edit-size"
+                value={editForm.size_slug}
+                onChange={(size_slug) => {
+                  setEditSizeManual(true)
+                  setEditForm((prev) => ({ ...prev, size_slug }))
+                }}
+              />
+              <p className="text-xs text-muted-foreground">Auto-fills from the PH chart unless you choose a custom size above.</p>
             </div>
             <DialogFooter className="gap-2 sm:gap-0">
               <Button type="button" variant="outline" onClick={closeEdit}>
@@ -413,6 +440,18 @@ export default function CarsCatalogPage({ embedded = false } = {}) {
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => {
+          if (!open && !saving) setDeleteTarget(null)
+        }}
+        title={`Delete ${deleteTarget ? `${deleteTarget.make} ${deleteTarget.model}` : 'vehicle'}?`}
+        description="Removes this model from the Team Lead queue picker."
+        confirmLabel={saving ? 'Deleting…' : 'Delete'}
+        pending={saving}
+        onConfirm={() => performRemoveRow(deleteTarget)}
+      />
     </div>
   )
 

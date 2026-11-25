@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { Check, CheckCircle2, ChevronLeft, ChevronRight, Plus } from 'lucide-react'
 import { toast } from 'sonner'
@@ -131,18 +131,19 @@ export default function CustomerBookPage() {
   const { branches: visibleBranches } = usePublicBranches({ mode: 'visible' })
   const soonBranches = visibleBranches.filter((b) => b.coming_soon)
 
-  useEffect(() => {
-    let cancelled = false
-    Promise.all([
-      fetchPortal().catch(() => null),
-      supabase
-        .from('services')
-        .select('id, name, description, slug, pay_category, price_minor, points_award, parent_service_id, service_size_prices(size_slug, price_minor)')
-        .eq('is_active', true)
-        .eq('is_archived', false)
-        .order('display_order'),
-    ]).then(([data, svc]) => {
-      if (cancelled) return
+  const loadBookingData = useCallback(async () => {
+    setLoading(true)
+    setError('')
+    try {
+      const [data, svc] = await Promise.all([
+        fetchPortal().catch(() => null),
+        supabase
+          .from('services')
+          .select('id, name, description, slug, pay_category, price_minor, points_award, parent_service_id, service_size_prices(size_slug, price_minor)')
+          .eq('is_active', true)
+          .eq('is_archived', false)
+          .order('display_order'),
+      ])
       if (svc.error) setError(svc.error.message)
       setPortal(data)
       const name = String(data?.profile?.full_name || authProfile?.full_name || '').trim()
@@ -187,7 +188,6 @@ export default function CustomerBookPage() {
           pick,
         ),
       )
-      setLoading(false)
       // A link that names a service (website buttons, "Book maintenance") opens the steps straight away.
       if (serviceId && !openedFromLink.current) {
         openedFromLink.current = true
@@ -197,11 +197,16 @@ export default function CustomerBookPage() {
         setCoated(fam === 'ceramic' ? (isMaintenanceService(linked) ? 'hakum' : 'no') : '')
         setFlowOpen(true)
       }
-    })
-    return () => {
-      cancelled = true
+    } catch (err) {
+      setError(err?.message || 'Could not load services right now.')
+    } finally {
+      setLoading(false)
     }
   }, [authProfile, user, params])
+
+  useEffect(() => {
+    loadBookingData()
+  }, [loadBookingData])
 
   function set(key, value) {
     setForm((f) => ({ ...f, [key]: value }))
@@ -426,7 +431,7 @@ export default function CustomerBookPage() {
             <div className="capp-empty" role="alert">
               <strong>Could not load services</strong>
               <span>{error}</span>
-              <button type="button" className="capp-btn capp-btn-fill" onClick={() => window.location.reload()}>
+              <button type="button" className="capp-btn capp-btn-fill" onClick={loadBookingData}>
                 Retry
               </button>
             </div>

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Clock, MapPin } from 'lucide-react'
 import ContentBlockRenderer from '@/components/content/ContentBlockRenderer'
@@ -36,7 +36,9 @@ export default function CustomerEventsPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
+  const loadEvents = useCallback(() => {
+    setLoading(true)
+    setError('')
     Promise.all([
       supabase
         .from('events')
@@ -44,13 +46,20 @@ export default function CustomerEventsPage() {
         .eq('is_published', true)
         .order('starts_at', { ascending: true }),
       supabase.from('ops_forms').select('id, name, slug, kind, public_enabled, status').eq('is_active', true),
-    ]).then(([ev, fo]) => {
-      if (ev.error) setError(ev.error.message)
-      setEvents(ev.data || [])
-      if (!fo.error) setForms(fo.data || [])
-      setLoading(false)
-    })
+    ])
+      .then(([ev, fo]) => {
+        if (ev.error) setError(ev.error.message)
+        else setError('')
+        setEvents(ev.data || [])
+        if (!fo.error) setForms(fo.data || [])
+      })
+      .catch((err) => setError(err?.message || 'Could not load events.'))
+      .finally(() => setLoading(false))
   }, [])
+
+  useEffect(() => {
+    loadEvents()
+  }, [loadEvents])
 
   const formsById = useMemo(() => Object.fromEntries(forms.map((f) => [f.id, f])), [forms])
   const now = Date.now()
@@ -106,9 +115,13 @@ export default function CustomerEventsPage() {
         </div>
       ) : null}
       {error ? (
-        <p className="capp-empty capp-span" role="alert">
-          {error}
-        </p>
+        <div className="capp-empty capp-span" role="alert">
+          <strong>Could not load events</strong>
+          <span>{error}</span>
+          <button type="button" className="capp-btn capp-btn-fill" onClick={loadEvents}>
+            Retry
+          </button>
+        </div>
       ) : null}
       {!loading && !shown.length && !error ? (
         <div className="capp-empty capp-span">{filter === 'upcoming' ? 'No upcoming events. New meets will show here.' : 'No past events yet.'}</div>

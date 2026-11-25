@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { catalogWriteError } from '@/lib/financeBooks'
 import { toast } from 'sonner'
 import FinanceVendorDialog from './FinanceVendorDialog'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
 import {
   FinanceEmpty,
   FinanceMetricCell,
@@ -21,6 +22,7 @@ export default function FinanceVendorsTab({ canManage, onVendorsChange }) {
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState('')
   const [dialog, setDialog] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const onVendorsChangeRef = useRef(onVendorsChange)
   onVendorsChangeRef.current = onVendorsChange
 
@@ -62,16 +64,22 @@ export default function FinanceVendorsTab({ canManage, onVendorsChange }) {
     else load()
   }
 
-  async function remove(row) {
-    if (!canManage || loading || !window.confirm(`Delete vendor "${row.name}"? Bills from them will show no vendor. Deactivate instead to keep the name on old bills.`)) return
+  async function performRemove(row) {
+    if (!canManage || !row || loading) return
     setLoading(true)
     const { error } = await supabase.from('vendors').delete().eq('id', row.id)
     setLoading(false)
+    setDeleteTarget(null)
     if (error) toast.error(catalogWriteError(error, 'vendor'))
     else {
       toast.success('Vendor deleted')
       load()
     }
+  }
+
+  function remove(row) {
+    if (!canManage || loading) return
+    setDeleteTarget(row)
   }
 
   if (loading && !rows.length && !loadError) return <FinanceTabSkeleton metrics={2} />
@@ -154,6 +162,18 @@ export default function FinanceVendorsTab({ canManage, onVendorsChange }) {
           </div>
         )}
       </FinancePanel>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => {
+          if (!open && !loading) setDeleteTarget(null)
+        }}
+        title={`Delete vendor "${deleteTarget?.name || ''}"?`}
+        description="Bills from this supplier will show no vendor. Deactivate instead if you want to keep the name on historical bills."
+        confirmLabel={loading ? 'Deleting…' : 'Delete vendor'}
+        pending={loading}
+        onConfirm={() => performRemove(deleteTarget)}
+      />
     </div>
   )
 }

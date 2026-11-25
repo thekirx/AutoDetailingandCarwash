@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { Eye, EyeOff } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import LoadingScreen from '../components/LoadingScreen'
 import HakumAuthShell from '../components/HakumAuthShell'
@@ -37,12 +38,15 @@ export default function CustomerSetPasswordPage() {
 
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
   const [error, setError] = useState('')
   const [ready, setReady] = useState(false)
   const [hasSession, setHasSession] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
   const navigate = useNavigate()
+  const timersRef = useRef([])
 
   useEffect(() => {
     let active = true
@@ -59,15 +63,17 @@ export default function CustomerSetPasswordPage() {
     }
 
     supabase.auth.getSession().then(({ data }) => {
+      if (!active) return
       if (data.session) {
         markReady(data.session)
         return
       }
       // Invite / recovery links land with hash tokens; detectSessionInUrl needs a beat
-      window.setTimeout(async () => {
+      const id = window.setTimeout(async () => {
         const { data: again } = await supabase.auth.getSession()
         markReady(again.session)
       }, 900)
+      timersRef.current.push(id)
     })
 
     const { data: sub } = supabase.auth.onAuthStateChange((event, session) => {
@@ -79,6 +85,8 @@ export default function CustomerSetPasswordPage() {
     return () => {
       active = false
       sub.subscription.unsubscribe()
+      for (const id of timersRef.current) window.clearTimeout(id)
+      timersRef.current = []
     }
   }, [])
 
@@ -119,7 +127,8 @@ export default function CustomerSetPasswordPage() {
       // The password is already saved. A failure resolving the landing page must
       // not be reported as a failed save, so this can never reach the catch.
       const dest = await homeAfterPassword(userData.user?.id).catch(() => '/account')
-      window.setTimeout(() => navigate(dest, { replace: true }), 1200)
+      const redirectTimer = window.setTimeout(() => navigate(dest, { replace: true }), 1200)
+      timersRef.current.push(redirectTimer)
     } catch (err) {
       setError(describePasswordUpdateError(err))
     } finally {
@@ -148,9 +157,14 @@ export default function CustomerSetPasswordPage() {
       <h2>Set your password</h2>
       <p className="hakum-auth-welcome">Use at least 8 characters. You will use this with your email or phone.</p>
       {error ? (
-        <p className="hakum-auth-alert" role="alert">
-          {error}
-        </p>
+        <div className="hakum-auth-alert" role="alert">
+          <p>{error}</p>
+          {!hasSession ? (
+            <p className="mt-2">
+              <Link to="/signin">Request a new reset link on Sign in →</Link>
+            </p>
+          ) : null}
+        </div>
       ) : null}
       {done ? (
         <p className="hakum-auth-info" role="status">
@@ -160,11 +174,21 @@ export default function CustomerSetPasswordPage() {
         <form onSubmit={submit} className="hakum-auth-form">
           <label>
             <span>New password</span>
-            <input type="password" required autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} disabled={!hasSession} />
+            <div className="hakum-auth-password">
+              <input type={showPassword ? 'text' : 'password'} required autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={8} disabled={!hasSession} />
+              <button type="button" onClick={() => setShowPassword((v) => !v)} aria-label={showPassword ? 'Hide password' : 'Show password'}>
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </label>
           <label>
             <span>Confirm password</span>
-            <input type="password" required autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} minLength={8} disabled={!hasSession} />
+            <div className="hakum-auth-password">
+              <input type={showConfirm ? 'text' : 'password'} required autoComplete="new-password" value={confirm} onChange={(e) => setConfirm(e.target.value)} minLength={8} disabled={!hasSession} />
+              <button type="button" onClick={() => setShowConfirm((v) => !v)} aria-label={showConfirm ? 'Hide password' : 'Show password'}>
+                {showConfirm ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </label>
           <button type="submit" className="hakum-auth-submit" disabled={submitting || !hasSession}>
             {submitting ? 'Saving…' : 'Save password'}

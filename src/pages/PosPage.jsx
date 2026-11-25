@@ -17,6 +17,7 @@ import { filterBranchesForProfile, pickDefaultBranchSlug } from '@/queue/queueLo
 import { formatMoney, searchPosCustomer } from '@/queue/queueApi'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import OpsTabList from '@/components/ops/OpsTabBar'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -162,6 +163,8 @@ function PosCounterPage() {
   const [todayStats, setTodayStats] = useState(null)
   const [handoffs, setHandoffs] = useState([])
   const [activeHandoff, setActiveHandoff] = useState(null)
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false)
+  const [pendingHandoff, setPendingHandoff] = useState(null)
   const [announcerOn, setAnnouncerOn] = useState(readAnnouncerOn)
   const announcerOnRef = useRef(announcerOn)
   announcerOnRef.current = announcerOn
@@ -976,14 +979,18 @@ function PosCounterPage() {
   }
 
   /** Clear the walk-in lines; a queue handoff keeps its locked line. */
-  function clearCart() {
-    if (!cart.length) return
-    if (!window.confirm(activeHandoff ? 'Remove the add-ons from this ticket?' : 'Clear the current order?')) return
+  function performClearCart() {
     setCart((current) => current.filter((line) => !canRemovePosCartLine(line)))
     setDiscountPercent('')
     setDiscountAmountPesos('')
     setDiscountReason('')
     setCashTendered('')
+    setClearConfirmOpen(false)
+  }
+
+  function clearCart() {
+    if (!cart.length) return
+    setClearConfirmOpen(true)
   }
 
   function toggleAnnouncer() {
@@ -1017,16 +1024,14 @@ function PosCounterPage() {
     const booking = row.bookings || {}
     // One customer at a time: add-ons rung up for the open ticket must not slide onto another car.
     const carriedAddOns = cart.filter((line) => !line.from_handoff).reduce((sum, line) => sum + (Number(line.quantity) || 0), 0)
-    if (
-      activeHandoff &&
-      activeHandoff.id !== row.id &&
-      carriedAddOns > 0 &&
-      !window.confirm(
-        `${formatQueueTicket(activeHandoff.bookings)} has ${carriedAddOns} add-on item${carriedAddOns === 1 ? '' : 's'} in the order. Move them to ${formatQueueTicket(booking)}?\n\nChoose Cancel to finish ${formatQueueTicket(activeHandoff.bookings)} first.`,
-      )
-    ) {
+    if (activeHandoff && activeHandoff.id !== row.id && carriedAddOns > 0) {
+      setPendingHandoff(row)
       return
     }
+    applyHandoffRow(row, booking)
+  }
+
+  async function applyHandoffRow(row, booking = row.bookings || {}) {
     const serviceId = booking.service_id
     const svc = serviceId ? services.find((s) => s.id === serviceId) : null
     if (booking.vehicle_type) setHandoffVehicleSize(booking.vehicle_type)
@@ -2242,6 +2247,40 @@ function PosCounterPage() {
           {orderPanelBody}
         </SheetContent>
       </Sheet>
+
+      <ConfirmDialog
+        open={clearConfirmOpen}
+        onOpenChange={setClearConfirmOpen}
+        title={activeHandoff ? 'Remove the add-ons from this ticket?' : 'Clear the current order?'}
+        description={activeHandoff ? 'Locked queue items stay on the ticket.' : 'All items and discounts in the current order will be cleared.'}
+        confirmLabel={activeHandoff ? 'Remove add-ons' : 'Clear order'}
+        destructive
+        onConfirm={performClearCart}
+      />
+
+      <ConfirmDialog
+        open={Boolean(pendingHandoff)}
+        onOpenChange={(open) => {
+          if (!open) setPendingHandoff(null)
+        }}
+        title={
+          pendingHandoff
+            ? `Move ${cart.filter((line) => !line.from_handoff).reduce((sum, line) => sum + (Number(line.quantity) || 0), 0)} add-on item(s) to ${formatQueueTicket(pendingHandoff.bookings)}?`
+            : 'Switch open ticket?'
+        }
+        description={
+          pendingHandoff
+            ? `${formatQueueTicket(activeHandoff?.bookings)} still has add-on items in this order. Choose Cancel to finish ${formatQueueTicket(activeHandoff?.bookings)} first.`
+            : ''
+        }
+        confirmLabel="Move items"
+        onConfirm={() => {
+          if (!pendingHandoff) return
+          const target = pendingHandoff
+          setPendingHandoff(null)
+          applyHandoffRow(target)
+        }}
+      />
     </OpsPageShell>
   )
 }

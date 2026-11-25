@@ -69,6 +69,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import OpsPageShell from '@/components/ops/OpsPageShell'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
 import { cn } from '@/lib/utils'
 import NotificationSettingsPanel from '@/pages/notifications/NotificationSettingsPanel'
 import NotificationTemplatesPanel from '@/pages/notifications/NotificationTemplatesPanel'
@@ -336,9 +337,15 @@ function ReminderRulesPanel() {
     setServices(svcRes.data || [])
     setBranches(brRes.data || [])
     try {
-      const data = await setRes.json()
-      setSettings(data.settings || [])
+      const data = await setRes.json().catch(() => ({}))
+      if (!setRes.ok) {
+        toast.error(data.error || 'Could not load reminder rules')
+        setSettings([])
+      } else {
+        setSettings(data.settings || [])
+      }
     } catch {
+      toast.error('Could not load reminder rules')
       setSettings([])
     }
     setLoading(false)
@@ -477,17 +484,26 @@ function ReminderRulesPanel() {
     }
   }
 
-  async function removeSetting(id) {
-    if (!window.confirm('Delete this reminder rule?')) return
-    const token = await getAccessTokenFresh()
-    const res = await fetch(`/api/notification-settings?id=${id}`, {
-      method: 'DELETE',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-    })
-    if (!res.ok) toast.error('Delete failed')
-    else {
-      toast.success('Reminder removed')
-      load()
+  const [deleteRuleId, setDeleteRuleId] = useState(null)
+  const [deletingRule, setDeletingRule] = useState(false)
+
+  async function confirmRemoveSetting() {
+    if (!deleteRuleId || deletingRule) return
+    setDeletingRule(true)
+    try {
+      const token = await getAccessTokenFresh()
+      const res = await fetch(`/api/notification-settings?id=${deleteRuleId}`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      })
+      if (!res.ok) toast.error('Delete failed')
+      else {
+        toast.success('Reminder removed')
+        setDeleteRuleId(null)
+        load()
+      }
+    } finally {
+      setDeletingRule(false)
     }
   }
 
@@ -883,7 +899,7 @@ function ReminderRulesPanel() {
                         size="icon"
                         variant="ghost"
                         className="size-9 cursor-pointer text-destructive hover:bg-destructive/10"
-                        onClick={() => removeSetting(s.id)}
+                        onClick={() => setDeleteRuleId(s.id)}
                         aria-label="Remove reminder rule"
                       >
                         <Trash2 className="size-4" aria-hidden />
@@ -896,6 +912,19 @@ function ReminderRulesPanel() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={Boolean(deleteRuleId)}
+        onOpenChange={(open) => {
+          if (!open) setDeleteRuleId(null)
+        }}
+        title="Delete this reminder rule?"
+        description="Customers matched by this scope will fall back to general defaults."
+        confirmLabel="Delete"
+        destructive
+        pending={deletingRule}
+        onConfirm={confirmRemoveSetting}
+      />
     </div>
   )
 }
@@ -927,6 +956,8 @@ function BroadcastPanel({ canManageKinds = false }) {
   const [sending, setSending] = useState(false)
   const [editingRow, setEditingRow] = useState(null)
   const [savingEdit, setSavingEdit] = useState(false)
+  const [deleteBroadcastTarget, setDeleteBroadcastTarget] = useState(null)
+  const [deletingBroadcast, setDeletingBroadcast] = useState(false)
   const [form, setForm] = useState({
     kind: 'promo',
     audience_group: 'customers',
@@ -1174,10 +1205,12 @@ function BroadcastPanel({ canManageKinds = false }) {
     }
   }
 
-  async function deleteBroadcast(id) {
+  async function confirmDeleteBroadcast() {
+    if (!deleteBroadcastTarget || deletingBroadcast) return
+    setDeletingBroadcast(true)
     try {
       const token = await getAccessTokenFresh()
-      const res = await fetch(`/api/notification-broadcast?id=${encodeURIComponent(id)}`, {
+      const res = await fetch(`/api/notification-broadcast?id=${encodeURIComponent(deleteBroadcastTarget.id)}`, {
         method: 'DELETE',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
@@ -1187,9 +1220,12 @@ function BroadcastPanel({ canManageKinds = false }) {
         return
       }
       toast.success('Broadcast deleted')
+      setDeleteBroadcastTarget(null)
       loadHistory()
     } catch (err) {
       toast.error(err?.message || 'Delete failed')
+    } finally {
+      setDeletingBroadcast(false)
     }
   }
 
@@ -1558,10 +1594,14 @@ function BroadcastPanel({ canManageKinds = false }) {
                               ...f,
                               kind: h.kind || f.kind,
                               audience_group: canTargetEmployees ? h.audience_group || 'customers' : 'customers',
+                              target_audience: h.target_audience || f.target_audience || 'all',
+                              employee_scope: h.employee_scope || f.employee_scope || 'all',
+                              employee_roles: Array.isArray(h.employee_roles) ? h.employee_roles : f.employee_roles || [],
                               channel: h.channel || 'push',
                               title: h.title || '',
                               body: h.body || '',
                               url: h.url || '/account',
+                              staff_url: h.staff_url || f.staff_url || '/operations/dashboard',
                               branch_slug: h.branch_slug || '',
                               allow_multipart: Boolean(h.allow_multipart),
                             }))
@@ -1587,11 +1627,7 @@ function BroadcastPanel({ canManageKinds = false }) {
                               variant="ghost"
                               className="size-8 cursor-pointer text-destructive hover:bg-destructive/10"
                               aria-label={`Delete ${h.title}`}
-                              onClick={() => {
-                                if (window.confirm(`Delete broadcast log "${h.title}"?`)) {
-                                  deleteBroadcast(h.id)
-                                }
-                              }}
+                              onClick={() => setDeleteBroadcastTarget({ id: h.id, title: h.title })}
                             >
                               <Trash2 className="size-3.5" />
                             </Button>
@@ -1679,6 +1715,19 @@ function BroadcastPanel({ canManageKinds = false }) {
       </Dialog>
 
       {canManageKinds ? <BroadcastKindsManager kinds={kinds} onChanged={loadKinds} /> : null}
+
+      <ConfirmDialog
+        open={Boolean(deleteBroadcastTarget)}
+        onOpenChange={(open) => {
+          if (!open) setDeleteBroadcastTarget(null)
+        }}
+        title={`Delete broadcast log "${deleteBroadcastTarget?.title || 'campaign'}"?`}
+        description="This removes the campaign log entry from Broadcast History."
+        confirmLabel="Delete"
+        destructive
+        pending={deletingBroadcast}
+        onConfirm={confirmDeleteBroadcast}
+      />
     </div>
   )
 }

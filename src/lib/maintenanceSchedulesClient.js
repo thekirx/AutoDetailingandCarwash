@@ -19,12 +19,9 @@ export async function maintenanceRequest(method, { query, body } = {}) {
   return data
 }
 
-/** Car is at the shop → Paint Maintenance booking at Vehicle intake. Confirms first (client gets a status text). */
+/** Car is at the shop → Paint Maintenance booking at Vehicle intake (callers confirm via UI dialog first). */
 export async function processMaintenanceArrival(row) {
   const plate = row?.plate_number || 'this car'
-  if (!window.confirm(`Check in ${plate} for Paint Maintenance? It goes to Vehicle intake and the client gets a status update.`)) {
-    return null
-  }
   const data = await maintenanceRequest('POST', { body: { id: row.id, action: 'arrive' } })
   toast.success(`${plate} added to Vehicle intake${data.notify?.sms?.ok ? ' · SMS sent' : ''}`)
   return data

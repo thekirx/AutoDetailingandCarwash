@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Check, MessageCircle, Radio } from 'lucide-react'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
@@ -68,15 +68,19 @@ export default function CustomerVisitPage() {
   const back = useBackOr('/account')
   usePageMeta({ title: 'Visit', description: 'Follow your car through each step.', path: CUSTOMER_VISIT_PATH })
 
-  useEffect(() => {
-    let cancelled = false
-    fetchPortal()
-      .then((next) => !cancelled && setData(next))
-      .catch((err) => !cancelled && setError(err.message))
-    return () => {
-      cancelled = true
-    }
+  const load = useCallback(() => {
+    setError('')
+    return fetchPortal()
+      .then((next) => {
+        setData(next)
+        setError('')
+      })
+      .catch((err) => setError(err.message || 'Could not load visit details.'))
   }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
 
   const all = [...(data?.bookings || []), ...(data?.history || [])]
   const visit = id ? all.find((row) => String(row.id) === String(id)) : data?.bookings?.[0]
@@ -116,6 +120,9 @@ export default function CustomerVisitPage() {
       {error ? (
         <div className="capp-empty" role="alert">
           <strong>{error}</strong>
+          <button type="button" className="capp-btn capp-btn-fill" onClick={load}>
+            Retry
+          </button>
         </div>
       ) : null}
       {!data && !error ? <Skeleton n={3} /> : null}

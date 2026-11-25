@@ -5,6 +5,8 @@ import {
   Cake,
   CalendarDays,
   Camera,
+  Eye,
+  EyeOff,
   Gift,
   KeyRound,
   LifeBuoy,
@@ -175,7 +177,7 @@ export default function CustomerMorePage() {
       <Sheet open={signingOut} onClose={() => setSigningOut(false)} label="Sign out">
         <SheetActions
           heading="Sign out of Hakum?"
-          sub="You'll need your phone number and PIN to sign back in."
+          sub="You'll need your phone number and password to sign back in."
           onCancel={() => setSigningOut(false)}
           actions={[
             {
@@ -269,6 +271,8 @@ function AccountSection({ profile, onUpdated }) {
   const [birthday, setBirthday] = useState('')
   const [password, setPassword] = useState('')
   const [password2, setPassword2] = useState('')
+  const [showPw, setShowPw] = useState(false)
+  const [showPw2, setShowPw2] = useState(false)
   const syntheticEmail = isSyntheticCustomerEmail(profile?.email)
   const { hash } = useLocation()
 
@@ -408,11 +412,69 @@ function AccountSection({ profile, onUpdated }) {
         <SectionHead title="Password" />
         <label className="capp-field">
           <span>New password</span>
-          <input type="password" autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <input
+              type={showPw ? 'text' : 'password'}
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              style={{ width: '100%', paddingRight: '2.75rem' }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPw((v) => !v)}
+              aria-label={showPw ? 'Hide new password' : 'Show new password'}
+              style={{
+                position: 'absolute',
+                right: 0,
+                top: 0,
+                bottom: 0,
+                width: '2.75rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'transparent',
+                border: 0,
+                color: 'inherit',
+                cursor: 'pointer',
+              }}
+            >
+              {showPw ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
+            </button>
+          </div>
         </label>
         <label className="capp-field">
           <span>Confirm password</span>
-          <input type="password" autoComplete="new-password" value={password2} onChange={(e) => setPassword2(e.target.value)} />
+          <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <input
+              type={showPw2 ? 'text' : 'password'}
+              autoComplete="new-password"
+              value={password2}
+              onChange={(e) => setPassword2(e.target.value)}
+              style={{ width: '100%', paddingRight: '2.75rem' }}
+            />
+            <button
+              type="button"
+              onClick={() => setShowPw2((v) => !v)}
+              aria-label={showPw2 ? 'Hide confirm password' : 'Show confirm password'}
+              style={{
+                position: 'absolute',
+                right: 0,
+                top: 0,
+                bottom: 0,
+                width: '2.75rem',
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                background: 'transparent',
+                border: 0,
+                color: 'inherit',
+                cursor: 'pointer',
+              }}
+            >
+              {showPw2 ? <EyeOff size={16} aria-hidden /> : <Eye size={16} aria-hidden />}
+            </button>
+          </div>
         </label>
         <button type="submit" className="capp-btn capp-btn-fill" disabled={busy}>
           <KeyRound size={16} strokeWidth={1.75} aria-hidden />
@@ -455,6 +517,7 @@ export function GarageSection({ vehicles, loaded, editId, onEdit, onUpdated, sta
   const [adding, setAdding] = useState(startAdding)
   const [picked, setPicked] = useState(null)
   const [confirming, setConfirming] = useState(false)
+  const [removing, setRemoving] = useState(false)
   const [uploadingId, setUploadingId] = useState('')
   const photoInput = useRef(null)
   const photoFor = useRef(null)
@@ -466,18 +529,24 @@ export function GarageSection({ vehicles, loaded, editId, onEdit, onUpdated, sta
   }, [startAdding])
 
   function closeSheet() {
+    if (removing) return
     setPicked(null)
     setConfirming(false)
   }
 
   async function remove(v) {
-    closeSheet()
+    if (removing) return
+    setRemoving(true)
     try {
       await portalAction('archive-vehicle', { vehicle_id: v.id })
       toast.success(`${v.plate_number} removed`)
+      setPicked(null)
+      setConfirming(false)
       onUpdated?.()
     } catch (err) {
       toast.error(err.message)
+    } finally {
+      setRemoving(false)
     }
   }
 
@@ -579,7 +648,7 @@ export function GarageSection({ vehicles, loaded, editId, onEdit, onUpdated, sta
               heading={`Remove ${picked.plate_number}?`}
               sub="It leaves your garage. Past visits stay in your history."
               onCancel={closeSheet}
-              actions={[{ label: 'Remove from garage', danger: true, onClick: () => remove(picked) }]}
+              actions={[{ label: removing ? 'Removing…' : 'Remove from garage', danger: true, disabled: removing, onClick: () => remove(picked) }]}
             />
           ) : (
             <SheetActions

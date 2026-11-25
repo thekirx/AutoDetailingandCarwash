@@ -313,6 +313,9 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
   const editable = canEdit && (isDraft || isReturned)
   const isOwner = profile?.role === ROLES.SUPER_ADMIN
   const [ownerOverride, setOwnerOverride] = useState(false)
+  useEffect(() => {
+    setOwnerOverride(false)
+  }, [branch, date, sheetId])
   const canEditFields = editable || (isOwner && ownerOverride)
   const sheetValues = {
     counted_cash_minor: parsePesosToMinor(countText),
@@ -526,8 +529,8 @@ export default function DailySheetPanel({ branch, branchLabel, mode = 'edit', sh
             </div>
           ) : null}
           {editable ? (
-            <span className="text-xs text-muted-foreground" aria-live="polite">
-              {saveState === 'saving' ? 'Saving…' : saveState === 'saved' && !dirty ? 'Saved' : dirty ? 'Unsaved changes' : ''}
+            <span className={cn('text-xs', saveState === 'error' ? 'font-medium text-destructive' : 'text-muted-foreground')} aria-live="polite">
+              {saveState === 'saving' ? 'Saving…' : saveState === 'error' ? 'Save failed' : saveState === 'saved' && !dirty ? 'Saved' : dirty ? 'Unsaved changes' : ''}
             </span>
           ) : null}
           {isOwner && !editable && sheet?.id ? (

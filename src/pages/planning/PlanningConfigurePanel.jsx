@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
 import { supabase } from '@/lib/supabase'
 import {
   DEFAULT_PLAN_LISTS,
@@ -338,6 +339,8 @@ export default function PlanningConfigurePanel({
   const [editingTmplId, setEditingTmplId] = useState(null)
   const [editTmplName, setEditTmplName] = useState('')
   const [editTmplItems, setEditTmplItems] = useState('')
+  const [confirmDelete, setConfirmDelete] = useState(null)
+  const [deletingConfig, setDeletingConfig] = useState(false)
 
   const savedVisibility = useMemo(
     () => describeBoardVisibility(board, PLAN_CATEGORY_ROLE_OPTIONS),
@@ -454,17 +457,16 @@ export default function PlanningConfigurePanel({
     onChanged()
   }
 
-  async function removeBoard() {
+  function removeBoard() {
     if (!board?.id) return
     if (boards.length < 2) return toast.error('Keep at least one board.')
     if (totalTasksOnBoard) return toast.error('Move or delete tasks on this board first.')
-    if (!window.confirm(`Delete board “${board.name}”? Lists on it go too.`)) return
-    const { error } = await supabase.from('plan_boards').delete().eq('id', board.id)
-    if (error) return toast.error(error.message)
-    toast.success('Board deleted')
-    const next = boards.find((b) => b.id !== board.id)
-    if (next) onSelectBoard?.(next.id)
-    onChanged()
+    setConfirmDelete({
+      kind: 'board',
+      id: board.id,
+      title: `Delete board “${board.name}”?`,
+      description: 'Lists on this board will also be deleted.',
+    })
   }
 
   async function addList(e) {
@@ -502,19 +504,15 @@ export default function PlanningConfigurePanel({
     onChanged()
   }
 
-  async function removeList(list) {
+  function removeList(list) {
     if (lists.length < 2) return toast.error('Keep at least one list on this board.')
     const n = listCardCount(list)
-    const ok = window.confirm(
-      n
-        ? `Delete “${list.title}”? That also deletes ${n} task${n === 1 ? '' : 's'} on it.`
-        : `Delete list “${list.title}”?`,
-    )
-    if (!ok) return
-    const { error } = await supabase.from('plan_lists').delete().eq('id', list.id)
-    if (error) return toast.error(error.message)
-    toast.success('List deleted')
-    onChanged()
+    setConfirmDelete({
+      kind: 'list',
+      id: list.id,
+      title: `Delete list “${list.title}”?`,
+      description: n ? `That also deletes ${n} task${n === 1 ? '' : 's'} on it.` : 'This empty list will be deleted.',
+    })
   }
 
   async function addCategory(e) {
@@ -561,13 +559,13 @@ export default function PlanningConfigurePanel({
     onChanged()
   }
 
-  async function removeCategory(id) {
-    if (!window.confirm('Delete this category? Tasks stay, uncategorized.')) return
-    const { error } = await supabase.from('plan_categories').delete().eq('id', id)
-    if (error) return toast.error(error.message)
-    toast.success('Category deleted')
-    if (editingCatId === id) setEditingCatId(null)
-    onChanged()
+  function removeCategory(id) {
+    setConfirmDelete({
+      kind: 'category',
+      id,
+      title: 'Delete this category?',
+      description: 'Tasks stay, uncategorized.',
+    })
   }
 
   async function addTemplate(e) {
@@ -610,13 +608,45 @@ export default function PlanningConfigurePanel({
     onChanged()
   }
 
-  async function removeTemplate(id) {
-    if (!window.confirm('Delete this checklist template?')) return
-    const { error } = await supabase.from('plan_checklist_templates').delete().eq('id', id)
-    if (error) return toast.error(error.message)
-    toast.success('Template deleted')
-    if (editingTmplId === id) setEditingTmplId(null)
-    onChanged()
+  function removeTemplate(id) {
+    setConfirmDelete({
+      kind: 'template',
+      id,
+      title: 'Delete this checklist template?',
+      description: 'Existing tasks with copied checklist items stay intact.',
+    })
+  }
+
+  async function executeConfirmDelete() {
+    if (!confirmDelete || deletingConfig) return
+    setDeletingConfig(true)
+    try {
+      if (confirmDelete.kind === 'board') {
+        const { error } = await supabase.from('plan_boards').delete().eq('id', confirmDelete.id)
+        if (error) return toast.error(error.message)
+        toast.success('Board deleted')
+        const next = boards.find((b) => b.id !== confirmDelete.id)
+        if (next) onSelectBoard?.(next.id)
+      } else if (confirmDelete.kind === 'list') {
+        const { error } = await supabase.from('plan_lists').delete().eq('id', confirmDelete.id)
+        if (error) return toast.error(error.message)
+        toast.success('List deleted')
+      } else if (confirmDelete.kind === 'category') {
+        const { error } = await supabase.from('plan_categories').delete().eq('id', confirmDelete.id)
+        if (error) return toast.error(error.message)
+        toast.success('Category deleted')
+        if (editingCatId === confirmDelete.id) setEditingCatId(null)
+      } else if (confirmDelete.kind === 'template') {
+        const { error } = await supabase.from('plan_checklist_templates').delete().eq('id', confirmDelete.id)
+        if (error) return toast.error(error.message)
+        toast.success('Template deleted')
+        if (editingTmplId === confirmDelete.id) setEditingTmplId(null)
+      }
+      setConfirmDelete(null)
+      onChanged()
+    } finally {
+      setDeletingConfig(false)
+    }
   }
 
   function jumpTo(sectionId) {
@@ -1232,6 +1262,19 @@ export default function PlanningConfigurePanel({
           </Section>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={Boolean(confirmDelete)}
+        onOpenChange={(open) => {
+          if (!open) setConfirmDelete(null)
+        }}
+        title={confirmDelete?.title || 'Confirm delete'}
+        description={confirmDelete?.description || ''}
+        confirmLabel="Delete"
+        destructive
+        pending={deletingConfig}
+        onConfirm={executeConfirmDelete}
+      />
     </div>
   )
 }

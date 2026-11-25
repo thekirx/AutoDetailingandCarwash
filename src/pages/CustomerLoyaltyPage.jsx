@@ -1,5 +1,5 @@
 import PointsShop from '@/components/customer/PointsShop'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Car, Check, Gift, Info } from 'lucide-react'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
 import StampTrack from '@/components/customer/StampTrack'
@@ -21,9 +21,19 @@ export default function CustomerLoyaltyPage() {
   const [giftAt, setGiftAt] = useState(null)
   const [howOpen, setHowOpen] = useState(false)
 
-  useEffect(() => {
-    fetchPortal().then(setData).catch((err) => setError(err.message))
+  const load = useCallback(() => {
+    setError('')
+    fetchPortal()
+      .then((next) => {
+        setData(next)
+        setError('')
+      })
+      .catch((err) => setError(err.message || 'Could not load rewards.'))
   }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
 
   // /refer "Get my link" lands on #refer once the card has rendered.
   useEffect(() => {
@@ -53,7 +63,11 @@ export default function CustomerLoyaltyPage() {
     >
       {error ? (
         <div className="capp-empty capp-span" role="alert">
-          <strong>{error}</strong>
+          <strong>Could not load rewards</strong>
+          <span>{error}</span>
+          <button type="button" className="capp-btn capp-btn-fill" onClick={load}>
+            Retry
+          </button>
         </div>
       ) : null}
 

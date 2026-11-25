@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
 import { BarChart3, Car, GitCompare, MessageSquareWarning, Receipt, Users } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessInquiries, canSeeAllBranches, canSeeAllKpiBranches, getBranchScopeList, isSuperAdmin, ROLES } from '@/auth/permissions'
+import { canAccessInquiries, canAccessKpi, canSeeAllBranches, canSeeAllKpiBranches, getBranchScopeList, isSuperAdmin, ROLES } from '@/auth/permissions'
 import { listBranches } from '@/lib/adminApi'
 import { applyBranchScope, collectPaged, resolveKpiRpcBranch } from '@/lib/crmInsights'
 import { aggregateByService, averageCycleMinutes, averageWaitMinutes, compareBranchesByCompleted, failedQaInRange, finishedForAverage, inTimeRange, kpiStatHover } from '@/lib/kpiPart8'
@@ -72,6 +72,7 @@ export default function KpiPage({ embedded = false } = {}) {
   const [customEnd, setCustomEnd] = useState('')
   const [serviceFilter, setServiceFilter] = useState('all')
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [showAllSales, setShowAllSales] = useState(false)
 
   const range = useMemo(() => {
@@ -100,6 +101,7 @@ export default function KpiPage({ embedded = false } = {}) {
       return
     }
     setLoading(true)
+    setLoadError('')
     const startIso = `${range.start}T00:00:00+08:00`
     const endIso = `${range.end}T23:59:59.999+08:00`
     const legacyScope = getBranchScope(profile)
@@ -209,7 +211,9 @@ export default function KpiPage({ embedded = false } = {}) {
         setComplaints([])
       }
     } catch (err) {
-      toast.error(err.message)
+      const msg = err?.message || 'Unable to load KPI data'
+      setLoadError(msg)
+      toast.error(msg)
     } finally {
       setLoading(false)
     }
@@ -263,7 +267,7 @@ export default function KpiPage({ embedded = false } = {}) {
     [bookings, salesTotal, complaints.length],
   )
 
-  if (!canViewQueueOperations) return <Navigate to="/operations/access-denied" replace />
+  if (!canAccessKpi(profile) && !canViewQueueOperations) return <Navigate to="/operations/access-denied" replace />
   if (requiresTeamLeadBranchSetup(profile)) {
     return (
       <section className="rounded-2xl border border-amber-300/20 bg-amber-400/10 p-6 text-amber-100">
@@ -334,10 +338,24 @@ export default function KpiPage({ embedded = false } = {}) {
               {services.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Button variant="outline" className="min-h-11" onClick={load}>Refresh</Button>
+          <Button variant="outline" className="min-h-11" disabled={loading} onClick={load}>
+            {loading ? 'Loading…' : 'Refresh'}
+          </Button>
         </div>
       }
     >
+      {loadError ? (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          <span>{loadError}</span>
+          <Button type="button" variant="outline" size="sm" onClick={load}>
+            Retry
+          </Button>
+        </div>
+      ) : null}
+
       <OpsGuideCard
         title="How KPI works"
         description="Crew and branch metrics for coaching. Paid sales here are context — Payroll uses POS proof."

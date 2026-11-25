@@ -1,6 +1,18 @@
 # System Audit
 
-## Latest Refresh (2026-11-15 — Blog Redesign, Full CRUD & Services Hardening)
+## Latest Refresh (2026-11-25 — Deep System Frontend Audit, Design-System & UX Hardening across All 13 Roles)
+
+| Check | Result |
+|-------|--------|
+| Deep system audit checklist | **COMPLETE** — Verified across all 11 staff roles + Guest + Customer (`/operations/*`, `/account/*`, `/signin`, `/signup`, `/account/set-password`, `/book`, `/queue`, `/shop`, `/complaints`, `/f/:slug`, `/403`, `/404`). |
+| Boundaries & 403/404 recovery | **PASS** — Added `OpsErrorBoundary` around both `FloorAppShell` and `CommandShell` `<Outlet />`, in-shell `OpsNotFoundPage` (`/operations/*`), `CustomerNotFoundPage` (`/account/*`), `/account/pickup` redirect, and role-aware `ForbiddenPage`. |
+| Design-system & confirm standardization | **PASS** — Replaced remaining `window.confirm` prompts in Operations & System flows with `ConfirmDialog`; fixed Base-UI `<Select><option>` usage with `NamedSelect`; added `DataTable` `loading` skeletons + `AuditLogPage`/`DataCenterPage` retry states; fixed `OpsEmptyState` JSX `action` rendering and `.capp-vote-btn` dark-mode contrast. |
+| Customer, Auth & Settings hardenings | **PASS** — Added required mobile contact to `/complaints` + `buildPublicInquiryRow`, `/shop` `BREDESIGN` shell & `44px` modal close target, `ChatbotSettingsPage` toggle rollback & Retry, `TintFinderSettingsPage` per-lead lock & Retry, `UserSettingsModal`/`CustomerMorePage` password toggles & error propagation, and `VouchersPage` active service filter. |
+| Role docs & Design-system docs synced | **PASS** — Updated `docs/ops-chrome.md`, `docs/design-system/02-components.md`, `docs/guides/pages/customer-app.md`, and `docs/guides/roles/{sales,marketing,detailer,video-editor}.md`. |
+| Automated checks (`npm run audit:api-auth`, `check`, `lint`, `npm test`, `npm run build`) | **PASS** — `43/43` `/api/*` auth handlers, all `5/5` `check:*` scripts, `0` ESLint errors, **2,816+** unit tests across **627+** suites (`0` failed), production Vite + prerender build verified. |
+| Knowledge graph (`graphify-out/`) | **Updated** — `graphify update .` synced after code changes. |
+
+## Prior Snapshot (2026-11-15 — Blog Redesign, Full CRUD & Services Hardening)
 
 | Check | Result |
 |-------|--------|

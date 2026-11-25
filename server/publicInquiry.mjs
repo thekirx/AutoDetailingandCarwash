@@ -57,19 +57,29 @@ const builders = {
 
   complaint(body) {
     const customerName = text(body.customerName)
+    const phoneRaw = text(body.customerPhone || body.phone)
+    const phoneDigits = phoneRaw.replace(/\D/g, '')
+    const email = text(body.customerEmail || body.email).toLowerCase()
     const branch = text(body.branch)
     const category = text(body.category)
     const description = text(body.description)
-    if (!customerName || !category || !description) {
-      return { error: 'Name, category, and description are required.' }
+    if (!customerName || !phoneDigits || !category || !description) {
+      return { error: 'Name, mobile number, category, and description are required.' }
     }
+    if (phoneDigits.length < 10 || phoneDigits.length > 13) {
+      return { error: 'Enter a valid Philippine mobile number (e.g. 09171234567).' }
+    }
+    if (email && !EMAIL_PATTERN.test(email)) {
+      return { error: 'Enter a valid email address or leave it blank.' }
+    }
+    const contactLine = `[Contact: ${phoneRaw.slice(0, 32)}${email ? ` · ${email}` : ''}]`
     return {
       table: 'complaints',
       row: {
         customer_name: customerName,
         branch: branch || null,
         category,
-        description,
+        description: `${contactLine}\n\n${description}`,
         status: 'submitted',
       },
     }

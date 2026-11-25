@@ -21,6 +21,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { AlertTriangle, Clock, Coffee, Info, Layers, Package, Plus, ShieldCheck, Sparkles } from 'lucide-react'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -136,6 +137,7 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
   const [editing, setEditing] = useState(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [archiveTargetId, setArchiveTargetId] = useState(null)
   const [selectedBranch, setSelectedBranch] = useState('all')
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [availabilityFilter, setAvailabilityFilter] = useState('all')
@@ -353,19 +355,24 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
     }
   }
 
-  async function onArchive(id) {
-    if (saving || !assertCanMutate()) return
-    if (!window.confirm('Archive this item?')) return
+  async function performArchive(id) {
+    if (!id || saving || !assertCanMutate()) return
     setSaving(true)
     try {
       await archiveProduct(id)
       toast.success('Item archived')
+      setArchiveTargetId(null)
       await load()
     } catch (err) {
       toast.error(err.message)
     } finally {
       setSaving(false)
     }
+  }
+
+  function onArchive(id) {
+    if (saving || !assertCanMutate()) return
+    setArchiveTargetId(id)
   }
 
   function stockDraftKey(branchSlug, sizeKey = '') {
@@ -442,7 +449,12 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
   async function setBranchQty(productId, branchSlug, sizeKey = '') {
     if (!assertCanMutate()) return
     const dk = stockDraftKey(branchSlug, sizeKey)
-    const next = applyOwnerSetQty(branchQtyDraft[dk])
+    const rawQty = String(branchQtyDraft[dk] ?? '').trim()
+    if (rawQty === '' || !Number.isFinite(Number(rawQty)) || Number(rawQty) < 0) {
+      toast.error('Enter a valid non-negative on-hand quantity.')
+      return
+    }
+    const next = applyOwnerSetQty(rawQty)
     const key = productSizeKey(sizeKey)
     setSaving(true)
     try {
@@ -1705,6 +1717,18 @@ export default function ProductsManagePage({ embedded = false, crudLocked = fals
           )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(archiveTargetId)}
+        onOpenChange={(open) => {
+          if (!open && !saving) setArchiveTargetId(null)
+        }}
+        title="Archive catalog item?"
+        description="Archived products are hidden from POS and stock restock lists."
+        confirmLabel={saving ? 'Archiving…' : 'Archive'}
+        pending={saving}
+        onConfirm={() => performArchive(archiveTargetId)}
+      />
     </section>
   )
 }

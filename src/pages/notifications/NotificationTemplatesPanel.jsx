@@ -26,6 +26,7 @@ import { TEMPLATE_CATEGORIES } from '@/lib/notificationTemplates.js'
 import NotificationSimulatorPreview from '@/components/notifications/NotificationSimulatorPreview'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Dialog,
@@ -107,6 +108,7 @@ export default function NotificationTemplatesPanel() {
   const [saving, setSaving] = useState(false)
   const [resetting, setResetting] = useState(false)
   const [deletingKey, setDeletingKey] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
   const [running, setRunning] = useState(false)
 
   const load = useCallback(async () => {
@@ -149,10 +151,16 @@ export default function NotificationTemplatesPanel() {
   }, [templates, query, channelFilter, categoryFilter])
 
   const grouped = useMemo(() => {
-    return TEMPLATE_CATEGORIES.map((cat) => ({
+    const knownIds = new Set(TEMPLATE_CATEGORIES.map((c) => c.id))
+    const groups = TEMPLATE_CATEGORIES.map((cat) => ({
       ...cat,
       rows: filtered.filter((t) => (t.category || (t.is_custom ? 'custom' : '')) === cat.id),
     })).filter((g) => g.rows.length)
+    const otherRows = filtered.filter((t) => !knownIds.has(t.category || (t.is_custom ? 'custom' : '')))
+    if (otherRows.length) {
+      groups.push({ id: 'other', label: 'Other', hint: 'Additional templates', rows: otherRows })
+    }
+    return groups
   }, [filtered])
 
   const totalCustomCount = useMemo(() => templates.filter((t) => t.is_custom).length, [templates])
@@ -396,18 +404,18 @@ export default function NotificationTemplatesPanel() {
               Manage all automated shop alerts, service milestones, and custom promotional templates. Real-time preview simulator and BusyBee SMS calculations.
             </CardDescription>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="min-h-10 cursor-pointer text-xs font-semibold"
-              disabled={running}
-              onClick={runBirthdays}
-            >
-              <Cake className="size-4 text-primary" aria-hidden />
-              {running ? 'Running…' : 'Send today’s birthdays'}
-            </Button>
-            {canEdit ? (
+          {canEdit ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="min-h-10 cursor-pointer text-xs font-semibold"
+                disabled={running}
+                onClick={runBirthdays}
+              >
+                <Cake className="size-4 text-primary" aria-hidden />
+                {running ? 'Running…' : 'Send today’s birthdays'}
+              </Button>
               <Button
                 type="button"
                 className="min-h-10 cursor-pointer text-xs font-semibold"
@@ -416,8 +424,8 @@ export default function NotificationTemplatesPanel() {
                 <Plus className="size-4" aria-hidden />
                 New custom template
               </Button>
-            ) : null}
-          </div>
+            </div>
+          ) : null}
         </CardHeader>
 
         {/* Filter controls */}
@@ -626,11 +634,7 @@ export default function NotificationTemplatesPanel() {
                               className="size-9 cursor-pointer text-destructive hover:bg-destructive/10"
                               disabled={deletingKey === row.key}
                               aria-label={`Delete custom template ${row.label}`}
-                              onClick={() => {
-                                if (window.confirm(`Delete custom template "${row.label}"?`)) {
-                                  deleteTemplate(row.key)
-                                }
-                              }}
+                              onClick={() => setDeleteTarget({ key: row.key, label: row.label })}
                             >
                               <Trash2 className="size-4" />
                             </Button>
@@ -834,11 +838,7 @@ export default function NotificationTemplatesPanel() {
                       variant="outline"
                       className="min-h-10 text-destructive hover:bg-destructive/10 cursor-pointer"
                       disabled={saving || Boolean(deletingKey)}
-                      onClick={() => {
-                        if (window.confirm(`Delete custom template "${draft.label}"?`)) {
-                          deleteTemplate(draft.key)
-                        }
-                      }}
+                      onClick={() => setDeleteTarget({ key: draft.key, label: draft.label })}
                     >
                       <Trash2 className="size-4" aria-hidden />
                       Delete custom template
@@ -1054,6 +1054,24 @@ export default function NotificationTemplatesPanel() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTarget(null)
+        }}
+        title={`Delete custom template "${deleteTarget?.label || 'template'}"?`}
+        description="This removes the custom template permanently."
+        confirmLabel="Delete"
+        destructive
+        pending={Boolean(deleteTarget && deletingKey === deleteTarget.key)}
+        onConfirm={async () => {
+          if (!deleteTarget) return
+          const targetKey = deleteTarget.key
+          await deleteTemplate(targetKey)
+          setDeleteTarget(null)
+        }}
+      />
     </div>
   )
 }

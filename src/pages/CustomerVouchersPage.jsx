@@ -59,7 +59,13 @@ export default function CustomerVouchersPage() {
   }
 
   function reload() {
-    return fetchPortal().then(setData).catch((err) => setError(err.message))
+    setError('')
+    return fetchPortal()
+      .then((next) => {
+        setData(next)
+        setError('')
+      })
+      .catch((err) => setError(err.message || 'Could not load vouchers.'))
   }
 
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import BrandedOpsForm from '@/components/BrandedOpsForm'
 import {
@@ -22,7 +22,7 @@ export default function PublicFormPage() {
   const [acceptedLegal, setAcceptedLegal] = useState(false)
   const [guard, setGuard] = useState(() => createPublicFormGuard())
 
-  useEffect(() => {
+  const loadForm = useCallback(() => {
     if (!slug) return
     setError('')
     setStatus('idle')
@@ -34,15 +34,21 @@ export default function PublicFormPage() {
     Promise.all([
       supabase.rpc('get_public_ops_form', { p_slug: slug }),
       listBranches().catch(() => []),
-    ]).then(([{ data, error: e }, branches]) => {
-      if (e) setError(e.message)
-      else if (!data || data.kind === 'event') setError('This form is closed or not found.')
-      else {
-        const slugs = filterFormBranchSlugs(branches || [])
-        setForm({ ...data, fields: withLiveBranchOptions(data.fields, slugs) })
-      }
-    })
+    ])
+      .then(([{ data, error: e }, branches]) => {
+        if (e) setError(e.message)
+        else if (!data || data.kind === 'event') setError('This form is closed or not found.')
+        else {
+          const slugs = filterFormBranchSlugs(branches || [])
+          setForm({ ...data, fields: withLiveBranchOptions(data.fields, slugs) })
+        }
+      })
+      .catch((err) => setError(err?.message || 'Unable to load form.'))
   }, [slug])
+
+  useEffect(() => {
+    loadForm()
+  }, [loadForm])
 
   async function onSubmit() {
     if (!form) return
@@ -103,6 +109,13 @@ export default function PublicFormPage() {
       <div className="hakum-form-page-bg" aria-hidden />
       <div className="hakum-form-page-inner">
         {!form && !error ? <p className="hakum-form-loading">Loading form…</p> : null}
+        {!form && error ? (
+          <div className="mb-4 text-center">
+            <button type="button" className="underline text-sm font-semibold" onClick={loadForm}>
+              Retry loading form
+            </button>
+          </div>
+        ) : null}
         {(form || error) && (
           <BrandedOpsForm
             form={form || { name: 'Form unavailable', fields: [], kind: 'complaint' }}

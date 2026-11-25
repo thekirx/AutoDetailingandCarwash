@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import { NamedSelect } from '@/components/ui/named-select'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
 import { supabase } from '@/lib/supabase'
 import { formatMoney } from '@/queue/queueApi'
 import { activeAccounts } from '@/lib/financeBooks'
@@ -47,7 +48,8 @@ export default function FinanceExpenseReportsTab({
   })
   const [busy, setBusy] = useState(false)
   const [createOpen, setCreateOpen] = useState(false)
-  const [reviewNote, setReviewNote] = useState('')
+  const [reviewNotes, setReviewNotes] = useState({})
+  const [deleteConfirmId, setDeleteConfirmId] = useState(null)
 
   const load = useCallback(async () => {
     let q = supabase
@@ -135,16 +137,21 @@ export default function FinanceExpenseReportsTab({
     }
   }
 
-  async function deleteDraft(id) {
-    if (!window.confirm('Delete this draft expense report?')) return
+  async function performDeleteDraft(id) {
+    if (!id) return
     setBusy(true)
     const { error } = await supabase.from('expense_reports').delete().eq('id', id)
     setBusy(false)
+    setDeleteConfirmId(null)
     if (error) toast.error(error.message)
     else {
       toast.success('Draft deleted')
       load()
     }
+  }
+
+  function deleteDraft(id) {
+    setDeleteConfirmId(id)
   }
 
   async function submit(id) {
@@ -160,13 +167,14 @@ export default function FinanceExpenseReportsTab({
   }
 
   async function review(id, action) {
-    if (action === 'reject' && String(reviewNote).trim().length < 3) {
+    const note = String(reviewNotes[id] || '').trim()
+    if (action === 'reject' && note.length < 3) {
       toast.error('Reject needs a note')
       return
     }
     setBusy(true)
     const { error } = await supabase.rpc('review_expense_report', {
-      payload: { id, action, review_note: reviewNote.trim() || null },
+      payload: { id, action, review_note: note || null },
     })
     setBusy(false)
     if (error) toast.error(error.message)
@@ -180,7 +188,11 @@ export default function FinanceExpenseReportsTab({
               ? 'Expenses marked paid'
               : `Report ${action}d`,
       )
-      setReviewNote('')
+      setReviewNotes((prev) => {
+        const next = { ...prev }
+        delete next[id]
+        return next
+      })
       load()
       onReload?.()
     }
@@ -297,12 +309,6 @@ export default function FinanceExpenseReportsTab({
           </Button>
         ) : null}
       >
-        {isSuperAdmin(profile) ? (
-          <div className="mb-4 flex flex-col gap-1.5">
-            <Label>Review note (required to reject)</Label>
-            <Input className="min-h-10" value={reviewNote} onChange={(e) => setReviewNote(e.target.value)} />
-          </div>
-        ) : null}
         {!reports.length ? (
           <FinanceEmpty
             title="No expense reports yet"
@@ -326,6 +332,18 @@ export default function FinanceExpenseReportsTab({
                     </div>
                     <Badge>{r.status}</Badge>
                   </div>
+                  {isSuperAdmin(profile) && r.status === 'submitted' ? (
+                    <div className="mt-3 flex flex-col gap-1.5 sm:max-w-md">
+                      <Label htmlFor={`er-review-${r.id}`}>Review note (required to reject)</Label>
+                      <Input
+                        id={`er-review-${r.id}`}
+                        className="min-h-10"
+                        placeholder="Add approval or rejection note…"
+                        value={reviewNotes[r.id] || ''}
+                        onChange={(e) => setReviewNotes((prev) => ({ ...prev, [r.id]: e.target.value }))}
+                      />
+                    </div>
+                  ) : null}
                   <div className="mt-3 flex flex-wrap gap-2">
                     {canWrite && (r.status === 'draft' || r.status === 'rejected') ? (
                       <>
@@ -378,6 +396,18 @@ export default function FinanceExpenseReportsTab({
           </ul>
         )}
       </FinancePanel>
+
+      <ConfirmDialog
+        open={Boolean(deleteConfirmId)}
+        onOpenChange={(open) => {
+          if (!open && !busy) setDeleteConfirmId(null)
+        }}
+        title="Delete draft expense report?"
+        description="This removes the draft report and all its line items."
+        confirmLabel={busy ? 'Deleting…' : 'Delete draft'}
+        pending={busy}
+        onConfirm={() => performDeleteDraft(deleteConfirmId)}
+      />
     </div>
   )
 }

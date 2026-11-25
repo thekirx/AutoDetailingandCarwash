@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select } from '@/components/ui/select'
+import { NamedSelect } from '@/components/ui/named-select'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { getLocalCalendarDate } from '@/lib/localCalendarDate'
 import { activeAccounts } from '@/lib/financeBooks'
@@ -74,6 +75,7 @@ export default function FinancePurchasesTab({
     bill_reference: '',
   })
   const [sheetBillBusy, setSheetBillBusy] = useState(false)
+  const [confirmState, setConfirmState] = useState(null) // { kind: 'sheet_bill' | 'expense', row }
   const vendorName = (id) => vendors.find((v) => v.id === id)?.name || ''
 
   const filtered = useMemo(() => {
@@ -208,9 +210,8 @@ export default function FinancePurchasesTab({
     }
   }
 
-  async function deleteSheetBillOverride(row) {
+  async function performDeleteSheetBillOverride(row) {
     if (!row) return
-    if (!window.confirm(`Delete "${row.title}" from both Finance Bills and its Daily Sheet?`)) return
     setSheetBillBusy(true)
     try {
       await callFinanceOwnerOps({
@@ -225,7 +226,13 @@ export default function FinancePurchasesTab({
       toast.error(err?.message || 'Could not delete daily-sheet bill.')
     } finally {
       setSheetBillBusy(false)
+      setConfirmState(null)
     }
+  }
+
+  function deleteSheetBillOverride(row) {
+    if (!row) return
+    setConfirmState({ kind: 'sheet_bill', row })
   }
 
   async function transition(row, status) {
@@ -242,6 +249,38 @@ export default function FinancePurchasesTab({
     }
   }
 
+  async function performRemoveExpense(row) {
+    if (!row || !canWrite) return
+    setSheetBillBusy(true)
+    try {
+      // Scoped in the query as well as the guard above: a JS-only check is not a
+      // control, because a direct PostgREST call skips this component entirely.
+      const { data, error } = await supabase
+        .from('expenses')
+        .delete()
+        .eq('id', row.id)
+        .is('daily_sheet_line_id', null)
+        .select('id')
+      if (error) toast.error(error.message)
+      else if (!data || data.length === 0) {
+        toast.error('This bill was posted by an approved daily sheet. Reopen that sheet to change it.')
+      } else {
+        await writeAudit({
+          action: 'finance.expense.delete',
+          entityType: 'expense',
+          entityId: row.id,
+          summary: `Deleted expense "${row.title}"`,
+          meta: { amount_minor: row.amount_minor ?? null, branch: row.branch ?? null },
+        })
+        toast.success('Expense deleted')
+        onReload?.()
+      }
+    } finally {
+      setSheetBillBusy(false)
+      setConfirmState(null)
+    }
+  }
+
   async function remove(row) {
     if (!canWrite) return
     // An expense with a daily_sheet_line_id is one an approved Daily Sheet is
@@ -250,35 +289,13 @@ export default function FinancePurchasesTab({
     // Super Admin reopening the sheet, which voids and re-approves properly.
     if (row.daily_sheet_line_id) {
       if (isSuperAdmin) {
-        await deleteSheetBillOverride(row)
+        deleteSheetBillOverride(row)
         return
       }
       toast.error('This bill was posted by an approved daily sheet. Reopen that sheet to change it.')
       return
     }
-    if (!window.confirm(`Delete "${row.title}"? This cannot be undone.`)) return
-    // Scoped in the query as well as the guard above: a JS-only check is not a
-    // control, because a direct PostgREST call skips this component entirely.
-    const { data, error } = await supabase
-      .from('expenses')
-      .delete()
-      .eq('id', row.id)
-      .is('daily_sheet_line_id', null)
-      .select('id')
-    if (error) toast.error(error.message)
-    else if (!data || data.length === 0) {
-      toast.error('This bill was posted by an approved daily sheet. Reopen that sheet to change it.')
-    } else {
-      await writeAudit({
-        action: 'finance.expense.delete',
-        entityType: 'expense',
-        entityId: row.id,
-        summary: `Deleted expense "${row.title}"`,
-        meta: { amount_minor: row.amount_minor ?? null, branch: row.branch ?? null },
-      })
-      toast.success('Expense deleted')
-      onReload?.()
-    }
+    setConfirmState({ kind: 'expense', row })
   }
 
   if (loading) return <FinanceTabSkeleton metrics={4} />
@@ -576,21 +593,17 @@ export default function FinancePurchasesTab({
             </div>
             <div>
               <Label htmlFor="sb-category">Expense account / category</Label>
-              <Select
+              <NamedSelect
                 id="sb-category"
                 value={sheetBillForm.category_id}
-                onChange={(e) => setSheetBillForm((f) => ({ ...f, category_id: e.target.value }))}
+                onChange={(category_id) => setSheetBillForm((f) => ({ ...f, category_id }))}
                 className="mt-1"
-              >
-                <option value="">Uncategorized</option>
-                {activeAccounts(categories, [sheetBillForm.category_id]).map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.code != null ? `${c.code} · ` : ''}
-                    {c.name}
-                    {c.is_archived ? ' (Archived)' : ''}
-                  </option>
-                ))}
-              </Select>
+                emptyLabel="Uncategorized"
+                options={activeAccounts(categories, [sheetBillForm.category_id]).map((c) => ({
+                  value: c.id,
+                  label: `${c.code != null ? `${c.code} · ` : ''}${c.name}${c.is_archived ? ' (Archived)' : ''}`,
+                }))}
+              />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -608,15 +621,16 @@ export default function FinancePurchasesTab({
               </div>
               <div>
                 <Label htmlFor="sb-paid-from">Paid from</Label>
-                <Select
+                <NamedSelect
                   id="sb-paid-from"
                   value={sheetBillForm.paid_from}
-                  onChange={(e) => setSheetBillForm((f) => ({ ...f, paid_from: e.target.value }))}
+                  onChange={(paid_from) => setSheetBillForm((f) => ({ ...f, paid_from }))}
                   className="mt-1"
-                >
-                  <option value="cash">Cash</option>
-                  <option value="gcash">GCash</option>
-                </Select>
+                  options={[
+                    { value: 'cash', label: 'Cash' },
+                    { value: 'gcash', label: 'GCash' },
+                  ]}
+                />
               </div>
             </div>
             <div>
@@ -650,6 +664,26 @@ export default function FinancePurchasesTab({
           </form>
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(confirmState)}
+        onOpenChange={(open) => {
+          if (!open && !sheetBillBusy) setConfirmState(null)
+        }}
+        title={confirmState?.kind === 'sheet_bill' ? 'Delete daily-sheet bill?' : 'Delete expense bill?'}
+        description={
+          confirmState?.kind === 'sheet_bill'
+            ? `Delete "${confirmState?.row?.title || 'this bill'}" from both Finance Bills and its Daily Sheet? Sheet totals will recalculate.`
+            : `Delete "${confirmState?.row?.title || 'this bill'}"? This cannot be undone.`
+        }
+        confirmLabel={sheetBillBusy ? 'Deleting…' : 'Delete'}
+        pending={sheetBillBusy}
+        onConfirm={() => {
+          if (!confirmState?.row) return
+          if (confirmState.kind === 'sheet_bill') performDeleteSheetBillOverride(confirmState.row)
+          else performRemoveExpense(confirmState.row)
+        }}
+      />
     </div>
   )
 }

@@ -19,6 +19,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { NamedSelect } from '@/components/ui/named-select'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import ContentStudioModal from '@/components/content/ContentStudioModal'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
 import { supabase } from '@/lib/supabase'
 import { listBranches } from '@/lib/adminApi'
 import { slugifyEventTitle } from '@/lib/planningPart6'
@@ -39,6 +40,8 @@ export function PlanningEventsPanel({ canEdit, highlightId }) {
   const [createOpen, setCreateOpen] = useState(false)
   const [studioOpen, setStudioOpen] = useState(false)
   const [studioDraft, setStudioDraft] = useState(null)
+  const [deleteTarget, setDeleteTarget] = useState(null)
+  const [saving, setSaving] = useState(false)
   const [eventQuery, setEventQuery] = useState('')
   const [eventBranch, setEventBranch] = useState('all')
   const [eventStatus, setEventStatus] = useState('all')
@@ -106,81 +109,114 @@ export function PlanningEventsPanel({ canEdit, highlightId }) {
     setStudioOpen(true)
   }
 
-  async function handleDeleteEvent(ev) {
+  async function performDeleteEvent(ev) {
     if (!canEdit || !ev?.id) return
-    if (!window.confirm(`Delete event "${ev.title}"?`)) return
-    const res = await deleteCmsEvent(ev.id)
-    if (!res.ok) {
-      toast.error(res.error || 'Could not delete event')
-      return
+    setSaving(true)
+    try {
+      const res = await deleteCmsEvent(ev.id)
+      if (!res.ok) {
+        toast.error(res.error || 'Could not delete event')
+        return
+      }
+      toast.success('Event deleted')
+      setDeleteTarget(null)
+      load()
+    } catch (err) {
+      toast.error(err?.message || 'Could not delete event')
+    } finally {
+      setSaving(false)
     }
-    toast.success('Event deleted')
-    load()
+  }
+
+  function handleDeleteEvent(ev) {
+    if (!canEdit || !ev?.id) return
+    setDeleteTarget(ev)
   }
 
   async function createEvent(e) {
     e.preventDefault()
-    if (!canEdit) return
+    if (!canEdit || saving) return
     const title = form.title.trim()
     if (!title || !form.starts_at) return toast.error('Title and start required')
     if (form.ends_at && new Date(form.ends_at) < new Date(form.starts_at)) {
       return toast.error('End date/time must be on or after start')
     }
-    const tempId = crypto.randomUUID()
-    const slug = slugifyEventTitle(title, tempId)
-    const res = await saveCmsEvent(
-      {
-        id: tempId,
-        title,
-        description: form.description.trim() || null,
-        branch: form.branch.trim() || null,
-        starts_at: new Date(form.starts_at).toISOString(),
-        ends_at: form.ends_at ? new Date(form.ends_at).toISOString() : null,
-        is_published: Boolean(form.is_published),
-        slug,
-        form_id: form.form_id || null,
-      },
-      { publish: Boolean(form.is_published) },
-    )
-    if (!res.ok) toast.error(res.error)
-    else {
-      toast.success('Event created')
-      setForm({
-        title: '',
-        description: '',
-        branch: branchOptions[0]?.value || '',
-        starts_at: '',
-        ends_at: '',
-        is_published: true,
-        form_id: '',
-      })
-      setCreateOpen(false)
-      load()
+    setSaving(true)
+    try {
+      const tempId = crypto.randomUUID()
+      const slug = slugifyEventTitle(title, tempId)
+      const res = await saveCmsEvent(
+        {
+          id: tempId,
+          title,
+          description: form.description.trim() || null,
+          branch: form.branch.trim() || null,
+          starts_at: new Date(form.starts_at).toISOString(),
+          ends_at: form.ends_at ? new Date(form.ends_at).toISOString() : null,
+          is_published: Boolean(form.is_published),
+          slug,
+          form_id: form.form_id || null,
+        },
+        { publish: Boolean(form.is_published) },
+      )
+      if (!res.ok) toast.error(res.error)
+      else {
+        toast.success('Event created')
+        setForm({
+          title: '',
+          description: '',
+          branch: branchOptions[0]?.value || '',
+          starts_at: '',
+          ends_at: '',
+          is_published: true,
+          form_id: '',
+        })
+        setCreateOpen(false)
+        load()
+      }
+    } catch (err) {
+      toast.error(err?.message || 'Could not create event')
+    } finally {
+      setSaving(false)
     }
   }
 
   async function assignForm(ev, formId) {
-    if (!canEdit) return
-    const res = await saveCmsEvent(
-      prepareEventForEditor({ ...ev, form_id: formId || '' }),
-      { publish: Boolean(ev.is_published) },
-    )
-    if (!res.ok) toast.error(res.error)
-    else {
-      toast.success(formId ? 'Form attached' : 'Form cleared')
-      load()
+    if (!canEdit || saving) return
+    setSaving(true)
+    try {
+      const res = await saveCmsEvent(
+        prepareEventForEditor({ ...ev, form_id: formId || '' }),
+        { publish: Boolean(ev.is_published) },
+      )
+      if (!res.ok) toast.error(res.error)
+      else {
+        toast.success(formId ? 'Form attached' : 'Form cleared')
+        load()
+      }
+    } catch (err) {
+      toast.error(err?.message || 'Could not update event form')
+    } finally {
+      setSaving(false)
     }
   }
 
   async function togglePublish(ev) {
-    if (!canEdit) return
-    const nextPublished = !ev.is_published
-    const res = await saveCmsEvent(
-      prepareEventForEditor({ ...ev, is_published: nextPublished }),
-      { publish: nextPublished },
-    )
-    if (!res.ok) toast.error(res.error)
-    else load()
+    if (!canEdit || saving) return
+    setSaving(true)
+    try {
+      const nextPublished = !ev.is_published
+      const res = await saveCmsEvent(
+        prepareEventForEditor({ ...ev, is_published: nextPublished }),
+        { publish: nextPublished },
+      )
+      if (!res.ok) toast.error(res.error)
+      else load()
+    } catch (err) {
+      toast.error(err?.message || 'Could not toggle publish state')
+    } finally {
+      setSaving(false)
+    }
   }
 
   const visibleEvents = (canEdit ? events : events.filter((ev) => ev.is_published)).filter((ev) => {
@@ -469,13 +505,25 @@ export function PlanningEventsPanel({ canEdit, highlightId }) {
           open={studioOpen}
           onOpenChange={setStudioOpen}
           kind="event"
-          initialData={studioDraft}
-          opsForms={opsForms}
+          initialValue={studioDraft}
+          forms={opsForms}
           branchOptions={branchOptions}
           onSaved={() => load()}
           onDeleted={() => load()}
         />
       ) : null}
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => {
+          if (!open && !saving) setDeleteTarget(null)
+        }}
+        title={`Delete event "${deleteTarget?.title || ''}"?`}
+        description="This permanently removes the event page and its public share link."
+        confirmLabel={saving ? 'Deleting…' : 'Delete event'}
+        pending={saving}
+        onConfirm={() => performDeleteEvent(deleteTarget)}
+      />
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { CheckSquare, Search, Trash2, X } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
 import { getAccessTokenFresh } from '@/lib/authToken'
 import { supabase } from '@/lib/supabase'
 import { allowedStaffPlanAssigneePatch } from '@/queue/staffTaskLogic'
@@ -66,6 +67,7 @@ export default function TaskModal({
   const [peopleQ, setPeopleQ] = useState('')
   const [newItem, setNewItem] = useState('')
   const [saving, setSaving] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [proofNote, setProofNote] = useState('')
   const [proofFile, setProofFile] = useState(null)
   const myAssignee = assignees.find((a) => a.staff_id === profile?.id)
@@ -238,13 +240,24 @@ export default function TaskModal({
     finish('Task saved')
   }
 
-  async function remove() {
-    if (!canEdit || isCreate || !window.confirm('Delete this task?')) return
-    const { error } = await supabase.from('plan_cards').delete().eq('id', workingId)
-    if (error) return toast.error(error.message)
-    toast.success('Task deleted')
-    onDeleted?.()
-    onClose()
+  function remove() {
+    if (!canEdit || isCreate) return
+    setDeleteConfirmOpen(true)
+  }
+
+  async function confirmRemoveTask() {
+    if (!canEdit || isCreate) return
+    setSaving(true)
+    try {
+      const { error } = await supabase.from('plan_cards').delete().eq('id', workingId)
+      if (error) return toast.error(error.message)
+      toast.success('Task deleted')
+      setDeleteConfirmOpen(false)
+      onDeleted?.()
+      onClose()
+    } finally {
+      setSaving(false)
+    }
   }
 
   async function toggleAssignee(staff) {
@@ -599,23 +612,42 @@ export default function TaskModal({
           {myAssignee && (
             <div className="mt-5 rounded-xl border border-dashed border-border p-3">
               <p className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
-                {proofRequired ? 'Proof (required)' : 'Proof (optional)'}
+                {myAssignee.status === 'for_review'
+                  ? 'Submitted for review'
+                  : myAssignee.status === 'done'
+                    ? 'Completed'
+                    : proofRequired
+                      ? 'Proof (required)'
+                      : 'Proof (optional)'}
               </p>
-              <textarea className="mt-2 min-h-16 w-full rounded-xl border px-3 py-2 text-sm" placeholder="Note" value={proofNote} onChange={(e) => setProofNote(e.target.value)} />
-              <input type="file" accept="image/*" className="mt-2 min-h-11 w-full text-sm" onChange={(e) => setProofFile(e.target.files?.[0] || null)} />
-              <div className="mt-3 flex flex-wrap gap-2">
-                {myAssignee.status === 'todo' && (
-                  <Button type="button" size="sm" className="min-h-11" onClick={() => submitProof('in_progress')}>Start</Button>
-                )}
-                {myAssignee.status === 'in_progress' && (
-                  <>
-                    <Button type="button" size="sm" className="min-h-11" onClick={() => submitProof('for_review')}>Submit for review</Button>
-                    {!proofRequired && (
-                      <Button type="button" size="sm" variant="outline" className="min-h-11" onClick={() => submitProof('done')}>Mark done</Button>
+              {myAssignee.status === 'for_review' || myAssignee.status === 'done' ? (
+                <div className="mt-2 space-y-1 text-sm text-muted-foreground">
+                  <p>
+                    {myAssignee.status === 'for_review'
+                      ? 'Your submission is waiting for manager review.'
+                      : 'This task assignment is marked complete.'}
+                  </p>
+                  {myAssignee.proof_note ? <p className="text-foreground">Note: {myAssignee.proof_note}</p> : null}
+                </div>
+              ) : (
+                <>
+                  <textarea className="mt-2 min-h-16 w-full rounded-xl border px-3 py-2 text-sm" placeholder="Note" value={proofNote} onChange={(e) => setProofNote(e.target.value)} />
+                  <input type="file" accept="image/*" className="mt-2 min-h-11 w-full text-sm" onChange={(e) => setProofFile(e.target.files?.[0] || null)} />
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {myAssignee.status === 'todo' && (
+                      <Button type="button" size="sm" className="min-h-11" onClick={() => submitProof('in_progress')}>Start</Button>
                     )}
-                  </>
-                )}
-              </div>
+                    {myAssignee.status === 'in_progress' && (
+                      <>
+                        <Button type="button" size="sm" className="min-h-11" onClick={() => submitProof('for_review')}>Submit for review</Button>
+                        {!proofRequired && (
+                          <Button type="button" size="sm" variant="outline" className="min-h-11" onClick={() => submitProof('done')}>Mark done</Button>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           )}
         </div>
@@ -630,6 +662,17 @@ export default function TaskModal({
           )}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        onOpenChange={setDeleteConfirmOpen}
+        title="Delete this task?"
+        description="This removes the task card and its checklist items."
+        confirmLabel="Delete"
+        destructive
+        pending={saving}
+        onConfirm={confirmRemoveTask}
+      />
     </div>
   )
 }

@@ -22,6 +22,8 @@ export default function MyPayslipsPage() {
   const showAdvances = canAccessMyAdvances(profile)
 
   const [rows, setRows] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [names, setNames] = useState({})
   const [busyId, setBusyId] = useState('')
   const [issuingOwnerSlip, setIssuingOwnerSlip] = useState(false)
@@ -32,18 +34,28 @@ export default function MyPayslipsPage() {
 
   const load = useCallback(async () => {
     if (!profile?.id) return
-    const { data, error } = await supabase
-      .from('payslips')
-      .select('id, period_start, period_end, salary_minor, incentive_minor, paid_from, note, status, signed_name, signed_at, branch')
-      .eq('staff_id', profile.id)
-      .order('period_start', { ascending: false })
-    if (error) throw error
-    setRows(data || [])
+    setLoading(true)
+    setLoadError('')
+    try {
+      const { data, error } = await supabase
+        .from('payslips')
+        .select('id, period_start, period_end, salary_minor, incentive_minor, paid_from, note, status, signed_name, signed_at, branch')
+        .eq('staff_id', profile.id)
+        .order('period_start', { ascending: false })
+      if (error) throw error
+      setRows(data || [])
+    } catch (err) {
+      const msg = err?.message || 'Could not load payslips'
+      setLoadError(msg)
+      toast.error(msg)
+    } finally {
+      setLoading(false)
+    }
   }, [profile?.id])
 
   useEffect(() => {
     if (!profile?.id || !canAccessMyPayslips(profile)) return
-    load().catch((err) => toast.error(err.message || 'Could not load payslips'))
+    load()
   }, [load, profile])
 
   if (!canAccessMyPayslips(profile)) return <Navigate to="/operations/access-denied" replace />
@@ -212,7 +224,19 @@ export default function MyPayslipsPage() {
           </section>
         ) : null}
 
-        {rows.length ? (
+        {loading ? (
+          <div className="rounded-2xl border border-border bg-card p-6 text-sm text-muted-foreground">
+            Loading payslips…
+          </div>
+        ) : loadError ? (
+          <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-6 text-sm text-destructive" role="alert">
+            <p className="font-semibold">Could not load payslips</p>
+            <p className="mt-1">{loadError}</p>
+            <Button type="button" variant="outline" size="sm" className="mt-3 min-h-10" onClick={load}>
+              Retry
+            </Button>
+          </div>
+        ) : rows.length ? (
           <ul className="flex w-full flex-col gap-3" aria-label="Your payslips">
             {rows.map((row) => {
               const takeHome = payslipTakeHome(row.salary_minor, row.incentive_minor)
@@ -272,7 +296,7 @@ export default function MyPayslipsPage() {
                           autoComplete="name"
                         />
                       </div>
-                      <Button type="button" className="min-h-11" disabled={busyId === row.id} onClick={() => sign(row.id)}>
+                      <Button type="button" className="min-h-11" disabled={busyId === row.id || !String(names[row.id] || '').trim()} onClick={() => sign(row.id)}>
                         Sign
                       </Button>
                     </div>

@@ -5695,8 +5695,10 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  min-width: 44px;
+  min-height: 44px;
+  width: 44px;
+  height: 44px;
   border-radius: 999px;
   border: 1px solid var(--bd-rule);
   background: rgba(255, 255, 255, 0.05);

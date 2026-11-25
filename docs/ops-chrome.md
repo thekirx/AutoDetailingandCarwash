@@ -14,18 +14,18 @@ Full design system: [docs/design-system/README.md](design-system/README.md) · R
 | Operations Lead | Network ops; Queue home (no Floor Board); CRM view only |
 | Investor | Slim: Finance only |
 
-**Pattern:** collapsible inset sidebar, Hakum wordmark, breadcrumbs + Cmd/Ctrl+K + notifications + account in topbar. Dense SaaS tables OK. Mobile = drawer, not phone stage.
+**Pattern:** collapsible inset sidebar, Hakum wordmark, breadcrumbs + Cmd/Ctrl+K + notifications + account in topbar. Dense SaaS tables OK. Mobile = drawer, not phone stage. Both shells wrap `<Outlet />` in `OpsErrorBoundary` and resolve unknown `/operations/*` routes to `OpsNotFoundPage`.
 
 ## FloorAppShell (mobile-app-first)
 
-| Role | Primary dock |
+| Role | Primary dock (More in Permissions) |
 |------|----------------|
-| Team Lead | Queue / New / Floor / Attendance / Crew |
-| Crew (`staff`) | Attendance / Tasks / Pay / Forms |
-| Sales | Bookings / History |
-| Marketing | CRM / Bookings / Planner / Notifications |
-| Video editor | Calendar / Tasks / Pay |
-| Detailer | Bookings / Attendance / Tasks / Pay |
+| Team Lead | Queue / Bookings / POS / Tasks (More: Attendance, Dashboard, Advances, Payslips, KPI, Forms) |
+| Crew (`staff`) | Attendance / Tasks / Advances (More: Payslips) |
+| Sales | Bookings / History (More: Queue, CRM, Notifications, Payslips) |
+| Marketing | CRM / Bookings / Notifications / Rewards (More: Queue, Planner, Content, Inquiries, Payslips) |
+| Video editor | Planner / Content (More: Attendance, Payslips) |
+| Detailer | Bookings / Attendance / Tasks (More: Payslips) |
 
 **Pattern:** island bottom nav (max 5), brand mark topbar, settings + notifications. Phone: single column. Tablet 768+: left icon rail + 2-col (not stretched phone UI). Desktop: same rail, `max-w-5xl`. Safe-area aware.
 

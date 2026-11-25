@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Check, Copy, Share2 } from 'lucide-react'
 import { toast } from 'sonner'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
@@ -19,9 +19,19 @@ export default function CustomerReferralPage() {
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
 
-  useEffect(() => {
-    fetchPortal().then(setData).catch((err) => setError(err.message))
+  const load = useCallback(() => {
+    setError('')
+    fetchPortal()
+      .then((next) => {
+        setData(next)
+        setError('')
+      })
+      .catch((err) => setError(err.message || 'Could not load referral code.'))
   }, [])
+
+  useEffect(() => {
+    load()
+  }, [load])
 
   const code = data?.rewards?.referral_code || data?.profile?.referral_code || ''
   const credits = Number(data?.rewards?.available_discounts) || 0
@@ -54,10 +64,14 @@ export default function CustomerReferralPage() {
   }
 
   return (
-    <CustomerAppFrame title="Your code" subtitle="Friends enter this when they book detailing." cols>
+    <CustomerAppFrame title="Your code" subtitle="Friends enter this when they book detailing." backTo="/account/more" backLabel="Settings" onRefresh={load} cols>
       {error ? (
         <div className="capp-empty capp-span" role="alert">
-          <strong>{error}</strong>
+          <strong>Could not load referral code</strong>
+          <span>{error}</span>
+          <button type="button" className="capp-btn capp-btn-fill" onClick={load}>
+            Retry
+          </button>
         </div>
       ) : null}
       {!data && !error ? (

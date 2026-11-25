@@ -115,6 +115,8 @@ export default function VouchersPage({ embedded = false } = {}) {
       supabase
         .from('services')
         .select('id, name, slug, pay_category')
+        .eq('is_active', true)
+        .eq('is_archived', false)
         .order('name'),
     ])
     if (error) toast.error(error.message)

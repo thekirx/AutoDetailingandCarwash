@@ -35,6 +35,7 @@ export default function AuditLogPage({ embedded = false } = {}) {
   const [searchParams, setSearchParams] = useSearchParams()
   const [rows, setRows] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [q, setQ] = useState(() => searchParams.get('q') || '')
   const [actionFilter, setActionFilter] = useState('all')
   const [entityFilter, setEntityFilter] = useState('all')
@@ -54,10 +55,13 @@ export default function AuditLogPage({ embedded = false } = {}) {
 
   const load = useCallback(async () => {
     setLoading(true)
+    setLoadError('')
     try {
       setRows(await listAuditLogs({ limit: 300 }))
     } catch (err) {
-      toast.error(err.message || 'Unable to load audit log. Apply the audit migration if this is new.')
+      const msg = err.message || 'Unable to load audit log. Apply the audit migration if this is new.'
+      setLoadError(msg)
+      toast.error(msg)
       setRows([])
     } finally {
       setLoading(false)
@@ -228,9 +232,19 @@ export default function AuditLogPage({ embedded = false } = {}) {
         </div>
       ) : null}
 
+      {loadError ? (
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <span>{loadError}</span>
+          <Button type="button" variant="outline" size="sm" className="min-h-10" onClick={load} disabled={loading}>
+            Retry
+          </Button>
+        </div>
+      ) : null}
+
       <DataTable
         columns={columns}
         data={filtered}
+        loading={loading}
         searchKeys={false}
         emptyTitle="No audit events"
         emptyDescription="Create or edit a branch, person, or service to start the trail."

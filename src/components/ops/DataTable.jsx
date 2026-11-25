@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { ArrowDown, ArrowUp, ArrowUpDown } from 'lucide-react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Input } from '@/components/ui/input'
+import { Skeleton } from '@/components/ui/skeleton'
 import OpsEmptyState from '@/components/ops/OpsEmptyState'
 import { cn } from '@/lib/utils'
 
@@ -12,6 +13,7 @@ import { cn } from '@/lib/utils'
 export default function DataTable({
   columns = [],
   data = [],
+  loading = false,
   searchKeys,
   searchPlaceholder = 'Search…',
   emptyTitle = 'No rows',
@@ -78,7 +80,9 @@ export default function DataTable({
 
       {/* Mobile cards */}
       <div className="grid gap-2 md:hidden">
-        {filtered.length === 0 ? (
+        {loading && filtered.length === 0 ? (
+          [0, 1, 2].map((i) => <Skeleton key={i} className="h-24 rounded-[var(--shape-card)]" />)
+        ) : filtered.length === 0 ? (
           <OpsEmptyState title={emptyTitle} description={emptyDescription} />
         ) : (
           filtered.map((row, i) => (
@@ -129,7 +133,17 @@ export default function DataTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.length === 0 ? (
+            {loading && filtered.length === 0 ? (
+              [0, 1, 2, 3].map((i) => (
+                <TableRow key={`sk-${i}`}>
+                  {columns.map((col) => (
+                    <TableCell key={col.id}>
+                      <Skeleton className="h-4 w-full max-w-[10rem]" />
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : filtered.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={columns.length} className="p-0">
                   <OpsEmptyState title={emptyTitle} description={emptyDescription} />

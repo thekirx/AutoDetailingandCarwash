@@ -29,6 +29,7 @@ import {
 import AssistantGrantsEditor from '@/components/AssistantGrantsEditor'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import OpsStatTile from '@/components/ops/OpsStatTile'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
 import {
   deactivateStaffPerson,
   listBranches,
@@ -173,6 +174,8 @@ export default function PeopleManagePage({ embedded = false, view = 'all', openC
   const [searchParams, setSearchParams] = useSearchParams()
   const [people, setPeople] = useState([])
   const [branches, setBranches] = useState([])
+  const [deactivateTarget, setDeactivateTarget] = useState(null)
+  const [archiveRoleTarget, setArchiveRoleTarget] = useState(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [editing, setEditing] = useState(null)
@@ -467,15 +470,25 @@ export default function PeopleManagePage({ embedded = false, view = 'all', openC
     }
   }
 
-  async function onDeactivate(row, archive) {
+  function onDeactivate(row, archive) {
     if (!canMutateDirectoryPerson(profile, row)) return
-    if (!window.confirm(`${archive ? 'Archive' : 'Deactivate'} ${row.full_name}?`)) return
+    setDeactivateTarget({ row, archive })
+  }
+
+  async function confirmDeactivate() {
+    if (!deactivateTarget) return
+    const { row, archive } = deactivateTarget
+    if (!canMutateDirectoryPerson(profile, row)) return
+    setSaving(true)
     try {
       await deactivateStaffPerson(row.id, { archive })
       toast.success(archive ? 'Archived' : 'Deactivated')
+      setDeactivateTarget(null)
       await load()
     } catch (err) {
       toast.error(err.message)
+    } finally {
+      setSaving(false)
     }
   }
 
@@ -899,23 +912,7 @@ export default function PeopleManagePage({ embedded = false, view = 'all', openC
                       variant="ghost"
                       className="text-destructive"
                       disabled={saving}
-                      onClick={async () => {
-                        if (!window.confirm(`Archive custom role "${d.label}" (${d.role_key})?`)) return
-                        setSaving(true)
-                        try {
-                          const { error } = await supabase
-                            .from('role_definitions')
-                            .update({ is_active: false, updated_at: new Date().toISOString() })
-                            .eq('role_key', d.role_key)
-                          if (error) throw error
-                          toast.success('Role template archived')
-                          await load()
-                        } catch (err) {
-                          toast.error(err.message)
-                        } finally {
-                          setSaving(false)
-                        }
-                      }}
+                      onClick={() => setArchiveRoleTarget(d)}
                     >
                       Archive
                     </Button>
@@ -1392,6 +1389,53 @@ export default function PeopleManagePage({ embedded = false, view = 'all', openC
           ) : null}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(deactivateTarget)}
+        onOpenChange={(open) => {
+          if (!open) setDeactivateTarget(null)
+        }}
+        title={`${deactivateTarget?.archive ? 'Archive' : 'Deactivate'} ${deactivateTarget?.row?.full_name || 'employee'}?`}
+        description={
+          deactivateTarget?.archive
+            ? 'This archives the employee record and revokes floor access.'
+            : 'This deactivates the employee account.'
+        }
+        confirmLabel={deactivateTarget?.archive ? 'Archive' : 'Deactivate'}
+        destructive
+        pending={saving}
+        onConfirm={confirmDeactivate}
+      />
+
+      <ConfirmDialog
+        open={Boolean(archiveRoleTarget)}
+        onOpenChange={(open) => {
+          if (!open) setArchiveRoleTarget(null)
+        }}
+        title={`Archive custom role "${archiveRoleTarget?.label || ''}" (${archiveRoleTarget?.role_key || ''})?`}
+        description="Existing staff keep current access until reassigned."
+        confirmLabel="Archive"
+        destructive
+        pending={saving}
+        onConfirm={async () => {
+          if (!archiveRoleTarget) return
+          setSaving(true)
+          try {
+            const { error } = await supabase
+              .from('role_definitions')
+              .update({ is_active: false, updated_at: new Date().toISOString() })
+              .eq('role_key', archiveRoleTarget.role_key)
+            if (error) throw error
+            toast.success('Role template archived')
+            setArchiveRoleTarget(null)
+            await load()
+          } catch (err) {
+            toast.error(err.message)
+          } finally {
+            setSaving(false)
+          }
+        }}
+      />
     </>
   )
 

@@ -11,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select } from '@/components/ui/select'
+import { NamedSelect } from '@/components/ui/named-select'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { FinanceAccountDialog } from '@/pages/finance/FinanceAccountDialog'
 
@@ -217,29 +217,25 @@ export function FinanceCategoriesTab({
                 aria-label="Search categories"
               />
             </div>
-            <Select
+            <NamedSelect
               value={kindFilter}
-              onChange={(e) => setKindFilter(e.target.value)}
+              onChange={setKindFilter}
               className="w-full sm:w-52"
-              aria-label="Filter categories by group"
-            >
-              <option value="all">All groups</option>
-              {Object.entries(KIND_LABELS).map(([k, label]) => (
-                <option key={k} value={k}>
-                  {label}
-                </option>
-              ))}
-            </Select>
-            <Select
+              options={[
+                { value: 'all', label: 'All groups' },
+                ...Object.entries(KIND_LABELS).map(([k, label]) => ({ value: k, label })),
+              ]}
+            />
+            <NamedSelect
               value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
+              onChange={setStatusFilter}
               className="w-full sm:w-40"
-              aria-label="Filter categories by status"
-            >
-              <option value="all">All statuses</option>
-              <option value="active">Active only</option>
-              <option value="archived">Archived only</option>
-            </Select>
+              options={[
+                { value: 'all', label: 'All statuses' },
+                { value: 'active', label: 'Active only' },
+                { value: 'archived', label: 'Archived only' },
+              ]}
+            />
           </div>
 
           <div className="overflow-x-auto rounded-lg border border-slate-100">
@@ -392,22 +388,18 @@ export function FinanceCategoriesTab({
           <div className="space-y-3 py-2">
             <div>
               <Label htmlFor="reassign-category-select">Reassign linked bills &amp; sheet lines to</Label>
-              <Select
+              <NamedSelect
                 id="reassign-category-select"
                 value={reassignToId}
-                onChange={(e) => setReassignToId(e.target.value)}
+                onChange={setReassignToId}
                 className="mt-1"
-              >
-                {sortedCategories
+                options={sortedCategories
                   .filter((c) => c.id !== deleteTarget?.id)
-                  .map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.code != null ? `${c.code} · ` : ''}
-                      {c.name}
-                      {c.is_archived ? ' (Archived)' : ''}
-                    </option>
-                  ))}
-              </Select>
+                  .map((c) => ({
+                    value: c.id,
+                    label: `${c.code != null ? `${c.code} · ` : ''}${c.name}${c.is_archived ? ' (Archived)' : ''}`,
+                  }))}
+              />
             </div>
           </div>
           <DialogFooter className="gap-2">

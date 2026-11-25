@@ -48,6 +48,8 @@ const CustomerVouchersPage = lazy(() => import('./pages/CustomerVouchersPage'))
 const CustomerVisitPage = lazy(() => import('./pages/CustomerVisitPage'))
 const CustomerMorePage = lazy(() => import('./pages/CustomerMorePage'))
 const CustomerCarsPage = lazy(() => import('./pages/CustomerCarsPage'))
+const CustomerNotFoundPage = lazy(() => import('./pages/CustomerNotFoundPage'))
+const OpsNotFoundPage = lazy(() => import('./pages/OpsNotFoundPage'))
 const ContentAdminPage = lazy(() => import('./pages/ContentAdminPage'))
 
 const PeopleManagePage = lazy(() => import('./pages/PeopleManagePage'))
@@ -259,6 +261,7 @@ export default function App() {
             <Route path="/account/events" element={<CustomerEventsPage />} />
             <Route path="/account/queue" element={<CustomerQueuePage />} />
             <Route path="/account/book" element={<CustomerBookPage />} />
+            <Route path="/account/pickup" element={<Navigate to="/account" replace />} />
             <Route path="/account/pickup/:id" element={<CustomerPickupPage />} />
             <Route path="/account/loyalty" element={<CustomerLoyaltyPage />} />
             <Route path="/account/referral" element={<CustomerReferralPage />} />
@@ -267,6 +270,7 @@ export default function App() {
             <Route path="/account/cars" element={<CustomerCarsPage />} />
             <Route path="/account/visit" element={<CustomerVisitPage />} />
             <Route path="/account/visit/:id" element={<CustomerVisitPage />} />
+            <Route path="/account/*" element={<CustomerNotFoundPage />} />
           </Route>
           <Route path="*" element={<NotFoundPage />} />
         </Route>
@@ -342,6 +346,7 @@ export default function App() {
             <Route path="memberships" element={gate('memberships', <RewardsHubRedirect tab="memberships" subTabParam="mtab" fallback={<MembershipsPage />} />)} />
             <Route path="vouchers" element={gate('vouchers', <RewardsHubRedirect tab="vouchers" fallback={<VouchersPage />} />)} />
             <Route path="reviews" element={gate('reviews', <Navigate to="/operations/forms/results" replace />)} />
+            <Route path="*" element={<OpsNotFoundPage />} />
           </Route>
         </Route>
 

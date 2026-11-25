@@ -15,6 +15,7 @@ import { formatQueueNumberForKind } from '@/lib/serviceKinds'
 import { formatMoney } from '@/queue/queueApi'
 import { BOOKING_PRIMARY_ACTION_LABELS } from '@/queue/queueLogic'
 import StatusBadge from '@/components/ops/StatusBadge'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
 import { cn } from '@/lib/utils'
 
 const MAINTENANCE_STAGE = 'maintenance'
@@ -206,6 +207,7 @@ export default function BookingFloorBoard({
   const [expandedId, setExpandedId] = useState(null)
   const [maint, setMaint] = useState({ loading: true, schedules: [], canWrite: false, canArrive: false, error: '' })
   const [busyId, setBusyId] = useState(null)
+  const [arriveTarget, setArriveTarget] = useState(null)
   const [advancingId, setAdvancingId] = useState(null)
 
   async function handleAdvance(booking, next) {
@@ -255,11 +257,18 @@ export default function BookingFloorBoard({
     return visible.has('waiting') ? 'waiting' : columns[0]?.id
   }, [stage, columns, grouped, maintRows.length])
 
-  async function arrive(row) {
+  function arrive(row) {
+    setArriveTarget(row)
+  }
+
+  async function confirmArrive() {
+    if (!arriveTarget) return
+    const row = arriveTarget
     setBusyId(row.id)
     try {
       const done = await processMaintenanceArrival(row)
       if (!done) return
+      setArriveTarget(null)
       await Promise.all([loadMaintenance(), onArrived?.()])
       onStageChange('waiting')
     } catch (err) {
@@ -391,6 +400,17 @@ export default function BookingFloorBoard({
           )}
         </div>
       )}
+      <ConfirmDialog
+        open={Boolean(arriveTarget)}
+        onOpenChange={(open) => {
+          if (!open) setArriveTarget(null)
+        }}
+        title={`Check in ${arriveTarget?.plate_number || 'this car'} for Paint Maintenance?`}
+        description="It goes to Vehicle intake and the client gets a status update."
+        confirmLabel="Check in"
+        pending={Boolean(arriveTarget && busyId === arriveTarget.id)}
+        onConfirm={confirmArrive}
+      />
     </div>
   )
 }

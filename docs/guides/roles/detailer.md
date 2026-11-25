@@ -1,4 +1,4 @@
-﻿# Detailer
+# Detailer
 
 **Home:** `/operations/bookings`  
 **Shell:** FloorAppShell  
@@ -6,7 +6,7 @@
 
 ## Dock
 
-Detailing Board · Attendance · Tasks · Advances
+Detailing Board · Attendance · Tasks · Advances · More: Payslips
 
 ## Daily flow
 

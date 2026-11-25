@@ -1,5 +1,5 @@
 import queueHeroPoster from '../assets/hero/bredesign-hero-poster.webp'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
 import { CUSTOMER_QUEUE_PATH } from '../lib/liveQueuePath'
@@ -139,7 +139,7 @@ function WizardOption({ checked, onSelect, title, sub, right }) {
 export function BookingPage() {
   const location = useLocation()
   const { user, profile } = useAuth()
-  const { branches, loading: branchesLoading, error: branchesError } = usePublicBranches()
+  const { branches, loading: branchesLoading, error: branchesError, reload: reloadBranches } = usePublicBranches()
   const [catalog, setCatalog] = useState([])
   const [status, setStatus] = useState('idle')
   const [voucherCode, setVoucherCode] = useState('')
@@ -192,7 +192,8 @@ export function BookingPage() {
     if (prefilled.service_id) setForm((f) => ({ ...f, service_id: prefilled.service_id }))
   }, [location.state])
 
-  useEffect(() => {
+  const loadServices = useCallback(() => {
+    setError('')
     supabase
       .from('services')
       .select('id, name, slug, pay_category, price_minor, parent_service_id, display_order')
@@ -213,7 +214,12 @@ export function BookingPage() {
           return matched ? { ...f, service_id: matched } : { ...f, service_id: '' }
         })
       })
+      .catch((err) => setError(err?.message || 'Unable to load services.'))
   }, [prefServiceName, prefPackageId])
+
+  useEffect(() => {
+    loadServices()
+  }, [loadServices])
 
   useEffect(() => {
     if (!form.branch && branches[0]?.slug) {
@@ -595,7 +601,21 @@ export function BookingPage() {
 
           {stepBody()}
 
-          {(error || branchesError) && <p className="form-error" role="alert">{error || branchesError}</p>}
+          {(error || branchesError) ? (
+            <p className="form-error" role="alert">
+              {error || branchesError}{' '}
+              <button
+                type="button"
+                className="underline font-semibold"
+                onClick={() => {
+                  reloadBranches()
+                  loadServices()
+                }}
+              >
+                Retry
+              </button>
+            </p>
+          ) : null}
           <div className="bk-nav">
             {step > 0 ? (
               <button type="button" className="bk-btn bk-btn-back" onClick={() => setStep((s) => s - 1)}>

@@ -13,6 +13,7 @@ import {
   resolveFrequencyMonthsFromSettings,
 } from '@/lib/paintMaintenance'
 import StatusBadge from '@/components/ops/StatusBadge'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
 import { processMaintenanceArrival } from '@/lib/maintenanceSchedulesClient'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -41,6 +42,7 @@ export default function DetailingMaintenancePanel({ branchFilter = 'all', canCre
   const [typeMonths, setTypeMonths] = useState({})
   const [savingTypes, setSavingTypes] = useState(false)
   const [busyId, setBusyId] = useState(null)
+  const [arriveTarget, setArriveTarget] = useState(null)
   const [filter, setFilter] = useState('action')
   const [search, setSearch] = useState('')
   const [draftDue, setDraftDue] = useState({})
@@ -209,10 +211,19 @@ export default function DetailingMaintenancePanel({ branchFilter = 'all', canCre
     }
   }
 
-  async function arrive(row) {
+  function arrive(row) {
+    setArriveTarget(row)
+  }
+
+  async function confirmArrive() {
+    if (!arriveTarget) return
+    const row = arriveTarget
     setBusyId(row.id)
     try {
-      if (await processMaintenanceArrival(row)) onArrived?.()
+      if (await processMaintenanceArrival(row)) {
+        setArriveTarget(null)
+        onArrived?.()
+      }
     } catch (err) {
       toast.error(err.message)
     } finally {
@@ -527,6 +538,18 @@ export default function DetailingMaintenancePanel({ branchFilter = 'all', canCre
           </ul>
         )}
       </section>
+
+      <ConfirmDialog
+        open={Boolean(arriveTarget)}
+        onOpenChange={(open) => {
+          if (!open) setArriveTarget(null)
+        }}
+        title={`Check in ${arriveTarget?.plate_number || 'this car'} for Paint Maintenance?`}
+        description="It goes to Vehicle intake and the client gets a status update."
+        confirmLabel="Check in"
+        pending={Boolean(arriveTarget && busyId === arriveTarget.id)}
+        onConfirm={confirmArrive}
+      />
     </div>
   )
 }

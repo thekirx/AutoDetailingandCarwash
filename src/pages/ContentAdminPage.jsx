@@ -54,6 +54,7 @@ import { analyzeContentSeo } from '@/lib/contentAnalyzer'
 import { mergeBlogPostsWithGuides } from '@/lib/seoLocalGuides'
 import { supabase } from '@/lib/supabase'
 import { toast } from 'sonner'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
 
 export default function ContentAdminPage() {
   const { profile } = useAuth()
@@ -72,6 +73,8 @@ export default function ContentAdminPage() {
   const [previewFullscreen, setPreviewFullscreen] = useState(false)
   const [previewViewport, setPreviewViewport] = useState('desktop')
   const [mediaLibraryOpen, setMediaLibraryOpen] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState(null) // { kind: 'blog' | 'event', item }
+  const [deleting, setDeleting] = useState(false)
 
   const load = useCallback(async () => {
     // Disambiguate events -> ops_forms relationship via ops_forms!form_id:
@@ -206,15 +209,8 @@ export default function ContentAdminPage() {
     })
   }
 
-  async function handleDeleteBlogRow(post) {
-    if (!window.confirm(`Delete "${post.title}"?`)) return
-    try {
-      await deleteCmsBlog(post, profile)
-      toast.success('Blog deleted')
-      load()
-    } catch (err) {
-      toast.error(err?.message || 'Delete failed')
-    }
+  function handleDeleteBlogRow(post) {
+    setDeleteTarget({ kind: 'blog', item: post })
   }
 
   async function handleQuickToggleEventPublish(ev) {
@@ -246,14 +242,27 @@ export default function ContentAdminPage() {
     })
   }
 
-  async function handleDeleteEventRow(ev) {
-    if (!window.confirm(`Delete event "${ev.title}"?`)) return
+  function handleDeleteEventRow(ev) {
+    setDeleteTarget({ kind: 'event', item: ev })
+  }
+
+  async function confirmDeleteContent() {
+    if (!deleteTarget?.item || deleting) return
+    setDeleting(true)
     try {
-      await deleteCmsEvent(ev.id)
-      toast.success('Event deleted')
+      if (deleteTarget.kind === 'blog') {
+        await deleteCmsBlog(deleteTarget.item, profile)
+        toast.success('Blog deleted')
+      } else {
+        await deleteCmsEvent(deleteTarget.item.id)
+        toast.success('Event deleted')
+      }
+      setDeleteTarget(null)
       load()
     } catch (err) {
       toast.error(err?.message || 'Delete failed')
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -918,6 +927,18 @@ export default function ContentAdminPage() {
           navigator.clipboard?.writeText(item.url)
           toast.success('Photo URL copied to clipboard')
         }}
+      />
+
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setDeleteTarget(null)
+        }}
+        title={`Delete ${deleteTarget?.kind === 'event' ? 'event' : 'blog'} "${deleteTarget?.item?.title || ''}"?`}
+        description="This permanently removes it from the studio and public site."
+        confirmLabel={deleting ? 'Deleting…' : 'Delete'}
+        pending={deleting}
+        onConfirm={confirmDeleteContent}
       />
     </OpsPageShell>
   )

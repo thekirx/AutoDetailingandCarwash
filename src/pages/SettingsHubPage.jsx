@@ -2,6 +2,7 @@ import { Link, Navigate } from 'react-router-dom'
 import { Bell, Bot, Clock3, Database, ShoppingCart, SlidersHorizontal, Sun, Wallet } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import {
+  canAccessAudit,
   canAccessDataCenter,
   canAccessNotifications,
   canAccessPos,
@@ -68,10 +69,11 @@ const TILES = [
   {
     key: 'system-data',
     title: 'System & Data Center',
-    description: 'JSON catalog/CRM exports, retention rules, and PITR backup readiness.',
+    description: 'Audit trail, JSON catalog/CRM exports, retention rules, and PITR backup readiness.',
     to: '/operations/system?tab=data-center',
+    resolveTo: (p) => (canAccessDataCenter(p) ? '/operations/system?tab=data-center' : '/operations/system?tab=audit'),
     icon: Database,
-    allow: canAccessDataCenter,
+    allow: (p) => canAccessAudit(p) || canAccessDataCenter(p),
   },
 ]
 
@@ -95,10 +97,11 @@ export default function SettingsHubPage() {
       <div className="grid gap-4 sm:grid-cols-2">
         {tiles.map((tile) => {
           const Icon = tile.icon
+          const target = tile.resolveTo ? tile.resolveTo(profile) : tile.to
           return (
             <Link
               key={tile.key}
-              to={tile.to}
+              to={target}
               className="group block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
               <Card className="h-full transition group-hover:border-primary/40">

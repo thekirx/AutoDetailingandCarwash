@@ -59,7 +59,7 @@ export default function InventoryPage() {
   const rawTab = searchParams.get('tab')
   const tab = resolveInventoryTab(rawTab, canCars)
   const serviceScope = resolveCatalogScope(rawTab, searchParams.get('scope'))
-  const [crudLocked, setCrudLocked] = useState(false)
+  const [crudLocked, setCrudLocked] = useState(true)
   const [lockBusy, setLockBusy] = useState(false)
 
   const refreshLock = useCallback(async () => {

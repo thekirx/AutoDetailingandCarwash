@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowUpRight, CheckCircle2, Coffee, MapPin, ShieldCheck, Sparkles, Star, X } from 'lucide-react'
 import FormLegalNotice from '../components/FormLegalNotice'
@@ -103,6 +103,8 @@ function mapLiveCatalogRow(row) {
 export default function PublicShopPage() {
   const [activeCategory, setActiveCategory] = useState('all')
   const [liveRows, setLiveRows] = useState([])
+  const [liveLoading, setLiveLoading] = useState(true)
+  const [liveError, setLiveError] = useState('')
   const [selectedItem, setSelectedItem] = useState(null)
   const [formState, setFormState] = useState({
     branch: 'bacoor',
@@ -123,19 +125,27 @@ export default function PublicShopPage() {
   })
   useReveal()
 
-  useEffect(() => {
-    let active = true
+  const loadLiveCatalog = useCallback(() => {
+    setLiveLoading(true)
+    setLiveError('')
     supabase
       .rpc('get_public_shop_catalog')
       .then(({ data, error }) => {
-        if (!active || error || !Array.isArray(data)) return
-        setLiveRows(data.map(mapLiveCatalogRow))
+        if (error) {
+          setLiveError('Live branch counter stock could not load. Showing curated studio gear below.')
+          return
+        }
+        if (Array.isArray(data)) setLiveRows(data.map(mapLiveCatalogRow))
       })
-      .catch(() => { })
-    return () => {
-      active = false
-    }
+      .catch(() => {
+        setLiveError('Live branch counter stock could not load. Showing curated studio gear below.')
+      })
+      .finally(() => setLiveLoading(false))
   }, [])
+
+  useEffect(() => {
+    loadLiveCatalog()
+  }, [loadLiveCatalog])
 
   useEffect(() => {
     if (!selectedItem) return undefined
@@ -258,6 +268,15 @@ export default function PublicShopPage() {
               ))}
             </div>
           </div>
+
+          {liveError ? (
+            <p className="form-error mb-4" role="status">
+              {liveError}{' '}
+              <button type="button" className="underline font-semibold" onClick={loadLiveCatalog} disabled={liveLoading}>
+                Retry
+              </button>
+            </p>
+          ) : null}
 
           <div className="bd-shop-grid bd-reveal">
             {items.map((item) => {

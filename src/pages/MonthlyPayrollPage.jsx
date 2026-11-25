@@ -431,15 +431,15 @@ export default function MonthlyPayrollPage({ defaultBranch, onFinanceSync } = {}
     const targetBranch = branch === 'all' ? person.branch_slug || branches[0]?.slug || 'bacoor' : branch
     if (locked && !isOwner) {
       setFormError('This period is locked. Lucy or Owner can unlock it.')
-      return
+      return false
     }
     if (!targetBranch || !period) {
       setFormError('Pick a branch and a payroll period.')
-      return
+      return false
     }
     if (isDayCrewRole(person.role)) {
       setFormError('Crew are paid on the Daily Sheet.')
-      return
+      return false
     }
     const existing = slipByStaff.get(person.id)
     const draft = draftFor(person)
@@ -453,12 +453,12 @@ export default function MonthlyPayrollPage({ defaultBranch, onFinanceSync } = {}
     const minor = parsePesosToMinor(salaryText)
     if (minor == null || minor <= 0) {
       setFormError(`Enter a salary for ${person.full_name}.`)
-      return
+      return false
     }
     const incentive = String(incentiveText).trim() ? parsePesosToMinor(incentiveText) : 0
     if (incentive == null || incentive < 0) {
       setFormError(`Incentive for ${person.full_name} must be zero or more.`)
-      return
+      return false
     }
     const takeHome = payslipTakeHome(minor, incentive)
     const paidFrom = payrollPaidFrom(draft.paidFrom, existing?.paid_from)
@@ -506,10 +506,12 @@ export default function MonthlyPayrollPage({ defaultBranch, onFinanceSync } = {}
       )
       await Promise.all([loadPeriod(), viewMode === 'history' ? loadHistory() : Promise.resolve()])
       onFinanceSync?.()
+      return true
     } catch (err) {
       const message = err.message || 'Could not send the payslip'
       setFormError(message)
       toast.error(message)
+      return false
     } finally {
       setBusyId('')
     }
@@ -528,12 +530,20 @@ export default function MonthlyPayrollPage({ defaultBranch, onFinanceSync } = {}
     }
     setBatchSending(true)
     let sent = 0
+    let failed = 0
     try {
       for (const person of readyList) {
-        await sendOne(person)
-        sent += 1
+        const ok = await sendOne(person)
+        if (ok) sent += 1
+        else failed += 1
       }
-      toast.success(`Issued ${sent} payslip(s) and posted all to Finance Books.`)
+      if (failed === 0) {
+        toast.success(`Issued ${sent} payslip(s) and posted all to Finance Books.`)
+      } else if (sent > 0) {
+        toast.warning(`Issued ${sent} payslip(s); ${failed} failed. Check the error banner above.`)
+      } else {
+        toast.error(`All ${failed} payslip(s) failed to issue.`)
+      }
     } finally {
       setBatchSending(false)
     }
@@ -1370,9 +1380,9 @@ export default function MonthlyPayrollPage({ defaultBranch, onFinanceSync } = {}
                     className="bg-background text-sm rounded-xl border border-input px-3 py-2 min-h-11"
                   >
                     <option value="all">All years</option>
-                    <option value="2026">2026</option>
-                    <option value="2025">2025</option>
-                    <option value="2024">2024</option>
+                    {Array.from({ length: 5 }, (_, i) => String(new Date().getFullYear() + 1 - i)).map((y) => (
+                      <option key={y} value={y}>{y}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="flex flex-col gap-1.5">

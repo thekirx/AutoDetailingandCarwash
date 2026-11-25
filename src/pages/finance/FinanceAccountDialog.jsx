@@ -6,7 +6,7 @@ import { buildAccountRow, catalogWriteError, isSalaryAccount } from '@/lib/finan
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select } from '@/components/ui/select'
+import { NamedSelect } from '@/components/ui/named-select'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
 const KIND_OPTIONS = [
@@ -115,13 +115,7 @@ export function FinanceAccountDialog({ open, onOpenChange, account, onSaved }) {
           </div>
           <div>
             <Label htmlFor="acct-kind">Group / kind</Label>
-            <Select id="acct-kind" value={kind} disabled={locked14} onChange={(e) => setKind(e.target.value)} className="mt-1">
-              {KIND_OPTIONS.map((o) => (
-                <option key={o.value} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </Select>
+            <NamedSelect id="acct-kind" value={kind} disabled={locked14} onChange={setKind} options={KIND_OPTIONS} className="mt-1" />
             {locked14 ? (
               <p className="mt-1 text-xs text-slate-500">
                 Account 14 code and Payroll kind are locked because Daily Sheets and Monthly Salaries post to it automatically. You can rename it here.

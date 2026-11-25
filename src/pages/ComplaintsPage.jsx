@@ -14,12 +14,14 @@ export default function ComplaintsPage() {
     path: '/complaints',
     noindex: true,
   })
-  const { branches, loading: branchesLoading, error: branchesError } = usePublicBranches()
+  const { branches, loading: branchesLoading, error: branchesError, reload: reloadBranches } = usePublicBranches()
   const [status, setStatus] = useState('idle')
   const [error, setError] = useState('')
   const [guard, setGuard] = useState(() => createPublicFormGuard())
   const [form, setForm] = useState({
     customer_name: '',
+    customer_phone: '',
+    customer_email: '',
     branch: '',
     category: 'Service quality',
     description: '',
@@ -33,8 +35,13 @@ export default function ComplaintsPage() {
 
   async function submit(event) {
     event.preventDefault()
-    setStatus('loading')
     setError('')
+    const digits = String(form.customer_phone || '').replace(/\D/g, '')
+    if (digits.length < 10 || digits.length > 13) {
+      setError('Enter a valid Philippine mobile number (e.g. 09171234567).')
+      return
+    }
+    setStatus('loading')
     const blocked = validatePublicFormGuard(guard)
     if (blocked) {
       setError(blocked)
@@ -45,6 +52,8 @@ export default function ComplaintsPage() {
       'complaint',
       {
         customerName: form.customer_name.trim(),
+        customerPhone: form.customer_phone.trim(),
+        customerEmail: form.customer_email.trim(),
         branch: form.branch,
         category: form.category,
         description: form.description.trim(),
@@ -73,7 +82,10 @@ export default function ComplaintsPage() {
     )
   }
 
-  const update = (key) => (e) => setForm({ ...form, [key]: e.target.value })
+  const update = (key) => (e) => {
+    setError('')
+    setForm((prev) => ({ ...prev, [key]: e.target.value }))
+  }
 
   return (
     <>
@@ -92,6 +104,8 @@ export default function ComplaintsPage() {
       <div className="public-shell booking-grid is-single">
         <form onSubmit={submit} className="booking-form">
           <label>Customer name<input required value={form.customer_name} onChange={update('customer_name')} /></label>
+          <label>Mobile number<input required type="tel" inputMode="tel" placeholder="0917 123 4567" value={form.customer_phone} onChange={update('customer_phone')} /></label>
+          <label>Email (optional)<input type="email" placeholder="you@email.com" value={form.customer_email} onChange={update('customer_email')} /></label>
           <label>Branch
             <select required value={form.branch} onChange={update('branch')} disabled={branchesLoading}>
               <option value="">Select branch</option>
@@ -119,8 +133,11 @@ export default function ComplaintsPage() {
           </label>
           <FormLegalNotice id="complaint-legal" className="form-legal-notice booking-span-2" />
           {branchesError ? (
-            <p className="form-error">
-              Branches could not load ({branchesError}). Please refresh the page to pick a branch.
+            <p className="form-error booking-span-2" role="alert">
+              Branches could not load ({branchesError}).{' '}
+              <button type="button" className="underline font-semibold" onClick={reloadBranches}>
+                Retry
+              </button>
             </p>
           ) : null}
           {error && <p className="form-error">{error}</p>}

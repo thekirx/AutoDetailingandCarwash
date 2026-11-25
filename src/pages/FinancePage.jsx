@@ -92,6 +92,8 @@ import { FINANCE_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
 const MonthlyPayrollPage = lazy(() => import('@/pages/MonthlyPayrollPage'))
 const ApprovalsPage = lazy(() => import('@/pages/ApprovalsPage'))
 
+const PINNED_MORE_IDS = new Set(['categories', 'salaries', 'approvals'])
+
 const TAB_ICONS = {
   overview: LayoutDashboard,
   sheets: ClipboardList,
@@ -309,7 +311,7 @@ export default function FinancePage() {
             .range(from, to)
           q = scopeBranch(q, profile, branchFilter)
           const { data, error } = await q
-          if (error) return []
+          if (error) throw error
           return data || []
         }, 1000)
 
@@ -463,6 +465,15 @@ export default function FinancePage() {
     return branchOptions.find((b) => b.slug === branchFilter)?.name || branchFilter
   }, [branchFilter, branchOptions])
 
+  const pinnedMoreTabs = useMemo(
+    () => visibleTabs.filter((t) => PINNED_MORE_IDS.has(t.id) && !FINANCE_PRIMARY_TAB_IDS.includes(t.id)),
+    [visibleTabs],
+  )
+  const overflowMoreTabs = useMemo(
+    () => moreTabs.filter((t) => !PINNED_MORE_IDS.has(t.id)),
+    [moreTabs],
+  )
+
   if (!canOpenFinanceHub(profile)) return <Navigate to="/operations/access-denied" replace />
 
   function setTab(next) {
@@ -477,10 +488,7 @@ export default function FinancePage() {
     bills: Receipt,
     payroll: FileBarChart,
   }
-  const moreActive = moreTabs.some((item) => item.id === tab)
-  const pinnedMoreTabs = visibleTabs.filter(
-    (t) => ['categories', 'salaries', 'approvals'].includes(t.id) && !FINANCE_PRIMARY_TAB_IDS.includes(t.id),
-  )
+  const moreActive = overflowMoreTabs.some((item) => item.id === tab)
   const railTabs = reportsOnly ? visibleTabs : [...primaryTabs, ...pinnedMoreTabs]
   const isSuperAdmin = profile?.role === ROLES.SUPER_ADMIN
 
@@ -638,7 +646,7 @@ export default function FinancePage() {
                 </TabsTrigger>
               )
             })}
-            {!reportsOnly && moreTabs.length ? (
+            {!reportsOnly && overflowMoreTabs.length ? (
               <DropdownMenu>
                 <DropdownMenuTrigger
                   className="finance-tabs-more"
@@ -651,7 +659,7 @@ export default function FinancePage() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start" className="min-w-52">
                   <DropdownMenuGroup>
-                    {moreTabs.map((item) => (
+                    {overflowMoreTabs.map((item) => (
                       <DropdownMenuItem
                         key={item.id}
                         onClick={() => setTab(item.id)}

@@ -14,6 +14,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import OpsPageShell from '@/components/ops/OpsPageShell'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import {
@@ -46,6 +47,7 @@ export default function SmsPage({ embedded = false }) {
   const [form, setForm] = useState(EMPTY_TEMPLATE_FORM)
   const [tplOpen, setTplOpen] = useState(false)
   const [savingTpl, setSavingTpl] = useState(false)
+  const [deleteTargetId, setDeleteTargetId] = useState(null)
   const [eventQuery, setEventQuery] = useState('')
 
   const filteredEvents = useMemo(() => {
@@ -164,13 +166,17 @@ export default function SmsPage({ embedded = false }) {
     }
   }
 
-  async function deleteTemplate(id) {
+  function deleteTemplate(id) {
     if (savingTpl) return
-    if (!window.confirm('Delete this reference SMS template?')) return
+    setDeleteTargetId(id)
+  }
+
+  async function confirmDeleteTemplate() {
+    if (!deleteTargetId || savingTpl) return
     setSavingTpl(true)
     try {
       const token = await getAccessTokenFresh()
-      const res = await fetch(`/api/notifications?operation=sms-templates&id=${encodeURIComponent(id)}`, {
+      const res = await fetch(`/api/notifications?operation=sms-templates&id=${encodeURIComponent(deleteTargetId)}`, {
         method: 'DELETE',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       })
@@ -180,6 +186,7 @@ export default function SmsPage({ embedded = false }) {
         return
       }
       toast.success('Template deleted')
+      setDeleteTargetId(null)
       load()
     } finally {
       setSavingTpl(false)
@@ -492,6 +499,19 @@ export default function SmsPage({ embedded = false }) {
           </Table>
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={Boolean(deleteTargetId)}
+        onOpenChange={(open) => {
+          if (!open) setDeleteTargetId(null)
+        }}
+        title="Delete this reference SMS template?"
+        description="This removes the reference SMS template."
+        confirmLabel="Delete"
+        destructive
+        pending={savingTpl}
+        onConfirm={confirmDeleteTemplate}
+      />
     </div>
   )
 

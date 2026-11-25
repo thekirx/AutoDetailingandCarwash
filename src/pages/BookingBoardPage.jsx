@@ -70,6 +70,7 @@ import {
   bookingUpdateObjectPath,
 } from '@/lib/detailingCompletion'
 import CancellationReasonDialog from '@/components/CancellationReasonDialog'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
 import OpsGuideCard from '@/components/ops/OpsGuideCard'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import OpsTabList from '@/components/ops/OpsTabBar'
@@ -462,8 +463,12 @@ export default function BookingBoardPage() {
       stop = true
     }
   }, [formOpen])
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
   const [saving, setSaving] = useState(false)
-  const [boardFilter, setBoardFilter] = useState('all')
+  const [boardFilter, setBoardFilter] = useState(() => urlStatus || 'all')
+  const [archiveTarget, setArchiveTarget] = useState(null)
+  const [archiveBusy, setArchiveBusy] = useState(false)
   const [boardLayout, setBoardLayout] = useState('grid')
   const [showEmptyLanes, setShowEmptyLanes] = useState(false)
   const [crewDialog, setCrewDialog] = useState(null)
@@ -516,54 +521,67 @@ export default function BookingBoardPage() {
   const branchScope = useMemo(() => resolveBranchFilter(profile, branchFilter), [profile, branchFilter])
 
   const load = useCallback(async () => {
-    const select = BOOKING_ROW_SELECT
-    // Open pipeline stays on board/calendar until released/cancelled — date filter only gates terminal rows.
-    const openStatuses = boardStatuses.filter((s) => isOpenBookingStatus(s))
-    const closedStatuses = boardStatuses.filter((s) => !isOpenBookingStatus(s))
+    setLoading(true)
+    setLoadError('')
+    try {
+      const select = BOOKING_ROW_SELECT
+      // Open pipeline stays on board/calendar until released/cancelled — date filter only gates terminal rows.
+      const openStatuses = boardStatuses.filter((s) => isOpenBookingStatus(s))
+      const closedStatuses = boardStatuses.filter((s) => !isOpenBookingStatus(s))
 
-    let openQ = supabase
-      .from('bookings')
-      .select(select)
-      .eq('is_archived', false)
-      .in('status', openStatuses.length ? openStatuses : ['pending'])
-      .order('scheduled_start', { ascending: true })
-      .limit(500)
-    openQ = applyBranchScope(openQ, branchScope)
-
-    let closedQ = null
-    if (closedStatuses.length) {
-      closedQ = supabase
+      let openQ = supabase
         .from('bookings')
         .select(select)
         .eq('is_archived', false)
-        .in('status', closedStatuses)
+        .in('status', openStatuses.length ? openStatuses : ['pending'])
         .order('scheduled_start', { ascending: true })
-        .limit(datePreset === 'all' ? 400 : 200)
-      if (range.start && range.end) {
-        closedQ = closedQ
-          .gte('scheduled_start', `${range.start}T00:00:00+08:00`)
-          .lte('scheduled_start', `${range.end}T23:59:59.999+08:00`)
+        .limit(500)
+      openQ = applyBranchScope(openQ, branchScope)
+
+      let closedQ = null
+      if (closedStatuses.length) {
+        closedQ = supabase
+          .from('bookings')
+          .select(select)
+          .eq('is_archived', false)
+          .in('status', closedStatuses)
+          .order('scheduled_start', { ascending: true })
+          .limit(datePreset === 'all' ? 400 : 200)
+        if (range.start && range.end) {
+          closedQ = closedQ
+            .gte('scheduled_start', `${range.start}T00:00:00+08:00`)
+            .lte('scheduled_start', `${range.end}T23:59:59.999+08:00`)
+        }
+        closedQ = applyBranchScope(closedQ, branchScope)
       }
-      closedQ = applyBranchScope(closedQ, branchScope)
-    }
 
-    const [openRes, closedRes] = await Promise.all([
-      openQ,
-      closedQ || Promise.resolve({ data: [], error: null }),
-    ])
-    if (openRes.error) toast.error(openRes.error.message)
-    else if (closedRes.error) toast.error(closedRes.error.message)
+      const [openRes, closedRes] = await Promise.all([
+        openQ,
+        closedQ || Promise.resolve({ data: [], error: null }),
+      ])
+      const err = openRes.error || closedRes.error
+      if (err) {
+        setLoadError(err.message || 'Unable to load bookings')
+        toast.error(err.message || 'Unable to load bookings')
+      }
 
-    const byId = new Map()
-    for (const row of [...(openRes.data || []), ...(closedRes.data || [])]) {
-      if (!isBookingBoardRow(row)) continue
-      byId.set(row.id, row)
+      const byId = new Map()
+      for (const row of [...(openRes.data || []), ...(closedRes.data || [])]) {
+        if (!isBookingBoardRow(row)) continue
+        byId.set(row.id, row)
+      }
+      setBookings(
+        [...byId.values()].sort(
+          (a, b) => new Date(a.scheduled_start).getTime() - new Date(b.scheduled_start).getTime(),
+        ),
+      )
+    } catch (err) {
+      const msg = err?.message || 'Unable to load bookings'
+      setLoadError(msg)
+      toast.error(msg)
+    } finally {
+      setLoading(false)
     }
-    setBookings(
-      [...byId.values()].sort(
-        (a, b) => new Date(a.scheduled_start).getTime() - new Date(b.scheduled_start).getTime(),
-      ),
-    )
   }, [branchScope, range.start, range.end, boardStatuses, datePreset])
 
   useEffect(() => {
@@ -1131,17 +1149,34 @@ export default function BookingBoardPage() {
     load()
   }
 
-  async function archiveBooking(booking) {
+  function archiveBooking(booking) {
     if (formBookingsOnly) {
       toast.error('Cancel with a reason — archive is Admin only.')
       return
     }
-    if (!canEdit || !window.confirm('Archive this booking?')) return
-    const { error } = await supabase.from('bookings').update({ is_archived: true }).eq('id', booking.id).select('id').single()
-    if (error) toast.error(error.message)
-    else {
-      toast.success('Booking archived')
-      load()
+    if (!canEdit) return
+    setArchiveTarget(booking)
+  }
+
+  async function confirmArchiveBooking() {
+    if (!archiveTarget || !canEdit) return
+    setArchiveBusy(true)
+    try {
+      const { error } = await supabase
+        .from('bookings')
+        .update({ is_archived: true })
+        .eq('id', archiveTarget.id)
+        .select('id')
+        .single()
+      if (error) {
+        toast.error(error.message)
+      } else {
+        toast.success('Booking archived')
+        setArchiveTarget(null)
+        load()
+      }
+    } finally {
+      setArchiveBusy(false)
     }
   }
 
@@ -1293,9 +1328,35 @@ export default function BookingBoardPage() {
         </>
       }
     >
+      {loadError ? (
+        <div
+          role="alert"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive"
+        >
+          <span>{loadError}</span>
+          <Button type="button" variant="outline" size="sm" onClick={load} disabled={loading}>
+            {loading ? 'Retrying…' : 'Retry'}
+          </Button>
+        </div>
+      ) : null}
+
       {floorLayout ? null : bookingGuide}
 
-      <Tabs value={tab} onValueChange={(next) => setSearchParams(next === 'board' ? {} : { tab: next }, { replace: true })} className="min-w-0 flex flex-col gap-4">
+      <Tabs
+        value={tab}
+        onValueChange={(next) => {
+          setSearchParams(
+            (prev) => {
+              const p = new URLSearchParams(prev)
+              if (next === 'board') p.delete('tab')
+              else p.set('tab', next)
+              return p
+            },
+            { replace: true },
+          )
+        }}
+        className="min-w-0 flex flex-col gap-4"
+      >
         <OpsTabList tabs={shellTabs} aria-label="Bookings views" />
 
         <TabsContent value="board" className="mt-4 min-w-0">
@@ -1311,7 +1372,7 @@ export default function BookingBoardPage() {
               branchNameBySlug={branchNameBySlug}
               nextActionFor={floorNextAction}
               onAdvance={move}
-              onOpen={canEdit || canEditServicePrice || canSchedule ? openEdit : null}
+              onOpen={canEdit || canEditServicePrice || canSchedule || canAdvanceStatus ? openEdit : null}
               onArrived={load}
               readOnlyHint={isTeamLead ? 'Payment handoff happens at POS.' : 'View only — Team Lead moves stages.'}
             />
@@ -1396,7 +1457,7 @@ export default function BookingBoardPage() {
                   }
                   return showEmptyLanes || !anyPopulated || count > 0
                 })
-                const canOpenCard = canEdit || canEditServicePrice || canSchedule
+                const canOpenCard = canEdit || canEditServicePrice || canSchedule || canAdvanceStatus
                 const hideCardPrice = isInvestor(profile)
                 return (
                   <div
@@ -1608,7 +1669,7 @@ export default function BookingBoardPage() {
                     dayHeaderFormat: (date, culture, loc) => loc.format(date, 'EEE MMM d', culture),
                   }}
                   style={{ minHeight: 420 }}
-                  onSelectEvent={(ev) => (canEdit || canSchedule) && openEdit(ev.resource)}
+                  onSelectEvent={(ev) => (canEdit || canEditServicePrice || canSchedule || canAdvanceStatus) && openEdit(ev.resource)}
                 />
               </div>
             </CardContent>
@@ -1625,319 +1686,342 @@ export default function BookingBoardPage() {
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>{editing ? 'Edit booking' : 'New booking'}</DialogTitle>
+            <DialogTitle>
+              {editing ? (!canEdit && !canSchedule ? 'Booking details' : 'Edit booking') : 'New booking'}
+            </DialogTitle>
           </DialogHeader>
-          <form onSubmit={saveBooking} className="grid gap-3">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="bk-lookup">Find existing customer (phone, plate, or email)</Label>
-              <Input
-                id="bk-lookup"
-                type="search"
-                placeholder="Type to search existing customers"
-                onChange={(e) => lookupExistingCustomer(e.target.value)}
-                aria-describedby="bk-lookup-help"
-              />
-              <p id="bk-lookup-help" className="text-xs text-muted-foreground">
-                {customerLookup.loading
-                  ? 'Searching…'
-                  : customerLookup.error
-                    ? customerLookup.error
-                    : customerLookup.match
-                      ? `Linked: ${customerLookup.match.full_name || customerLookup.match.phone || customerLookup.match.id}`
-                      : 'New customer — leave blank to create a fresh CRM row on save.'}
-              </p>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="bk-name">Customer name</Label>
-              <Input id="bk-name" required value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} />
-            </div>
-            <ReferralSourceFields
-              source={form.referral_source}
-              name={form.referred_by_name}
-              staffId={form.referred_by_staff_id}
-              staff={referralStaff}
-              accountError={friendCodeAccountError({ referral_source: form.referral_source }, form.customer_id)}
-              onChange={(patch) => setForm((current) => ({ ...current, ...patch }))}
-            />
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="bk-phone">Phone</Label>
-              <Input id="bk-phone" value={form.customer_phone} onChange={(e) => setForm({ ...form, customer_phone: e.target.value })} />
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label>Branch</Label>
-              <Select
-                value={form.branch || undefined}
-                onValueChange={(branch) => setForm({ ...form, branch })}
-                items={formBranchItems}
-              >
-                <SelectTrigger className="cursor-pointer"><SelectValue placeholder="Pick a branch" /></SelectTrigger>
-                <SelectContent>
-                  {branchSelectOptions.map((b) => (
-                    <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label>Service</Label>
-              <Select
-                value={form.service_id || undefined}
-                onValueChange={(service_id) => {
-                  const svc = formServices.find((s) => s.id === service_id)
-                  const minor = resolveServicePriceMinor(svc, form.vehicle_type)
-                  setForm((f) => ({
-                    ...f,
-                    service_id,
-                    package_id: '',
-                    price_pesos: minor ? String(minor / 100) : f.price_pesos,
-                  }))
-                }}
-                items={formServiceItems}
-              >
-                <SelectTrigger className="cursor-pointer" aria-label="Service">
-                  <SelectValue placeholder={formServices.length ? 'Select detailing service' : 'No detailing services loaded'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {serviceSelectOptions.map((s) => (
-                    <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {(formBookingsOnly) ? (
-                <p className="text-xs text-muted-foreground">
-                  Detailing · Ceramic, Paint Maintenance, Tint, PPF — Ceramic/PPF start a 6‑month paint-maintenance reminder
-                </p>
-              ) : null}
-            </div>
-            {packagesForService(services, form.service_id).length ? (
-              <div className="flex flex-col gap-2">
-                <Label>Package</Label>
-                <Select
-                  value={form.package_id || undefined}
-                  onValueChange={(package_id) => {
-                    const pkg = packagesForService(services, form.service_id).find((row) => row.id === package_id)
-                    const pesos = pkg && Number(pkg.price_minor) > 0 ? String(Number(pkg.price_minor) / 100) : ''
-                    setForm((f) => ({
-                      ...f,
-                      package_id,
-                      price_pesos: pesos || f.price_pesos,
-                    }))
-                  }}
-                  items={packagesForService(services, form.service_id).map((row) => ({ value: row.id, label: row.name }))}
-                >
-                  <SelectTrigger className="cursor-pointer" aria-label="Package">
-                    <SelectValue placeholder="Select package" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {packagesForService(services, form.service_id).map((row) => (
-                      <SelectItem key={row.id} value={row.id}>
-                        {row.name}{Number(row.price_minor) > 0 ? '' : ' · Ask for price'}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : null}
-            {editing?.reschedule_requested_at ? (
-              <p className="text-sm text-foreground" role="status">
-                This customer asked to reschedule. Call them, then set the new day below. They cannot pick a date themselves.
-              </p>
-            ) : null}
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="bk-start">Final schedule</Label>
-              <Input id="bk-start" type="datetime-local" required value={form.scheduled_start} onChange={(e) => setForm({ ...form, scheduled_start: e.target.value })} />
-              <p className="text-xs text-muted-foreground">
-                Call the customer first, then set the day you agreed. Saving sends a text, an in-app notice, and a phone notification.
-              </p>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="bk-specialist">Specialist</Label>
-              <Input
-                id="bk-specialist"
-                list="bk-specialist-list"
-                value={detailers.find((row) => row.id === form.assigned_staff_id)?.full_name || form.specialist_name || ''}
-                placeholder="Who will do this job"
-                onChange={(e) => {
-                  const name = e.target.value
-                  const match = detailers.find((row) => row.full_name === name)
-                  setForm((current) => ({
-                    ...current,
-                    specialist_name: name,
-                    assigned_staff_id: match?.id || '',
-                  }))
-                }}
-              />
-              <datalist id="bk-specialist-list">
-                {detailers.map((row) => (
-                  <option key={row.id} value={row.full_name} />
-                ))}
-              </datalist>
-              <p className="text-xs text-muted-foreground">Shown in the confirmation text once this booking is confirmed.</p>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="flex flex-col gap-2 sm:col-span-2">
-                <Label htmlFor="bk-plate">Plate / sticker</Label>
-                <Input id="bk-plate" required value={form.vehicle_plate} onChange={(e) => setForm({ ...form, vehicle_plate: e.target.value.toUpperCase() })} placeholder="ABC 1234" />
-                <p className="text-xs text-muted-foreground">{PLATE_FIELD_HINT}</p>
-              </div>
-              <VehicleMakeModelFields
-                make={form.vehicle_make}
-                model={form.vehicle_model}
-                onMakeChange={(vehicle_make) => setForm((f) => ({ ...f, vehicle_make }))}
-                onModelChange={(vehicle_model) => setForm((f) => ({ ...f, vehicle_model }))}
-                onSizeSuggest={(size) => {
-                  const vehicle_type = normalizePricingSize(size)
-                  const svc = formServices.find((s) => s.id === form.service_id)
-                  const minor = resolveServicePriceMinor(svc, vehicle_type)
-                  setForm((f) => ({
-                    ...f,
-                    vehicle_type,
-                    price_pesos: minor ? String(minor / 100) : f.price_pesos,
-                  }))
-                }}
-                variant="crm"
-                makeLabel="Make"
-                modelLabel="Model"
-              />
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="bk-size">Car size</Label>
-                <select
-                  id="bk-size"
-                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
-                  value={form.vehicle_type || 'medium'}
-                  onChange={(e) => {
-                    const vehicle_type = normalizePricingSize(e.target.value)
-                    const svc = formServices.find((s) => s.id === form.service_id)
-                    const minor = resolveServicePriceMinor(svc, vehicle_type)
-                    setForm((f) => ({
-                      ...f,
-                      vehicle_type,
-                      price_pesos: minor ? String(minor / 100) : f.price_pesos,
-                    }))
-                  }}
-                >
-                  {PRICING_SIZES.map((sz) => (
-                    <option key={sz.slug} value={sz.slug}>
-                      {sz.label}
-                    </option>
-                  ))}
-                </select>
-                <p className="text-xs text-muted-foreground">Auto-fills from make and model. Override if this visit prices differently.</p>
-              </div>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="bk-price">Price (PHP)</Label>
-              <Input
-                id="bk-price"
-                type="number"
-                min="0"
-                step="0.01"
-                value={form.price_pesos}
-                onChange={(e) => setForm({ ...form, price_pesos: e.target.value })}
-                placeholder="Optional · Sales overrides"
-              />
-              <p className="text-xs text-muted-foreground">Service and price changes stay with Sales.</p>
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label>Status</Label>
-              {editing && formBookingsOnly ? (
-                <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-foreground">
-                  {detailingBoardStatusLabel(form.status) || form.status}
-                  <span className="mt-0.5 block text-xs text-muted-foreground">
-                    Use Advance below to move this booking. Additional services stay with Sales.
-                  </span>
-                </p>
-              ) : (
-                <Select value={form.status} onValueChange={(status) => setForm({ ...form, status })} items={formStatusItems}>
-                  <SelectTrigger className="cursor-pointer"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {visibleColumns.map((c) => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              )}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="bk-notes">Notes</Label>
-              <Textarea id="bk-notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
-            </div>
-            {editing && canApplyVoucher && !editing.promo_voucher_id && !['completed', 'cancelled'].includes(editing.status) ? (
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                <label className="grid flex-1 gap-1.5">
-                  <Label htmlFor="bk-voucher">Voucher code</Label>
-                  <Input
-                    id="bk-voucher"
-                    value={voucherCode}
-                    onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
-                    placeholder="Customer shows this code"
-                    autoComplete="off"
-                    maxLength={16}
-                    className="uppercase"
+          {(() => {
+            const canSaveForm = !editing || canEdit || canSchedule
+            const canEditFullFields = !editing || canEditServicePrice
+            return (
+              <form onSubmit={saveBooking} className="grid gap-3">
+                <fieldset disabled={!canSaveForm || !canEditFullFields} className="grid min-w-0 gap-3 border-0 p-0">
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="bk-lookup">Find existing customer (phone, plate, or email)</Label>
+                    <Input
+                      id="bk-lookup"
+                      type="search"
+                      placeholder="Type to search existing customers"
+                      onChange={(e) => lookupExistingCustomer(e.target.value)}
+                      aria-describedby="bk-lookup-help"
+                    />
+                    <p id="bk-lookup-help" className="text-xs text-muted-foreground">
+                      {customerLookup.loading
+                        ? 'Searching…'
+                        : customerLookup.error
+                          ? customerLookup.error
+                          : customerLookup.match
+                            ? `Linked: ${customerLookup.match.full_name || customerLookup.match.phone || customerLookup.match.id}`
+                            : 'New customer — leave blank to create a fresh CRM row on save.'}
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="bk-name">Customer name</Label>
+                    <Input id="bk-name" required value={form.customer_name} onChange={(e) => setForm({ ...form, customer_name: e.target.value })} />
+                  </div>
+                  <ReferralSourceFields
+                    source={form.referral_source}
+                    name={form.referred_by_name}
+                    staffId={form.referred_by_staff_id}
+                    staff={referralStaff}
+                    accountError={friendCodeAccountError({ referral_source: form.referral_source }, form.customer_id)}
+                    onChange={(patch) => setForm((current) => ({ ...current, ...patch }))}
                   />
-                </label>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="min-h-11"
-                  disabled={voucherBusy || !voucherCode.trim()}
-                  onClick={async () => {
-                    setVoucherBusy(true)
-                    try {
-                      const { data, error } = await supabase.rpc('apply_booking_promo_voucher', {
-                        p_booking_id: editing.id,
-                        p_code: voucherCode,
-                      })
-                      if (error) throw error
-                      if (data && data.ok === false) throw new Error(data.error || 'Voucher not applied')
-                      toast.success(`Voucher ${data.code} applied`)
-                      setVoucherCode('')
-                      setEditing({ ...editing, promo_voucher_id: data.voucher_id, final_price_minor: data.final_price_minor })
-                      setForm({ ...form, price_pesos: data.final_price_minor != null ? String(Number(data.final_price_minor) / 100) : form.price_pesos })
-                      await load()
-                    } catch (err) {
-                      toast.error(err.message)
-                    } finally {
-                      setVoucherBusy(false)
-                    }
-                  }}
-                >
-                  {voucherBusy ? 'Applying…' : 'Apply voucher'}
-                </Button>
-              </div>
-            ) : null}
-            {editing ? (
-              <div className="bk-edit-stage-actions">
-                {canAdvanceStatus && editingNext ? (
-                  <Button
-                    type="button"
-                    className="min-h-11 w-full cursor-pointer sm:w-auto"
-                    onClick={() => {
-                      setFormOpen(false)
-                      move(editing, editingNext)
-                    }}
-                  >
-                    {BOOKING_PRIMARY_ACTION_LABELS[editingNext] || 'Advance'}
-                  </Button>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="bk-phone">Phone</Label>
+                    <Input id="bk-phone" value={form.customer_phone} onChange={(e) => setForm({ ...form, customer_phone: e.target.value })} />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label>Branch</Label>
+                    <Select
+                      disabled={!canSaveForm || !canEditFullFields}
+                      value={form.branch || undefined}
+                      onValueChange={(branch) => setForm({ ...form, branch })}
+                      items={formBranchItems}
+                    >
+                      <SelectTrigger className="cursor-pointer"><SelectValue placeholder="Pick a branch" /></SelectTrigger>
+                      <SelectContent>
+                        {branchSelectOptions.map((b) => (
+                          <SelectItem key={b.value} value={b.value}>{b.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label>Service</Label>
+                    <Select
+                      disabled={!canSaveForm || !canEditFullFields}
+                      value={form.service_id || undefined}
+                      onValueChange={(service_id) => {
+                        const svc = formServices.find((s) => s.id === service_id)
+                        const minor = resolveServicePriceMinor(svc, form.vehicle_type)
+                        setForm((f) => ({
+                          ...f,
+                          service_id,
+                          package_id: '',
+                          price_pesos: minor ? String(minor / 100) : f.price_pesos,
+                        }))
+                      }}
+                      items={formServiceItems}
+                    >
+                      <SelectTrigger className="cursor-pointer" aria-label="Service">
+                        <SelectValue placeholder={formServices.length ? 'Select detailing service' : 'No detailing services loaded'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {serviceSelectOptions.map((s) => (
+                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {(formBookingsOnly) ? (
+                      <p className="text-xs text-muted-foreground">
+                        Detailing · Ceramic, Paint Maintenance, Tint, PPF — Ceramic/PPF start a 6‑month paint-maintenance reminder
+                      </p>
+                    ) : null}
+                  </div>
+                  {packagesForService(services, form.service_id).length ? (
+                    <div className="flex flex-col gap-2">
+                      <Label>Package</Label>
+                      <Select
+                        disabled={!canSaveForm || !canEditFullFields}
+                        value={form.package_id || undefined}
+                        onValueChange={(package_id) => {
+                          const pkg = packagesForService(services, form.service_id).find((row) => row.id === package_id)
+                          const pesos = pkg && Number(pkg.price_minor) > 0 ? String(Number(pkg.price_minor) / 100) : ''
+                          setForm((f) => ({
+                            ...f,
+                            package_id,
+                            price_pesos: pesos || f.price_pesos,
+                          }))
+                        }}
+                        items={packagesForService(services, form.service_id).map((row) => ({ value: row.id, label: row.name }))}
+                      >
+                        <SelectTrigger className="cursor-pointer" aria-label="Package">
+                          <SelectValue placeholder="Select package" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {packagesForService(services, form.service_id).map((row) => (
+                            <SelectItem key={row.id} value={row.id}>
+                              {row.name}{Number(row.price_minor) > 0 ? '' : ' · Ask for price'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : null}
+                </fieldset>
+                {editing?.reschedule_requested_at ? (
+                  <p className="text-sm text-foreground" role="status">
+                    This customer asked to reschedule. Call them, then set the new day below. They cannot pick a date themselves.
+                  </p>
                 ) : null}
-                {canCancelForm && editing.status !== 'cancelled' && editing.status !== 'completed' ? (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    className="min-h-11 w-full cursor-pointer text-destructive sm:w-auto"
-                    onClick={() => {
-                      setFormOpen(false)
-                      setCancelTarget(editing)
-                    }}
-                  >
-                    Cancel booking
-                  </Button>
+                <fieldset disabled={!canSaveForm} className="grid min-w-0 gap-3 border-0 p-0">
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="bk-start">Final schedule</Label>
+                    <Input id="bk-start" type="datetime-local" required value={form.scheduled_start} onChange={(e) => setForm({ ...form, scheduled_start: e.target.value })} />
+                    <p className="text-xs text-muted-foreground">
+                      Call the customer first, then set the day you agreed. Saving sends a text, an in-app notice, and a phone notification.
+                    </p>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="bk-specialist">Specialist</Label>
+                    <Input
+                      id="bk-specialist"
+                      list="bk-specialist-list"
+                      value={detailers.find((row) => row.id === form.assigned_staff_id)?.full_name || form.specialist_name || ''}
+                      placeholder="Who will do this job"
+                      onChange={(e) => {
+                        const name = e.target.value
+                        const match = detailers.find((row) => row.full_name === name)
+                        setForm((current) => ({
+                          ...current,
+                          specialist_name: name,
+                          assigned_staff_id: match?.id || '',
+                        }))
+                      }}
+                    />
+                    <datalist id="bk-specialist-list">
+                      {detailers.map((row) => (
+                        <option key={row.id} value={row.full_name} />
+                      ))}
+                    </datalist>
+                    <p className="text-xs text-muted-foreground">Shown in the confirmation text once this booking is confirmed.</p>
+                  </div>
+                </fieldset>
+                <fieldset disabled={!canSaveForm || !canEditFullFields} className="grid min-w-0 gap-3 border-0 p-0">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="flex flex-col gap-2 sm:col-span-2">
+                      <Label htmlFor="bk-plate">Plate / sticker</Label>
+                      <Input id="bk-plate" required value={form.vehicle_plate} onChange={(e) => setForm({ ...form, vehicle_plate: e.target.value.toUpperCase() })} placeholder="ABC 1234" />
+                      <p className="text-xs text-muted-foreground">{PLATE_FIELD_HINT}</p>
+                    </div>
+                    <VehicleMakeModelFields
+                      make={form.vehicle_make}
+                      model={form.vehicle_model}
+                      onMakeChange={(vehicle_make) => setForm((f) => ({ ...f, vehicle_make }))}
+                      onModelChange={(vehicle_model) => setForm((f) => ({ ...f, vehicle_model }))}
+                      onSizeSuggest={(size) => {
+                        const vehicle_type = normalizePricingSize(size)
+                        const svc = formServices.find((s) => s.id === form.service_id)
+                        const minor = resolveServicePriceMinor(svc, vehicle_type)
+                        setForm((f) => ({
+                          ...f,
+                          vehicle_type,
+                          price_pesos: minor ? String(minor / 100) : f.price_pesos,
+                        }))
+                      }}
+                      variant="crm"
+                      makeLabel="Make"
+                      modelLabel="Model"
+                    />
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor="bk-size">Car size</Label>
+                      <select
+                        id="bk-size"
+                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                        value={form.vehicle_type || 'medium'}
+                        onChange={(e) => {
+                          const vehicle_type = normalizePricingSize(e.target.value)
+                          const svc = formServices.find((s) => s.id === form.service_id)
+                          const minor = resolveServicePriceMinor(svc, vehicle_type)
+                          setForm((f) => ({
+                            ...f,
+                            vehicle_type,
+                            price_pesos: minor ? String(minor / 100) : f.price_pesos,
+                          }))
+                        }}
+                      >
+                        {PRICING_SIZES.map((sz) => (
+                          <option key={sz.slug} value={sz.slug}>
+                            {sz.label}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="text-xs text-muted-foreground">Auto-fills from make and model. Override if this visit prices differently.</p>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="bk-price">Price (PHP)</Label>
+                    <Input
+                      id="bk-price"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={form.price_pesos}
+                      onChange={(e) => setForm({ ...form, price_pesos: e.target.value })}
+                      placeholder="Optional · Sales overrides"
+                    />
+                    <p className="text-xs text-muted-foreground">Service and price changes stay with Sales.</p>
+                  </div>
+                </fieldset>
+                <fieldset disabled={!canSaveForm} className="grid min-w-0 gap-3 border-0 p-0">
+                  <div className="flex flex-col gap-2">
+                    <Label>Status</Label>
+                    {editing && formBookingsOnly ? (
+                      <p className="rounded-lg border border-border bg-muted/40 px-3 py-2 text-sm text-foreground">
+                        {detailingBoardStatusLabel(form.status) || form.status}
+                        <span className="mt-0.5 block text-xs text-muted-foreground">
+                          Use Advance below to move this booking. Additional services stay with Sales.
+                        </span>
+                      </p>
+                    ) : (
+                      <Select disabled={!canSaveForm} value={form.status} onValueChange={(status) => setForm({ ...form, status })} items={formStatusItems}>
+                        <SelectTrigger className="cursor-pointer"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {visibleColumns.map((c) => <SelectItem key={c.id} value={c.id}>{c.label}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="bk-notes">Notes</Label>
+                    <Textarea id="bk-notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} />
+                  </div>
+                </fieldset>
+                {editing && canApplyVoucher && !editing.promo_voucher_id && !['completed', 'cancelled'].includes(editing.status) ? (
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                    <label className="grid flex-1 gap-1.5">
+                      <Label htmlFor="bk-voucher">Voucher code</Label>
+                      <Input
+                        id="bk-voucher"
+                        value={voucherCode}
+                        onChange={(e) => setVoucherCode(e.target.value.toUpperCase())}
+                        placeholder="Customer shows this code"
+                        autoComplete="off"
+                        maxLength={16}
+                        className="uppercase"
+                      />
+                    </label>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      className="min-h-11"
+                      disabled={voucherBusy || !voucherCode.trim()}
+                      onClick={async () => {
+                        setVoucherBusy(true)
+                        try {
+                          const { data, error } = await supabase.rpc('apply_booking_promo_voucher', {
+                            p_booking_id: editing.id,
+                            p_code: voucherCode,
+                          })
+                          if (error) throw error
+                          if (data && data.ok === false) throw new Error(data.error || 'Voucher not applied')
+                          toast.success(`Voucher ${data.code} applied`)
+                          setVoucherCode('')
+                          setEditing({ ...editing, promo_voucher_id: data.voucher_id, final_price_minor: data.final_price_minor })
+                          setForm({ ...form, price_pesos: data.final_price_minor != null ? String(Number(data.final_price_minor) / 100) : form.price_pesos })
+                          await load()
+                        } catch (err) {
+                          toast.error(err.message)
+                        } finally {
+                          setVoucherBusy(false)
+                        }
+                      }}
+                    >
+                      {voucherBusy ? 'Applying…' : 'Apply voucher'}
+                    </Button>
+                  </div>
                 ) : null}
-              </div>
-            ) : null}
-            <DialogFooter>
-              <Button type="button" variant="outline" className="cursor-pointer" onClick={() => setFormOpen(false)}>Cancel</Button>
-              <Button type="submit" className="cursor-pointer" disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
-            </DialogFooter>
-          </form>
+                {editing ? (
+                  <div className="bk-edit-stage-actions">
+                    {canAdvanceStatus && editingNext ? (
+                      <Button
+                        type="button"
+                        className="min-h-11 w-full cursor-pointer sm:w-auto"
+                        onClick={() => {
+                          setFormOpen(false)
+                          move(editing, editingNext)
+                        }}
+                      >
+                        {BOOKING_PRIMARY_ACTION_LABELS[editingNext] || 'Advance'}
+                      </Button>
+                    ) : null}
+                    {canCancelForm && editing.status !== 'cancelled' && editing.status !== 'completed' ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        className="min-h-11 w-full cursor-pointer text-destructive sm:w-auto"
+                        onClick={() => {
+                          setFormOpen(false)
+                          setCancelTarget(editing)
+                        }}
+                      >
+                        Cancel booking
+                      </Button>
+                    ) : null}
+                  </div>
+                ) : null}
+                <DialogFooter>
+                  <Button type="button" variant="outline" className="cursor-pointer" onClick={() => setFormOpen(false)}>
+                    {canSaveForm ? 'Cancel' : 'Close'}
+                  </Button>
+                  {canSaveForm ? (
+                    <Button type="submit" className="cursor-pointer" disabled={saving}>{saving ? 'Saving…' : 'Save'}</Button>
+                  ) : null}
+                </DialogFooter>
+              </form>
+            )
+          })()}
         </DialogContent>
       </Dialog>
 
@@ -2130,6 +2214,19 @@ export default function BookingBoardPage() {
             setCancelLoading(false)
           }
         }}
+      />
+
+      <ConfirmDialog
+        open={Boolean(archiveTarget)}
+        onOpenChange={(open) => {
+          if (!open) setArchiveTarget(null)
+        }}
+        title="Archive this booking?"
+        description="Archived bookings leave the active board and remain in database records."
+        confirmLabel="Archive"
+        destructive
+        pending={archiveBusy}
+        onConfirm={confirmArchiveBooking}
       />
     </OpsPageShell>
   )

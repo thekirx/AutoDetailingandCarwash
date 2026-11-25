@@ -6,7 +6,7 @@
 
 ## Dock
 
-CRM · Detailing Board · Planner Board · Alerts · Content · History
+CRM · Detailing Board · Planner Board · Alerts · Content · History · Payslips
 
 Carwash Queue is read-only on the command list. No Cash advance planner board.
 

@@ -111,6 +111,7 @@ import { cn } from '../lib/utils'
 import OpsGuideCard from '@/components/ops/OpsGuideCard'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import OpsTabList from '@/components/ops/OpsTabBar'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
 import StatusBadge from '@/components/ops/StatusBadge'
 import { QUEUE_WORKFLOW_STEPS, MY_TASKS_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
 import { toast } from 'sonner'
@@ -1711,7 +1712,10 @@ export function NewQueueTicketPage() {
           setPlateMatch(null)
           setPlateLookupState(ranked.length ? 'suggest' : 'idle')
         })
-        .catch((err) => setError(err.message))
+        .catch((err) => {
+          setPlateLookupState('idle')
+          setError(err.message)
+        })
     }, 250)
     return () => window.clearTimeout(timeout)
   }, [form.vehicle_plate, profile])
@@ -1767,6 +1771,7 @@ export function NewQueueTicketPage() {
 
   const parsedFormPrice = Number(String(form.final_price).replace(/,/g, '').trim())
   const showFormLowPriceWarning = Number.isFinite(parsedFormPrice) && parsedFormPrice > 0 && parsedFormPrice < 50
+  const [lowPriceConfirmOpen, setLowPriceConfirmOpen] = useState(false)
   const [step, setStep] = useState(0)
   const lastStep = NEW_TICKET_STEPS.length - 1
   const selectedServiceNames = (form.service_ids || [])
@@ -1803,26 +1808,10 @@ export function NewQueueTicketPage() {
     setStep(index)
   }
 
-  const submit = async (event) => {
-    event.preventDefault()
-    if (step < lastStep) {
-      goTo(step + 1)
-      return
-    }
+  const performCreateTicket = async () => {
     setSubmitting(true)
     setError('')
     try {
-      for (let i = 0; i < lastStep; i += 1) {
-        const problem = stepError(i)
-        if (problem) {
-          setStep(i)
-          throw new Error(problem)
-        }
-      }
-      if (showFormLowPriceWarning && !window.confirm('Please confirm this amount is correct. Did you mean a higher peso amount?')) {
-        setSubmitting(false)
-        return
-      }
       const ticket = await createQueueTicket({
         ...form,
         customer_name: `${form.customer_first_name || ''} ${form.customer_last_name || ''}`.trim(),
@@ -1833,12 +1822,36 @@ export function NewQueueTicketPage() {
         services,
         created_by: user.id,
       })
+      setLowPriceConfirmOpen(false)
       navigate(`/operations/queue?open=${ticket.id}`)
     } catch (err) {
+      setLowPriceConfirmOpen(false)
       setError(err.message)
     } finally {
       setSubmitting(false)
     }
+  }
+
+  const submit = async (event) => {
+    event.preventDefault()
+    if (step < lastStep) {
+      goTo(step + 1)
+      return
+    }
+    setError('')
+    for (let i = 0; i < lastStep; i += 1) {
+      const problem = stepError(i)
+      if (problem) {
+        setStep(i)
+        setError(problem)
+        return
+      }
+    }
+    if (showFormLowPriceWarning) {
+      setLowPriceConfirmOpen(true)
+      return
+    }
+    await performCreateTicket()
   }
 
   if (!canManageQueue) return <Navigate to="/operations/access-denied" replace />
@@ -2047,6 +2060,15 @@ export function NewQueueTicketPage() {
           </form>
         </Panel>
       </div>
+      <ConfirmDialog
+        open={lowPriceConfirmOpen}
+        onOpenChange={setLowPriceConfirmOpen}
+        title="Confirm low amount"
+        description="Please confirm this amount is correct. Did you mean a higher peso amount?"
+        confirmLabel="Create ticket"
+        pending={submitting}
+        onConfirm={performCreateTicket}
+      />
     </OpsPageShell>
   )
 }
@@ -2066,6 +2088,7 @@ export function CrewPage() {
   const [branches, setBranches] = useState([])
   const [saving, setSaving] = useState('')
   const [actionError, setActionError] = useState('')
+  const [deactivateTarget, setDeactivateTarget] = useState(null)
   const [crewTab, setCrewTab] = useState('pool')
   const presentCount = staffPool.filter((member) => member.is_present_today).length
   const presentRows = useMemo(() => staffPool.filter((m) => m.is_present_today), [staffPool])
@@ -2206,10 +2229,7 @@ export function CrewPage() {
             saving={saving}
             onAttendance={(member, status) => runCrewAction(`${member.id}-${status}`, () => setStaffAttendance(member, status, profile))}
             onEdit={(member, patch) => runCrewAction(`${member.id}-edit`, () => updateCrewStaffMember(member.id, patch))}
-            onDeactivate={(member) => {
-              if (!window.confirm(`Remove ${member.full_name} from the active crew pool?`)) return
-              return runCrewAction(`${member.id}-off`, () => deactivateCrewStaffMember(member.id))
-            }}
+            onDeactivate={(member) => setDeactivateTarget(member)}
           />
         </Panel>
       )}
@@ -2224,10 +2244,7 @@ export function CrewPage() {
               saving={saving}
               onAttendance={(member, status) => runCrewAction(`${member.id}-${status}`, () => setStaffAttendance(member, status, profile))}
               onEdit={(member, patch) => runCrewAction(`${member.id}-edit`, () => updateCrewStaffMember(member.id, patch))}
-              onDeactivate={(member) => {
-                if (!window.confirm(`Remove ${member.full_name} from the active crew pool?`)) return
-                return runCrewAction(`${member.id}-off`, () => deactivateCrewStaffMember(member.id))
-              }}
+              onDeactivate={(member) => setDeactivateTarget(member)}
             />
           </Panel>
           <Panel title="Deployable (not on a ticket)" icon={Users}><CrewList rows={availableStaff} empty="No attended staff available" /></Panel>
@@ -2239,6 +2256,23 @@ export function CrewPage() {
       {crewTab === 'compensation' && (
         <CrewCompensationPanel profile={profile} staffPool={staffPool} branchFilter={getBranchScope(profile) || 'all'} />
       )}
+      <ConfirmDialog
+        open={Boolean(deactivateTarget)}
+        onOpenChange={(open) => {
+          if (!open) setDeactivateTarget(null)
+        }}
+        title={`Remove ${deactivateTarget?.full_name || 'crew member'} from the active crew pool?`}
+        description="They will no longer appear for active queue assignments."
+        confirmLabel="Remove"
+        destructive
+        pending={Boolean(deactivateTarget && saving === `${deactivateTarget.id}-off`)}
+        onConfirm={async () => {
+          if (!deactivateTarget) return
+          const member = deactivateTarget
+          setDeactivateTarget(null)
+          await runCrewAction(`${member.id}-off`, () => deactivateCrewStaffMember(member.id))
+        }}
+      />
     </OpsPageShell>
   )
 }
@@ -2366,6 +2400,7 @@ export function MyTasksPage() {
   const [planRows, setPlanRows] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [actionError, setActionError] = useState('')
   const [saving, setSaving] = useState('')
 
   const load = useCallback(async () => {
@@ -2417,30 +2452,33 @@ export function MyTasksPage() {
   if (!canViewAssignedTasks) return <Navigate to="/operations/access-denied" replace />
 
   const markInProgress = async (assignment) => {
+    setActionError('')
     setSaving(assignment.id)
     try {
       await acknowledgeQueueAssignment(assignment.id)
       await load()
     } catch (err) {
-      setError(err.message)
+      setActionError(err.message)
     } finally {
       setSaving('')
     }
   }
 
   const markQueueDone = async (assignment) => {
+    setActionError('')
     setSaving(assignment.id)
     try {
       await completeQueueAssignment(assignment.id)
       await load()
     } catch (err) {
-      setError(err.message)
+      setActionError(err.message)
     } finally {
       setSaving('')
     }
   }
 
   const updatePlanTask = async (row, nextStatus, proofFields = {}) => {
+    setActionError('')
     const proofRequired = Boolean(row.plan_cards?.proof_required)
     const patch = allowedStaffPlanAssigneePatch(
       { ...row, proof_required: proofRequired },
@@ -2448,7 +2486,7 @@ export function MyTasksPage() {
       { proofRequired },
     )
     if (!patch) {
-      setError('Illegal planning status change.')
+      setActionError('Illegal planning status change.')
       return
     }
     setSaving(row.id)
@@ -2458,7 +2496,7 @@ export function MyTasksPage() {
       .eq('id', row.id)
       .eq('staff_id', user.id)
     setSaving('')
-    if (uError) setError(uError.message)
+    if (uError) setActionError(uError.message)
     else load()
   }
 
@@ -2488,6 +2526,12 @@ export function MyTasksPage() {
         </div>
       }
     >
+      {actionError ? (
+        <div role="alert" className="floor-alert floor-alert-error">
+          {actionError}
+        </div>
+      ) : null}
+
       <OpsGuideCard
         title="How my tasks work"
         description="Queue assignments and planner cards assigned to you. Photo proof goes to Planner review."

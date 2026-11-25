@@ -124,7 +124,7 @@ describe('Bookings floor board wiring', () => {
     assert.match(board, /MAINTENANCE_STAGE = 'maintenance'/)
     assert.match(board, /Car arrived · Start intake/)
     assert.match(client, /action: 'arrive'/)
-    assert.match(client, /window\.confirm/)
+    assert.match(board, /ConfirmDialog/)
     assert.match(board, /openMaintenanceBookingForPlate/)
   })
 

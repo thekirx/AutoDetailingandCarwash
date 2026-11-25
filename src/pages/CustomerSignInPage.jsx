@@ -85,6 +85,17 @@ export default function CustomerSignInPage() {
   const returnPath = resolveCustomerPostLoginPath(location.state?.from)
 
   useEffect(() => {
+    const state = location.state
+    if (state?.justSignedUp) {
+      if (state.phone) {
+        setIdMode('phone')
+        setIdentifier(String(state.phone))
+      }
+      setInfo('Account created! Enter your password below to sign in.')
+    }
+  }, [location.state])
+
+  useEffect(() => {
     let cancelled = false
     unlockDemoLoginFromUrl().then((on) => {
       if (cancelled) return
@@ -142,7 +153,7 @@ export default function CustomerSignInPage() {
   }, [identifier])
 
   if (loading) return <LoadingScreen />
-  if (user && profile?.role === 'customer') return <Navigate to="/account" replace />
+  if (user && profile?.role === 'customer') return <Navigate to={returnPath} replace />
 
   const signInWithCredentials = async (nextIdentifier, nextPassword, { skipIntentCheck = false } = {}) => {
     setError('')
@@ -397,8 +408,8 @@ export default function CustomerSignInPage() {
         {setupStatus === 'ready' ? <p className="hakum-auth-hint hakum-auth-hint--ok">Account found. Enter your password.</p> : null}
         {setupStatus === 'unknown' ? (
           <p className="hakum-auth-hint">
-            No account for that {idMode === 'phone' ? 'number' : 'email or plate'} yet.{' '}
-            <Link to={idMode === 'phone' ? activateSignupHref(identifier.trim()) : '/signup'}>Create one</Link> to track visits.
+            No account for that {idKind === 'email' ? 'email' : idKind === 'plate' ? 'plate' : 'number'} yet.{' '}
+            <Link to={idKind === 'phone' ? activateSignupHref(identifier.trim()) : '/signup'}>Create one</Link> to track visits.
           </p>
         ) : null}
 

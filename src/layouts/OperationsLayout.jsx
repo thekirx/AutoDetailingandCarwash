@@ -76,6 +76,7 @@ import PushToggle from '@/components/PushToggle'
 import UserSettingsModal from '@/components/UserSettingsModal'
 import { OpsInstallPopup } from '@/components/InstallGuide'
 import CommandMenu from '@/components/ops/CommandMenu'
+import OpsErrorBoundary from '@/components/ops/OpsErrorBoundary'
 import ResponsiveSheet from '@/components/ops/ResponsiveSheet'
 import {
   Sidebar,
@@ -269,12 +270,11 @@ function FloorAppShell({
                 to={to}
                 end={Boolean(end)}
                 className={({ isActive }) => {
-                  const onQueueBoard = pathOnly === '/operations/queue' && location.pathname === '/operations/queue'
                   const active = primary
                     ? location.pathname === pathOnly || location.pathname.startsWith(`${pathOnly}/`)
                     : end
-                      ? onQueueBoard
-                      : isActive || location.pathname.startsWith(pathOnly)
+                      ? isActive
+                      : isActive || location.pathname === pathOnly || location.pathname.startsWith(`${pathOnly}/`)
                   return `floor-rail-item ${primary ? 'floor-rail-item-primary' : ''} ${active ? 'is-active' : ''}`
                 }}
               >
@@ -370,7 +370,9 @@ function FloorAppShell({
           </header>
 
           <main className="floor-main ops-page-chrome min-h-0 flex-1 overflow-y-auto overscroll-y-contain pt-3 pb-[calc(4.75rem+env(safe-area-inset-bottom))] sm:pt-4 md:max-w-5xl md:self-stretch md:px-6 md:pb-6">
-            <Outlet />
+            <OpsErrorBoundary key={`${location.pathname}${location.search}`} homeTo={homeUrl}>
+              <Outlet />
+            </OpsErrorBoundary>
           </main>
 
           <nav
@@ -390,12 +392,11 @@ function FloorAppShell({
                       to={to}
                       end={Boolean(end)}
                       className={({ isActive }) => {
-                        const onQueueBoard = pathOnly === '/operations/queue' && location.pathname === '/operations/queue'
                         const active = primary
                           ? location.pathname === pathOnly || location.pathname.startsWith(`${pathOnly}/`)
                           : end
-                            ? onQueueBoard
-                            : isActive || location.pathname.startsWith(pathOnly)
+                            ? isActive
+                            : isActive || location.pathname === pathOnly || location.pathname.startsWith(`${pathOnly}/`)
                         if (primary) return `floor-dock-fab ${active ? 'floor-dock-fab-active' : ''}`
                         return `floor-dock-item ${active ? 'floor-dock-item-active' : ''}`
                       }}
@@ -420,9 +421,11 @@ function FloorAppShell({
                   key={to}
                   to={to}
                   onClick={() => setMoreOpen(false)}
-                  className={({ isActive }) =>
-                    `floor-chip min-h-11 ${isActive || location.pathname.startsWith(to.split('?')[0]) ? 'floor-chip-active' : ''}`
-                  }
+                  className={({ isActive }) => {
+                    const toPath = to.split('?')[0]
+                    const active = isActive || location.pathname === toPath || location.pathname.startsWith(`${toPath}/`)
+                    return `floor-chip min-h-11 ${active ? 'floor-chip-active' : ''}`
+                  }}
                 >
                   <Icon size={16} aria-hidden />
                   {dockLabel(label)}
@@ -808,7 +811,12 @@ function CommandShell({ profile, user, signOut, navigation, adminShell }) {
           </DropdownMenu>
         </header>
         <main className="ops-page-chrome mx-auto min-w-0 w-full max-w-7xl flex-1 p-3 sm:p-5 lg:p-8">
-          <Outlet />
+          <OpsErrorBoundary
+            key={`${location.pathname}${location.search}`}
+            homeTo={resolvePostLoginPath(profile, null) || '/operations'}
+          >
+            <Outlet />
+          </OpsErrorBoundary>
         </main>
       </SidebarInset>
       <CommandMenu open={cmdOpen} onOpenChange={setCmdOpen} />

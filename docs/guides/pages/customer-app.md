@@ -1,7 +1,7 @@
 ﻿# Customer app
 
-**Routes:** `/account`, `/account/book`, `/account/queue`, `/account/blog`, `/account/loyalty`, `/account/more`, `/account/events`, `/account/visit`, `/account/visit/:id`, `/signin`, `/signup`, `/account/set-password`  
-**Shell:** `.capp` + HakumAuthShell (auth)  
+**Routes:** `/account`, `/account/book`, `/account/queue`, `/account/cars`, `/account/loyalty`, `/account/referral`, `/account/vouchers`, `/account/pickup`, `/account/pickup/:id`, `/account/more`, `/account/blog`, `/account/events`, `/account/visit`, `/account/visit/:id`, `/account/*` (`CustomerNotFoundPage`), `/signin`, `/signup`, `/account/set-password`  
+**Shell:** `.capp` + `HakumAuthShell` (auth) + `HakumChatbot` (owner-configurable floating deterministic concierge with Messenger/Facebook human handoff)  
 **Role guide:** [`../roles/customer.md`](../roles/customer.md) · **Shop-day:** walk-in → signup history · sold car: staff [`vehicle-transfer.md`](./vehicle-transfer.md)
 
 ## Purpose
@@ -23,8 +23,8 @@ Staff move a sold car on [`vehicle-transfer.md`](./vehicle-transfer.md) — past
 
 ## Nav (dock)
 
-Home · Book · Queue · Blog · More  
-Secondary: Events, Loyalty (tiles / More).
+Home · Queue · Book · Rewards · Cars  
+Secondary (Settings gear / More): Profile, Notifications, Appearance, Referrals, Vouchers, Pickups, Events, Blog, Help & Support.
 
 ## Components
 CustomerAppFrame, CustomerAccountDock, ActiveVisitCard, VisitProgress, CustomerUi primitives.

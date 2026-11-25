@@ -1,5 +1,5 @@
 import { isApprovalPreview, APPROVAL_BRANCHES } from './approvalPreview'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from './supabase.js'
 import { publicBranchName } from './homeBranches.js'
 
@@ -78,11 +78,17 @@ export function usePublicBranches({ mode = 'bookable' } = {}) {
   const [branches, setBranches] = useState(isApprovalPreview ? APPROVAL_BRANCHES : [])
   const [loading, setLoading] = useState(!isApprovalPreview)
   const [error, setError] = useState('')
+  const [reloadSeq, setReloadSeq] = useState(0)
+
+  const reload = useCallback(() => {
+    setReloadSeq((n) => n + 1)
+  }, [])
 
   useEffect(() => {
     if (isApprovalPreview) return
     let active = true
     setLoading(true)
+    setError('')
     fetchPublicBranches({ mode })
       .then((rows) => {
         if (active) setBranches(rows)
@@ -96,9 +102,9 @@ export function usePublicBranches({ mode = 'bookable' } = {}) {
     return () => {
       active = false
     }
-  }, [mode])
+  }, [mode, reloadSeq])
 
-  return { branches, loading, error }
+  return { branches, loading, error, reload }
 }
 
 /**

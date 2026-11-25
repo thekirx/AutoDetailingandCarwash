@@ -1185,8 +1185,9 @@ export function getSalesDock(profile) {
   ]
 }
 
-export function getSalesMore() {
-  return []
+export function getSalesMore(profile) {
+  if (profile && !isSalesRole(profile)) return []
+  return [{ label: 'Payslips', to: '/operations/payslips', icon: 'Banknote' }]
 }
 
 /** Crew thumb dock — attendance primary. */
@@ -1223,6 +1224,7 @@ export function getMarketingMore(profile) {
   const more = []
   if (canManageSiteContent(profile)) more.push({ label: 'Content', to: '/operations/content', icon: 'Newspaper' })
   if (canAccessHistory(profile)) more.push({ label: 'History', to: '/operations/history', icon: 'History' })
+  if (canAccessMyPayslips(profile)) more.push({ label: 'Payslips', to: '/operations/payslips', icon: 'Banknote' })
   return more
 }
 
@@ -1235,8 +1237,12 @@ export function getVideoEditorDock(profile) {
   ]
 }
 
-export function getVideoEditorMore() {
-  return []
+export function getVideoEditorMore(profile) {
+  if (profile && profile?.role !== ROLES.VIDEO_EDITOR) return []
+  return [
+    { label: 'Attendance', to: '/operations/attendance', icon: 'Clock' },
+    { label: 'Payslips', to: '/operations/payslips', icon: 'Banknote' },
+  ]
 }
 
 /** Detailer — detailing pipeline on Bookings + attendance. */
@@ -1250,8 +1256,9 @@ export function getDetailerDock(profile) {
   ]
 }
 
-export function getDetailerMore() {
-  return []
+export function getDetailerMore(profile) {
+  if (profile && profile?.role !== ROLES.DETAILER) return []
+  return [{ label: 'Payslips', to: '/operations/payslips', icon: 'Banknote' }]
 }
 
 export function redirectForRole(role) {

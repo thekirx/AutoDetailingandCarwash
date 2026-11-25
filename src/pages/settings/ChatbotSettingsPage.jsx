@@ -133,28 +133,34 @@ export default function ChatbotSettingsPage() {
       syncFromSettings(res.settings)
       setUpdatedAt(res.updatedAt)
       toast.success(successMessage)
+      return true
     } catch (err) {
       const msg = err.message || 'Could not save chatbot settings.'
       setError(msg)
       toast.error(msg)
+      return false
     } finally {
       setSaving(false)
     }
   }
 
   async function handleToggleEnabled(checked) {
+    const previous = form
     const next = normalizeChatbotSettings({
       ...form,
       suggested_prompts: parsedPrompts,
       enabled: Boolean(checked),
     })
     syncFromSettings(next)
-    await persist(
+    const ok = await persist(
       next,
       next.enabled
         ? 'Hakum Concierge chatbot is now ON for public & customer pages.'
         : 'Hakum Concierge chatbot is now OFF and hidden from visitors.',
     )
+    if (!ok) {
+      syncFromSettings(previous)
+    }
   }
 
   async function handleSubmit(e) {
@@ -203,9 +209,12 @@ export default function ChatbotSettingsPage() {
       }
     >
       {error ? (
-        <p role="alert" className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {error}
-        </p>
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <span>{error}</span>
+          <Button type="button" variant="outline" size="sm" className="min-h-10" onClick={load} disabled={loading || saving}>
+            Retry
+          </Button>
+        </div>
       ) : null}
 
       {loading ? (

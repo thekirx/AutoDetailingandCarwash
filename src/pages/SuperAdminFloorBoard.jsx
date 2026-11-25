@@ -220,12 +220,16 @@ export default function SuperAdminFloorBoard() {
     Promise.all([
       supabase.from('restock_requests').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
       supabase.from('expenses').select('id', { count: 'exact', head: true }).eq('status', 'pending_approval'),
-    ]).then(([stock, bills]) => {
-      if (!current) return
-      if (stock.error) console.warn('restock_requests count:', stock.error.message)
-      if (bills.error) console.warn('expenses approval count:', bills.error.message)
-      setPendingApprovals((Number(stock.count) || 0) + (Number(bills.count) || 0))
-    })
+    ])
+      .then(([stock, bills]) => {
+        if (!current) return
+        if (stock.error) console.warn('restock_requests count:', stock.error.message)
+        if (bills.error) console.warn('expenses approval count:', bills.error.message)
+        setPendingApprovals((Number(stock.count) || 0) + (Number(bills.count) || 0))
+      })
+      .catch((err) => {
+        console.warn('pending approvals count:', err?.message || err)
+      })
     return () => {
       current = false
     }
@@ -469,9 +473,15 @@ export default function SuperAdminFloorBoard() {
       </div>
 
       {error ? (
-        <p className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-950 dark:text-red-100" role="alert">
-          {error}
-        </p>
+        <div
+          className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-950 dark:text-red-100"
+          role="alert"
+        >
+          <span>{error}</span>
+          <Button type="button" variant="outline" size="sm" onClick={load} disabled={loading}>
+            {loading ? 'Retrying…' : 'Retry'}
+          </Button>
+        </div>
       ) : null}
 
       {isSuperAdmin(profile) || isAssistantSuperAdmin(profile) ? (

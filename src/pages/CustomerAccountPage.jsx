@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useLocation } from 'react-router-dom'
-import { CalendarDays, CalendarPlus, ChevronDown, Radio, Receipt, Settings, ThumbsDown, ThumbsUp, Wrench } from 'lucide-react'
+import { CalendarDays, CalendarPlus, ChevronDown, Gift, Radio, Receipt, Settings, ThumbsDown, ThumbsUp, Wrench } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { formatMoney } from '@/queue/queueApi'
 import { customerQueuePath } from '@/lib/liveQueuePath'
@@ -117,6 +117,7 @@ export default function CustomerAccountPage() {
   const birthday = data?.birthday
   const dueMaintenance = data?.maintenanceDue || []
   const maintenanceSchedules = data?.maintenanceSchedules || dueMaintenance
+  const pendingPickups = (data?.rewards?.redemptions || []).filter((r) => r.status === 'pending')
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -231,6 +232,7 @@ export default function CustomerAccountPage() {
       cols
       navTitle="Home"
       className="capp-account-home"
+      onRefresh={load}
       hero={
         <header className="capp-hero">
           <div className="capp-hero-bar">
@@ -394,7 +396,7 @@ export default function CustomerAccountPage() {
             </section>
           ) : null}
         </>
-      ) : (
+      ) : !error ? (
         <div className="capp-live-card is-empty capp-span capp-phone-only">
           <div className="capp-live-top">
             <p className="capp-eyebrow">Your car</p>
@@ -411,7 +413,24 @@ export default function CustomerAccountPage() {
             Walk in? See the live queue
           </Link>
         </div>
-      )}
+      ) : null}
+
+      {!loading && pendingPickups.length ? (
+        <section className="capp-section capp-span" aria-label="Merch ready for pickup">
+          <div className="capp-group">
+            {pendingPickups.map((pickup) => (
+              <Row
+                key={pickup.id}
+                to={`/account/pickup/${pickup.id}`}
+                icon={Gift}
+                title={`Pickup pass · ${pickup.products?.name || 'Hakum merch'}`}
+                sub={`${branchLabel(branches, pickup.branch_slug)} · Show code at the counter`}
+                chevron
+              />
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       {maintenanceSchedules.length ? (
         <div className="capp-card capp-span" role="status">
@@ -496,7 +515,7 @@ export default function CustomerAccountPage() {
               <div className="capp-thumbs" role="group" aria-label="How was your visit?">
                 <button
                   type="button"
-                  className={`capp-thumb${ratingVote === 'up' ? ' is-on' : ''}`}
+                  className={`capp-vote-btn${ratingVote === 'up' ? ' is-on' : ''}`}
                   disabled={ratingSaving}
                   onClick={() => submitReview('up')}
                 >
@@ -505,7 +524,7 @@ export default function CustomerAccountPage() {
                 </button>
                 <button
                   type="button"
-                  className={`capp-thumb${ratingVote === 'down' ? ' is-on' : ''}`}
+                  className={`capp-vote-btn${ratingVote === 'down' ? ' is-on' : ''}`}
                   disabled={ratingSaving}
                   onClick={() => setRatingVote('down')}
                 >
@@ -629,7 +648,10 @@ export default function CustomerAccountPage() {
                       end={
                         <>
                           <b>{formatMoney(row.final_price_minor)}</b>
-                          <Badge status={row.status} label={row.status} />
+                          <Badge
+                            status={row.status}
+                            label={STAGE_PHRASES[String(row.status || '').toLowerCase()] || String(row.status || '').replace(/_/g, ' ')}
+                          />
                         </>
                       }
                       chevron

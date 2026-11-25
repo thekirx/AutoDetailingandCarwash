@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Gift } from 'lucide-react'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
@@ -12,14 +12,29 @@ export default function CustomerPickupPage() {
   const [data, setData] = useState(null)
   const [error, setError] = useState('')
   usePageMeta({ title: 'Pickup pass', description: 'Show this code at the counter.', path: `/account/pickup/${id}` })
-  useEffect(() => { fetchPortal().then(setData).catch((err) => setError(err.message)) }, [id])
+  const load = useCallback(() => {
+    setError('')
+    fetchPortal()
+      .then((next) => {
+        setData(next)
+        setError('')
+      })
+      .catch((err) => setError(err.message || 'Could not load pickup pass.'))
+  }, [])
+  useEffect(() => { load() }, [load, id])
   const rows = data?.rewards?.redemptions || []
   const row = rows.find((r) => r.id === id)
   const branch = branchLabel(data?.branches, row?.branch_slug)
   const days = pickupDaysLeft(row?.expires_at)
-  return <CustomerAppFrame title={row?.status === 'pending' ? 'Ready for pickup' : 'Pickup pass'} subtitle="Show this code at the counter.">
+  return <CustomerAppFrame title={row?.status === 'pending' ? 'Ready for pickup' : 'Pickup pass'} subtitle="Show this code at the counter." backTo="/account/loyalty" backLabel="Rewards" onRefresh={load}>
     {!data && !error ? <Skeleton n={2} /> : null}
-    {error ? <p className="capp-empty" role="alert">{error}</p> : null}
+    {error ? (
+      <div className="capp-empty" role="alert">
+        <strong>Could not load pickup pass</strong>
+        <span>{error}</span>
+        <button type="button" className="capp-btn capp-btn-fill" onClick={load}>Retry</button>
+      </div>
+    ) : null}
     {data && !row ? <p className="capp-empty">Pickup pass not found. <Link to="/account/loyalty">Back to Rewards</Link></p> : null}
     {row ? <>
       <section className="capp-card capp-pass" aria-label="Pickup pass">

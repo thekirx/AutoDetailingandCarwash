@@ -6,6 +6,8 @@ import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
 import { canAccessMyAdvances, canAccessMyPayslips, canApproveCashAdvance, canEditFinanceBooks, isSuperAdmin } from '@/auth/permissions'
 import OpsPageShell from '@/components/ops/OpsPageShell'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
+import { listBranches } from '@/lib/adminApi'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -29,7 +31,10 @@ export default function MyCashAdvancesPage({ embedded = false } = {}) {
   const [ledger, setLedger] = useState([])
   const [allRequests, setAllRequests] = useState([])
   const [allLedger, setAllLedger] = useState([])
+  const [branches, setBranches] = useState([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+  const [deleteConfirmId, setDeleteConfirmId] = useState('')
   const [amount, setAmount] = useState('')
   const [reason, setReason] = useState('')
   const [branchChoice, setBranchChoice] = useState(profile?.branch_slug || 'bacoor')
@@ -43,8 +48,9 @@ export default function MyCashAdvancesPage({ embedded = false } = {}) {
     const uid = user?.id || profile?.id
     if (!uid) return
     setLoading(true)
+    setLoadError('')
     try {
-      const [{ data, error }, movements] = await Promise.all([
+      const [{ data, error }, movements, branchList] = await Promise.all([
         supabase
           .from('ops_form_submissions')
           .select('id, status, payload, created_at, respondent_label, ops_forms!inner(kind)')
@@ -52,22 +58,30 @@ export default function MyCashAdvancesPage({ embedded = false } = {}) {
           .eq('created_by', uid)
           .order('created_at', { ascending: false })
           .limit(50),
-        loadCashAdvanceLedger(profile?.branch_slug || (isOwner ? 'all' : null), uid).catch(() => []),
+        loadCashAdvanceLedger(profile?.branch_slug || (isOwner ? 'all' : null), uid),
+        listBranches().catch(() => []),
       ])
       if (error) throw error
+      const opBranches = (branchList || []).filter((b) => b && !b.is_archived && b.is_active !== false)
+      setBranches(opBranches)
+      if (!profile?.branch_slug && opBranches[0]?.slug) {
+        setBranchChoice((prev) => (opBranches.some((b) => b.slug === prev) ? prev : opBranches[0].slug))
+      }
       setRows(data || [])
       setLedger(movements || [])
 
       if (canApprove) {
         const [hubRes, companyMovements] = await Promise.all([
-          callFinanceOwnerOps({ action: 'manage-cash-advance', sub_action: 'list' }).catch(() => ({ submissions: [] })),
-          loadCashAdvanceLedger(isOwner ? 'all' : profile?.branch_slug || 'bacoor', null).catch(() => []),
+          callFinanceOwnerOps({ action: 'manage-cash-advance', sub_action: 'list' }),
+          loadCashAdvanceLedger(isOwner ? 'all' : profile?.branch_slug || 'bacoor', null),
         ])
         setAllRequests(hubRes?.submissions || [])
         setAllLedger(companyMovements || [])
       }
     } catch (err) {
-      toast.error(err.message)
+      const msg = err?.message || 'Could not load cash advances'
+      setLoadError(msg)
+      toast.error(msg)
     } finally {
       setLoading(false)
     }
@@ -142,10 +156,12 @@ export default function MyCashAdvancesPage({ embedded = false } = {}) {
   }
 
   async function handleDeleteSubmission(id) {
+    if (!id) return
     setBusyId(id)
     try {
       await callFinanceOwnerOps({ action: 'manage-cash-advance', sub_action: 'delete', id })
       toast.success('Cash advance request deleted.')
+      setDeleteConfirmId('')
       await load()
     } catch (err) {
       toast.error(err.message || 'Could not delete cash advance request')
@@ -185,6 +201,14 @@ export default function MyCashAdvancesPage({ embedded = false } = {}) {
 
   const inner = loading ? (
     <p className="text-sm text-muted-foreground">Loading…</p>
+  ) : loadError ? (
+    <div className="rounded-2xl border border-destructive/40 bg-destructive/10 p-5 text-sm text-destructive" role="alert">
+      <p className="font-semibold">Could not load cash advances</p>
+      <p className="mt-1">{loadError}</p>
+      <Button type="button" variant="outline" size="sm" className="mt-3 min-h-10" onClick={load}>
+        Retry
+      </Button>
+    </div>
   ) : (
     <div className="flex flex-col gap-5">
       {/* Personal Balance Summary Card */}
@@ -382,7 +406,7 @@ export default function MyCashAdvancesPage({ embedded = false } = {}) {
                               variant="ghost"
                               className="min-h-9 text-destructive hover:text-destructive"
                               disabled={busyId === r.id}
-                              onClick={() => handleDeleteSubmission(r.id)}
+                              onClick={() => setDeleteConfirmId(r.id)}
                               aria-label="Delete cash advance request"
                             >
                               <Trash2 className="size-4" />
@@ -429,8 +453,18 @@ export default function MyCashAdvancesPage({ embedded = false } = {}) {
                 className="min-h-11 rounded-xl border border-input bg-background px-3 text-sm"
                 aria-label="Branch for cash advance"
               >
-                <option value="bacoor">Bacoor</option>
-                <option value="batangas">Batangas</option>
+                {branches.length ? (
+                  branches.map((b) => (
+                    <option key={b.slug} value={b.slug}>
+                      {b.name || b.slug}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="bacoor">Bacoor</option>
+                    <option value="batangas">Batangas</option>
+                  </>
+                )}
               </select>
             ) : null}
             <Input
@@ -483,6 +517,18 @@ export default function MyCashAdvancesPage({ embedded = false } = {}) {
           })}
         </ul>
       )}
+
+      <ConfirmDialog
+        open={Boolean(deleteConfirmId)}
+        onOpenChange={(open) => {
+          if (!open && !busyId) setDeleteConfirmId('')
+        }}
+        title="Delete cash advance request?"
+        description="Removes this cash advance request from the approvals queue."
+        confirmLabel={busyId ? 'Deleting…' : 'Delete request'}
+        pending={Boolean(busyId)}
+        onConfirm={() => handleDeleteSubmission(deleteConfirmId)}
+      />
     </div>
   )
 

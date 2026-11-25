@@ -10,7 +10,7 @@ Label = exact action ("Save changes", "Clock in"). Same verb in toast.
 
 ## Input / Select / Textarea / Label
 
-Label above field. Helper under label optional. Error under field. No placeholder-as-label. Focus ring uses `--ring` (brand).
+Label above field. Helper under label optional. Error under field. No placeholder-as-label. Focus ring uses `--ring` (brand). Always use `NamedSelect` (`@/components/ui/named-select`) rather than raw `<option>` children inside Base-UI `<Select>`.
 
 ## Tabs
 
@@ -32,7 +32,7 @@ Value uses `tabular-nums`. Loading = skeleton matching final shape.
 
 ## DataTable
 
-Thin wrapper over shadcn Table: search, column sort, sticky header, optional column visibility, mobile card fallback (one row → stacked fields). Empty → `OpsEmptyState`.
+Thin wrapper over shadcn Table: search, column sort, `loading` skeleton rows, sticky header, optional column visibility, mobile card fallback (one row → stacked fields). Empty → `OpsEmptyState`.
 
 ## PageHeader (`OpsPageShell` evolved)
 
@@ -46,7 +46,7 @@ Search, selects, date range, active chips, Clear. One row on desktop; collapse i
 
 - Dialog: desktop confirmations and short forms.
 - Sheet `side="bottom"`: mobile floor/capp actions.
-- ConfirmDialog: destructive or irreversible (void ticket, close shift). Title, body, Cancel + destructive primary.
+- ConfirmDialog (`@/components/ops/ConfirmDialog`): destructive or irreversible (archive booking, void/clear POS ticket, delete/revoke, close shift). Title, body, Cancel + destructive primary. Never use native browser `window.confirm()` on Operations or System pages.
 - ResponsiveSheet: Dialog ≥ md, bottom Sheet < md.
 
 ## CommandMenu
@@ -55,9 +55,9 @@ Mounts existing `command.jsx` (cmdk). Items from `getOperationsNav(profile)`. Op
 
 ## Empty / Error / Skeleton
 
-- Empty: icon + title + one sentence + optional action.
-- Error: what failed + retry.
-- Skeleton: match layout shape; avoid lone spinners for page loads.
+- Empty (`OpsEmptyState`): icon + title + one sentence + optional JSX `action` (or `onAction` + `actionLabel`).
+- Error: inline error alert + Retry trigger, plus route-level containment via `OpsErrorBoundary` inside `OperationsLayout` and in-shell 404s (`OpsNotFoundPage`, `CustomerNotFoundPage`).
+- Skeleton: match layout shape (`DataTable` `loading` skeletons); avoid lone spinners for page loads.
 
 ## Toast (sonner)
 

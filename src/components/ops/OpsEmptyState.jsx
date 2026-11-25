@@ -16,7 +16,7 @@ export default function OpsEmptyState({ title, description, action, actionLabel,
           {description ? <CardDescription className="mt-1 max-w-prose">{description}</CardDescription> : null}
         </div>
       </CardHeader>
-      {(action || onAction) && actionLabel ? (
+      {action || (onAction && actionLabel) ? (
         <CardContent className="pt-0">
           {action || (
             <Button type="button" variant="secondary" className="min-h-11" onClick={onAction}>

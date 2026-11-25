@@ -1,4 +1,4 @@
-﻿# Video editor
+# Video editor
 
 **Home:** `/operations/planning?tab=calendar`  
 **Shell:** FloorAppShell  
@@ -6,7 +6,7 @@
 
 ## Dock
 
-Calendar · Tasks
+Calendar · Tasks · More: Attendance, Payslips
 
 ## Daily flow
 

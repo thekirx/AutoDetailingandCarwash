@@ -19,6 +19,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Plus } from 'lucide-react'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -195,6 +196,7 @@ export default function ServicesManagePage({
   const [referralEligible, setReferralEligible] = useState(null)
   const [createOpen, setCreateOpen] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [archiveTargetId, setArchiveTargetId] = useState(null)
   const [query, setQuery] = useUrlQueryState()
 
   const categoryOptions = useMemo(
@@ -349,19 +351,24 @@ export default function ServicesManagePage({
     }
   }
 
-  async function onArchive(id) {
-    if (!assertCanMutate()) return
-    if (!window.confirm('Archive this catalog item?')) return
+  async function performArchive(id) {
+    if (!id || !assertCanMutate()) return
     setSaving(true)
     try {
       await archiveService(id)
       toast.success('Archived')
+      setArchiveTargetId(null)
       await load()
     } catch (err) {
       toast.error(err.message)
     } finally {
       setSaving(false)
     }
+  }
+
+  function onArchive(id) {
+    if (!assertCanMutate()) return
+    setArchiveTargetId(id)
   }
 
   const isPackage = serviceKindFromPayCategory(form.pay_category) === 'package'
@@ -727,6 +734,7 @@ export default function ServicesManagePage({
           </DialogHeader>
           {editing && (
             <form onSubmit={onSaveEdit} className="flex flex-col gap-4">
+              <fieldset disabled={!canMutate} className="contents">
               <div className="flex flex-col gap-2">
                 <Label>Name</Label>
                 <Input required value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} />
@@ -888,11 +896,12 @@ export default function ServicesManagePage({
                 onSizeEnabledChange={(size_enabled) => setEditing({ ...editing, size_enabled })}
                 onPricesChange={(size_prices) => setEditing({ ...editing, size_prices, price: size_prices.medium || editing.price })}
               />
+              </fieldset>
               <DialogFooter>
                 <Button type="button" variant="outline" className="min-h-11" onClick={() => setEditing(null)}>
                   Cancel
                 </Button>
-                <Button type="submit" className="min-h-11" disabled={saving}>
+                <Button type="submit" className="min-h-11" disabled={saving || !canMutate}>
                   Save
                 </Button>
               </DialogFooter>
@@ -900,6 +909,18 @@ export default function ServicesManagePage({
           )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(archiveTargetId)}
+        onOpenChange={(open) => {
+          if (!open && !saving) setArchiveTargetId(null)
+        }}
+        title="Archive catalog item?"
+        description="Archived services stay on old tickets and receipts but are hidden from POS and booking."
+        confirmLabel={saving ? 'Archiving…' : 'Archive'}
+        pending={saving}
+        onConfirm={() => performArchive(archiveTargetId)}
+      />
     </section>
   )
 }

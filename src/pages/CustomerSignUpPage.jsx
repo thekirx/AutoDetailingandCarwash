@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { Cake, Eye, EyeOff } from 'lucide-react'
+import { useAuth } from '../auth/AuthProvider'
 import { supabase } from '../lib/supabase'
 import HakumAuthShell, { CUSTOMER_AUTH_BULLETS } from '../components/HakumAuthShell'
 import { AuthLegalLinks } from '../components/FormLegalNotice'
@@ -58,6 +59,7 @@ export default function CustomerSignUpPage() {
   const [submitting, setSubmitting] = useState(false)
   const [looking, setLooking] = useState(false)
   const [invite, setInvite] = useState(null)
+  const { user, profile, loading: authLoading } = useAuth()
   const navigate = useNavigate()
 
   // Arrived from /r/:code — show who invited them. The code rides along to the
@@ -143,6 +145,8 @@ export default function CustomerSignUpPage() {
       return
     }
 
+    if (authLoading) return
+
     setSubmitting(true)
     try {
       let res
@@ -215,6 +219,10 @@ export default function CustomerSignUpPage() {
     }),
     [],
   )
+
+  if (!authLoading && user && profile?.role === 'customer') {
+    return <Navigate to="/account" replace />
+  }
 
   return (
     <HakumAuthShell

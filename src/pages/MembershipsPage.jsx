@@ -25,6 +25,7 @@ import { formatMoney } from '@/queue/queueApi'
 import { formatSizePriceRange } from '@/lib/servicePricing'
 import OpsGuideCard from '@/components/ops/OpsGuideCard'
 import OpsPageShell from '@/components/ops/OpsPageShell'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
 import ReferralSettingsCard from '@/components/ops/ReferralSettingsCard'
 import OpsTabList from '@/components/ops/OpsTabBar'
 import { MEMBERSHIPS_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
@@ -121,6 +122,7 @@ export default function MembershipsPage({ embedded = false } = {}) {
   const [weightDrafts, setWeightDrafts] = useState({})
   const [pointsDrafts, setPointsDrafts] = useState({})
   const [saving, setSaving] = useState(false)
+  const [revokeTarget, setRevokeTarget] = useState(null)
 
   const load = useCallback(async () => {
     const [tierRows, milestoneRows, serviceRows, settingsRow, customerRows, membershipRows] = await Promise.all([
@@ -326,11 +328,13 @@ export default function MembershipsPage({ embedded = false } = {}) {
     }
   }
 
-  async function onRevokeMembership(id) {
+  async function confirmRevokeMembership() {
+    if (!revokeTarget) return
     setSaving(true)
     try {
-      await revokeCustomerMembership(id)
+      await revokeCustomerMembership(revokeTarget.id)
       toast.success('Membership revoked')
+      setRevokeTarget(null)
       await load()
     } catch (err) {
       toast.error(err.message)
@@ -718,7 +722,7 @@ export default function MembershipsPage({ embedded = false } = {}) {
                           variant="outline"
                           className="max-xl:min-h-11"
                           disabled={saving}
-                          onClick={() => onRevokeMembership(row.id)}
+                          onClick={() => setRevokeTarget(row)}
                         >
                           Revoke
                         </Button>
@@ -956,6 +960,19 @@ export default function MembershipsPage({ embedded = false } = {}) {
           )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={Boolean(revokeTarget)}
+        onOpenChange={(open) => {
+          if (!open) setRevokeTarget(null)
+        }}
+        title={`Revoke ${revokeTarget?.customers?.full_name || 'customer'} membership?`}
+        description="Loyalty tier multipliers and member discounts will stop applying at POS immediately."
+        confirmLabel="Revoke"
+        destructive
+        pending={saving}
+        onConfirm={confirmRevokeMembership}
+      />
     </>
   )
 
