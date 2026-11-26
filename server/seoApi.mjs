@@ -52,6 +52,9 @@ export const STATIC_SITEMAP_ROUTES = [
   })),
   { path: '/book', changefreq: 'weekly', priority: '0.9' },
   { path: '/queue', changefreq: 'daily', priority: '0.8' },
+  { path: '/queue/bacoor', changefreq: 'daily', priority: '0.8' },
+  { path: '/queue/batangas', changefreq: 'daily', priority: '0.8' },
+  { path: '/partnerships', changefreq: 'monthly', priority: '0.7' },
   { path: '/events', changefreq: 'weekly', priority: '0.8' },
   { path: '/blog', changefreq: 'weekly', priority: '0.9' },
   { path: '/contact', changefreq: 'monthly', priority: '0.7' },
@@ -153,8 +156,9 @@ export function buildSitemapXml({ dbBlogs = [], dbEvents = [], origin = ORIGIN }
   }
 
   for (const g of SEO_LOCAL_GUIDES) {
+    const guideLastmod = g.updated_at || g.published_at
     pushEntry(`${origin}/blog/${g.slug}`, {
-      lastmod: g.published_at ? g.published_at.slice(0, 10) : undefined,
+      lastmod: guideLastmod ? guideLastmod.slice(0, 10) : undefined,
       changefreq: 'monthly',
       priority: g.region && ['bacoor', 'batangas', 'imus', 'cavite'].includes(g.region) ? '0.8' : '0.7',
     })
@@ -593,7 +597,7 @@ export function buildBranchServiceCrawlerHtml({ page, origin = ORIGIN } = {}) {
     <link rel="alternate" hreflang="en-PH" href="${escHtml(canonical)}" />
     <link rel="alternate" hreflang="x-default" href="${escHtml(canonical)}" />
     <meta property="og:site_name" content="Hakum Auto Care" />
-    <meta property="og:type" content="service" />
+    <meta property="og:type" content="website" />
     <meta property="og:locale" content="en_PH" />
     <meta property="og:title" content="${escHtml(fullTitle)}" />
     <meta property="og:description" content="${escHtml(page.seoDescription)}" />
@@ -674,7 +678,7 @@ export function buildCoreServiceCrawlerHtml({ serviceSlug = '', origin = ORIGIN 
     <link rel="alternate" hreflang="en-PH" href="${escHtml(canonical)}" />
     <link rel="alternate" hreflang="x-default" href="${escHtml(canonical)}" />
     <meta property="og:site_name" content="Hakum Auto Care" />
-    <meta property="og:type" content="service" />
+    <meta property="og:type" content="website" />
     <meta property="og:locale" content="en_PH" />
     <meta property="og:title" content="${escHtml(fullTitle)}" />
     <meta property="og:description" content="${escHtml(desc)}" />

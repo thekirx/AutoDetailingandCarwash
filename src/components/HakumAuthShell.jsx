@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import authHeroPoster from '../assets/hero/bredesign-hero-poster.webp'
 import { Car, ClipboardList, Gauge, MapPin, Sparkles, Users } from 'lucide-react'
+import '@/styles-customer-app.css'
 
 /**
  * Split auth shell: Hakum cinematic blue + light form (ops login).

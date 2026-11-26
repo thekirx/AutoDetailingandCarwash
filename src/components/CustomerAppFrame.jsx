@@ -4,6 +4,7 @@ import { Link, useLocation, useNavigationType } from 'react-router-dom'
 import CustomerAccountDock from '@/components/CustomerAccountDock'
 import { customerScreenDepth } from '@/lib/customerAccountNav'
 import { useCustomerAppTheme } from '@/lib/customerAppTheme'
+import '@/styles-customer-app.css'
 import '@/styles/customer-refinement.css'
 import '@/styles/customer-native.css'
 

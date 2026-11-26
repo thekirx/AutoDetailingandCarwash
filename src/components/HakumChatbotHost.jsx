@@ -16,19 +16,22 @@ const HakumChatbot = lazy(() => import('./HakumChatbot.jsx'))
  */
 export default function HakumChatbotHost() {
   const { pathname } = useLocation()
+  const visible = isChatbotPathVisible(pathname)
   const [settings, setSettings] = useState(null)
 
   const refresh = useCallback(() => {
+    if (!visible) return
     fetchPublicChatbotSettings()
       .then(setSettings)
       .catch(() => setSettings({ ...DEFAULT_CHATBOT_SETTINGS }))
-  }, [])
+  }, [visible])
 
   useEffect(() => {
     refresh()
   }, [refresh])
 
   useEffect(() => {
+    if (!visible) return undefined
     const onUpdated = (e) => {
       if (e?.detail) setSettings(normalizeChatbotSettings(e.detail))
       else refresh()
@@ -40,9 +43,9 @@ export default function HakumChatbotHost() {
       window.removeEventListener(CHATBOT_SETTINGS_EVENT, onUpdated)
       window.removeEventListener('focus', onFocus)
     }
-  }, [refresh])
+  }, [refresh, visible])
 
-  if (!isChatbotPathVisible(pathname)) return null
+  if (!visible) return null
   if (!settings || settings.enabled === false) return null
 
   return (

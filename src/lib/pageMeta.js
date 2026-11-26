@@ -7,6 +7,7 @@ const DEFAULT_DESCRIPTION =
   'Swirl-free two-bucket car wash, auto detailing, Kisho 9H ceramic coating & ClearPro PPF in Bacoor, Imus, Dasmariñas, Cavite & Batangas City.'
 
 const VERIFIED_SOCIAL_PROFILES = [
+  'https://www.facebook.com/profile.php?id=61573318005308',
   'https://www.facebook.com/share/1GHerg8pxV/',
   'https://www.instagram.com/_hakumautocare',
   'https://www.tiktok.com/@hakum_autocare',
@@ -145,7 +146,7 @@ export function buildLocalBusinessJsonLd({
     const lat = Number.isFinite(Number(b.latitude)) ? Number(b.latitude) : mapInfo?.lat
     const lng = Number.isFinite(Number(b.longitude)) ? Number(b.longitude) : mapInfo?.lng
     const hasMapUrl = mapInfo?.cid ? `https://www.google.com/maps?cid=${mapInfo.cid}` : undefined
-    const canonicalBranchUrl = ['bacoor', 'batangas', 'imus', 'cavite'].includes(b.slug)
+    const canonicalBranchUrl = ['bacoor', 'batangas', 'imus', 'dasmarinas', 'cavite'].includes(b.slug)
       ? absoluteUrl(`/branches/${b.slug}`, origin)
       : absoluteUrl(`/branches#${b.slug}`, origin)
 
@@ -399,6 +400,7 @@ export function buildHeadPatch({
   canonical = '',
   article = null,
   noindex = false,
+  robots = '',
   jsonLd = null,
   jsonLdId = 'hakum-jsonld',
 } = {}) {
@@ -413,7 +415,9 @@ export function buildHeadPatch({
   const ogImage = /^https?:\/\//i.test(String(image || '').trim())
     ? String(image).trim()
     : absoluteUrl(image || '/og-image.png')
-  const robotsValue = noindex ? 'noindex,nofollow' : 'index,follow'
+  const explicitRobots = String(robots || '').trim()
+  const robotsValue = explicitRobots || (noindex === 'follow' ? 'noindex,follow' : noindex ? 'noindex,nofollow' : 'index,follow')
+  const isNoindex = Boolean(noindex) || /^noindex\b/i.test(robotsValue)
   const meta = [
     { attr: 'name', key: 'description', content: description },
     ...(String(keywords || '').trim() ? [{ attr: 'name', key: 'keywords', content: String(keywords).trim() }] : []),
@@ -428,9 +432,9 @@ export function buildHeadPatch({
     { attr: 'name', key: 'twitter:title', content: fullTitle },
     { attr: 'name', key: 'twitter:description', content: description },
     { attr: 'name', key: 'twitter:image', content: ogImage },
-    // The in-store TV board & /404 routes are excluded from the index.
+    // The in-store TV board, legal/account shells & /404 routes stay out of the search index.
     { attr: 'name', key: 'robots', content: robotsValue },
-    ...(!noindex
+    ...(!isNoindex
       ? [{ attr: 'name', key: 'googlebot', content: 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1' }]
       : []),
   ]
@@ -443,7 +447,7 @@ export function buildHeadPatch({
   }
 
   const links = [{ rel: 'canonical', href: resolvedCanonical }]
-  if (!noindex) {
+  if (!isNoindex) {
     links.push(
       { rel: 'alternate', hreflang: 'en-PH', href: resolvedCanonical },
       { rel: 'alternate', hreflang: 'x-default', href: resolvedCanonical },
@@ -454,6 +458,7 @@ export function buildHeadPatch({
     title: fullTitle,
     canonical: resolvedCanonical,
     robots: robotsValue,
+    isNoindex,
     meta,
     links,
     jsonLd,
@@ -465,6 +470,10 @@ function applyHeadPatch(options) {
   const patch = buildHeadPatch(options)
   document.title = patch.title
   for (const entry of patch.meta) upsertMeta(entry.attr, entry.key, entry.content)
+  if (patch.isNoindex) {
+    document.head.querySelector('meta[name="googlebot"]')?.remove()
+    document.head.querySelectorAll('link[rel="alternate"][hreflang]').forEach((el) => el.remove())
+  }
   for (const link of patch.links) {
     upsertLink(link.rel, link.href, link.hreflang ? { hreflang: link.hreflang } : {})
   }
@@ -482,6 +491,7 @@ export function usePageMeta({
   canonical,
   article,
   noindex,
+  robots,
   jsonLd = null,
   jsonLdId = 'hakum-jsonld',
 } = {}) {
@@ -497,11 +507,12 @@ export function usePageMeta({
       canonical,
       article,
       noindex,
+      robots,
       jsonLd,
       jsonLdId,
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, description, path, image, ogType, keywords, canonical, articleKey, noindex, jsonLd, jsonLdId])
+  }, [title, description, path, image, ogType, keywords, canonical, articleKey, noindex, robots, jsonLd, jsonLdId])
 }
 
 /**
@@ -518,12 +529,13 @@ export function useLayoutPageMeta({
   keywords,
   canonical,
   noindex,
+  robots,
   jsonLd = null,
   jsonLdId = 'hakum-jsonld',
 } = {}) {
   useLayoutEffect(() => {
-    applyHeadPatch({ title, description, path, image, ogType, keywords, canonical, noindex, jsonLd, jsonLdId })
-  }, [title, description, path, image, ogType, keywords, canonical, noindex, jsonLd, jsonLdId])
+    applyHeadPatch({ title, description, path, image, ogType, keywords, canonical, noindex, robots, jsonLd, jsonLdId })
+  }, [title, description, path, image, ogType, keywords, canonical, noindex, robots, jsonLd, jsonLdId])
 }
 
 export { SITE, DEFAULT_DESCRIPTION }

@@ -64,6 +64,7 @@ export default function CustomerSignInPage() {
     title: 'Sign in',
     description: 'Sign in to your Hakum Auto Care customer account with your phone and password.',
     path: '/signin',
+    noindex: true,
   })
 
   const [idMode, setIdMode] = useState('phone')

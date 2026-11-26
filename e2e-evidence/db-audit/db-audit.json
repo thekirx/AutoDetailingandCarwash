@@ -1,10 +1,10 @@
 {
   "ok": false,
   "url": "https://lybxhpzzqqyqswvuwpxv.supabase.co",
-  "at": "2026-11-18T08:57:02.646Z",
+  "at": "2026-11-26T13:48:30.973Z",
   "bySeverity": {
-    "Info": 54,
-    "High": 2,
+    "Info": 53,
+    "High": 3,
     "Low": 2
   },
   "findings": [
@@ -25,85 +25,85 @@
       "severity": "Info",
       "section": "tables",
       "message": "branches",
-      "rows": 5
+      "rows": 6
     },
     {
       "severity": "Info",
       "section": "tables",
       "message": "customers",
-      "rows": 947
+      "rows": 1869
     },
     {
       "severity": "Info",
       "section": "tables",
       "message": "bookings",
-      "rows": 1362
+      "rows": 7302
     },
     {
       "severity": "Info",
       "section": "tables",
       "message": "vehicles",
-      "rows": 961
+      "rows": 1863
     },
     {
       "severity": "Info",
       "section": "tables",
       "message": "services",
-      "rows": 84
+      "rows": 86
     },
     {
       "severity": "Info",
       "section": "tables",
       "message": "sales",
-      "rows": 1309
+      "rows": 7383
     },
     {
       "severity": "Info",
       "section": "tables",
       "message": "sale_line_items",
-      "rows": 1463
+      "rows": 8699
     },
     {
       "severity": "Info",
       "section": "tables",
       "message": "expenses",
-      "rows": 361
+      "rows": 4723
     },
     {
       "severity": "Info",
       "section": "tables",
       "message": "transactions",
-      "rows": 20
+      "rows": 24
     },
     {
       "severity": "Info",
       "section": "tables",
       "message": "daily_sheets",
-      "rows": 63
+      "rows": 672
     },
     {
       "severity": "Info",
       "section": "tables",
       "message": "daily_sheet_lines",
-      "rows": 385
+      "rows": 4241
     },
     {
       "severity": "Info",
       "section": "tables",
       "message": "staff_attendance",
-      "rows": 308
+      "rows": 3346
     },
     {
       "severity": "Info",
       "section": "tables",
       "message": "queue_assignments",
-      "rows": 1423
+      "rows": 7307
     },
     {
       "severity": "Info",
       "section": "tables",
       "message": "active_customer_queue",
-      "rows": 17
+      "rows": 25
     },
     {
       "severity": "Info",
@@ -121,7 +121,7 @@
       "severity": "Info",
       "section": "tables",
       "message": "loyalty_ledger",
-      "rows": 15
+      "rows": 5857
     },
     {
       "severity": "Info",
@@ -133,7 +133,7 @@
       "severity": "Info",
       "section": "tables",
       "message": "ops_form_submissions",
-      "rows": 3
+      "rows": 39
     },
     {
       "severity": "Info",
@@ -145,13 +145,13 @@
       "severity": "Info",
       "section": "tables",
       "message": "blogs",
-      "rows": 2
+      "rows": 11
     },
     {
       "severity": "Info",
       "section": "tables",
       "message": "audit_logs",
-      "rows": 405
+      "rows": 424
     },
     {
       "severity": "Info",
@@ -163,19 +163,19 @@
       "severity": "Info",
       "section": "tables",
       "message": "service_reviews",
-      "rows": 1
+      "rows": 101
     },
     {
       "severity": "Info",
       "section": "tables",
       "message": "push_subscriptions",
-      "rows": 6
+      "rows": 7
     },
     {
       "severity": "Info",
       "section": "tables",
       "message": "vendors",
-      "rows": 1
+      "rows": 7
     },
     {
       "severity": "Info",
@@ -193,25 +193,25 @@
       "severity": "Info",
       "section": "tables",
       "message": "notification_broadcasts",
-      "rows": 1
+      "rows": 19
     },
     {
       "severity": "Info",
       "section": "tables",
       "message": "sms_events",
-      "rows": 264
+      "rows": 267
     },
     {
       "severity": "Info",
       "section": "tables",
       "message": "plan_cards",
-      "rows": 2
+      "rows": 74
     },
     {
       "severity": "Info",
       "section": "tables",
       "message": "vehicles",
-      "rows": 961
+      "rows": 1863
     },
     {
       "severity": "Info",
@@ -223,22 +223,22 @@
       "severity": "Info",
       "section": "money",
       "message": "sales",
-      "total": 1309,
-      "paid": 1295,
-      "paidTotalMinor": 163382200,
-      "paidTotalPHP": "1633822.00"
+      "total": 7383,
+      "paid": 7320,
+      "paidTotalMinor": 1265817500,
+      "paidTotalPHP": "12658175.00"
     },
     {
       "severity": "Info",
       "section": "money",
       "message": "every sale with line items reconciles",
-      "checked": 1309
+      "checked": 7383
     },
     {
       "severity": "Info",
       "section": "money",
       "message": "transactions",
-      "total": 20,
+      "total": 24,
       "live": 16,
       "liveTotalMinor": 4214850,
       "liveTotalPHP": "42148.50"
@@ -336,29 +336,31 @@
       "severity": "Low",
       "section": "money",
       "message": "transactions with no payment method recorded",
-      "count": 20,
-      "of": 20,
+      "count": 24,
+      "of": 24,
       "note": "Presentational only: nothing reports from this table, and the settled amount lives on `sales.payment_method`."
     },
     {
       "severity": "Info",
       "section": "bookings",
       "message": "status distribution (paged, complete)",
-      "total": 1362,
-      "confirmed": 6,
-      "completed": 1190,
-      "waiting": 22,
-      "for_payment": 13,
-      "cancelled": 90,
-      "pending": 19,
-      "in_progress": 6,
-      "no_show": 16
+      "total": 7302,
+      "completed": 7071,
+      "confirmed": 11,
+      "waiting": 26,
+      "for_payment": 16,
+      "cancelled": 127,
+      "pending": 21,
+      "in_progress": 10,
+      "no_show": 16,
+      "final_checking": 2,
+      "redo": 2
     },
     {
       "severity": "Info",
       "section": "integrity",
       "message": "open queue rows (paged)",
-      "count": 17
+      "count": 25
     },
     {
       "severity": "Info",
@@ -373,9 +375,9 @@
       "detailer": 2,
       "BossMich": 1,
       "marketing": 2,
+      "staff": 5,
       "video_editor": 1,
       "team_lead": 10,
-      "staff": 5,
       "sales": 1
     },
     {
@@ -383,10 +385,10 @@
       "section": "auth",
       "message": "push enrollment (paged, keyed on user_id)",
       "activeStaff": 34,
-      "subscriptionRows": 6,
+      "subscriptionRows": 7,
       "enrolledActiveStaff": 3,
       "notEnrolled": 31,
-      "nonStaffSubscriptions": 3,
+      "nonStaffSubscriptions": 4,
       "inactiveStaffSubscriptions": 0,
       "nonStaffRoles": [
         "customer"
@@ -404,10 +406,10 @@
       "severity": "Info",
       "section": "dailysheet",
       "message": "sheet status distribution",
-      "approved": 58,
+      "approved": 665,
       "draft": 3,
-      "returned": 1,
-      "submitted": 1
+      "returned": 2,
+      "submitted": 2
     },
     {
       "severity": "Info",
@@ -416,25 +418,97 @@
       "sheets": 61
     },
     {
-      "severity": "Info",
+      "severity": "High",
       "section": "dailysheet",
-      "message": "every stored sheet matches the app's own totals for its sales and lines",
-      "sheetsCompared": 2,
-      "note": "Recomputed with computeSheetTotals() from src/lib/dailySheet.js, not a restatement of its rules."
+      "message": "a stored sheet does not match what the app computes from its own sales and lines",
+      "count": 14,
+      "sheets": 611,
+      "detail": [
+        {
+          "branch": "bacoor",
+          "date": "2026-10-11",
+          "status": "approved",
+          "field": "grossMinor",
+          "deltaPHP": 4500
+        },
+        {
+          "branch": "bacoor",
+          "date": "2026-10-11",
+          "status": "approved",
+          "field": "netMinor",
+          "deltaPHP": 4500
+        },
+        {
+          "branch": "bacoor",
+          "date": "2026-10-11",
+          "status": "approved",
+          "field": "cashMinor",
+          "deltaPHP": 4500
+        },
+        {
+          "branch": "bacoor",
+          "date": "2026-10-11",
+          "status": "approved",
+          "field": "count",
+          "deltaPHP": 0.01
+        },
+        {
+          "branch": "bacoor",
+          "date": "2026-10-11",
+          "status": "approved",
+          "field": "netProfitMinor",
+          "deltaPHP": 4500
+        },
+        {
+          "branch": "bacoor",
+          "date": "2026-10-11",
+          "status": "approved",
+          "field": "expectedCashMinor",
+          "deltaPHP": 4500
+        },
+        {
+          "branch": "bacoor",
+          "date": "2026-10-11",
+          "status": "approved",
+          "field": "overShortMinor",
+          "deltaPHP": -4500
+        },
+        {
+          "branch": "bacoor",
+          "date": "2026-08-08",
+          "status": "approved",
+          "field": "grossMinor",
+          "deltaPHP": 2850
+        },
+        {
+          "branch": "bacoor",
+          "date": "2026-08-08",
+          "status": "approved",
+          "field": "netMinor",
+          "deltaPHP": 2850
+        },
+        {
+          "branch": "bacoor",
+          "date": "2026-08-08",
+          "status": "approved",
+          "field": "cashMinor",
+          "deltaPHP": 2850
+        }
+      ]
     },
     {
       "severity": "Info",
       "section": "content",
       "message": "services",
-      "total": 84,
+      "total": 86,
       "publishedOrActive": 33
     },
     {
       "severity": "Info",
       "section": "content",
       "message": "blog posts",
-      "total": 2,
-      "publishedOrActive": 2
+      "total": 11,
+      "publishedOrActive": 11
     },
     {
       "severity": "Info",
@@ -453,7 +527,7 @@
       "severity": "Info",
       "section": "audit",
       "message": "audit_logs rows",
-      "rows": 405
+      "rows": 424
     }
   ]
 }

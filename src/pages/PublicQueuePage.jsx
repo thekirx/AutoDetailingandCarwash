@@ -93,14 +93,17 @@ export default function PublicQueuePage({ mode = 'customer' }) {
     title: branchDetails?.name
       ? isTv
         ? `Shop TV · ${branchDetails.name}`
-        : `Live queue · ${branchDetails.name}`
+        : `Live Queue · ${branchDetails.name}`
       : isTv
         ? 'Shop TV queue'
         : 'Live queue',
     description: isTv
       ? 'Shop floor TV board with plate and service kind. For in-store display.'
-      : 'Customer-safe live queue counts at Hakum Auto Care. Counts only.',
+      : branchDetails?.name
+        ? `Live car wash and detailing queue at Hakum Auto Care ${branchDetails.name}. Check cars waiting and on bay before driving over.`
+        : 'Customer-safe live queue counts and bay activity across Hakum Auto Care branches in Bacoor and Batangas City.',
     path: branch ? (isTv ? `/queue/${branch}/tv` : `/queue/${branch}`) : '/queue',
+    noindex: isTv,
   })
 
   const loadQueue = useCallback(async () => {

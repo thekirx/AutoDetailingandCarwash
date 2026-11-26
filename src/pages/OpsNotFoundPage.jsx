@@ -4,9 +4,16 @@ import { useAuth } from '@/auth/AuthProvider'
 import { resolvePostLoginPath } from '@/auth/authRedirect'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import { Button } from '@/components/ui/button'
+import { usePageMeta } from '@/lib/pageMeta'
 
 /** In-shell 404 for unknown /operations/* URLs so staff stay inside Hakum Ops navigation. */
 export default function OpsNotFoundPage() {
+  usePageMeta({
+    title: 'Page Not Found · Hakum Ops',
+    description: 'Operations route not found.',
+    path: '/operations',
+    noindex: true,
+  })
   const { profile } = useAuth()
   const homeTo = resolvePostLoginPath(profile, null) || '/operations'
 

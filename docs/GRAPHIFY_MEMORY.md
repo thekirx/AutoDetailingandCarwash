@@ -165,4 +165,4 @@ Planner: `plan_cards` + categories/lists/boards. Proof photos in private `plan-p
 
 ## Security note for agents
 
-Never commit `.env`, service_role, or personal access tokens. A management token was pasted in an earlier chat — rotate it; do not put it in graphify-out or git.
+Never commit `.env`, `.env.local`, `service_role`, or personal access tokens (`sbp_*`). Current active 7-day Supabase CLI/Management API access token for project `lybxhpzzqqyqswvuwpxv` (issued `2026-11-26`, valid until **`2026-12-03`**) is stored locally in gitignored `.env.local` (`SUPABASE_ACCESS_TOKEN`) for `npx supabase ... --remote` and Management API queries; `20261125180000_chatbot_widget_settings.sql` is applied and tracked in remote `schema_migrations`.

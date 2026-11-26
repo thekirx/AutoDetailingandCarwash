@@ -319,8 +319,56 @@ function buildStaticRoutes() {
       bodyHtml: `
         <p>See how many cars are currently waiting or in-bay at Hakum Auto Care Bacoor and Batangas City in real time so you never guess wait times.</p>
         <ul>
-          <li><a href="/branches/bacoor/car-wash">Car Wash &amp; Queue in Bacoor (RFC Molino II)</a> — 0915 629 6096</li>
-          <li><a href="/branches/batangas/car-wash">Car Wash &amp; Queue in Batangas City (Alangilan)</a> — 0956 007 1028</li>
+          <li><a href="/queue/bacoor">Live Queue Board — Bacoor (RFC Molino II)</a> · <a href="/branches/bacoor/car-wash">Bacoor Car Wash Studio</a> (0915 629 6096)</li>
+          <li><a href="/queue/batangas">Live Queue Board — Batangas City (Alangilan)</a> · <a href="/branches/batangas/car-wash">Batangas City Car Wash Studio</a> (0956 007 1028)</li>
+        </ul>
+      `,
+    },
+    {
+      path: '/queue/bacoor',
+      title: 'Live Queue · Bacoor (RFC Molino)',
+      description:
+        'Live car wash and detailing queue at Hakum Auto Care Bacoor (RFC Molino II). Check waiting cars and active bays before driving over.',
+      h1: 'Live Car Wash & Detailing Queue — Hakum Bacoor',
+      bodyHtml: `
+        <p>Real-time bay queue for Hakum Auto Care Bacoor at RFC Molino II, Molino Boulevard, Bacoor, Cavite (0915 629 6096).</p>
+        <ul>
+          <li><a href="/branches/bacoor/car-wash">Bacoor Car Wash Services</a> · <a href="/book?branch=bacoor">Book Detailing in Bacoor</a></li>
+          <li><a href="/queue/batangas">Switch to Batangas City Live Queue</a></li>
+        </ul>
+      `,
+    },
+    {
+      path: '/queue/batangas',
+      title: 'Live Queue · Batangas City (Alangilan)',
+      description:
+        'Live car wash and detailing queue at Hakum Auto Care Batangas City (Brgy. Alangilan). Check waiting cars and active bays before driving over.',
+      h1: 'Live Car Wash & Detailing Queue — Hakum Batangas City',
+      bodyHtml: `
+        <p>Real-time bay queue for Hakum Auto Care Batangas City along National Highway, Brgy. Alangilan, Batangas City (0956 007 1028).</p>
+        <ul>
+          <li><a href="/branches/batangas/car-wash">Batangas City Car Wash Services</a> · <a href="/book?branch=batangas">Book Detailing in Batangas City</a></li>
+          <li><a href="/queue/bacoor">Switch to Bacoor Live Queue</a></li>
+        </ul>
+      `,
+    },
+    {
+      path: '/partnerships',
+      title: PUBLIC_ROUTE_SEO['/partnerships'].title,
+      description: PUBLIC_ROUTE_SEO['/partnerships'].description,
+      jsonLd: buildBreadcrumbJsonLd(
+        [
+          { name: 'Home', path: '/' },
+          { name: 'Partnerships', path: '/partnerships' },
+        ],
+        ORIGIN,
+      ),
+      jsonLdId: 'hakum-partnerships-breadcrumb',
+      h1: 'Brand Collabs, Car Meets & Automotive Partnerships',
+      bodyHtml: `
+        <p>Partner with Hakum Auto Care across Bacoor, Cavite and Batangas City for automotive club meets, detailing clinics, product collaborations, and studio events.</p>
+        <ul>
+          <li><a href="/events">Upcoming Events &amp; Car Meets</a> · <a href="/contact">Contact Studio Team</a></li>
         </ul>
       `,
     },

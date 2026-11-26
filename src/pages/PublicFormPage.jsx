@@ -11,10 +11,18 @@ import { listBranches } from '@/lib/adminApi'
 import { createPublicFormGuard, validatePublicFormGuard } from '@/lib/publicFormGuard'
 import { submitPublicOpsFormViaApi } from '@/lib/publicInquiryApi'
 import { supabase } from '@/lib/supabase'
+import { usePageMeta } from '@/lib/pageMeta'
 
 export default function PublicFormPage() {
   const { slug } = useParams()
   const [form, setForm] = useState(null)
+
+  usePageMeta({
+    title: form?.name || 'Inquiry Form',
+    description: form?.description || 'Submit a form or feedback directly to Hakum Auto Care.',
+    path: slug ? `/f/${slug}` : '/contact',
+    noindex: true,
+  })
   const [error, setError] = useState('')
   const [values, setValues] = useState({})
   const [status, setStatus] = useState('idle')

@@ -109,6 +109,7 @@ export default function PublicQueueTvPage() {
     title: branchDetails?.name ? `Shop TV · ${branchDetails.name}` : 'Shop TV queue',
     description: 'In-store landscape board: waiting, in progress, and ready for payment. No sign-in.',
     path: branch ? `/queue/${branch}/tv` : '/queue',
+    noindex: true,
   })
 
   const loadQueue = useCallback(async () => {

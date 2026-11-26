@@ -210,7 +210,8 @@ describe('customer app frame', () => {
     const css = read('src/styles-customer-app.css')
     assert.match(css, /\.hakum-auth--app/)
     assert.match(css, /max-width: 899px/)
-    assert.match(read('src/main.jsx'), /styles-customer-app\.css/)
+    assert.match(shell, /styles-customer-app\.css/)
+    assert.match(read('src/components/CustomerAppFrame.jsx'), /styles-customer-app\.css/)
   })
 
   it('home book is detailing-only, queue is opt-in by branch, ratings and stamps follow the visit', () => {

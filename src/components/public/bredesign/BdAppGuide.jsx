@@ -177,7 +177,7 @@ export default function BdAppGuide({ className, children }) {
 
           <div className="hk-guide-visual" aria-hidden="true">
             <div className="hk-guide-phone">
-              <img src={step.shot} alt="" />
+              <img src={step.shot} alt="" loading="lazy" decoding="async" />
             </div>
           </div>
         </DialogPrimitive.Popup>

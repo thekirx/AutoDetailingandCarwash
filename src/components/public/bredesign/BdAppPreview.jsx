@@ -43,9 +43,9 @@ export default function BdAppPreview() {
               through decorative controls that do nothing. */}
           <div className="bd-app-device" aria-hidden="true">
             <div className="bd-app-screen bd-app-shot">
-              <img src={APP_HOME} alt="" />
+              <img src={APP_HOME} alt="" loading="lazy" decoding="async" />
             </div>
-            <img className="bd-app-frame" src={DEVICE_FRAME} alt="" draggable="false" />
+            <img className="bd-app-frame" src={DEVICE_FRAME} alt="" loading="lazy" decoding="async" draggable="false" />
           </div>
           <p>Live branch status · Stamp rewards · Booking history</p>
           <p className="bd-app-note">Illustrative figures</p>

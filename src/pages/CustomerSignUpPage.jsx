@@ -44,6 +44,7 @@ export default function CustomerSignUpPage() {
     title: 'Create account',
     description: `Join Hakum Auto Care. Add your name, plate, and birthday for a ${BIRTHDAY_GIFT_LABEL} on your day.`,
     path: '/signup',
+    noindex: true,
   })
 
   const [params] = useSearchParams()

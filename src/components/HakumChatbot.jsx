@@ -139,6 +139,7 @@ export default function HakumChatbot({ settings }) {
   const [offset, setOffset] = useState(() => loadSavedOffset())
   const [tooltipOnRight, setTooltipOnRight] = useState(false)
   const [activeSizesByMsg, setActiveSizesByMsg] = useState({})
+  const [viewportHeight, setViewportHeight] = useState(null)
 
   const rootRef = useRef(null)
   const scrollRef = useRef(null)
@@ -211,17 +212,36 @@ export default function HakumChatbot({ settings }) {
   }, [messages, open])
 
   useEffect(() => {
-    if (!open) return undefined
+    if (!open) {
+      setViewportHeight(null)
+      return undefined
+    }
     const onKey = (e) => {
       if (e.key === 'Escape') setOpen(false)
     }
+    const syncViewport = () => {
+      const vv = window.visualViewport
+      if (vv && window.innerWidth <= 640) {
+        setViewportHeight(Math.round(vv.height))
+      } else {
+        setViewportHeight(null)
+      }
+    }
+    syncViewport()
     window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
+    window.visualViewport?.addEventListener('resize', syncViewport)
+    window.visualViewport?.addEventListener('scroll', syncViewport)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.visualViewport?.removeEventListener('resize', syncViewport)
+      window.visualViewport?.removeEventListener('scroll', syncViewport)
+    }
   }, [open])
 
   const beginDrag = useCallback(
     (e) => {
       if (e.button != null && e.button !== 0) return
+      if (open && typeof window !== 'undefined' && window.innerWidth <= 640) return
       if (e.target.closest('button[data-no-drag="true"], a[data-no-drag="true"]')) return
       const el = rootRef.current
       if (!el) return
@@ -236,7 +256,7 @@ export default function HakumChatbot({ settings }) {
       }
       e.currentTarget.setPointerCapture?.(e.pointerId)
     },
-    [offset.x, offset.y],
+    [offset.x, offset.y, open],
   )
 
   useEffect(() => {
@@ -345,23 +365,35 @@ export default function HakumChatbot({ settings }) {
   }, [messages, settings.suggested_prompts])
 
   return (
-    <aside
-      ref={rootRef}
-      aria-label="Hakum Concierge Assistant"
-      data-accent={accentId}
-      className={[
-        'hakum-bot-root',
-        dragging ? 'is-dragging' : '',
-        offset.custom ? 'is-custom-pos' : '',
-        hasFloatingTalkFab ? 'is-raised-above-fab' : '',
-        isAccountRoute ? 'is-account-route' : '',
-      ]
-        .filter(Boolean)
-        .join(' ')}
-      style={{
-        transform: `translate3d(${offset.x}px, ${offset.y}px, 0)`,
-      }}
-    >
+    <>
+      {open ? (
+        <div
+          className="hakum-bot-scrim"
+          aria-hidden="true"
+          onClick={() => setOpen(false)}
+        />
+      ) : null}
+      <aside
+        ref={rootRef}
+        aria-label="Hakum Concierge Assistant"
+        data-accent={accentId}
+        className={[
+          'hakum-bot-root',
+          open ? 'is-open' : '',
+          dragging ? 'is-dragging' : '',
+          offset.custom ? 'is-custom-pos' : '',
+          hasFloatingTalkFab ? 'is-raised-above-fab' : '',
+          isAccountRoute ? 'is-account-route' : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+        style={{
+          transform: open && typeof window !== 'undefined' && window.innerWidth <= 640
+            ? undefined
+            : `translate3d(${offset.x}px, ${offset.y}px, 0)`,
+          ...(viewportHeight ? { '--hb-viewport-h': `${viewportHeight}px` } : {}),
+        }}
+      >
       {!open ? (
         <div className={`hakum-bot-launcher-wrap${tooltipOnRight ? ' is-tooltip-right' : ''}`}>
           {!tooltipDismissed && settings.launcher_label ? (
@@ -709,6 +741,7 @@ export default function HakumChatbot({ settings }) {
           </div>
         </section>
       )}
-    </aside>
+      </aside>
+    </>
   )
 }

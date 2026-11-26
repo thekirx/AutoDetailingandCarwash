@@ -4,14 +4,15 @@ import ProtectedRoute from './auth/ProtectedRoute'
 import OpsRoleGate from './auth/OpsRoleGate'
 import { useAuth } from './auth/AuthProvider'
 import { allowRoute, canAccessCrm, canAccessRewardsHub, canUseAttendanceClock, OPS_LOGIN_ROLES, usesFloorAppShell } from './auth/permissions'
-import OperationsLayout from './layouts/OperationsLayout'
 import PublicLayout from './layouts/PublicLayout'
-import LoginPage from './pages/LoginPage'
-import NotFoundPage from './pages/NotFoundPage'
-import OpsIndexRedirect from './pages/OpsIndexRedirect'
-import InAppNotificationListener from './components/InAppNotificationListener'
-import PwaUpdateBanner from './components/PwaUpdateBanner'
 import HakumChatbotHost from './components/HakumChatbotHost'
+
+const OperationsLayout = lazy(() => import('./layouts/OperationsLayout'))
+const LoginPage = lazy(() => import('./pages/LoginPage'))
+const NotFoundPage = lazy(() => import('./pages/NotFoundPage'))
+const OpsIndexRedirect = lazy(() => import('./pages/OpsIndexRedirect'))
+const InAppNotificationListener = lazy(() => import('./components/InAppNotificationListener'))
+const PwaUpdateBanner = lazy(() => import('./components/PwaUpdateBanner'))
 
 const PublicLandingPage = lazy(() => import('./pages/PublicLandingPage'))
 const ServiceDetailPage = lazy(() => import('./pages/ServiceDetailPage'))
@@ -216,9 +217,11 @@ function RouteFallback() {
 export default function App() {
   return (
     <Suspense fallback={<RouteFallback />}>
-      <InAppNotificationListener />
-      <PwaUpdateBanner />
-      <HakumChatbotHost />
+      <Suspense fallback={null}>
+        <InAppNotificationListener />
+        <PwaUpdateBanner />
+        <HakumChatbotHost />
+      </Suspense>
       <Routes>
         <Route path="/" element={<RootEntry />} />
         <Route path="/app" element={<AppShellGate />} />

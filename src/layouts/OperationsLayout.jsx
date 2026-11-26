@@ -43,6 +43,11 @@ import {
 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
+import Papa from 'papaparse'
+import '../styles/finance.css'
+import '../styles/daily-sheet.css'
+
+if (typeof window !== 'undefined' && !window.Papa) window.Papa = Papa
 import { useAuth } from '../auth/AuthProvider'
 import {
   getDetailerDock,

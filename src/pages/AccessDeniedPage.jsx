@@ -4,12 +4,19 @@ import { ShieldAlert } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
 import { resolvePostLoginPath } from '@/auth/authRedirect'
 import { supabase } from '@/lib/supabase'
+import { usePageMeta } from '@/lib/pageMeta'
 
 /**
  * Lightweight access-denied shell (own chunk — never pull OperationsPages).
  * Hakum bay vernacular: blocked lane, clear recovery to home or login.
  */
 export default function AccessDeniedPage() {
+  usePageMeta({
+    title: 'Access Denied · Hakum Ops',
+    description: 'Operations role restriction notice.',
+    path: '/operations/access-denied',
+    noindex: true,
+  })
   const { profile, signOut } = useAuth()
   const navigate = useNavigate()
   const [busy, setBusy] = useState(false)

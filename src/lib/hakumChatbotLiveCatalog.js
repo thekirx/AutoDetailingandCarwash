@@ -52,7 +52,7 @@ export async function fetchChatbotLiveCatalog({ force = false } = {}) {
         supabase.rpc('get_public_queue_counts'),
         supabase
           .from('loyalty_program_settings')
-          .select('stamps_enabled, points_enabled, card_slots, completion_reward_label')
+          .select('stamps_enabled, points_enabled, card_slots')
           .eq('id', 1)
           .maybeSingle(),
         supabase
@@ -62,7 +62,7 @@ export async function fetchChatbotLiveCatalog({ force = false } = {}) {
           .order('threshold_points'),
         supabase
           .from('membership_tiers')
-          .select('slug, name, min_visits, discount_percent, loyalty_multiplier, description, is_active')
+          .select('id, name, min_visits, discount_percent, loyalty_multiplier, benefits, is_active')
           .eq('is_active', true)
           .order('min_visits'),
       ])

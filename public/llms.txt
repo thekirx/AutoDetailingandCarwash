@@ -47,7 +47,8 @@
 - [Nano Ceramic Window Tint](https://www.hakumautocare.com/services/tint) & [Interactive 3D Tint Finder](https://www.hakumautocare.com/tint-finder)
 - [pH-Neutral Car Wash & Detailing](https://www.hakumautocare.com/services/wash-detailing)
 - [Aftercare Shop](https://www.hakumautocare.com/shop)
-- [Online Booking](https://www.hakumautocare.com/book) and [Live Branch Queue](https://www.hakumautocare.com/queue) (`/queue/bacoor` and `/queue/batangas`).
+- [Brand Partnerships & Car Meets](https://www.hakumautocare.com/partnerships)
+- [Online Booking](https://www.hakumautocare.com/book), [Live Branch Queue](https://www.hakumautocare.com/queue), [Bacoor Live Queue](https://www.hakumautocare.com/queue/bacoor), and [Batangas City Live Queue](https://www.hakumautocare.com/queue/batangas).
 
 ## Regional Guides & Technical Journal
 - [Hakum Blog & Guides](https://www.hakumautocare.com/blog)

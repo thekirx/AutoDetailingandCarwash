@@ -11,8 +11,15 @@ import DemoAccountChips from '../components/DemoAccountChips'
 import { describeAuthError } from '../lib/authErrorMessage'
 import { OPS_DEMO_ACCOUNTS } from '../lib/demoAccounts'
 import { demoSignIn, unlockDemoLoginFromUrl, isDemoLoginVisible } from '../lib/demoSignIn'
+import { usePageMeta } from '../lib/pageMeta'
 
 export default function LoginPage() {
+  usePageMeta({
+    title: 'Team Portal Sign In',
+    description: 'Sign in to the Hakum Auto Care operations portal.',
+    path: '/operations/login',
+    noindex: true,
+  })
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)

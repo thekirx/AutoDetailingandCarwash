@@ -234,6 +234,40 @@ describe('Technical SEO & AI Visibility setup', () => {
       })
       handleSeoRequest({ method: 'GET', url: '/api/seo?operation=branches-meta' }, res)
     })
+
+    // Open Graph protocol uses 'website' (not invalid 'service') and sitemap stays synced
+    assert.doesNotMatch(serviceHtml, /property="og:type" content="service"/)
+    assert.match(serviceHtml, /property="og:type" content="website"/)
+    assert.doesNotMatch(coreHtml, /property="og:type" content="service"/)
+    assert.match(coreHtml, /property="og:type" content="website"/)
+
+    const expectedSitemap = buildSitemapXml({ origin: 'https://www.hakumautocare.com' })
+    const shippedSitemap = read('public/sitemap.xml')
+    assert.equal(shippedSitemap.trim(), expectedSitemap.trim(), 'public/sitemap.xml must match buildSitemapXml()')
+    assert.match(shippedSitemap, /\/partnerships</)
+    assert.match(shippedSitemap, /\/queue\/bacoor</)
+    assert.match(shippedSitemap, /\/queue\/batangas</)
+
+    // Noindex discipline across legal, auth, public form, and shop TV shells
+    const legalPatch = buildHeadPatch({ title: 'Terms', path: '/terms', robots: 'noindex,follow' })
+    assert.equal(legalPatch.robots, 'noindex,follow')
+    assert.equal(legalPatch.isNoindex, true)
+    assert.equal(legalPatch.meta.some((m) => m.key === 'googlebot'), false)
+    assert.equal(legalPatch.links.some((l) => l.rel === 'alternate'), false)
+
+    for (const rel of [
+      'src/pages/LegalPages.jsx',
+      'src/pages/PublicQueueTvPage.jsx',
+      'src/pages/PublicFormPage.jsx',
+      'src/pages/CustomerSignInPage.jsx',
+      'src/pages/CustomerSignUpPage.jsx',
+      'src/pages/CustomerSetPasswordPage.jsx',
+      'src/pages/LoginPage.jsx',
+      'src/pages/AccessDeniedPage.jsx',
+      'src/pages/OpsNotFoundPage.jsx',
+    ]) {
+      assert.match(read(rel), /noindex/, `${rel} must opt out of search indexing`)
+    }
   })
 })
 

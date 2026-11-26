@@ -206,6 +206,21 @@
     <priority>0.8</priority>
   </url>
   <url>
+    <loc>https://www.hakumautocare.com/queue/bacoor</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.hakumautocare.com/queue/batangas</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>https://www.hakumautocare.com/partnerships</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+  <url>
     <loc>https://www.hakumautocare.com/events</loc>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
@@ -222,43 +237,43 @@
   </url>
   <url>
     <loc>https://www.hakumautocare.com/blog/best-car-wash-detailing-bacoor</loc>
-    <lastmod>2026-10-15</lastmod>
+    <lastmod>2026-11-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://www.hakumautocare.com/blog/best-car-wash-detailing-batangas-city</loc>
-    <lastmod>2026-10-18</lastmod>
+    <lastmod>2026-11-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://www.hakumautocare.com/blog/best-car-wash-detailing-imus</loc>
-    <lastmod>2026-10-22</lastmod>
+    <lastmod>2026-11-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://www.hakumautocare.com/blog/best-auto-detailing-ceramic-coating-ppf-cavite</loc>
-    <lastmod>2026-10-25</lastmod>
+    <lastmod>2026-11-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://www.hakumautocare.com/blog/best-car-wash-detailing-dasmarinas</loc>
-    <lastmod>2026-11-10</lastmod>
+    <lastmod>2026-11-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://www.hakumautocare.com/blog/ceramic-coating-vs-ppf-philippine-climate</loc>
-    <lastmod>2026-10-28</lastmod>
+    <lastmod>2026-11-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://www.hakumautocare.com/blog/why-two-bucket-ph-neutral-wash-matters</loc>
-    <lastmod>2026-11-02</lastmod>
+    <lastmod>2026-11-20</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
   </url>

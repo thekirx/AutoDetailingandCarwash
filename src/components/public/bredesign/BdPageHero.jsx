@@ -46,7 +46,7 @@ export default function BdPageHero({ eyebrow, title, copy, image = heroPoster, c
 
   return (
     <section ref={heroRef} className={`bd-page-hero${scrollAnimated ? ' is-scroll-animated' : ''}`}>
-      <img className="bd-page-hero-media" src={image} alt="" />
+      <img className="bd-page-hero-media" src={image} alt="" fetchPriority="high" decoding="sync" />
       <div className="bd-shell bd-page-hero-in">
         {eyebrow ? <p className="bd-eyebrow">{eyebrow}</p> : null}
         <h1>{title}</h1>

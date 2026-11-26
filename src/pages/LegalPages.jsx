@@ -5,7 +5,7 @@ import { PUBLIC_ROUTE_SEO } from '@/lib/publicSeoCatalog'
 import BdPageHero from '../components/public/bredesign/BdPageHero'
 
 function LegalShell({ eyebrow, title, updated, path, description, toc = [], children }) {
-  usePageMeta({ title, description, path })
+  usePageMeta({ title, description, path, robots: 'noindex,follow' })
 
   const peers = [
     { to: '/terms', label: 'Terms of Service' },

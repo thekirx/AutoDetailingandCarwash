@@ -27,8 +27,11 @@
   font-family: var(--font-body, system-ui, -apple-system, sans-serif);
   color: var(--hb-ink);
   user-select: none;
-  touch-action: none;
   will-change: transform;
+}
+
+.hakum-bot-scrim {
+  display: none;
 }
 
 .hakum-bot-root[data-accent='cobalt'] {
@@ -138,6 +141,7 @@
     0 12px 32px rgba(2, 10, 49, 0.42),
     inset 0 1px 0 rgba(255, 255, 255, 0.16);
   cursor: grab;
+  touch-action: none;
   transition: transform 0.25s var(--hb-ease), border-color 0.25s ease;
 }
 
@@ -363,6 +367,8 @@
   flex-direction: column;
   gap: 12px;
   overscroll-behavior: contain;
+  touch-action: pan-y;
+  -webkit-overflow-scrolling: touch;
 }
 
 .hakum-bot-scroll::-webkit-scrollbar {
@@ -597,12 +603,14 @@
   font-size: 13.5px;
   line-height: 1.45;
   font-weight: 500;
+  overflow-wrap: anywhere;
 }
 
 .hakum-bot-card {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-width: 0;
   padding: 13px 14px;
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.11);
@@ -752,6 +760,8 @@
   overflow-x: auto;
   scrollbar-width: none;
   padding-bottom: 2px;
+  touch-action: pan-x;
+  -webkit-overflow-scrolling: touch;
 }
 
 .hakum-bot-suggestions::-webkit-scrollbar {
@@ -817,20 +827,11 @@
   color: var(--hb-ink-muted);
 }
 
-@media (max-width: 540px) {
-  .hakum-bot-input {
-    font-size: 16px;
-  }
-  .hakum-bot-panel-shell {
-    width: calc(100vw - 16px);
-  }
-}
-
 .hakum-bot-send {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: 36px;
+  height: 36px;
   border-radius: 999px;
   border: 0;
   background: var(--hb-sapphire);
@@ -848,6 +849,136 @@
 .hakum-bot-send:disabled {
   opacity: 0.45;
   cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .hakum-bot-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 87;
+    background: rgba(2, 6, 20, 0.56);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+
+  .hakum-bot-root:not(.is-open) {
+    right: max(14px, env(safe-area-inset-right));
+    bottom: max(14px, env(safe-area-inset-bottom));
+  }
+
+  .hakum-bot-launcher {
+    width: 56px;
+    height: 56px;
+  }
+
+  .hakum-bot-launcher-logo {
+    width: 28px;
+    height: 28px;
+  }
+
+  .hakum-bot-root.is-open {
+    left: max(8px, env(safe-area-inset-left));
+    right: max(8px, env(safe-area-inset-right));
+    bottom: max(8px, env(safe-area-inset-bottom));
+    transform: none !important;
+  }
+
+  .hakum-bot-root.is-open .hakum-bot-panel-shell {
+    width: 100%;
+    max-width: none;
+    border-radius: 20px;
+    padding: 4px;
+  }
+
+  .hakum-bot-root.is-open .hakum-bot-panel {
+    height: min(84dvh, calc(var(--hb-viewport-h, 100dvh) - 16px - env(safe-area-inset-top) - env(safe-area-inset-bottom)));
+    max-height: calc(var(--hb-viewport-h, 100dvh) - 16px);
+    border-radius: 16px;
+  }
+
+  .hakum-bot-head {
+    padding: 10px 10px 10px 12px;
+    cursor: default;
+  }
+
+  .hakum-bot-grip {
+    display: none;
+  }
+
+  .hakum-bot-head-badge {
+    width: 32px;
+    height: 32px;
+  }
+
+  .hakum-bot-icon-btn {
+    min-width: 40px;
+    min-height: 40px;
+    width: 40px;
+    height: 40px;
+  }
+
+  .hakum-bot-scroll {
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .hakum-bot-size-btn {
+    min-height: 44px;
+  }
+
+  .hakum-bot-cta {
+    min-height: 44px;
+  }
+
+  .hakum-bot-handoff-links a {
+    min-height: 38px;
+    padding: 4px 2px;
+  }
+
+  .hakum-bot-suggest-pill {
+    min-height: 38px;
+    padding: 7px 12px;
+    font-size: 12px;
+  }
+
+  .hakum-bot-input {
+    font-size: 16px;
+  }
+
+  .hakum-bot-form {
+    padding: 8px 10px calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .hakum-bot-send {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+@media (max-width: 360px) {
+  .hakum-bot-menu {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .hakum-bot-head-actions {
+    gap: 2px;
+  }
+  .hakum-bot-icon-btn {
+    min-width: 36px;
+    min-height: 36px;
+    width: 36px;
+    height: 36px;
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .hakum-bot-panel-shell,
+  .hakum-bot-tooltip,
+  .hakum-bot-scrim {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    background: #050a18;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

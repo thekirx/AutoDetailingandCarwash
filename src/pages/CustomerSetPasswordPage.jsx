@@ -34,6 +34,7 @@ export default function CustomerSetPasswordPage() {
     title: 'Set password',
     description: 'Choose a new password for your Hakum Auto Care account.',
     path: '/account/set-password',
+    noindex: true,
   })
 
   const [password, setPassword] = useState('')

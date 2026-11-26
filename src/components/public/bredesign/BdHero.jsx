@@ -262,6 +262,8 @@ export default function BdHero() {
         className={`bd-hero-media bd-hero-poster${playing && !videoFailed ? ' is-hidden' : ''}`}
         src={poster}
         alt=""
+        fetchPriority="high"
+        decoding="sync"
         aria-hidden="true"
       />
 

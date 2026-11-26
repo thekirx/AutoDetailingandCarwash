@@ -239,4 +239,23 @@ describe('Hakum deterministic NLU & product/process knowledge engine', () => {
     assert.equal(member.specs.some((r) => r.value === 'JUAN88'), true)
     assert.equal(member.actions.some((a) => a.to === '/account/visit/b-1'), true)
   })
+
+  it('ships mobile-responsive bottom-sheet, touch-action, and safe-area guards without overflow', async () => {
+    const { readFileSync } = await import('node:fs')
+    const { dirname, join } = await import('node:path')
+    const { fileURLToPath } = await import('node:url')
+    const root = join(dirname(fileURLToPath(import.meta.url)), '..')
+    const jsx = readFileSync(join(root, 'src/components/HakumChatbot.jsx'), 'utf8')
+    const css = readFileSync(join(root, 'src/components/HakumChatbot.css'), 'utf8')
+
+    assert.match(jsx, /hakum-bot-scrim/)
+    assert.match(jsx, /window\.visualViewport/)
+    assert.match(jsx, /--hb-viewport-h/)
+
+    assert.match(css, /@media \(max-width: 640px\)/)
+    assert.match(css, /@media \(max-width: 360px\)/)
+    assert.match(css, /touch-action:\s*pan-y/)
+    assert.match(css, /touch-action:\s*pan-x/)
+    assert.match(css, /prefers-reduced-transparency: reduce/)
+  })
 })
