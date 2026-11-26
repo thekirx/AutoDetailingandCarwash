@@ -148,6 +148,15 @@ test('Planning, Inventory, Payroll, Bookings, and Ops ConfirmDialog regressions 
   assert.doesNotMatch(customerMore, /phone number and PIN/i)
   assert.match(customerMore, /const \[removing, setRemoving\] = useState\(false\)/)
 
+  const custBook = read('src/pages/CustomerBookPage.jsx')
+  assert.match(custBook, /if\s*\(stepId !== 'review'\)/)
+
+  const vehicleTransfer = read('src/pages/crm/VehicleTransferPanel.jsx')
+  assert.match(vehicleTransfer, /ConfirmDialog/)
+
+  const custProfile = read('src/pages/crm/CustomerProfileDialog.jsx')
+  assert.match(custProfile, /setData\(EMPTY\)/)
+
   const systemOpsFiles = [
     'src/pages/BookingBoardPage.jsx',
     'src/pages/PosPage.jsx',

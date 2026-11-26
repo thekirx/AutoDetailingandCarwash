@@ -137,8 +137,12 @@ export default function CustomerProfileDialog({
   const customerId = customer?.id
 
   useEffect(() => {
-    if (!customerId) return undefined
+    if (!customerId) {
+      setData(EMPTY)
+      return undefined
+    }
     let alive = true
+    setData(EMPTY)
     setLoading(true)
     loadHistory(customerId)
       .then((next) => alive && setData(next))

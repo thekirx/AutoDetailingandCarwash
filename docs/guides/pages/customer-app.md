@@ -1,4 +1,4 @@
-﻿# Customer app
+# Customer app
 
 **Routes:** `/account`, `/account/book`, `/account/queue`, `/account/cars`, `/account/loyalty`, `/account/referral`, `/account/vouchers`, `/account/pickup`, `/account/pickup/:id`, `/account/more`, `/account/blog`, `/account/events`, `/account/visit`, `/account/visit/:id`, `/account/*` (`CustomerNotFoundPage`), `/signin`, `/signup`, `/account/set-password`  
 **Shell:** `.capp` + `HakumAuthShell` (auth) + `HakumChatbot` (owner-configurable floating deterministic concierge with Messenger/Facebook human handoff)  

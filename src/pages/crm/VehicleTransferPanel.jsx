@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { ArrowRight, CarFront, Check, Search, UserCheck } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import ConfirmDialog from '@/components/ops/ConfirmDialog'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -31,6 +32,7 @@ export default function VehicleTransferPanel({ initialVehicle = null, onTransfer
   const [buyer, setBuyer] = useState(null)
   const [loadingList, setLoadingList] = useState(true)
   const [busy, setBusy] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
 
   useEffect(() => {
     if (initialVehicle?.id) setPicked(initialVehicle)
@@ -100,6 +102,7 @@ export default function VehicleTransferPanel({ initialVehicle = null, onTransfer
     try {
       await transferApi({ vehicle_id: picked.id, to_customer_id: buyer.id })
       toast.success(`${picked.plate_number} now belongs to ${buyer.full_name}.`)
+      setConfirmOpen(false)
       setPicked(null)
       setBuyer(null)
       await runSearch('')
@@ -261,11 +264,21 @@ export default function VehicleTransferPanel({ initialVehicle = null, onTransfer
               Open maintenance reminders move with the car; past service receipts and visits remain under the original seller.
             </p>
           </div>
-          <Button type="button" className="min-h-11 shrink-0 px-5" disabled={busy || !picked || !buyer} onClick={moveOwnership}>
+          <Button type="button" className="min-h-11 shrink-0 px-5" disabled={busy || !picked || !buyer} onClick={() => setConfirmOpen(true)}>
             {busy ? 'Transferring…' : 'Transfer car'}
           </Button>
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={picked && buyer ? `Transfer ${picked.plate_number} to ${buyer.full_name}?` : 'Transfer vehicle ownership?'}
+        description="Open maintenance schedules will move with the vehicle while past visit history remains with the seller."
+        confirmLabel="Confirm transfer"
+        pending={busy}
+        onConfirm={moveOwnership}
+      />
     </div>
   )
 }

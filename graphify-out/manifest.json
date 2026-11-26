@@ -1032,8 +1032,8 @@
     "semantic_hash": "261b8ae24981205f997c2e341b57f390"
   },
   "src/components/UserSettingsModal.jsx": {
-    "mtime": 1795618859.4086535,
-    "seen": 1795619093.6297588,
+    "mtime": 1795619488.5617893,
+    "seen": 1795698269.9495223,
     "ast_hash": "29d627a4c564558de260a30b7e07f07f",
     "semantic_hash": ""
   },
@@ -1104,8 +1104,8 @@
     "semantic_hash": "88acd52bf339185b5f2d5a6f97661fd2"
   },
   "src/components/ops/DataTable.jsx": {
-    "mtime": 1795618781.3853185,
-    "seen": 1795619093.629889,
+    "mtime": 1795619488.726436,
+    "seen": 1795698269.9518764,
     "ast_hash": "1b2008441eff03949d303a87b63126e3",
     "semantic_hash": ""
   },
@@ -1116,8 +1116,8 @@
     "semantic_hash": "118b6b67247a20c85f2028b9bb6f772b"
   },
   "src/components/ops/OpsEmptyState.jsx": {
-    "mtime": 1795618767.5622354,
-    "seen": 1795619093.6299024,
+    "mtime": 1795619488.9658864,
+    "seen": 1795698269.951974,
     "ast_hash": "76e0174c8fe58a80c6939b8b10c2ef0f",
     "semantic_hash": ""
   },
@@ -2028,8 +2028,8 @@
     "semantic_hash": ""
   },
   "src/pages/AuditLogPage.jsx": {
-    "mtime": 1795618791.3298974,
-    "seen": 1795619093.6313512,
+    "mtime": 1795619489.205013,
+    "seen": 1795698269.9545603,
     "ast_hash": "a4ccece82f5a6d6a8cf2a85f624c8932",
     "semantic_hash": ""
   },
@@ -2118,9 +2118,9 @@
     "semantic_hash": ""
   },
   "src/pages/CustomerBookPage.jsx": {
-    "mtime": 1795619023.5454717,
-    "seen": 1795619093.6314228,
-    "ast_hash": "82920aa6c004245dbe99243e5819cc65",
+    "mtime": 1795698144.8676221,
+    "seen": 1795698269.9546323,
+    "ast_hash": "e914f4385f8bdda6f8c157fd93e096d2",
     "semantic_hash": ""
   },
   "src/pages/CustomerEventsPage.jsx": {
@@ -2136,8 +2136,8 @@
     "semantic_hash": ""
   },
   "src/pages/CustomerMorePage.jsx": {
-    "mtime": 1795618941.8395324,
-    "seen": 1795619093.6314385,
+    "mtime": 1795619489.541769,
+    "seen": 1795698269.9546528,
     "ast_hash": "c251ba97e6773b7c3f79041ee98ba82b",
     "semantic_hash": ""
   },
@@ -2166,8 +2166,8 @@
     "semantic_hash": ""
   },
   "src/pages/DataCenterPage.jsx": {
-    "mtime": 1795618803.8509665,
-    "seen": 1795619093.631478,
+    "mtime": 1795619489.7473385,
+    "seen": 1795698269.954693,
     "ast_hash": "d1699dc2e340f42d4fb2a899872807a2",
     "semantic_hash": ""
   },
@@ -2232,8 +2232,8 @@
     "semantic_hash": ""
   },
   "src/pages/MembershipsPage.jsx": {
-    "mtime": 1795618880.608462,
-    "seen": 1795619093.6315742,
+    "mtime": 1795619490.1029913,
+    "seen": 1795698269.9547467,
     "ast_hash": "718d08f998772cc447894d1498a0fff4",
     "semantic_hash": ""
   },
@@ -5652,8 +5652,8 @@
     "semantic_hash": "ab2c52c3468e894ef3b669f6d2f575d4"
   },
   "docs/SYSTEM_AUDIT.md": {
-    "mtime": 1795618958.6786656,
-    "seen": 1795619093.6349425,
+    "mtime": 1795619487.4548206,
+    "seen": 1795698269.9591887,
     "ast_hash": "3397d54a38675cc994f4fd5971efd6df",
     "semantic_hash": ""
   },
@@ -5856,8 +5856,8 @@
     "semantic_hash": "2c20628c5d957f7cdd7cfbfc7085771d"
   },
   "docs/design-system/02-components.md": {
-    "mtime": 1795618948.9675539,
-    "seen": 1795619093.635175,
+    "mtime": 1795619487.752943,
+    "seen": 1795698269.9593663,
     "ast_hash": "4415f1c820ffdcd3d1a238d94d1bbd40",
     "semantic_hash": ""
   },
@@ -5940,9 +5940,9 @@
     "semantic_hash": "e2621319189295e76b3e92fb013bb91c"
   },
   "docs/guides/pages/customer-app.md": {
-    "mtime": 1795618955.5390725,
-    "seen": 1795619093.6352592,
-    "ast_hash": "de34400b875956c050a4c84592110b69",
+    "mtime": 1795619487.9696596,
+    "seen": 1795698269.959442,
+    "ast_hash": "186e106eb9ea5ab8a50a7c824290876d",
     "semantic_hash": ""
   },
   "docs/guides/pages/finance-reports.md": {
@@ -6150,8 +6150,8 @@
     "semantic_hash": "cb3259d0ca7e01ff7d31e5e81a8efae0"
   },
   "docs/ops-chrome.md": {
-    "mtime": 1795618945.4483118,
-    "seen": 1795619093.6354601,
+    "mtime": 1795619488.102116,
+    "seen": 1795698269.9595647,
     "ast_hash": "0085f35c200ce258712eef59c95846e6",
     "semantic_hash": ""
   },
@@ -8124,9 +8124,9 @@
     "semantic_hash": "0d3876a7f2dc5c5cab72e9e6cab9be3c"
   },
   "src/pages/crm/CustomerProfileDialog.jsx": {
-    "mtime": 1795610710.4382188,
-    "seen": 1795612310.3102453,
-    "ast_hash": "7cf964a9013a87f1cb16a789b81656c5",
+    "mtime": 1795698148.0066562,
+    "seen": 1795698269.954967,
+    "ast_hash": "95ff21c396c2e99f2a30f70f6938a6a7",
     "semantic_hash": ""
   },
   "tests/crmSmartGroups.test.js": {
@@ -8298,8 +8298,8 @@
     "semantic_hash": ""
   },
   "src/pages/settings/TintFinderSettingsPage.jsx": {
-    "mtime": 1795618845.4624531,
-    "seen": 1795619093.6318471,
+    "mtime": 1795619491.222633,
+    "seen": 1795698269.955234,
     "ast_hash": "261251a2b39e9e6dc6f0da799c6c8aa6",
     "semantic_hash": ""
   },
@@ -10764,9 +10764,9 @@
     "semantic_hash": ""
   },
   "src/pages/crm/VehicleTransferPanel.jsx": {
-    "mtime": 1794929653.224279,
-    "seen": 1794930984.872387,
-    "ast_hash": "25338da0ff992987f40d0b1b22347318",
+    "mtime": 1795698138.6895683,
+    "seen": 1795698269.9549735,
+    "ast_hash": "f41d209eb4a5931a7820c9746893f083",
     "semantic_hash": ""
   },
   "tests/customerAdminCrud.test.js": {
@@ -11106,8 +11106,8 @@
     "semantic_hash": ""
   },
   "src/pages/settings/ChatbotSettingsPage.jsx": {
-    "mtime": 1795618832.3325408,
-    "seen": 1795619093.6318376,
+    "mtime": 1795619490.9157789,
+    "seen": 1795698269.9552162,
     "ast_hash": "d7f6b5f947f9b212fe2fcf075b378dbf",
     "semantic_hash": ""
   },
@@ -11166,9 +11166,9 @@
     "semantic_hash": ""
   },
   "tests/systemFrontendAuditFixes.test.js": {
-    "mtime": 1795618962.0242422,
-    "seen": 1795619093.6342697,
-    "ast_hash": "57d306c89f4da7a7da91f787ab9fe3f2",
+    "mtime": 1795698152.4195724,
+    "seen": 1795698269.9584029,
+    "ast_hash": "eb177ca19804756f3f1dc85e93c9e087",
     "semantic_hash": ""
   }
 }

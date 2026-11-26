@@ -340,6 +340,10 @@ export default function CustomerBookPage() {
 
   async function submit(e) {
     e.preventDefault()
+    if (stepId !== 'review') {
+      if (stepReady) next()
+      return
+    }
     const plateError = plateValidationError(form.vehicle_plate)
     if (plateError) {
       setError(plateError)
@@ -504,6 +508,9 @@ export default function CustomerBookPage() {
               text you to confirm the final day.
             </p>
             <p className="capp-meta">{[whenLine, branchName, quote].filter(Boolean).join(' · ')}</p>
+            <Link to="/account" className="capp-btn capp-btn-outline mt-3">
+              View my visits →
+            </Link>
           </div>
         ) : (
           <form id="capp-book-form" className="capp-flow" onSubmit={submit} noValidate={false}>

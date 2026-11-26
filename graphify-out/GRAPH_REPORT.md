@@ -1,17 +1,17 @@
-# Graph Report - AutoDetailingandCarwash  (2026-11-25)
+# Graph Report - AutoDetailingandCarwash  (2026-11-26)
 
 ## Corpus Check
-- 1775 files · ~1,983,945 words
+- 1775 files · ~1,984,037 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 33 file(s) not represented in the graph (top: .css 21, .mdc 6, (none) 4)
 
 ## Summary
-- 11929 nodes · 33407 edges · 902 communities (424 shown, 478 thin omitted)
+- 11929 nodes · 33410 edges · 902 communities (424 shown, 478 thin omitted)
 - Extraction: 97% EXTRACTED · 3% INFERRED · 0% AMBIGUOUS · INFERRED: 896 edges (avg confidence: 0.9)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `835fdfdc`
+- Built from commit: `007abb1a`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -695,10 +695,10 @@
 10. `isSuperAdmin()` - 123 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `Role Sales` --semantically_similar_to--> `Role — Sales Paper`  [INFERRED] [semantically similar]
-  audit/roles-users.md → docs/user-stories/pdf/role-sales.pdf
 - `Role Team Lead` --semantically_similar_to--> `Role — Team Lead Paper`  [INFERRED] [semantically similar]
   audit/roles-users.md → docs/user-stories/pdf/role-tl.pdf
+- `Role Sales` --semantically_similar_to--> `Role — Sales Paper`  [INFERRED] [semantically similar]
+  audit/roles-users.md → docs/user-stories/pdf/role-sales.pdf
 - `Assistant Super Admin` --semantically_similar_to--> `Assistant Super Admin`  [INFERRED] [semantically similar]
   CONTEXT.md → docs/user-stories/pdf/role-asa.pdf
 - `Operations Lead` --semantically_similar_to--> `Operations Lead`  [INFERRED] [semantically similar]
@@ -2423,17 +2423,17 @@ Nodes (3): Local Near-Me SEO Hubs (Bacoor, Imus, Cavite, Batangas), SEO & AI Sea
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `Detailer QUEUE_VIEWER_ROLES P0` connect `Detailer` to `roleGuideParity.test.js`?**
-  _High betweenness centrality (0.085) - this node is a cross-community bridge._
+  _High betweenness centrality (0.083) - this node is a cross-community bridge._
 - **What connects `gsap`, `shadcn`, `tw-animate-css` to the rest of the system?**
   _686 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `DailySheetPanel.jsx` be split into smaller, more focused modules?**
   _Cohesion score 0.09210526315789473 - nodes in this community are weakly interconnected._
-- **Why does `Wave D Specialty QA` connect `Detailer` to `Video Editor`, `Marketing`?**
-  _High betweenness centrality (0.054) - this node is a cross-community bridge._
+- **Why does `Roles Matrix` connect `Roles Matrix` to `Operations Lead`, `Team Lead`, `Ultimate Readiness Checklist`, `Shop Day Money Path`, `Roles and Users Inventory`, `Video Editor`?**
+  _High betweenness centrality (0.056) - this node is a cross-community bridge._
 - **Should `ref_node_assert` be split into smaller, more focused modules?**
   _Cohesion score 0.011227673635849937 - nodes in this community are weakly interconnected._
-- **Why does `Role QA Progress Log` connect `Detailer` to `Role-by-role System QA 2026-09`, `Assistant Super Admin`?**
-  _High betweenness centrality (0.041) - this node is a cross-community bridge._
+- **Why does `Wave D Specialty QA` connect `Detailer` to `Video Editor`, `Marketing`?**
+  _High betweenness centrality (0.052) - this node is a cross-community bridge._
 
 ### Low-confidence Hints
 _AMBIGUOUS edges — the extractor was unsure. Verify before acting on these._
