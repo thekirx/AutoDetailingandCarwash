@@ -113,9 +113,10 @@ export default function MonthlyPayrollPage({ defaultBranch, onFinanceSync } = {}
   const [savingBase, setSavingBase] = useState(false)
 
   // History / Reports state + Owner Edit/Delete Payslip Dialog
+  const todayManila = getLocalCalendarDate()
   const [historySlips, setHistorySlips] = useState([])
   const [loadingHistory, setLoadingHistory] = useState(false)
-  const [historyYear, setHistoryYear] = useState(() => String(new Date().getFullYear()))
+  const [historyYear, setHistoryYear] = useState(() => todayManila.slice(0, 4))
   const [historyMonth, setHistoryMonth] = useState('all')
   const [historyHalf, setHistoryHalf] = useState('all')
   const [historyStatus, setHistoryStatus] = useState('all')
@@ -136,9 +137,9 @@ export default function MonthlyPayrollPage({ defaultBranch, onFinanceSync } = {}
   const [deletingSlip, setDeletingSlip] = useState(false)
 
   // Jump to specific cutoff selector
-  const [jumpYear, setJumpYear] = useState(() => String(new Date().getFullYear()))
-  const [jumpMonth, setJumpMonth] = useState(() => String(new Date().getMonth() + 1))
-  const [jumpHalf, setJumpHalf] = useState(() => (new Date().getDate() <= 15 ? '1' : '2'))
+  const [jumpYear, setJumpYear] = useState(() => todayManila.slice(0, 4))
+  const [jumpMonth, setJumpMonth] = useState(() => String(Number(todayManila.slice(5, 7))))
+  const [jumpHalf, setJumpHalf] = useState(() => (Number(todayManila.slice(8, 10)) <= 15 ? '1' : '2'))
 
   const periods = useMemo(() => payPeriodList(getLocalCalendarDate(), 6), [])
   const periodKey = searchParams.get('pperiod') || periods[0]?.start || ''

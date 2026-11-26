@@ -424,6 +424,8 @@ export default function FormResultsBoardPage({ embedded = false, initialFormSlug
       }
       setActiveItem(null)
       await load({ silent: true })
+    } catch (err) {
+      toast.error(err?.message || 'Unable to update cash advance')
     } finally {
       setSaving(false)
     }

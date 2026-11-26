@@ -102,6 +102,7 @@ function mapLiveCatalogRow(row) {
 
 export default function PublicShopPage() {
   const [activeCategory, setActiveCategory] = useState('all')
+  const [searchQuery, setSearchQuery] = useState('')
   const [liveRows, setLiveRows] = useState([])
   const [liveLoading, setLiveLoading] = useState(true)
   const [liveError, setLiveError] = useState('')
@@ -159,9 +160,15 @@ export default function PublicShopPage() {
   const allItems = useMemo(() => [...liveRows, ...CURATED_STUDIO_CARE], [liveRows])
 
   const items = useMemo(() => {
-    if (activeCategory === 'all') return allItems
-    return allItems.filter((item) => item.category === activeCategory)
-  }, [activeCategory, allItems])
+    const q = searchQuery.trim().toLowerCase()
+    return allItems.filter((item) => {
+      if (activeCategory !== 'all' && item.category !== activeCategory) return false
+      if (!q) return true
+      return `${item.name || ''} ${item.brand || ''} ${item.summary || ''} ${item.tag || ''}`
+        .toLowerCase()
+        .includes(q)
+    })
+  }, [activeCategory, allItems, searchQuery])
 
   function openInquiryModal(item) {
     openedAtRef.current = Date.now()
@@ -253,19 +260,29 @@ export default function PublicShopPage() {
               <p className="bd-eyebrow">Curated Shelf</p>
               <h2 id="shop-catalog-heading">Counter Stock, Chemistry &amp; Hakum Gear</h2>
             </div>
-            <div className="bd-blog-pills" role="tablist" aria-label="Product categories">
-              {SHOP_CATEGORIES.map((cat) => (
-                <button
-                  key={cat.id}
-                  type="button"
-                  role="tab"
-                  aria-selected={activeCategory === cat.id}
-                  className={`bd-pill${activeCategory === cat.id ? ' is-active' : ''}`}
-                  onClick={() => setActiveCategory(cat.id)}
-                >
-                  {cat.label}
-                </button>
-              ))}
+            <div className="flex flex-wrap items-center gap-3">
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search merch, coffee, or care…"
+                aria-label="Search studio shop"
+                className="min-h-11 w-full rounded-full border border-border bg-background px-4 text-sm text-foreground sm:w-64"
+              />
+              <div className="bd-blog-pills" role="tablist" aria-label="Product categories">
+                {SHOP_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    role="tab"
+                    aria-selected={activeCategory === cat.id}
+                    className={`bd-pill${activeCategory === cat.id ? ' is-active' : ''}`}
+                    onClick={() => setActiveCategory(cat.id)}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 

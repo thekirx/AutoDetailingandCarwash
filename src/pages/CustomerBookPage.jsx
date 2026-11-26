@@ -273,6 +273,16 @@ export default function CustomerBookPage() {
                   reviewDigits.length <= 13,
               )
 
+  const autoAppliedVoucherRef = useRef('')
+  useEffect(() => {
+    const wantedVoucher = normalizePromoCode(params.get('voucher') || '')
+    if (!wantedVoucher || appliedVoucher || basePriceMinor <= 0 || autoAppliedVoucherRef.current === wantedVoucher) return
+    if (stepId !== 'summary' && stepId !== 'details') return
+    autoAppliedVoucherRef.current = wantedVoucher
+    applyVoucherDirect(wantedVoucher)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [params, appliedVoucher, basePriceMinor, stepId])
+
   async function applyVoucherDirect(rawCode) {
     const code = normalizePromoCode(rawCode)
     if (!code) return
@@ -859,7 +869,7 @@ export default function CustomerBookPage() {
                   ) : null}
                 </dl>
 
-                {assess ? null : (
+                {assess || basePriceMinor <= 0 ? null : (
                 <>
                 <div className="capp-sect mt-3">
                   <h2>Promo voucher</h2>

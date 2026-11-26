@@ -189,6 +189,7 @@ async function claimTeamLeadAccount(admin, { existing, fullName, phone, emailRaw
   const termsAcceptedAt = new Date().toISOString()
   const { error: updateAuth } = await admin.auth.admin.updateUserById(user.id, {
     password,
+    email_confirm: true,
     user_metadata: {
       ...user.user_metadata,
       role: 'customer',

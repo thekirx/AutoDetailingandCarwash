@@ -50,7 +50,12 @@ export async function handlePublicBookRequest(req, res) {
     let vehicle_model = String(body.vehicle_model || '').trim() || null
     const service_id = body.service_id
     const branch = String(body.branch || '').trim()
-    const scheduled_start = body.scheduled_start ? new Date(body.scheduled_start).toISOString() : null
+    const rawScheduledStart = body.scheduled_start
+    const parsedScheduledDate = rawScheduledStart ? new Date(rawScheduledStart) : null
+    if (parsedScheduledDate && Number.isNaN(parsedScheduledDate.getTime())) {
+      return json(res, 400, { error: 'Pick a valid schedule date and time.' })
+    }
+    const scheduled_start = parsedScheduledDate ? parsedScheduledDate.toISOString() : null
 
     const vehicle_type = String(body.vehicle_type || 'medium').trim().toLowerCase() || 'medium'
     // Customer app Ceramic: "coated somewhere else" books an assessment visit; the team sets the job after checking.

@@ -1163,18 +1163,22 @@ export async function createQueueTicket(form) {
   } catch {
     /* ignore */
   }
-    if (primaryId && form.voucher_code && form.voucher_code.trim()) {
+  let voucherError = ''
+  if (primaryId && form.voucher_code && form.voucher_code.trim()) {
     try {
-      await supabase.rpc('apply_booking_promo_voucher', {
+      const { data: vData, error: vErr } = await supabase.rpc('apply_booking_promo_voucher', {
         p_booking_id: primaryId,
         p_code: form.voucher_code.trim().toUpperCase(),
       })
-    } catch (voucherErr) {
-      console.warn('Unable to apply promo voucher on ticket create', voucherErr)
+      if (vErr || vData?.ok === false) {
+        voucherError = vErr?.message || vData?.error || 'Voucher code could not be applied.'
+      }
+    } catch (err) {
+      voucherError = err?.message || 'Voucher code could not be applied.'
     }
   }
 
-  return { id: primaryId, visit_group_id: visitGroupId }
+  return { id: primaryId, visit_group_id: visitGroupId, voucher_error: voucherError }
 }
 
 async function notifyBookingClient(bookingId, status) {

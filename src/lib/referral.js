@@ -80,7 +80,9 @@ const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 
 export function normalizeReferralCode(value) {
   const code = String(value || '').trim().toUpperCase().replace(/[^A-Z0-9-]/g, '')
-  return /^[A-Z]{1,8}-[A-HJ-NP-Z2-9]{3}$/.test(code) ? code : ''
+  if (/^[A-Z]{1,8}-[A-HJ-NP-Z2-9]{3}$/.test(code)) return code
+  if (/^HK[A-Z0-9]{6}$/.test(code)) return code
+  return ''
 }
 
 export function makeReferralCode(firstName, random = Math.random) {

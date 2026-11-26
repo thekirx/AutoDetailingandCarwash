@@ -188,7 +188,7 @@ export default function CustomerAccountPage() {
     if (!scores || !reviewVisit?.id) return
     if (vote === 'down') {
       const complaint = thumbDownComplaintPayload({
-        name: authProfile.full_name,
+        name: authProfile.full_name || data?.profile?.full_name || 'Customer',
         phone: authProfile.phone,
         branch: reviewVisit.branch,
         category: ratingCategory,

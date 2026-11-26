@@ -169,24 +169,30 @@ export default function InquiriesPage({ embedded = false } = {}) {
 
   const setPartnershipStatus = useCallback(async (id, status) => {
     setBusyId(id)
-    const { error } = await supabase.from('partnership_inquiries').update({ status }).eq('id', id)
-    setBusyId('')
-    if (error) setLoadError(error.message)
-    else load()
+    try {
+      const { error } = await supabase.from('partnership_inquiries').update({ status }).eq('id', id)
+      if (error) toast.error(error.message)
+      else load()
+    } finally {
+      setBusyId('')
+    }
   }, [load])
 
   const setComplaintStatus = useCallback(async (id, status) => {
     setBusyId(id)
-    const { error } = await supabase.from('complaints').update({ status }).eq('id', id)
-    setBusyId('')
-    if (error) setLoadError(error.message)
-    else load()
+    try {
+      const { error } = await supabase.from('complaints').update({ status }).eq('id', id)
+      if (error) toast.error(error.message)
+      else load()
+    } finally {
+      setBusyId('')
+    }
   }, [load])
 
   const promoteComplaintToNote = useCallback(async (row) => {
     const body = String(row.description || '').trim()
     if (!body) {
-      setLoadError('Complaint has no description to promote')
+      toast.error('Complaint has no description to promote')
       return
     }
     setBusyId(row.id)
@@ -208,9 +214,8 @@ export default function InquiriesPage({ embedded = false } = {}) {
         complaint_id: row.id,
         created_by: (await supabase.auth.getUser()).data?.user?.id || null,
       })
-      if (error) setLoadError(error.message)
+      if (error) toast.error(error.message)
       else {
-        setLoadError('')
         toast.success(customerId ? 'Promoted to customer note' : 'Promoted note (match customer in CRM if needed)')
       }
     } finally {
@@ -220,10 +225,13 @@ export default function InquiriesPage({ embedded = false } = {}) {
 
   const setContactStatus = useCallback(async (id, status) => {
     setBusyId(id)
-    const { error } = await supabase.from('contact_inquiries').update({ status }).eq('id', id)
-    setBusyId('')
-    if (error) setLoadError(error.message)
-    else load()
+    try {
+      const { error } = await supabase.from('contact_inquiries').update({ status }).eq('id', id)
+      if (error) toast.error(error.message)
+      else load()
+    } finally {
+      setBusyId('')
+    }
   }, [load])
 
   useEffect(() => {

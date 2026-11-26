@@ -54,7 +54,7 @@ export function PickupHandover({ row, onHandedOver }) {
       </div>
     </div>
     {matched === code && matched ? <p className="flex items-center gap-1.5 text-xs text-emerald-600"><CheckCircle2 className="size-3.5" /> Code matches</p> : checking ? <p className="text-xs text-muted-foreground">Checking code…</p> : null}
-    <Button className="w-full" type="button" disabled={!matched || matched !== code || busy} onClick={handover}>{busy ? 'Handing over…' : 'Hand over'}</Button>
+    <Button className="w-full min-h-11" type="button" disabled={!matched || matched !== code || busy} onClick={handover}>{busy ? 'Handing over…' : 'Hand over'}</Button>
     <p className="text-[11px] text-muted-foreground">No payment. The customer already used {row.points_spent} points. The code is only on their phone.</p>
     {error ? <p role="alert" className="text-xs text-destructive">{error}</p> : null}
   </div>

@@ -80,7 +80,7 @@ export default function DailySheetRulesPage() {
   if (!canReviewDailySheet(profile)) return <Navigate to="/operations/access-denied" replace />
 
   const hasSettings = canAccessSettings(profile)
-  const backTo = hasSettings ? '/operations/settings' : '/operations/finance?tab=daily_sheets'
+  const backTo = hasSettings ? '/operations/settings' : '/operations/finance?tab=sheets'
   const backLabel = hasSettings ? '← Company settings' : '← Daily sheets'
 
   async function saveRules(e) {

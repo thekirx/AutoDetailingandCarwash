@@ -1823,6 +1823,9 @@ export function NewQueueTicketPage() {
         created_by: user.id,
       })
       setLowPriceConfirmOpen(false)
+      if (ticket?.voucher_error) {
+        toast.warning(`Ticket added, but voucher was not applied: ${ticket.voucher_error}`)
+      }
       navigate(`/operations/queue?open=${ticket.id}`)
     } catch (err) {
       setLowPriceConfirmOpen(false)

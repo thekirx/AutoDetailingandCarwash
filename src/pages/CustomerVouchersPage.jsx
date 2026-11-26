@@ -95,7 +95,14 @@ export default function CustomerVouchersPage() {
 
 
   return (
-    <CustomerAppFrame title="Vouchers" subtitle="Birthday wash and service vouchers." cols>
+    <CustomerAppFrame
+      title="Vouchers"
+      subtitle="Birthday wash and service vouchers."
+      backTo="/account/more"
+      backLabel="More"
+      onRefresh={reload}
+      cols
+    >
       {error ? (
         <div className="capp-empty capp-span" role="alert">
           <strong>Could not load vouchers</strong>

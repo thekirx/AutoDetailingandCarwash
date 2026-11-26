@@ -107,9 +107,10 @@ export async function handleSendPushRequest(req, res) {
 
     const explicitIds = targets.map((t) => t.userId).filter(Boolean)
     const inboxIds = body.inbox === false ? [] : [...new Set([...explicitIds, ...userIds])]
+    let inboxInserted = 0
     if (inboxIds.length) {
       const db = admin()
-      await db.from('user_notifications').insert(
+      const { error: inboxErr } = await db.from('user_notifications').insert(
         inboxIds.map((user_id) => ({
           user_id,
           kind: body.kind || 'system',
@@ -119,9 +120,11 @@ export async function handleSendPushRequest(req, res) {
           tag: body.tag || null,
         })),
       )
+      if (inboxErr) console.warn('[pushApi] user_notifications insert failed:', inboxErr.message)
+      else inboxInserted = inboxIds.length
     }
 
-    return json(res, 200, { ok: true, ...result, userIds: userIds.length, inboxInserted: inboxIds.length }, req)
+    return json(res, 200, { ok: true, ...result, userIds: userIds.length, inboxInserted }, req)
   } catch (err) {
     return json(res, 500, { error: String(err.message || err) }, req)
   }

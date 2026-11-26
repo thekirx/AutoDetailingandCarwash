@@ -137,7 +137,7 @@ export default function TaskModal({
       .from('staff_profiles')
       .select('id, full_name, username, role, is_active')
       .eq('is_active', true)
-      .in('role', ['staff', 'team_lead', 'admin', 'assistant_super_admin', 'BossMich', 'marketing', 'video_editor'])
+      .in('role', ['staff', 'detailer', 'sales', 'team_lead', 'operations_lead', 'admin', 'assistant_super_admin', 'BossMich', 'marketing', 'video_editor'])
       .order('full_name')
       .then(({ data, error }) => {
         if (error) toast.error(error.message)
@@ -182,62 +182,62 @@ export default function TaskModal({
     }
     setTitleError('')
     setSaving(true)
-    if (isCreate) {
-      if (!listId) {
-        setSaving(false)
-        return toast.error('This board has no list to put the task in.')
+    try {
+      if (isCreate) {
+        if (!listId) {
+          return toast.error('This board has no list to put the task in.')
+        }
+        const { data, error } = await supabase
+          .from('plan_cards')
+          .insert({
+            list_id: listId,
+            title: title.trim(),
+            description,
+            due_at: datetimeLocalToIso(dueAt),
+            category_id: categoryId || null,
+            proof_required: proofRequired,
+            form_id: formId || null,
+            position: nextPlanCardPosition(lists, listId),
+            created_by: user?.id || null,
+          })
+          .select('id')
+          .single()
+        if (error) {
+          return toast.error(error.message)
+        }
+        let assigned = []
+        if (pickedIds.length) {
+          const { data: rows, error: aErr } = await supabase
+            .from('plan_card_assignees')
+            .insert(pickedIds.map((staff_id) => ({
+              card_id: data.id,
+              staff_id,
+              assigned_by: user?.id || null,
+              status: 'todo',
+            })))
+            .select(ASSIGNEE_SELECT)
+          if (aErr) toast.error(aErr.message)
+          else assigned = rows || []
+        }
+        const checklist = items.map((row) => String(row.title || '').trim()).filter(Boolean)
+        if (checklist.length) {
+          const { error: cErr } = await supabase.from('plan_checklist_items').insert(
+            checklist.map((itemTitle, i) => ({ card_id: data.id, title: itemTitle, position: i })),
+          )
+          if (cErr) toast.error(cErr.message)
+        }
+        toast.success('Task created')
+        onSaved?.(data)
+        onClose()
+        void pingPlannerAssignees(data.id, assigned.map((row) => row.staff_id), title.trim())
+        return
       }
-      const { data, error } = await supabase
-        .from('plan_cards')
-        .insert({
-          list_id: listId,
-          title: title.trim(),
-          description,
-          due_at: datetimeLocalToIso(dueAt),
-          category_id: categoryId || null,
-          proof_required: proofRequired,
-          form_id: formId || null,
-          position: nextPlanCardPosition(lists, listId),
-          created_by: user?.id || null,
-        })
-        .select('id')
-        .single()
-      if (error) {
-        setSaving(false)
-        return toast.error(error.message)
-      }
-      let assigned = []
-      if (pickedIds.length) {
-        const { data: rows, error: aErr } = await supabase
-          .from('plan_card_assignees')
-          .insert(pickedIds.map((staff_id) => ({
-            card_id: data.id,
-            staff_id,
-            assigned_by: user?.id || null,
-            status: 'todo',
-          })))
-          .select(ASSIGNEE_SELECT)
-        if (aErr) toast.error(aErr.message)
-        else assigned = rows || []
-      }
-      const checklist = items.map((row) => String(row.title || '').trim()).filter(Boolean)
-      if (checklist.length) {
-        const { error: cErr } = await supabase.from('plan_checklist_items').insert(
-          checklist.map((itemTitle, i) => ({ card_id: data.id, title: itemTitle, position: i })),
-        )
-        if (cErr) toast.error(cErr.message)
-      }
+      const error = await persistCard(workingId)
+      if (error) return toast.error(error.message)
+      finish('Task saved')
+    } finally {
       setSaving(false)
-      toast.success('Task created')
-      onSaved?.(data)
-      onClose()
-      void pingPlannerAssignees(data.id, assigned.map((row) => row.staff_id), title.trim())
-      return
     }
-    const error = await persistCard(workingId)
-    setSaving(false)
-    if (error) return toast.error(error.message)
-    finish('Task saved')
   }
 
   function remove() {

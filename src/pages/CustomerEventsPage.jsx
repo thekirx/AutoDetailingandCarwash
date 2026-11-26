@@ -105,7 +105,7 @@ export default function CustomerEventsPage() {
   }
 
   return (
-    <CustomerAppFrame title="Events" subtitle="Join our upcoming events and activities." onBack={back} cols>
+    <CustomerAppFrame title="Events" subtitle="Join our upcoming events and activities." onBack={back} onRefresh={loadEvents} cols>
       <div className="capp-span">
         <Pills items={FILTERS} value={filter} onChange={setFilter} label="Events" />
       </div>

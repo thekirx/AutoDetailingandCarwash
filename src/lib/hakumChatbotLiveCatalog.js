@@ -43,7 +43,7 @@ export async function fetchChatbotLiveCatalog({ force = false } = {}) {
         supabase
           .from('services')
           .select(
-            'id, name, slug, description, pay_category, price_minor, points_award, duration_minutes, display_order, service_size_prices(size_slug, price_minor)',
+            'id, name, slug, description, pay_category, price_minor, points_award, duration_minutes, display_order',
           )
           .eq('is_active', true)
           .eq('is_archived', false)

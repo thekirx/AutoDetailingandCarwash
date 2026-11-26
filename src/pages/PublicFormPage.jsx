@@ -118,24 +118,24 @@ export default function PublicFormPage() {
       <div className="hakum-form-page-inner">
         {!form && !error ? <p className="hakum-form-loading">Loading form…</p> : null}
         {!form && error ? (
-          <div className="mb-4 text-center">
-            <button type="button" className="underline text-sm font-semibold" onClick={loadForm}>
+          <div className="mb-4 rounded-xl border border-destructive/40 bg-destructive/10 p-4 text-center text-sm text-destructive" role="alert">
+            <p className="font-semibold">{error}</p>
+            <button type="button" className="mt-2 underline text-sm font-semibold" onClick={loadForm}>
               Retry loading form
             </button>
           </div>
         ) : null}
-        {(form || error) && (
+        {form ? (
           <BrandedOpsForm
-            form={form || { name: 'Form unavailable', fields: [], kind: 'complaint' }}
+            form={form}
             values={values}
             onChange={setValues}
             onSubmit={onSubmit}
-            status={form ? status : 'idle'}
+            status={status}
             error={error}
             submissionId={submissionId}
             footerSlot={
-              form ? (
-                <label className="form-legal-notice hakum-form-legal" htmlFor="ops-form-legal">
+              <label className="form-legal-notice hakum-form-legal" htmlFor="ops-form-legal">
                   <input
                     id="ops-form-legal"
                     type="checkbox"
@@ -155,10 +155,9 @@ export default function PublicFormPage() {
                     .
                   </span>
                 </label>
-              ) : null
             }
           />
-        )}
+        ) : null}
         <p className="hakum-form-footer-links">
           <Link to="/">Home</Link>
           <span aria-hidden>·</span>

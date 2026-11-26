@@ -1,5 +1,5 @@
 import { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react'
-import { Link, Navigate, useSearchParams } from 'react-router-dom'
+import { Navigate, useSearchParams } from 'react-router-dom'
 import {
   Archive,
   ArrowLeftRight,
@@ -19,7 +19,6 @@ import {
   canAccessInquiries,
   canEditCrm,
   canSendCustomerSms,
-  canWriteFinance,
   getBranchScopeList,
   isAssistantSuperAdmin,
   isSuperAdmin,
@@ -43,7 +42,7 @@ import OpsTabList from '@/components/ops/OpsTabBar'
 import { CRM_WORKFLOW_STEPS } from '@/components/ops/opsGuideCopy'
 import { opsTabSearchParams, resolveOpsTab } from '@/lib/opsShell'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent } from '@/components/ui/card'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -57,7 +56,6 @@ import '@/styles/crm-hub.css'
 const InquiriesPage = lazy(() => import('@/pages/InquiriesPage'))
 
 const PRICING_SIZE_ITEMS = PRICING_SIZES.map((sz) => ({ value: sz.slug, label: sz.label }))
-const EXPENSE_KIND_OPTIONS = ['general', 'payroll', 'marketing', 'utilities', 'chemicals', 'equipment'].map((k) => ({ value: k, label: k }))
 const SYNTHETIC_EMAIL = /@customers\.hakumautocare\.com$/i
 
 /** Source-scan contract — keep literal ids for ops shell tests. */
@@ -176,8 +174,6 @@ export default function CrmPage() {
   const [saving, setSaving] = useState(false)
   const [visitRows, setVisitRows] = useState([])
   const [visitsLoading, setVisitsLoading] = useState(true)
-  const [expenseCats, setExpenseCats] = useState([])
-  const [newExpenseCat, setNewExpenseCat] = useState({ name: '', kind: 'general' })
 
   const loadCustomers = useCallback(async ({ silent = false } = {}) => {
     if (!silent) setLoadingList(true)
@@ -192,27 +188,45 @@ export default function CrmPage() {
         return
       }
       let bookingRows = []
+      let saleRows = []
       try {
-        bookingRows = await collectPaged(async (from, to) => {
-          let bookingQuery = supabase
-            .from('bookings')
-            .select('customer_id')
-            .not('customer_id', 'is', null)
-            .eq('is_archived', false)
-            .order('created_at', { ascending: false })
-            .range(from, to)
-          bookingQuery = applyBranchScope(bookingQuery, scope)
-          const { data, error } = await bookingQuery
-          if (error) throw error
-          return data || []
-        }, 1000)
+        ;[bookingRows, saleRows] = await Promise.all([
+          collectPaged(async (from, to) => {
+            let bookingQuery = supabase
+              .from('bookings')
+              .select('customer_id')
+              .not('customer_id', 'is', null)
+              .eq('is_archived', false)
+              .order('created_at', { ascending: false })
+              .range(from, to)
+            bookingQuery = applyBranchScope(bookingQuery, scope)
+            const { data, error } = await bookingQuery
+            if (error) throw error
+            return data || []
+          }, 1000),
+          collectPaged(async (from, to) => {
+            let saleQuery = supabase
+              .from('sales')
+              .select('customer_id')
+              .not('customer_id', 'is', null)
+              .eq('status', 'paid')
+              .order('occurred_at', { ascending: false })
+              .range(from, to)
+            saleQuery = applyBranchScope(saleQuery, scope)
+            const { data, error } = await saleQuery
+            if (error) throw error
+            return data || []
+          }, 1000),
+        ])
       } catch (bookingErr) {
         toast.error(bookingErr.message)
         setCustomers([])
         setLoadingList(false)
         return
       }
-      customerIds = [...new Set(bookingRows.map((r) => r.customer_id).filter(Boolean))]
+      customerIds = [
+        ...new Set([...bookingRows, ...saleRows].map((r) => r.customer_id).filter(Boolean)),
+      ]
       if (!customerIds.length) {
         setCustomers([])
         setVehiclesByCustomer(new Map())
@@ -609,15 +623,6 @@ export default function CrmPage() {
       .then(setVisitRows)
       .catch((err) => toast.error(err.message))
       .finally(() => setVisitsLoading(false))
-    if (canWriteFinance(profile)) {
-      supabase
-        .from('expense_categories')
-        .select('id, name, kind')
-        .order('name')
-        .then(({ data, error }) => {
-          if (!error) setExpenseCats(data || [])
-        })
-    }
   }, [profile])
 
   const scopedBranches = useMemo(() => {
@@ -954,65 +959,6 @@ export default function CrmPage() {
             onView={setSelected}
             loading={visitsLoading}
           />
-
-          {canWriteFinance(profile) ? (
-            <Card>
-              <CardHeader>
-                <CardTitle>Expense categories</CardTitle>
-                <CardDescription>
-                  Categories used by Finance. Also editable under Finance → Categories.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3">
-                <form
-                  className="flex flex-wrap items-end gap-2"
-                  onSubmit={async (e) => {
-                    e.preventDefault()
-                    const name = newExpenseCat.name.trim()
-                    if (!name) return toast.error('Name required')
-                    const { error } = await supabase.from('expense_categories').insert({
-                      name,
-                      kind: newExpenseCat.kind || 'general',
-                    })
-                    if (error) return toast.error(error.message)
-                    toast.success('Category created')
-                    setNewExpenseCat({ name: '', kind: 'general' })
-                    const { data } = await supabase.from('expense_categories').select('id, name, kind').order('name')
-                    setExpenseCats(data || [])
-                  }}
-                >
-                  <div className="flex flex-col gap-1">
-                    <Label>Name</Label>
-                    <Input className="min-h-11" value={newExpenseCat.name} onChange={(e) => setNewExpenseCat({ ...newExpenseCat, name: e.target.value })} />
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <Label>Kind</Label>
-                    <Select value={newExpenseCat.kind} onValueChange={(kind) => setNewExpenseCat({ ...newExpenseCat, kind })} items={EXPENSE_KIND_OPTIONS}>
-                      <SelectTrigger className="h-11 w-44 cursor-pointer"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {EXPENSE_KIND_OPTIONS.map((k) => (
-                          <SelectItem key={k.value} value={k.value}>{k.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button type="submit" className="min-h-11">Add category</Button>
-                  <Button type="button" variant="outline" className="min-h-11" asChild>
-                    <Link to="/operations/finance?tab=categories">Open Finance</Link>
-                  </Button>
-                </form>
-                <ul className="text-sm text-muted-foreground">
-                  {expenseCats.map((c) => (
-                    <li key={c.id}>{c.name} · {c.kind}</li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Expense categories live in Finance. Ask Super Admin for finance write access to create them here.
-            </p>
-          )}
         </TabsContent>
 
         <TabsContent value="insights" className="mt-6">

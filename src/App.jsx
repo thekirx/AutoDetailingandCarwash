@@ -337,8 +337,8 @@ export default function App() {
             <Route path="settings" element={gate('settings', <SettingsHubPage />)} />
             <Route path="settings/tint-finder" element={gate('settings', <TintFinderSettingsPage />)} />
             <Route path="settings/chatbot" element={gate('settings', <ChatbotSettingsPage />)} />
-            <Route path="settings/pos" element={gate('settings', <PosSettingsPage />)} />
-            <Route path="settings/daily-sheet" element={gate('settings', <DailySheetRulesPage />)} />
+            <Route path="settings/pos" element={<PosSettingsPage />} />
+            <Route path="settings/daily-sheet" element={<DailySheetRulesPage />} />
             <Route path="settings/payroll" element={<Navigate to="/operations/settings/daily-sheet" replace />} />
             <Route path="content" element={gate('content', <ContentAdminPage />)} />
             <Route path="notifications" element={gate('notifications', <NotificationsPage />)} />

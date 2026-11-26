@@ -758,6 +758,9 @@
   border: none;
   padding: 0;
   text-align: left;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
 }
 .pl-clickable-category:hover {
   color: var(--primary);
@@ -773,7 +776,10 @@
   font-variant-numeric: tabular-nums;
   color: inherit;
   transition: all 0.15s ease;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: 44px;
   width: 100%;
   text-align: right;
 }

@@ -12,7 +12,7 @@ import { handleReferralRequest } from '../server/referral.mjs'
 
 export const operations = Object.freeze({
   'customer-auth-lookup': (req, res) => {
-    setCors(res, 'POST, OPTIONS')
+    setCors(res, 'POST, OPTIONS', req)
     return handleCustomerAuthLookupRequest(req, res, {
       getBody: () => readJsonBody(req),
       siteOrigin: req.headers.origin || `https://${req.headers.host}`,
@@ -25,7 +25,7 @@ export const operations = Object.freeze({
     }),
   'vehicle-transfer': handleVehicleTransferRequest,
   'customer-signup': (req, res) => {
-    setCors(res, 'POST, OPTIONS')
+    setCors(res, 'POST, OPTIONS', req)
     return handleCustomerSignupRequest(req, res, {
       getBody: () => readJsonBody(req),
     })
@@ -33,7 +33,7 @@ export const operations = Object.freeze({
   'public-inquiry': handlePublicInquiryRequest,
   referral: handleReferralRequest,
   'provision-customer': (req, res) => {
-    setCors(res, 'POST, OPTIONS')
+    setCors(res, 'POST, OPTIONS', req)
     const proto = req.headers['x-forwarded-proto'] || 'https'
     const host = req.headers['x-forwarded-host'] || req.headers.host
     return handleProvisionRequest(req, res, {

@@ -530,14 +530,14 @@ export default function TintFinderSettingsPage() {
                     {l.branch} · {l.preferred_date} · {l.vehicle_model}
                   </p>
                   <p className="text-sm">
-                    {l.recommendation.packageName} · {l.recommendation.front} front / {l.recommendation.rear} rear ·{' '}
-                    {tintPeso(l.recommendation.price)}
+                    {l.recommendation?.packageName || 'Recommendation'} · {l.recommendation?.front || '—'} front /{' '}
+                    {l.recommendation?.rear || '—'} rear · {tintPeso(l.recommendation?.price)}
                   </p>
                   <dl className="flex flex-wrap gap-4 text-xs">
                     {TINT_QUESTIONS.map((q) => (
                       <div key={q.key}>
                         <dt className="text-muted-foreground">{q.key}</dt>
-                        <dd>{q.choices.find((v) => v.id === l.answers[q.key])?.label}</dd>
+                        <dd>{q.choices.find((v) => v.id === l.answers?.[q.key])?.label || '—'}</dd>
                       </div>
                     ))}
                   </dl>

@@ -286,7 +286,7 @@ export function BookingPage() {
     Boolean(form.branch),
     Boolean(form.visit_date && form.visit_time && isCustomerBookable(`${form.visit_date}T12:00:00+08:00`)),
     !plateValidationError(form.vehicle_plate) && Boolean(form.vehicle_make.trim() && form.vehicle_model.trim()),
-    Boolean(form.customer_first_name.trim() && form.customer_last_name.trim() && phoneDigits.length >= 10) && !referralRequiredError(form) && !friendCodeAccountError(form, profile?.role === 'customer' ? user?.id : null),
+    Boolean(form.customer_first_name.trim() && form.customer_last_name.trim() && phoneDigits.length >= 10 && phoneDigits.length <= 13) && !referralRequiredError(form) && !friendCodeAccountError(form, profile?.role === 'customer' ? user?.id : null),
     true,
   ][step]
   const lastStep = step === WIZARD_STEPS.length - 1

@@ -315,6 +315,9 @@
   font-size: 11px;
   color: var(--hb-ink-muted);
   white-space: nowrap;
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
 }
 
 .hakum-bot-dot {

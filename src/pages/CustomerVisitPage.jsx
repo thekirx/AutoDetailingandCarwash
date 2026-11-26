@@ -215,7 +215,7 @@ export default function CustomerVisitPage() {
             </dl>
           </section>
 
-          {!finished && !visit.promo_voucher_id ? (
+          {!finished && visit.status !== 'for_payment' && Number(visit.final_price_minor ?? visit.price_minor ?? 0) > 0 && !visit.promo_voucher_id ? (
             <section className="capp-section" aria-label="Add voucher">
               <div className="capp-sect">
                 <h2>Have a voucher code?</h2>

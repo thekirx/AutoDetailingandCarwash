@@ -980,11 +980,17 @@ function PosCounterPage() {
 
   /** Clear the walk-in lines; a queue handoff keeps its locked line. */
   function performClearCart() {
-    setCart((current) => current.filter((line) => !canRemovePosCartLine(line)))
+    setCart((current) => {
+      const kept = current.filter((line) => !canRemovePosCartLine(line))
+      return kept
+    })
     setDiscountPercent('')
     setDiscountAmountPesos('')
     setDiscountReason('')
     setCashTendered('')
+    setVoucherCode('')
+    setSplitCashText('')
+    setSplitGcashText('')
     setClearConfirmOpen(false)
   }
 
@@ -1229,9 +1235,16 @@ function PosCounterPage() {
         return
       }
       const next = Math.max(0, Math.floor(Number(applied?.final_price_minor) || 0))
-      saleCart = cart.map((line) =>
-        line.from_handoff ? { ...line, unit_price_minor: next, list_price_minor: next, price_minor: next } : line,
-      )
+      let matchedOneLine = false
+      saleCart = cart.map((line) => {
+        if (!line.from_handoff) return line
+        const isTargetLine = line.booking_id
+          ? line.booking_id === handoff.booking_id
+          : !matchedOneLine
+        if (!isTargetLine) return line
+        matchedOneLine = true
+        return { ...line, unit_price_minor: next, list_price_minor: next, price_minor: next }
+      })
       if (handoff?.id) {
         const { error: handoffUpdErr } = await supabase
           .from('pos_handoffs')
@@ -1239,12 +1252,23 @@ function PosCounterPage() {
           .eq('id', handoff.id)
         if (handoffUpdErr) toast.error(handoffUpdErr.message)
       }
+      const nextCartTotal = saleCart.reduce(
+        (sum, l) => sum + Math.max(0, Math.floor(Number(l.unit_price_minor) || 0)) * Math.max(1, Number(l.quantity) || 1),
+        0,
+      )
       if (splitOn) {
-        setCart(saleCart)
-        setVoucherCode('')
-        toast.success(`Voucher applied. Ticket is now ${formatMoney(next)}. Check the cash and GCash split, then charge.`)
-        setSaving(false)
-        return
+        const nextSplit = splitCashGcash({
+          totalMinor: nextCartTotal,
+          cashMinor: splitCashMinor ?? 0,
+          gcashMinor: splitGcashMinor ?? 0,
+        })
+        if (!nextSplit.ok) {
+          setCart(saleCart)
+          setVoucherCode('')
+          toast.success(`Voucher applied. Ticket is now ${formatMoney(next)}. Check the cash and GCash split, then charge.`)
+          setSaving(false)
+          return
+        }
       }
     }
     if (cart.some((l) => l.is_membership_included)) noteParts.push('Includes membership service')
@@ -1262,8 +1286,8 @@ function PosCounterPage() {
         gcashMinor: splitCheck?.gcashMinor,
         paymentRef,
         discountReason: [
-          cart.some((l) => l.adhoc_discount_applied && !l.referral_reward_id) ? discountReason : '',
-          cart.some((l) => l.referral_reward_id) ? REFERRAL_DISCOUNT_REASON : '',
+          saleCart.some((l) => l.adhoc_discount_applied && !l.referral_reward_id) ? discountReason : '',
+          saleCart.some((l) => l.referral_reward_id) ? REFERRAL_DISCOUNT_REASON : '',
         ]
           .filter((part) => String(part || '').trim())
           .join(' · '),
@@ -1277,8 +1301,8 @@ function PosCounterPage() {
         notes: noteParts.join(' · '),
       }),
     })
-    setSaving(false)
     if (error) {
+      setSaving(false)
       toast.error(error.message)
       return
     }
@@ -1300,68 +1324,81 @@ function PosCounterPage() {
         toast.warning(err.message || 'Sale saved — customer notify failed')
       }
     }
+    const postSaleTasks = []
     if (handoff?.booking_id) {
-      supabase.rpc('consume_booking_promo_voucher', {
-        p_booking_id: handoff.booking_id,
-        p_sale_id: data?.sale_id || null,
-      }).then(({ error: promoErr, data: promoData }) => {
-        if (promoErr) toast.warning(promoErr.message || 'Voucher use not counted')
-        else if (promoData && promoData.ok === false && promoData.error !== 'No voucher on this ticket.') {
-          toast.warning(promoData.error || 'Voucher use not counted')
-        }
-      })
+      postSaleTasks.push(
+        supabase.rpc('consume_booking_promo_voucher', {
+          p_booking_id: handoff.booking_id,
+          p_sale_id: data?.sale_id || null,
+        }).then(({ error: promoErr, data: promoData }) => {
+          if (promoErr) toast.warning(promoErr.message || 'Voucher use not counted')
+          else if (promoData && promoData.ok === false && promoData.error !== 'No voucher on this ticket.') {
+            toast.warning(promoData.error || 'Voucher use not counted')
+          }
+        }),
+      )
     }
-    const referralLine = cart.find((l) => l.referral_reward_id)
+    const referralLine = saleCart.find((l) => l.referral_reward_id)
     if (resolvedCustomerId && referralLine && data?.sale_id) {
-      supabase
-        .rpc('claim_referral_reward', {
-          p_customer_id: resolvedCustomerId,
-          p_reward_id: referralLine.referral_reward_id,
-          p_sale_id: data.sale_id,
-        })
-        .then(({ data: claim, error: claimErr }) => {
-          if (claimErr || claim?.ok === false) toast.warning(claimErr?.message || claim?.error || 'Refer-a-friend reward not marked used')
-        })
+      postSaleTasks.push(
+        supabase
+          .rpc('claim_referral_reward', {
+            p_customer_id: resolvedCustomerId,
+            p_reward_id: referralLine.referral_reward_id,
+            p_sale_id: data.sale_id,
+          })
+          .then(({ data: claim, error: claimErr }) => {
+            if (claimErr || claim?.ok === false) toast.warning(claimErr?.message || claim?.error || 'Refer-a-friend reward not marked used')
+          }),
+      )
     }
     if (resolvedCustomerId && data?.sale_id && referralSettings?.enabled) {
-      getAccessTokenFresh()
-        .then((token) =>
-          token
-            ? fetch('/api/referral', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                body: JSON.stringify({ action: 'notify', sale_id: data.sale_id }),
-              })
-            : null,
-        )
-        .catch(() => {})
+      postSaleTasks.push(
+        getAccessTokenFresh()
+          .then((token) =>
+            token
+              ? fetch('/api/referral', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                  body: JSON.stringify({ action: 'notify', sale_id: data.sale_id }),
+                })
+              : null,
+          )
+          .catch(() => {}),
+      )
     }
-    // Loyalty claim thank-you SMS — fire and forget, server dedupes per sale.
-    if (resolvedCustomerId && cart.some((l) => l.is_birthday_award)) {
-      supabase.rpc('claim_birthday_perk', {
-        p_customer_id: resolvedCustomerId,
-        p_sale_id: data?.sale_id || null,
-        p_code: typedBirthdayCode,
-      }).then(({ error: claimErr, data: claimData }) => {
-        if (claimData && claimData.ok === false) toast.warning(claimData.error || 'Birthday perk not marked claimed')
-        if (claimErr) toast.warning(claimErr.message || 'Birthday perk not marked claimed')
-      })
+    if (resolvedCustomerId && saleCart.some((l) => l.is_birthday_award)) {
+      postSaleTasks.push(
+        supabase.rpc('claim_birthday_perk', {
+          p_customer_id: resolvedCustomerId,
+          p_sale_id: data?.sale_id || null,
+          p_code: typedBirthdayCode,
+        }).then(({ error: claimErr, data: claimData }) => {
+          if (claimData && claimData.ok === false) toast.warning(claimData.error || 'Birthday perk not marked claimed')
+          if (claimErr) toast.warning(claimErr.message || 'Birthday perk not marked claimed')
+        }),
+      )
     }
-    if (resolvedCustomerId && cart.some((l) => l.is_loyalty_award && !l.is_birthday_award)) {
-      getAccessTokenFresh()
-        .then((token) => {
-          if (!token) return null
-          return fetch('/api/lifecycle-sms', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify({ kind: 'loyalty_claim', customer_id: resolvedCustomerId, sale_id: data?.sale_id || '' }),
+    if (resolvedCustomerId && saleCart.some((l) => l.is_loyalty_award && !l.is_birthday_award)) {
+      postSaleTasks.push(
+        getAccessTokenFresh()
+          .then((token) => {
+            if (!token) return null
+            return fetch('/api/lifecycle-sms', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+              body: JSON.stringify({ kind: 'loyalty_claim', customer_id: resolvedCustomerId, sale_id: data?.sale_id || '' }),
+            })
           })
-        })
-        .catch(() => {})
+          .catch(() => {}),
+      )
+    }
+    if (postSaleTasks.length) {
+      await Promise.allSettled(postSaleTasks)
     }
     const loyalty = data?.loyalty_awarded || data?.stamps_awarded
     const saleId = data?.sale_id
-    const detailingMinor = detailingAmountMinor(cart)
+    const detailingMinor = detailingAmountMinor(saleCart)
     if (saleId && detailingMinor && canWriteFinance(profile)) {
       const drafts = buildCeramicCompensationExpenses({
         saleId,
@@ -1377,6 +1414,7 @@ function PosCounterPage() {
         if (ceramicErr) toast.warning(`Sale saved — ceramic salary draft failed: ${ceramicErr.message}`)
       }
     }
+    setSaving(false)
     toast.success(
       handoff
         ? `Ticket paid · ${formatMoney(data?.total_minor || cartTotal)}`
@@ -1476,7 +1514,7 @@ function PosCounterPage() {
 
   const ticketLines = cart.filter((line) => line.from_handoff)
   const addOnLines = cart.filter((line) => !line.from_handoff)
-  const referralOn = Boolean(referralSettings?.enabled && referralRewards.length)
+  const referralOn = Boolean(!branchAdmin && referralSettings?.enabled && referralRewards.length)
   const referralApplied = cart.find((line) => line.referral_reward_id)
   const referralTargets = referralOn && !referralApplied
     ? cart.filter((line) => !referralRewardLineError(line, referralEligibleIds))

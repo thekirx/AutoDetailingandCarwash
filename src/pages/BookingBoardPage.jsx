@@ -897,17 +897,18 @@ export default function BookingBoardPage() {
   }
 
   function openCreate(prefill = {}) {
+    const clean = prefill && !prefill.nativeEvent ? prefill : {}
     setEditing(null)
     const formBranches = formBranchOptions
     const defaultBranch =
-      prefill.branch ||
+      clean.branch ||
       (branchFilter !== 'all'
         ? branchFilter
         : preferredBranchSlug(formBranches) ||
         pickDefaultBranchSlug(profile, formBranches) ||
         formBranches[0]?.slug ||
         '')
-    const slug = String(prefill.serviceSlug || '').toLowerCase()
+    const slug = String(clean.serviceSlug || '').toLowerCase()
     const defaultService =
       (slug && formServices.find((s) => String(s.slug || '').toLowerCase() === slug)?.id) ||
       formServices[0]?.id ||
@@ -921,9 +922,9 @@ export default function BookingBoardPage() {
       ...emptyBooking,
       branch: defaultBranch,
       service_id: defaultService,
-      vehicle_plate: prefill.plate || '',
-      customer_name: prefill.customerName || '',
-      customer_phone: prefill.phone || '',
+      vehicle_plate: clean.plate || '',
+      customer_name: clean.customerName || '',
+      customer_phone: clean.phone || '',
       vehicle_type: defaultSize,
       scheduled_start: `${todayISO()}T10:00`,
       price_pesos: createPriceMinor ? String(createPriceMinor / 100) : '',
@@ -973,10 +974,10 @@ export default function BookingBoardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [openFromUrl, canEdit, canSchedule, services])
   useEffect(() => {
-    if (formOpen || !returnToQueue.current) return
+    if (formOpen || !returnToQueue.current || statusDialog || assignBranchDialog || crewDialog) return
     returnToQueue.current = false
     navigate('/operations/queue')
-  }, [formOpen, navigate])
+  }, [formOpen, statusDialog, assignBranchDialog, crewDialog, navigate])
 
   async function lookupExistingCustomer(identifier) {
     const raw = String(identifier || '').trim()
@@ -1321,7 +1322,7 @@ export default function BookingBoardPage() {
             </>
           )}
           {canCreate && (
-            <Button type="button" className="min-h-11 w-full cursor-pointer sm:w-auto" onClick={openCreate}>
+            <Button type="button" className="min-h-11 w-full cursor-pointer sm:w-auto" onClick={() => openCreate()}>
               New booking
             </Button>
           )}

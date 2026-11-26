@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { Cake, Eye, EyeOff } from 'lucide-react'
 import { useAuth } from '../auth/AuthProvider'
@@ -49,9 +49,12 @@ export default function CustomerSignUpPage() {
 
   const [params] = useSearchParams()
   const [step, setStep] = useState(0)
+  const initialQueryId = params.get('identifier') || params.get('phone') || ''
   const [form, setForm] = useState(() => ({
     ...emptyOnboardingDraft(),
-    phone: params.get('phone') || '',
+    phone: /^\+?[\d\s()-]{7,}$/.test(initialQueryId) ? initialQueryId : '',
+    email: initialQueryId.includes('@') ? initialQueryId : '',
+    plate: !initialQueryId.includes('@') && !/^\+?[\d\s()-]{7,}$/.test(initialQueryId) ? initialQueryId.toUpperCase() : '',
   }))
   const [errors, setErrors] = useState({})
   const [banner, setBanner] = useState('')
@@ -83,9 +86,12 @@ export default function CustomerSignUpPage() {
   const stepDef = ONBOARDING_STEPS[step]
   const stepIndex = step
 
+  const autoLookedRef = useRef('')
   useEffect(() => {
-    const phone = params.get('phone')
-    if (phone) setForm((f) => ({ ...f, phone }))
+    const raw = params.get('identifier') || params.get('phone') || ''
+    if (!raw || autoLookedRef.current === raw) return
+    autoLookedRef.current = raw
+    lookupPhoneAndPrefill(raw)
   }, [params])
 
   const update = (key) => (e) => {

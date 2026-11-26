@@ -3,7 +3,7 @@ import { Gift } from 'lucide-react'
 /** Bounded Hakum logo stamps; labels preserve earned and reward states without relying on color. */
 /** `onGift(n)` makes reward stamps tappable (Rewards opens a sheet for that reward). */
 export default function StampTrack({ slots = 10, completed = 0, gifts = [], compact = false, onGift }) {
-  const total = Math.min(24, Math.max(1, Number(slots) || 10))
+  const total = Math.max(1, Number(slots) || 10)
   const earned = Math.min(Number(completed) || 0, total)
   const giftAt = new Set((gifts || []).map((n) => Number(n)))
 

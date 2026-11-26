@@ -202,7 +202,8 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
       setAssignments(data.assignments)
       setStaff(data.staff)
       setSelectedStaff(data.assignments.filter((a) => a.status === 'active').map((a) => a.staff_id))
-      setPrice(String(((data.ticket?.final_price_minor ?? data.ticket?.base_price_minor ?? 0) / 100) || ''))
+      const rawMinor = data.ticket?.final_price_minor ?? data.ticket?.base_price_minor
+      setPrice(rawMinor != null ? String(rawMinor / 100) : '')
       setPriceReason('')
       setVehicleTypeDraft(normalizeVehicleType(data.ticket?.vehicle_type || 'medium'))
       if (data.ticket) {

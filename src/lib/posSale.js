@@ -40,6 +40,7 @@ export function buildHandoffCartLine({ handoff, services = [], amountMinor }) {
   ) || 0
   return {
     key: `handoff-${handoff.id}-${bookingId || 'solo'}`,
+    booking_id: bookingId,
     item_type: 'service',
     catalog_kind: 'service',
     id: serviceId,

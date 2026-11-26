@@ -397,8 +397,8 @@ export function isCeramicCompensationLine(line = {}) {
 }
 
 export function effectiveCeramicToggles(toggles = {}, paymentMethod) {
-  const method = String(paymentMethod || '').toLowerCase()
-  const card = method === 'card' || method === 'credit'
+  const method = String(paymentMethod || '').trim().toLowerCase()
+  const card = ['card', 'credit', 'credit_card', 'debit', 'debit_card', 'credit_debit', 'credit/debit'].includes(method)
   return {
     freeShirt: Boolean(toggles.freeShirt),
     cardPayment: Boolean(toggles.cardPayment) || card,

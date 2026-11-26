@@ -174,7 +174,7 @@ function buildTopics(ctx) {
   const liveTiers = (catalog.membershipTiers && catalog.membershipTiers.length)
     ? catalog.membershipTiers
     : MEMBER_TIERS
-  const loyaltyCfg = catalog.loyaltySettings || { stamps_enabled: true, points_enabled: true, card_slots: 10 }
+  const loyaltyCfg = catalog.loyaltySettings || { stamps_enabled: true, points_enabled: true, card_slots: 30 }
   const handoffActions = buildHumanHandoffActions(settings)
 
   return [
@@ -346,18 +346,19 @@ function buildTopics(ctx) {
         if (liveCeramic) {
           specs.push(...buildServicePricingSpecs(liveCeramic, detectedSize))
         }
+        const tierSummary = ceramicPackages.map((pkg) => `${pkg.title} ${pkg.warrantyYears}-yr`).join(' / ') || '3-yr / 5-yr / 8-yr'
         return {
           title: 'Hakum Ceramic Coating & Unlimited Recoating',
           badge: 'Japanese Titanium Catalyst',
           paragraphs: [
             `${ceramicSection.techTitle} — engineered specifically for Philippine sun, rain, and daily dust with deep wet gloss and hydrophobic water sheeting.`,
-            'Unlimited Ceramic Coating Reboost: If your coating’s hydrophobic performance begins to degrade during your warranty period (Classic 3-yr / Premium 5-yr / Platinum 8-yr), Hakum adds a fresh reboost layer free of charge.',
+            `Unlimited Ceramic Coating Reboost: If your coating’s hydrophobic performance begins to degrade during your warranty period (${tierSummary}), Hakum adds a fresh reboost layer free of charge.`,
           ],
           specs,
           sizePricing: liveCeramic ? buildInteractiveSizePricing([liveCeramic], detectedSize?.slug || 'medium') : null,
           highlights: [
             'Paint correction done BEFORE coating',
-            'Classic 1-Layer · Premium 2-Layer · Platinum 3-Layer',
+            ceramicPackages.map((pkg, i) => `${pkg.title} (${i + 1}-Layer)`).join(' · ') || 'Multi-layer Nano Ceramic packages',
             'Unlimited Recoating Warranty',
           ],
           actions: [
@@ -388,7 +389,7 @@ function buildTopics(ctx) {
           specs: [
             ...pkgs.map((p) => ({
               label: `${p.name} (${p.warranty})`,
-              value: `${formatPeso(p.prices?.small, { isMinor: false })} – ${formatPeso(p.prices?.xl, { isMinor: false })}`,
+              value: `${formatPeso(p.prices?.sedan ?? p.prices?.small, { isMinor: false })} – ${formatPeso(p.prices?.van ?? p.prices?.xl, { isMinor: false })}`,
             })),
             ...films.slice(0, 4).map((f) => ({
               label: `${f.name} (${f.vlt}% VLT)`,
@@ -456,10 +457,12 @@ function buildTopics(ctx) {
       resolve: () => {
         const wantsBatangas = /\bbatangas\b/i.test(rawQuery)
         const wantsBacoor = /\bbacoor\b/i.test(rawQuery)
-        const queueRows = [
-          { slug: 'bacoor', name: 'Hakum Bacoor (RFC Molino II)' },
-          { slug: 'batangas', name: 'Hakum Batangas City (Alangilan)' },
-        ]
+        const queueRows = liveBranches.length
+          ? liveBranches.filter((b) => !b.coming_soon).map((b) => ({ slug: b.slug, name: b.name || publicBranchName(b) }))
+          : [
+              { slug: 'bacoor', name: 'Hakum Bacoor (RFC Molino II)' },
+              { slug: 'batangas', name: 'Hakum Batangas City (Alangilan)' },
+            ]
         const specs = queueRows.map((b) => {
           const s = queueSummaryForBranch(b.slug, liveQueue)
           return { label: `${b.name} — ${s.label}`, value: s.detail }
@@ -470,7 +473,7 @@ function buildTopics(ctx) {
           badge: 'Real-Time Operations',
           paragraphs: [
             `Walk-in Car Wash & Same-Day Packages use live daily queue numbers that reset each Manila calendar day. Multi-day Detailing (Ceramic, ClearPro PPF, Nano Ceramic Tint, Paint Maintenance) requires booking at least ${BOOKING_LEAD_DAYS} calendar days ahead so a specialist bay is reserved.`,
-            'Full Studio Pipeline: Pending -> Confirmed -> Waiting -> Intake -> In Progress -> Final Checking (QC) -> For Releasing -> For Payment -> Completed. You can request a one-time reschedule while a booking is still before work (pending, confirmed, or waiting): ' + RESCHEDULE_ACK,
+            'Full Studio Pipeline: Pending -> Confirmed -> Waiting -> Intake -> In Progress -> Final Checking (QC) -> For Payment -> Completed. You can request a one-time reschedule while a booking is still before work (pending, confirmed, or waiting): ' + RESCHEDULE_ACK,
           ],
           specs,
           actions: [
@@ -492,7 +495,7 @@ function buildTopics(ctx) {
         title: 'Hakum Loyalty Stamps, Tiers, Birthday & Referrals',
         badge: 'Rewards Program',
         paragraphs: [
-          `Collect 1 stamp per paid visit across a ${loyaltyCfg.card_slots || 10}-slot card plus visit milestone bonuses at visits 6, 12, 18, 24, and 30. Spendable points are earned per service (1 pt for Car Wash up to 60 pts for Platinum PPF) and redeem for Hakum gear & ClearPro merch in Points Shop.`,
+          `Collect 1 stamp per paid visit across a ${loyaltyCfg.card_slots || 30}-slot card plus visit milestone bonuses at visits 6, 12, 18, 24, and 30. Spendable points are earned per service (up to 60 pts for Platinum PPF) and redeem for Hakum gear & ClearPro merch in Points Shop.`,
           `Birthday Gift: Save your birthdate once in /account/more?tab=account (locked after first save) to claim ${BIRTHDAY_GIFT_LABEL} on your birthday (7-day BDxxxx pass). Friend Referral: ${referralOfferCopy()} Promo vouchers use codes like VKxxxx in /account/vouchers or at booking.`,
         ],
         specs: [

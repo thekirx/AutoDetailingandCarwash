@@ -114,14 +114,8 @@ export default function KpiPage({ embedded = false } = {}) {
         input_branch_slug: rpcBranch,
       })
       if (rpcError) {
-        // fallback view — honor UI branch filter, not only legacy single scope
-        let q = supabase
-          .from('crew_kpi_summary')
-          .select('staff_id, staff_name, branch, total_assigned, total_completed, average_service_minutes, active_jobs, completed_today')
-        q = applyBranchScope(q, branchScope)
-        const { data, error } = await q.order('staff_name')
-        if (error) throw error
-        setCrewRows(data || [])
+        setLoadError(rpcError.message || 'Unable to load KPI metrics for the selected date range.')
+        setCrewRows([])
       } else {
         const today = todayISO()
         setCrewRows(

@@ -59,7 +59,7 @@ export default function CustomerBlogPage() {
 
   if (active) {
     return (
-      <CustomerAppFrame title={active.title} subtitle={[active.author_label, formatDate(active.published_at)].filter(Boolean).join(' · ')} onBack={() => setActive(null)}>
+      <CustomerAppFrame title={active.title} subtitle={[active.author_label, formatDate(active.published_at)].filter(Boolean).join(' · ')} onBack={() => setActive(null)} onRefresh={loadPosts}>
         {active.cover_url ? <img className="capp-cover" src={active.cover_url} alt="" /> : null}
         <article className="capp-article capp-card">
           <ContentBlockRenderer mobile blocks={active.content_blocks} />
@@ -69,7 +69,7 @@ export default function CustomerBlogPage() {
   }
 
   return (
-    <CustomerAppFrame title="Blog" subtitle="Tips, stories, and everything automotive." onBack={back} cols>
+    <CustomerAppFrame title="Blog" subtitle="Tips, stories, and everything automotive." onBack={back} onRefresh={loadPosts} cols>
       {loading && !error ? (
         <div className="capp-span">
           <Skeleton n={2} />

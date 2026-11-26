@@ -315,7 +315,11 @@ export async function loadCustomerPortal({ accessToken, origin = '' }) {
     referral_code: null,
     role: 'customer',
   }
-  profile.referral_code = await ensureReferralCode(admin, userId, customerRow.data?.referral_code)
+  profile.referral_code = await ensureReferralCode(
+    admin,
+    userId,
+    customerRow.data?.referral_code || referral?.code || null,
+  )
 
   const [credits, shop, redemptions, programRow] = await Promise.all([
     admin
@@ -898,8 +902,8 @@ export async function mutateCustomerPortal({ accessToken, body }) {
     })
     if (bErr) throw Object.assign(new Error(bErr.message), { status: 400 })
     if (!booking) throw Object.assign(new Error('Booking not found.'), { status: 404 })
-    if (['completed', 'cancelled'].includes(booking.status)) {
-      throw Object.assign(new Error('That ticket is already closed.'), { status: 400 })
+    if (['for_payment', 'completed', 'cancelled'].includes(booking.status)) {
+      throw Object.assign(new Error('That ticket is already closed or ready for payment.'), { status: 400 })
     }
     if (booking.promo_voucher_id) {
       throw Object.assign(new Error('This ticket already has a voucher.'), { status: 400 })
@@ -938,6 +942,12 @@ export async function mutateCustomerPortal({ accessToken, body }) {
     }
 
     const listPrice = Math.max(0, Number(booking.final_price_minor ?? booking.price_minor) || 0)
+    if (listPrice <= 0) {
+      throw Object.assign(
+        new Error('Set or confirm the ticket price at the shop before applying a voucher.'),
+        { status: 400 },
+      )
+    }
     const newPrice = promoDiscountedPriceMinor(listPrice, voucher)
     const discount = listPrice - newPrice
 

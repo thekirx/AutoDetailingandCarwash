@@ -472,6 +472,7 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, resultsId }) {
 
   async function submitStaff(e) {
     e.preventDefault()
+    if (saving) return
     if (!activeForm || !canSubmitOpsFormKind(profile, activeForm.kind)) {
       return toast.error('You cannot submit this form kind')
     }
@@ -480,87 +481,102 @@ export default function PlanningFormsSmartPanel({ canEdit, lists, resultsId }) {
     const calendarAt = extractCalendarAt(activeFormFields, payload)
     const submitPayload =
       activeForm.kind === 'cash_advance' ? enrichCashAdvancePayload(payload, profile) : payload
-    let planCardId = null
-    if (pushPlanning && listId && manageTemplates) {
-      const title = submissionTitle(activeForm, submitPayload)
-      const { data: card, error: cardErr } = await supabase
-        .from('plan_cards')
+    setSaving(true)
+    try {
+      const createPlanCardIfNeeded = async () => {
+        if (!pushPlanning || !listId || !manageTemplates) return null
+        const title = submissionTitle(activeForm, submitPayload)
+        const { data: card, error: cardErr } = await supabase
+          .from('plan_cards')
+          .insert({
+            list_id: listId,
+            title: title.slice(0, 200),
+            description: formatFormPayloadDescription(submitPayload),
+            due_at: calendarAt,
+            position: Date.now() % 1_000_000,
+            labels:
+              activeForm.kind === 'complaint'
+                ? [{ name: 'Complaint', color: '#38bdf8' }]
+                : activeForm.kind === 'equipment_repair'
+                  ? [{ name: 'Equipment', color: '#f59e0b' }]
+                  : activeForm.kind === 'cash_advance'
+                    ? [{ name: 'Cash advance', color: '#22c55e' }]
+                    : activeForm.kind === 'detailing'
+                      ? [{ name: 'Detailing', color: '#8b5cf6' }]
+                      : activeForm.kind === 'custom'
+                        ? [{ name: 'Custom', color: getComputedStyle(document.documentElement).getPropertyValue('--color-form-custom').trim() }]
+                        : [],
+          })
+          .select('id')
+          .single()
+        if (cardErr) {
+          toast.warning(`Submission saved, but planning card failed: ${cardErr.message}`)
+          return null
+        }
+        return card?.id || null
+      }
+
+      if (activeForm.kind === 'detailing' && activeForm.slug) {
+        const { data: sessionData } = await supabase.auth.getSession()
+        const accessToken = sessionData?.session?.access_token || null
+        const res = await submitPublicOpsFormViaApi({
+          slug: activeForm.slug,
+          payload: submitPayload,
+          calendarAt,
+          respondentLabel:
+            submitPayload.customer_name || submitPayload.name || submitPayload.employee_name || null,
+          source: 'staff',
+          accessToken,
+        })
+        if (!res.ok) {
+          return toast.error(res.error || 'Could not save detailing request')
+        }
+        const planCardId = await createPlanCardIfNeeded()
+        if (planCardId && res.id) {
+          await supabase.from('ops_form_submissions').update({ plan_card_id: planCardId }).eq('id', res.id)
+        }
+        toast.success(
+          planCardId
+            ? 'Submitted to Detailing Schedule (Booking Placeholder) & Tasks'
+            : 'Submitted to Detailing Schedule (Booking Placeholder)',
+        )
+        setPayload({})
+        load()
+        return
+      }
+
+      const { data: inserted, error } = await supabase
+        .from('ops_form_submissions')
         .insert({
-          list_id: listId,
-          title: title.slice(0, 200),
-          description: formatFormPayloadDescription(submitPayload),
+          form_id: activeForm.id,
+          payload: submitPayload,
           due_at: calendarAt,
-          position: Date.now() % 1_000_000,
-          labels:
-            activeForm.kind === 'complaint'
-              ? [{ name: 'Complaint', color: '#38bdf8' }]
-              : activeForm.kind === 'equipment_repair'
-                ? [{ name: 'Equipment', color: '#f59e0b' }]
-                : activeForm.kind === 'cash_advance'
-                  ? [{ name: 'Cash advance', color: '#22c55e' }]
-                  : activeForm.kind === 'detailing'
-                    ? [{ name: 'Detailing', color: '#8b5cf6' }]
-                    : activeForm.kind === 'custom'
-                      ? [{ name: 'Custom', color: getComputedStyle(document.documentElement).getPropertyValue('--color-form-custom').trim() }]
-                      : [],
+          calendar_at: calendarAt,
+          respondent_label:
+            submitPayload.customer_name ||
+            submitPayload.name ||
+            submitPayload.employee_name ||
+            null,
+          source: 'staff',
+          status: 'new',
         })
         .select('id')
         .single()
-      if (cardErr) return toast.error(cardErr.message)
-      planCardId = card.id
-    }
-    if (activeForm.kind === 'detailing' && activeForm.slug) {
-      const { data: sessionData } = await supabase.auth.getSession()
-      const accessToken = sessionData?.session?.access_token || null
-      const res = await submitPublicOpsFormViaApi({
-        slug: activeForm.slug,
-        payload: submitPayload,
-        calendarAt,
-        respondentLabel:
-          submitPayload.customer_name || submitPayload.name || submitPayload.employee_name || null,
-        source: 'staff',
-        accessToken,
-      })
-      if (!res.ok) {
-        return toast.error(res.error || 'Could not save detailing request')
+      if (error) {
+        toast.error(error.message)
+        return
       }
-      if (planCardId && res.id) {
-        await supabase.from('ops_form_submissions').update({ plan_card_id: planCardId }).eq('id', res.id)
+      const planCardId = await createPlanCardIfNeeded()
+      if (planCardId && inserted?.id) {
+        await supabase.from('ops_form_submissions').update({ plan_card_id: planCardId }).eq('id', inserted.id)
       }
-      toast.success(
-        planCardId
-          ? 'Submitted to Detailing Schedule (Booking Placeholder) & Tasks'
-          : 'Submitted to Detailing Schedule (Booking Placeholder)',
-      )
-      setPayload({})
-      load()
-      return
-    }
-    const { data: inserted, error } = await supabase
-      .from('ops_form_submissions')
-      .insert({
-        form_id: activeForm.id,
-        payload: submitPayload,
-        plan_card_id: planCardId,
-        due_at: calendarAt,
-        calendar_at: calendarAt,
-        respondent_label:
-          submitPayload.customer_name ||
-          submitPayload.name ||
-          submitPayload.employee_name ||
-          null,
-        source: 'staff',
-        status: 'new',
-      })
-      .select('id')
-      .single()
-    if (error) toast.error(error.message)
-    else {
       await notifyComplaintIfNeeded(activeForm, submitPayload, inserted?.id)
       if (activeForm.kind === 'cash_advance') notifyOpsEvent('cash_advance_submitted', inserted?.id)
       toast.success(planCardId ? 'Submitted and added to Tasks' : 'Submission saved')
       setPayload({})
       load()
+    } finally {
+      setSaving(false)
     }
   }
 

@@ -92,8 +92,13 @@ const builders = {
     const email = text(body.email).toLowerCase()
     const productName = text(body.productName || body.product)
     const branchRaw = text(body.branch).toLowerCase()
-    const branch = branchRaw === 'batangas' ? 'batangas' : 'bacoor'
-    const branchLabel = branch === 'batangas' ? 'Batangas City' : 'Bacoor'
+    const branch = branchRaw || 'bacoor'
+    const branchLabel =
+      branch === 'batangas'
+        ? 'Batangas City'
+        : branch === 'bacoor'
+          ? 'Bacoor'
+          : branch.replace(/[-_]+/g, ' ').replace(/\b\w/g, (m) => m.toUpperCase())
     const note = text(body.note || body.message)
     if (!name || !phoneDigits || !productName) {
       return { error: 'Name, mobile number, and product selection are required.' }

@@ -12,6 +12,7 @@
  */
 import { computeSheetTotals } from '../src/lib/dailySheet.js'
 import { buildAccountRow, isSalaryAccount } from '../src/lib/financeBooks.js'
+import { saleMoneySelect } from '../src/lib/paymentMethods.js'
 import { isDayCrewRole, payslipTakeHome } from '../src/lib/payslip.js'
 import { bearer, json, readJsonBody, setCors } from './httpUtil.mjs'
 import { resolveActiveStaff } from './staffAuth.mjs'
@@ -134,13 +135,14 @@ async function recomputeAndSyncDailySheet(db, { sheetId, actorId, syncApprovedEx
 
   const startIso = `${sheet.business_date}T00:00:00+08:00`
   const endIso = `${sheet.business_date}T23:59:59.999+08:00`
-  const { data: sales } = await db
+  const { data: sales, error: salesErr } = await db
     .from('sales')
-    .select('id, status, payment_method, subtotal_minor, discount_minor, total_minor, payment_parts')
+    .select(saleMoneySelect('subtotal_minor'))
     .eq('branch', sheet.branch)
     .in('status', ['paid', 'refunded'])
     .gte('occurred_at', startIso)
     .lte('occurred_at', endIso)
+  if (salesErr) throw Object.assign(new Error(salesErr.message), { status: 400 })
 
   const lines = (sheet.daily_sheet_lines || []).sort((a, b) => (a.sort || 0) - (b.sort || 0))
   const totals = computeSheetTotals({

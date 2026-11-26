@@ -713,6 +713,7 @@ export function allowedBookingViews(profile, views) {
 export function canViewRedoLane(profile) {
   if (has(profile, [ROLES.TEAM_LEAD, ROLES.STAFF])) return true
   if (isSuperAdmin(profile)) return true
+  if (isOperationsLead(profile)) return true
   return isAssistantSuperAdmin(profile) && hasGrant(profile, 'queue_all')
 }
 

@@ -95,7 +95,7 @@ export default function HistoryPage() {
   const [to, setTo] = useState('')
   const [selected, setSelected] = useState(null)
 
-  const allBranches = canSeeAllBranches(profile) || profile?.role === 'marketing' || profile?.role === 'assistant_super_admin'
+  const allBranches = canSeeAllBranches(profile) || profile?.role === 'marketing'
   const platePreview = normalizeHistoryPlate(q) || normalizeHistoryPhone(q) || '—'
 
   const timeline = useMemo(() => {

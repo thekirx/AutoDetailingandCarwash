@@ -73,7 +73,8 @@ export async function handleNotificationConfigRequest(req, res) {
     return
   }
 
-  const token = bearer(req)
+  try {
+    const token = bearer(req)
   if (!token) return json(res, 401, { error: 'Unauthorized' }, req)
   const db = admin()
   const staff = await resolveActiveStaff(db, token, { select: 'id, role, is_active, full_name, phone' })
@@ -326,5 +327,8 @@ export async function handleNotificationConfigRequest(req, res) {
     return json(res, 400, { error: 'Unsupported action' }, req)
   }
 
-  return json(res, 405, { error: 'Method not allowed' }, req)
+    return json(res, 405, { error: 'Method not allowed' }, req)
+  } catch (err) {
+    return json(res, err?.status || 500, { error: String(err?.message || err) }, req)
+  }
 }

@@ -100,6 +100,9 @@ async function getAuthUser(admin, id) {
   return data?.user || null
 }
 
+const isRealCustomerEmail = (email) =>
+  Boolean(email && !String(email).trim().toLowerCase().endsWith('@customers.hakumautocare.com'))
+
 async function statusForCustomer(admin, customer, kind) {
   if (!customer) return { status: 'unknown', kind }
 
@@ -115,7 +118,7 @@ async function statusForCustomer(admin, customer, kind) {
 
   const loginEmail = user.email || customer.email || null
   const needsPassword = Boolean(user.user_metadata?.must_set_password)
-  const canEmailReset = Boolean(loginEmail && !String(loginEmail).toLowerCase().endsWith('@customers.hakumautocare.com'))
+  const canEmailReset = isRealCustomerEmail(user.email) || isRealCustomerEmail(customer.email)
 
   return {
     status: needsPassword ? 'needs_password' : 'ready',
@@ -153,11 +156,13 @@ export async function sendCustomerSetupLink({ identifier, siteOrigin, mode = 'se
     )
   }
 
-  const loginEmail = user.email || customer.email
-  if (!loginEmail) throw Object.assign(new Error('Account has no login email.'), { status: 400 })
+  const realEmail = isRealCustomerEmail(user.email)
+    ? String(user.email).trim().toLowerCase()
+    : isRealCustomerEmail(customer.email)
+      ? String(customer.email).trim().toLowerCase()
+      : null
 
-  const synthetic = String(loginEmail).endsWith('@customers.hakumautocare.com')
-  if (synthetic) {
+  if (!realEmail) {
     throw Object.assign(
       new Error(
         'This account needs a real email for password reset. Ask the Team Lead to add your email on file, then try Forgot password again.',
@@ -166,11 +171,25 @@ export async function sendCustomerSetupLink({ identifier, siteOrigin, mode = 'se
     )
   }
 
+  // Promote real profile email onto Auth before requesting resetPasswordForEmail if Auth only had the synthetic phone placeholder.
+  if (!isRealCustomerEmail(user.email)) {
+    const { error: syncErr } = await admin.auth.admin.updateUserById(user.id, {
+      email: realEmail,
+      email_confirm: true,
+    })
+    if (syncErr) {
+      throw Object.assign(
+        new Error('Could not send reset email for that address. Sign in with phone or ask a Team Lead to verify your email.'),
+        { status: 400 },
+      )
+    }
+  }
+
   const redirectTo = `${String(siteOrigin || '').replace(/\/$/, '')}/account/set-password`
   const isReset = mode === 'reset'
 
   // Supabase Auth sends the recovery email (configured SMTP / Supabase mail)
-  const { error: resetError } = await admin.auth.resetPasswordForEmail(loginEmail, { redirectTo })
+  const { error: resetError } = await admin.auth.resetPasswordForEmail(realEmail, { redirectTo })
   if (resetError) throw Object.assign(new Error(resetError.message), { status: 400 })
 
   // First-time setup only — do not force this flag on normal password resets

@@ -66,10 +66,10 @@ export function useReferralStaff() {
     let cancelled = false
     ;(async () => {
       try {
-        const token = await getAccessTokenFresh()
-        if (!token || cancelled) return
+        const token = await getAccessTokenFresh().catch(() => null)
+        if (cancelled) return
         const res = await fetch('/api/referral-staff', {
-          headers: { Authorization: `Bearer ${token}` },
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
         })
         const body = res.ok ? await res.json() : { staff: [] }
         if (!cancelled) setStaff(Array.isArray(body.staff) ? body.staff : [])

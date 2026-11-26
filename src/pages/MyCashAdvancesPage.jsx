@@ -4,7 +4,7 @@ import { Link, Navigate } from 'react-router-dom'
 import { Check, RefreshCw, Search, Trash2, Wallet, X } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessMyAdvances, canAccessMyPayslips, canApproveCashAdvance, canEditFinanceBooks, isSuperAdmin } from '@/auth/permissions'
+import { canAccessMyAdvances, canAccessMyPayslips, canApproveCashAdvance, canEditFinanceBooks, canSeeAllBranches, isSuperAdmin } from '@/auth/permissions'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import ConfirmDialog from '@/components/ops/ConfirmDialog'
 import { listBranches } from '@/lib/adminApi'
@@ -47,6 +47,7 @@ export default function MyCashAdvancesPage({ embedded = false } = {}) {
   const load = useCallback(async () => {
     const uid = user?.id || profile?.id
     if (!uid) return
+    const ledgerAll = isOwner || (canApprove && canSeeAllBranches(profile))
     setLoading(true)
     setLoadError('')
     try {
@@ -58,7 +59,7 @@ export default function MyCashAdvancesPage({ embedded = false } = {}) {
           .eq('created_by', uid)
           .order('created_at', { ascending: false })
           .limit(50),
-        loadCashAdvanceLedger(profile?.branch_slug || (isOwner ? 'all' : null), uid),
+        loadCashAdvanceLedger(profile?.branch_slug || (ledgerAll ? 'all' : null), uid),
         listBranches().catch(() => []),
       ])
       if (error) throw error
@@ -73,7 +74,7 @@ export default function MyCashAdvancesPage({ embedded = false } = {}) {
       if (canApprove) {
         const [hubRes, companyMovements] = await Promise.all([
           callFinanceOwnerOps({ action: 'manage-cash-advance', sub_action: 'list' }),
-          loadCashAdvanceLedger(isOwner ? 'all' : profile?.branch_slug || 'bacoor', null),
+          loadCashAdvanceLedger(ledgerAll ? 'all' : profile?.branch_slug || 'bacoor', null),
         ])
         setAllRequests(hubRes?.submissions || [])
         setAllLedger(companyMovements || [])
@@ -85,7 +86,7 @@ export default function MyCashAdvancesPage({ embedded = false } = {}) {
     } finally {
       setLoading(false)
     }
-  }, [user?.id, profile?.id, profile?.branch_slug, isOwner, canApprove])
+  }, [user?.id, profile, isOwner, canApprove])
 
   useEffect(() => {
     if (canAccessMyAdvances(profile)) load()
