@@ -14,9 +14,9 @@ export function showQueueRedoAction(canViewRedoLane) {
   return Boolean(canViewRedoLane)
 }
 
-/** Final-check CTA: TL stays on final_checking; Admin may then send to payment. */
+/** Final-check CTA: move vehicle to Final Checking. */
 export function finalCheckActionLabel(canOpenPos) {
-  return canOpenPos ? 'Final check' : 'Final check'
+  return canOpenPos ? 'Final Checking' : 'Final Checking'
 }
 
 /** Payment handoff CTA: the TL hands a checked car to Admin / Super Admin at POS. */

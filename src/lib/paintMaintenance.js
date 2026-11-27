@@ -11,7 +11,13 @@ export const PAINT_MAINTENANCE_SERVICE_ID = '44444444-4444-4444-8444-44444444444
 /** Install jobs that enroll a vehicle into the paint-maintenance reminder program. */
 export const PAINT_MAINTENANCE_ENROLL_SLUGS = Object.freeze([
   'ceramic-coating',
+  'ultimate-ceramic-coating',
+  'platinum-ceramic-coating',
   'paint-protection-film',
+  'ppf-high-impact',
+  'ppf-basic',
+  'ppf-ultimate',
+  'ppf-platinum',
 ])
 
 /**
@@ -47,7 +53,8 @@ export function isPaintMaintenanceEnrollSlug(slug) {
 }
 
 export function isPaintMaintenanceSlug(slug) {
-  return String(slug || '').toLowerCase() === PAINT_MAINTENANCE_SLUG
+  const s = String(slug || '').toLowerCase()
+  return s === PAINT_MAINTENANCE_SLUG || s === 'ceramic-paint-maintenance'
 }
 
 /** Normalize plate for dedupe (uppercase, strip spaces/dashes). */

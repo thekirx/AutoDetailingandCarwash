@@ -39,10 +39,10 @@ describe('notify routing table', () => {
     assert.equal(pickNotifyUrl(profileOf(ROLES.DETAILER), NOTIFY_EVENTS.crew_assigned.urls), '/operations/my-tasks')
   })
 
-  it('Ops Lead gets booking alerts and lands on the queue (Bookings board is not theirs)', () => {
+  it('Ops Lead gets booking alerts and lands on the bookings board', () => {
     const rule = NOTIFY_EVENTS[bookingOpsEvent('pending')]
     assert.ok(rule.roles.includes(ROLES.OPERATIONS_LEAD))
-    assert.equal(pickNotifyUrl(profileOf(ROLES.OPERATIONS_LEAD), rule.urls), '/operations/queue')
+    assert.equal(pickNotifyUrl(profileOf(ROLES.OPERATIONS_LEAD), rule.urls), '/operations/bookings')
   })
 
   it('Team Lead ready-for-payment lands on the queue (POS is denied for TL)', () => {

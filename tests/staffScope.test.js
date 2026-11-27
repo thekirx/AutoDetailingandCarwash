@@ -52,10 +52,7 @@ describe('Staff capability matrix', () => {
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
       [
-        '/operations/attendance',
-        '/operations/my-advances',
         '/operations/dashboard',
-        '/operations/my-tasks',
         '/operations/planning',
       ],
     )

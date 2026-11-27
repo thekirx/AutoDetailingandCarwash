@@ -7,7 +7,6 @@ import {
   allowRoute,
   getOperationsNav,
   getTeamLeadDock,
-  groupOperationsNav,
 } from '../src/auth/permissions.js'
 import { opsRouteKeyFromPath } from '../src/auth/authRedirect.js'
 import { buildSmartSearchDestinations } from '../src/lib/smartSearchCatalog.js'
@@ -16,34 +15,23 @@ const root = join(import.meta.dirname, '..')
 const read = (rel) => readFileSync(join(root, rel), 'utf8')
 
 describe('Unified Employees & Attendance Hub consolidation', () => {
-  it('replaces redundant Attendance + RBAC Delegation sidebar links with Employees under Human Resource', () => {
+  it('replaces redundant Attendance + RBAC Delegation sidebar links with Employees in Smart Search', () => {
     const saNav = getOperationsNav({ role: ROLES.SUPER_ADMIN })
-    const saGroups = groupOperationsNav(saNav)
-    const hrGroup = saGroups.find((g) => g.id === 'hr')
-    const cfgGroup = saGroups.find((g) => g.id === 'config')
+    const saDest = buildSmartSearchDestinations({ role: ROLES.SUPER_ADMIN })
 
-    assert.deepEqual(
-      hrGroup.items.map((i) => ({ label: i.label, to: i.to })),
-      [
-        { label: 'Payslips', to: '/operations/payslips' },
-        { label: 'Employees', to: '/operations/employees' },
-      ],
-    )
+    assert.ok(saDest.some((d) => d.to === '/operations/employees'))
+    assert.ok(saDest.some((d) => d.to === '/operations/payslips'))
     assert.equal(saNav.some((i) => i.to === '/operations/people'), false)
     assert.equal(saNav.some((i) => i.to === '/operations/attendance'), false)
-    assert.equal(cfgGroup.items.some((i) => i.label === 'RBAC Delegation'), false)
 
-    const baNav = getOperationsNav({ role: ROLES.ADMIN, branch_slug: 'bacoor', branch_slugs: ['bacoor'] })
-    assert.equal(baNav.some((i) => i.to === '/operations/employees' && i.label === 'Employees'), true)
     assert.equal(allowRoute({ role: ROLES.ADMIN, branch_slug: 'bacoor' }, 'employees'), true)
     assert.equal(allowRoute({ role: ROLES.ADMIN, branch_slug: 'bacoor' }, 'people'), false)
   })
 
   it('keeps Floor Shell dock & nav routes intact while redirecting Command routes cleanly', () => {
     const tlDock = getTeamLeadDock({ role: ROLES.TEAM_LEAD, branch_slug: 'bacoor' })
-    const staffNav = getOperationsNav({ role: ROLES.STAFF, branch_slug: 'bacoor' })
     assert.equal(tlDock.some((i) => i.to === '/operations/attendance'), true)
-    assert.equal(staffNav.some((i) => i.to === '/operations/attendance'), true)
+    assert.equal(allowRoute({ role: ROLES.STAFF, branch_slug: 'bacoor' }, 'attendance'), true)
     assert.equal(opsRouteKeyFromPath('/operations/employees'), 'employees')
 
     const app = read('src/App.jsx')

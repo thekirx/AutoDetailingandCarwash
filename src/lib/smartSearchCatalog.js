@@ -61,6 +61,94 @@ function roleFloorItems(profile) {
 
 const SUB_DESTINATIONS = [
   {
+    routeKey: 'inventory',
+    label: 'Catalog & Inventory',
+    to: '/operations/inventory',
+    group: 'Catalog & Stock',
+    keywords: 'inventory catalog services packages stock merch cars',
+    allow: (p) => canAccessInventory(p),
+  },
+  {
+    routeKey: 'employees',
+    label: 'Employees',
+    to: '/operations/employees',
+    group: 'People & Time',
+    keywords: 'employees crew staff attendance clock register rbac',
+    allow: (p) => allowRoute(p, 'employees'),
+  },
+  {
+    routeKey: 'crm',
+    label: 'Customers',
+    to: '/operations/crm',
+    group: 'Customers & Messaging',
+    keywords: 'customers directory crm vehicles plates notes history',
+    allow: (p) => canAccessCrm(p),
+  },
+  {
+    routeKey: 'rewards',
+    label: 'Rewards',
+    to: '/operations/rewards',
+    group: 'Rewards & Loyalty',
+    keywords: 'rewards memberships vouchers points shop referrals',
+    allow: (p) => canAccessRewardsHub(p),
+  },
+  {
+    routeKey: 'payslips',
+    label: 'Payslips',
+    to: '/operations/payslips',
+    group: 'People & Time',
+    keywords: 'payslips salary earnings payout history',
+    allow: (p) => allowRoute(p, 'payslips'),
+  },
+  {
+    routeKey: 'branches',
+    label: 'Branches',
+    to: '/operations/branches',
+    group: 'Configuration',
+    keywords: 'branches bacoor batangas locations hours',
+    allow: (p) => canManageBranches(p),
+  },
+  {
+    routeKey: 'content',
+    label: 'Content',
+    to: '/operations/content',
+    group: 'Configuration',
+    keywords: 'content cms website gallery announcements',
+    allow: (p) => allowRoute(p, 'content'),
+  },
+  {
+    routeKey: 'settings',
+    label: 'Settings',
+    to: '/operations/settings',
+    group: 'Configuration',
+    keywords: 'settings configuration rules defaults',
+    allow: (p) => allowRoute(p, 'settings'),
+  },
+  {
+    routeKey: 'history',
+    label: 'History',
+    to: '/operations/history',
+    group: 'Reports & Controls',
+    keywords: 'history archive past transactions jobs',
+    allow: (p) => canAccessHistory(p),
+  },
+  {
+    routeKey: 'notifications',
+    label: 'Notifications',
+    to: '/operations/notifications',
+    group: 'Notifications & Alerts',
+    keywords: 'notifications alerts templates broadcast',
+    allow: (p) => canAccessNotifications(p),
+  },
+  {
+    routeKey: 'system',
+    label: 'System & Data',
+    to: '/operations/system',
+    group: 'Reports & Controls',
+    keywords: 'system data audit log backup export',
+    allow: (p) => canAccessAudit(p) || canAccessDataCenter(p),
+  },
+  {
     routeKey: 'notifications',
     label: 'Notifications · System & BusyBee SMS Copy',
     to: '/operations/notifications?tab=templates',
@@ -285,12 +373,28 @@ const SUB_DESTINATIONS = [
     allow: (p) => canManageServices(p) || canAccessInventory(p),
   },
   {
-    routeKey: 'cars',
-    label: 'Catalog & Inventory · Vehicle Make / Model List',
+    routeKey: 'inventory',
+    label: 'Catalog & Inventory ·Vehicle Make / Model List',
     to: '/operations/inventory?tab=cars',
     group: 'Catalog & Stock',
     keywords: 'cars make model size small medium large xl picker catalog',
     allow: (p) => canManageVehicleCatalog(p),
+  },
+  {
+    routeKey: 'inventory',
+    label: 'Catalog & Inventory · Restock Merch',
+    to: '/operations/inventory?tab=restock',
+    group: 'Catalog & Stock',
+    keywords: 'restock merch stock on hand branch inventory request',
+    allow: (p) => canAccessInventory(p),
+  },
+  {
+    routeKey: 'inventory',
+    label: 'Catalog & Inventory · Sunday Recon',
+    to: '/operations/inventory?tab=recon',
+    group: 'Catalog & Stock',
+    keywords: 'sunday recon chemicals stock audit reconciliation',
+    allow: (p) => canAccessInventory(p),
   },
   {
     routeKey: 'monthly-payroll',
@@ -431,6 +535,17 @@ export function buildQuickJumpDestinations(profile, limit = 8) {
       to: item.to,
       group: 'Quick Jump',
       keywords: item.label,
+    })
+    if (out.length >= limit) return out
+  }
+  for (const sub of SUB_DESTINATIONS) {
+    if (!allowRoute(profile, sub.routeKey)) continue
+    if (typeof sub.allow === 'function' && !sub.allow(profile)) continue
+    add({
+      label: sub.label,
+      to: sub.to,
+      group: 'Quick Jump',
+      keywords: sub.label,
     })
     if (out.length >= limit) return out
   }

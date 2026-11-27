@@ -16,7 +16,20 @@ function elapsedMinutes(ticket) {
 }
 
 /** Pure card markup; the parent supplies the existing queue action functions. */
-export default function DaylightQueueCard({ ticket, yourMove, next, canStart, canSendToPay, canRedo, onOpen, onSendToPay, onRedo, saving }) {
+export default function DaylightQueueCard({
+  ticket,
+  yourMove,
+  next,
+  canStart,
+  canFinalCheck,
+  canSendToPay,
+  canRedo,
+  onOpen,
+  onFinalCheck,
+  onSendToPay,
+  onRedo,
+  saving,
+}) {
   const vehicle = [ticket.vehicle_make, ticket.vehicle_model].filter(Boolean).join(' ') || 'Vehicle'
   const services = (ticket.service_names?.length ? ticket.service_names : [ticket.service_name].filter(Boolean)).join(' + ')
   const size = String(ticket.vehicle_type || '').replace(/_/g, ' ')
@@ -66,11 +79,12 @@ export default function DaylightQueueCard({ ticket, yourMove, next, canStart, ca
           </span>
         ) : null}
       </button>
-      {canStart || canSendToPay || canRedo ? (
+      {canStart || canFinalCheck || canSendToPay || canRedo ? (
         <div className="daylight-car-actions">
           {canStart ? <button type="button" className="daylight-button" onClick={onOpen}><Play size={16} aria-hidden />Start · pick crew</button> : null}
-          {canSendToPay ? <button type="button" className="daylight-button daylight-button-ok" disabled={saving} onClick={onSendToPay}><Check size={16} aria-hidden />{saving === 'payment' ? 'Sending…' : 'Send to pay'}</button> : null}
-          {canRedo ? <button type="button" className="daylight-button daylight-button-outline" disabled={saving} onClick={onRedo}><Undo2 size={16} aria-hidden />{saving === 'redo' ? 'Saving…' : 'Redo'}</button> : null}
+          {canFinalCheck ? <button type="button" className="daylight-button daylight-button-ok" disabled={Boolean(saving)} onClick={onFinalCheck}><Check size={16} aria-hidden />{saving === 'check' ? 'Saving…' : 'Final Checking'}</button> : null}
+          {canSendToPay ? <button type="button" className="daylight-button daylight-button-ok" disabled={Boolean(saving)} onClick={onSendToPay}><Check size={16} aria-hidden />{saving === 'payment' ? 'Sending…' : 'Send to pay'}</button> : null}
+          {canRedo ? <button type="button" className="daylight-button daylight-button-outline" disabled={Boolean(saving)} onClick={onRedo}><Undo2 size={16} aria-hidden />{saving === 'redo' ? 'Saving…' : 'Mark Redo'}</button> : null}
         </div>
       ) : null}
     </article>

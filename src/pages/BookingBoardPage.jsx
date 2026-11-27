@@ -615,11 +615,21 @@ export default function BookingBoardPage() {
     [branches],
   )
   const serviceSelectOptions = useMemo(() => {
-    const base = formServices.map((s) => ({ value: s.id, label: s.name }))
-    // Keep the current service visible when editing a non-detailing historical row.
+    const seen = new Set()
+    const base = []
+    for (const s of formServices) {
+      const key = String(s.name || s.slug || s.id).trim().toLowerCase()
+      if (!key || seen.has(key)) continue
+      seen.add(key)
+      base.push({ value: s.id, label: s.name })
+    }
+    // Keep the current service visible when editing a non-detailing historical row without duplicating by name.
     if (form.service_id && !base.some((s) => s.value === form.service_id)) {
       const orphan = services.find((s) => s.id === form.service_id)
-      if (orphan) base.unshift({ value: orphan.id, label: orphan.name })
+      const orphanKey = String(orphan?.name || '').trim().toLowerCase()
+      if (orphan && !seen.has(orphanKey)) {
+        base.unshift({ value: orphan.id, label: orphan.name })
+      }
     }
     return base
   }, [formServices, form.service_id, services])

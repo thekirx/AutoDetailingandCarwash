@@ -108,6 +108,58 @@ export function opsNavIsActive(pathname, search, to) {
   return pathname === path || pathname.startsWith(`${path}/`)
 }
 
+const FALLBACK_BREADCRUMBS = Object.freeze({
+  '/operations/inventory': {
+    label: 'Catalog & Inventory',
+    tabs: {
+      services: 'Services & Packages',
+      merch: 'Merch & Sellables',
+      cars: 'Vehicle List',
+      restock: 'Restock Merch',
+      recon: 'Sunday Recon',
+    },
+  },
+  '/operations/employees': {
+    label: 'Employees',
+    tabs: {
+      clock: 'Time clock',
+      attendance: 'Attendance',
+      register: 'Register',
+      employees: 'Employee list',
+      access: 'RBAC & roles',
+      settings: 'Settings',
+    },
+  },
+  '/operations/crm': {
+    label: 'Customers',
+    tabs: {
+      transfer: 'Transfer car',
+      inquiries: 'Inquiries',
+      sms: 'SMS',
+    },
+  },
+  '/operations/rewards': {
+    label: 'Rewards',
+    tabs: {
+      memberships: 'Memberships',
+      vouchers: 'Vouchers',
+      'points-shop': 'Points shop',
+      referrals: 'Referrals',
+    },
+  },
+  '/operations/branches': { label: 'Branches' },
+  '/operations/content': { label: 'Content' },
+  '/operations/settings': { label: 'Settings' },
+  '/operations/history': { label: 'History' },
+  '/operations/notifications': { label: 'Notifications' },
+  '/operations/system': { label: 'System & Data' },
+  '/operations/payslips': { label: 'Payslips' },
+  '/operations/attendance': { label: 'Attendance' },
+  '/operations/my-tasks': { label: 'My Tasks' },
+  '/operations/my-advances': { label: 'My advances' },
+  '/operations/kpi': { label: 'Month KPI' },
+})
+
 /** Resolve topbar breadcrumb (`Parent / Child` or `Page`) from active navigation items. */
 export function resolveOpsBreadcrumb(navigation = [], pathname = '', search = '', fallback = 'Ops') {
   for (const item of navigation) {
@@ -116,6 +168,14 @@ export function resolveOpsBreadcrumb(navigation = [], pathname = '', search = ''
       if (childMatch) return `${item.label} / ${childMatch.label}`
     }
     if (opsNavIsActive(pathname, search, item.to)) return item.label
+  }
+  const clean = String(pathname || '').split('?')[0]
+  const fb = FALLBACK_BREADCRUMBS[clean]
+  if (fb) {
+    const params = normalizeOpsNavSearch(clean, search)
+    const tab = params.get('tab')
+    if (tab && fb.tabs?.[tab]) return `${fb.label} / ${fb.tabs[tab]}`
+    return fb.label
   }
   return fallback
 }

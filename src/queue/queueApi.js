@@ -569,8 +569,37 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
 
   const completedJobs = (completedRows || []).map(toJob)
   const cancelledJobs = (cancelledRows || []).map(toJob)
-  const redoJobs = (redoRows || []).map(toJob)
-  const startedJobs = uniqueBookingsById((startedRows || []).map(toJob))
+  const liveRedoJobs = (snapshot.activeQueue || [])
+    .filter((row) => row.status === 'redo' || row.redo_at)
+    .map((row) => ({
+      booking_id: row.booking_id || row.id,
+      branch: row.branch,
+      status: row.status,
+      queue_number: row.queue_number,
+      customer_name: row.customer_name,
+      vehicle_plate: row.vehicle_plate,
+      vehicle_make: row.vehicle_make,
+      vehicle_model: row.vehicle_model,
+      service_id: row.service_id,
+      visit_group_id: row.visit_group_id || null,
+      service_name: row.service_name || null,
+      service_pay_category: row.service_pay_category || null,
+      final_price_minor: row.final_price_minor ?? row.base_price_minor,
+      waiting_at: row.waiting_at,
+      in_progress_at: row.in_progress_at,
+      final_checking_at: row.final_checking_at,
+      for_payment_at: row.for_payment_at,
+      completed_at: row.completed_at,
+      cancelled_at: row.cancelled_at,
+      redo_at: row.redo_at || row.updated_at || row.created_at,
+      created_at: row.created_at,
+      notes: row.redo_reason || row.notes,
+    }))
+  const redoJobs = uniqueBookingsById([...(redoRows || []).map(toJob), ...liveRedoJobs])
+  const startedJobs = uniqueBookingsById([
+    ...(startedRows || []).map(toJob),
+    ...(snapshot.activeQueue || []).filter((r) => r.in_progress_at),
+  ])
   const finishedJobs = uniqueBookingsById((finishedRows || []).map(toJob))
   const salesRows = (salesRaw || []).map((row) => ({
     ...row,
@@ -598,10 +627,23 @@ export async function fetchSuperAdminFloorBoard(profile, { branchFilter = 'all',
   const rangeEndMs = new Date(endIso).getTime()
   const cycleSample = finishedForAverage(finishedJobs, rangeStartMs, rangeEndMs)
   const avg = averageCycleMinutes(cycleSample)
-  const avgWait = averageWaitMinutes(startedJobs)
-  const waitSampleN = startedJobs
-    .map(bookingWaitMinutes)
-    .filter((n) => Number.isFinite(n) && n >= 0).length
+  const avgWaitStarted = averageWaitMinutes(startedJobs)
+  const waitingNow = (snapshot.activeQueue || [])
+    .filter((r) => r.status === 'waiting')
+    .map((r) => {
+      const s = new Date(r.waiting_at || r.created_at).getTime()
+      return Number.isFinite(s) && s <= Date.now() ? (Date.now() - s) / 60_000 : null
+    })
+    .filter((n) => Number.isFinite(n) && n >= 0)
+  const avgWait =
+    avgWaitStarted != null
+      ? avgWaitStarted
+      : waitingNow.length
+        ? waitingNow.reduce((a, b) => a + b, 0) / waitingNow.length
+        : null
+  const waitSampleN =
+    startedJobs.map(bookingWaitMinutes).filter((n) => Number.isFinite(n) && n >= 0).length ||
+    waitingNow.length
   const cycleSampleN = cycleSample.length
   const serviceNames = Object.fromEntries(
     finishedJobs.filter((row) => row.service_id && row.service_name).map((row) => [row.service_id, row.service_name]),
@@ -1092,11 +1134,11 @@ export async function createQueueTicket(form) {
       : []
   if (!serviceIds.length) throw new Error('Select at least one service.')
 
-  // Queue is same-day Services & Packages only — detailing belongs on Bookings.
+  // Queue is same-day Services & Packages only — multi-day detailing belongs on Bookings.
   for (const id of serviceIds) {
     const svc = form.services?.find((item) => item.id === id)
     if (!svc) throw new Error('Selected service was not found. Refresh and try again.')
-    if (!isSameDayQueueKind(svc.pay_category) || isBookingBoardService(svc)) {
+    if (!isSameDayQueueKind(svc.pay_category) || String(svc.pay_category || '').toLowerCase() === 'detailing') {
       throw new Error('Detailing services belong on Bookings, not the wash queue. Pick a service or package.')
     }
   }
@@ -1511,6 +1553,58 @@ export async function updateTicketPrice(ticket, amountMinor, reason, userId) {
     console.error('Unable to update queue ticket price', error)
     throw formatQueueActionError(error)
   }
+}
+
+/** Modify or change the assigned service on a ticket (or a specific visit line). */
+export async function updateTicketService(
+  ticket,
+  newServiceId,
+  { lineBookingId = null, priceMinor = null, servicesCatalog = [] } = {},
+) {
+  const profile = await getCurrentProfile({ required: true })
+  const targetBookingId = lineBookingId || ticket?.booking_id
+  if (!targetBookingId) throw new Error('Booking ID is required.')
+  if (!newServiceId) throw new Error('Select a service.')
+
+  const svc = (servicesCatalog || []).find((row) => row.id === newServiceId)
+  if (!svc) throw new Error('Selected service was not found in the catalog.')
+
+  const type = normalizeVehicleType(ticket?.vehicle_type || 'medium')
+  const sized = resolveServicePriceMinor(svc, type)
+  const finalMinor =
+    Number.isFinite(priceMinor) && priceMinor > 0
+      ? Number(priceMinor)
+      : sized || Number(svc.price_minor) || 0
+
+  const patch = {
+    service_id: svc.id,
+    final_price_minor: finalMinor,
+    price_minor: finalMinor,
+    price_edited_by: profile.id,
+    price_edit_reason: `Modified service to ${svc.name}`,
+  }
+
+  const { error } = await supabase.from('bookings').update(patch).eq('id', targetBookingId)
+  if (error) {
+    console.error('Unable to modify ticket service', error)
+    throw formatQueueActionError(error)
+  }
+
+  await writeAudit({
+    action: 'update',
+    entityType: 'booking',
+    entityId: targetBookingId,
+    summary: `Changed service on ticket ${ticket?.queue_number || targetBookingId} to ${svc.name}`,
+    meta: {
+      booking_id: targetBookingId,
+      new_service_id: svc.id,
+      new_service_name: svc.name,
+      final_price_minor: finalMinor,
+      branch: ticket?.branch,
+    },
+  })
+
+  return { booking_id: targetBookingId, service_id: svc.id, final_price_minor: finalMinor }
 }
 
 /** Update car size (pricing tier) on the ticket + linked vehicle; recalc catalog price when not overridden. */

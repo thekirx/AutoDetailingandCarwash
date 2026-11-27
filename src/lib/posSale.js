@@ -34,9 +34,10 @@ export function buildHandoffCartLine({ handoff, services = [], amountMinor }) {
   const booking = handoff?.bookings || {}
   const bookingId = booking.id || null
   const serviceId = booking.service_id || null
-  const svc = serviceId ? services.find((s) => s.id === serviceId) : null
+  const joinedSvc = Array.isArray(booking.services) ? booking.services[0] : booking.services
+  const svc = (serviceId ? services.find((s) => s.id === serviceId) : null) || joinedSvc || null
   const amount = Number(
-    amountMinor ?? handoff?.amount_minor ?? booking.final_price_minor ?? 0,
+    amountMinor ?? handoff?.amount_minor ?? booking.final_price_minor ?? booking.price_minor ?? svc?.price_minor ?? 0,
   ) || 0
   return {
     key: `handoff-${handoff.id}-${bookingId || 'solo'}`,
@@ -44,14 +45,14 @@ export function buildHandoffCartLine({ handoff, services = [], amountMinor }) {
     item_type: 'service',
     catalog_kind: 'service',
     id: serviceId,
-    name: svc?.name || `Queue · ${booking.vehicle_plate || 'ticket'}`,
+    name: svc?.name || booking.service_name || `Queue · ${booking.vehicle_plate || 'ticket'}`,
     quantity: 1,
     unit_price_minor: amount,
     list_price_minor: amount,
     price_minor: amount,
     missing_service: !serviceId,
     from_handoff: true,
-    pay_category: svc?.pay_category || null,
+    pay_category: svc?.pay_category || booking.service_pay_category || null,
   }
 }
 

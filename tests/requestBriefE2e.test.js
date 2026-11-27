@@ -100,7 +100,7 @@ describe('request.md roles + planner', () => {
     const investorNav = getOperationsNav({ role: ROLES.INVESTOR })
     assert.deepEqual(
       investorNav.map((i) => i.to),
-      ['/operations/queue', '/operations/bookings', '/operations/pos', '/operations/rewards?tab=vouchers', '/operations/finance'],
+      ['/operations/queue', '/operations/bookings', '/operations/pos', '/operations/finance'],
     )
     assert.equal(allowRoute({ role: ROLES.INVESTOR }, 'people'), false)
     assert.equal(allowRoute({ role: ROLES.INVESTOR }, 'pos'), true)

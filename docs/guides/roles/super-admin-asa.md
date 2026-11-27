@@ -7,7 +7,7 @@
 
 ## Nav
 
-Floor Insight · Carwash Queue · Detailing Schedule · Team Planner · Point of Sales · Catalog & Inventory · Financials · Payslips · Employees · Customers · Rewards · Branches · Content · Settings · History · Notifications · System & Data
+Floor Insight · Carwash Queue · Detailing · Team P · POS · Financials · Catalog & Inventory · Payslips · Employees · Customers · Rewards · Branches · Content · Settings · History · Notifications · System & Data
 
 Retired from this nav: **Console** (off since the Floor Board became the landing surface) and **Payroll / Crew** (`canAccessConsole()` returns `false`; `crew` is denied).
 

@@ -50,9 +50,6 @@ describe('sales role — detailing bookings board', () => {
       '/operations/queue',
       '/operations/bookings',
       '/operations/planning',
-      '/operations/crm',
-      '/operations/payslips',
-      '/operations/history',
     ]
     assert.deepEqual(getOperationsNav(sales).map((i) => i.to), expected)
     assert.deepEqual(getSalesDock(sales).map((i) => i.to), [
@@ -66,8 +63,8 @@ describe('sales role — detailing bookings board', () => {
     assert.equal(canEditBookings(sales), false)
     assert.equal(canCreateBookings(sales), false)
     assert.equal(canModifyBookingServicePrice(sales), false)
-    assert.equal(canModifyBookingServicePrice({ role: ROLES.TEAM_LEAD }), false)
-    assert.equal(canModifyBookingServicePrice({ role: ROLES.ADMIN }), false)
+    assert.equal(canModifyBookingServicePrice({ role: ROLES.TEAM_LEAD }), true)
+    assert.equal(canModifyBookingServicePrice({ role: ROLES.ADMIN }), true)
     assert.equal(canAccessPos(sales), false)
     assert.equal(canCheckInFormBooking(sales), false)
     assert.equal(canCheckInFormBooking({ role: ROLES.TEAM_LEAD }), true)

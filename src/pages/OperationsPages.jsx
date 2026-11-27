@@ -74,6 +74,7 @@ import {
   STATUS_LABELS,
   statusShortLabel,
 } from '../queue/queueLogic'
+import { averageWaitingMinutes, formatDaylightDuration } from '../queue/daylightPresentation'
 import { getLocalCalendarDate } from '../lib/localCalendarDate'
 import {
   addStaffMember,
@@ -504,6 +505,7 @@ function ScopedFloorDashboard() {
   )
   const visibleQueue = washQueue
   const counts = useMemo(() => getQueueCounts(washQueue, { statuses: boardStatuses }), [washQueue, boardStatuses])
+  const avgWaitMinutes = useMemo(() => averageWaitingMinutes(washQueue), [washQueue])
   const detailingCounts = useMemo(
     () => getQueueCounts(detailingQueue, { statuses: detailingStatuses }),
     [detailingQueue, detailingStatuses],
@@ -694,7 +696,7 @@ function ScopedFloorDashboard() {
           {!isTeamLeadFloor ? (
             <MetricCard
               label="For Payment"
-              value={filteredHandoffs.filter((h) => h.status === 'pending').length}
+              value={counts.for_payment ?? filteredHandoffs.filter((h) => h.status === 'pending').length}
               icon={Send}
               tone="amber"
               to={canOpenPos ? '/operations/pos' : queueLink({ branch: branchFilter })}
@@ -703,14 +705,21 @@ function ScopedFloorDashboard() {
           ) : null}
           {seeRedo ? (
             <MetricCard
-              label="Services Failed QA"
+              label="Failed QA"
               value={counts.redo}
               icon={ShieldAlert}
               tone="amber"
               to={queueLink({ lane: 'redo', branch: branchFilter })}
-              hint="Jump to redo lane"
+              hint="Jump to Failed QA lane"
             />
           ) : null}
+          <MetricCard
+            label="Average Waiting Time"
+            value={formatDaylightDuration(avgWaitMinutes)}
+            icon={Clock3}
+            to={queueLink({ lane: 'waiting', branch: branchFilter })}
+            hint="Average bay wait"
+          />
           <MetricCard
             label="Total Active"
             value={counts.total}
@@ -1001,6 +1010,7 @@ function OperationsQueueBoardPage() {
     [familyQueue, boardStatuses],
   )
   const visitTickets = useMemo(() => groupVisitTickets(visibleQueue), [visibleQueue])
+  const avgBoardWaitMinutes = useMemo(() => averageWaitingMinutes(visitTickets), [visitTickets])
   const boardTickets = useMemo(
     () =>
       visitTickets.filter((ticket) =>
@@ -1244,7 +1254,13 @@ function OperationsQueueBoardPage() {
           {view !== 'table' ? (
             <div className="bk-board">
               <div className="bk-board-toolbar">
-                <p className="bk-board-hint">Tap a ticket to open it. Tap a stage chip to focus or jump.</p>
+                <p className="bk-board-hint">
+                  Tap a ticket to open it. Tap a stage chip to focus or jump.
+                  {' · '}
+                  <span className="font-semibold text-foreground">
+                    Average Waiting Time: {formatDaylightDuration(avgBoardWaitMinutes)}
+                  </span>
+                </p>
                 <div className="bk-board-controls">
                   {focusLane ? (
                     <Button

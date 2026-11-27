@@ -123,6 +123,7 @@ const EXEMPTED = [
   '20261116180000_notifications_sms_audience_and_limits.sql',
   '20261120200000_custom_notification_templates.sql',
   '20261126223000_audit_money_referral_fixes.sql',
+  '20261127200000_revision_qa_checklist_fixes.sql',
 ]
 
 const read = (name) => readFileSync(join(migrationsDir, name), 'utf8')

@@ -60,7 +60,7 @@ describe('TL ops contract — cancel, payment gate, form bookings', () => {
     assert.equal(tlPay.canSendToPayment, true)
     assert.equal(getQueueTicketActionFlags('in_progress', { canManageQueue: true, canPushToPayment: true }).canSendToPayment, false)
 
-    assert.equal(finalCheckActionLabel(false), 'Final check')
+    assert.equal(finalCheckActionLabel(false), 'Final Checking')
   })
 
   it('updateTicketStatus writes final_checking and cancels with reason (no TL auto-payment)', () => {

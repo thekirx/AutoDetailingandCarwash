@@ -79,10 +79,9 @@ describe('command category IA', () => {
     assert.ok(!String(queueLinks[0].to).includes('family=detailing'))
     assert.equal(labels.includes('Car Wash Queue'), false)
     assert.equal(labels.includes('Detailing Queue'), false)
-    assert.ok(labels.includes('Team Planner'))
+    assert.ok(labels.includes('Team P'))
     assert.equal(labels.includes('KPI'), false)
     assert.equal(labels.includes('Reviews'), false)
-    assert.ok(labels.includes('Settings'))
     assert.equal(canAccessSettings({ role: 'BossMich' }), true)
     const dock = getTeamLeadDock({ role: 'team_lead', branch_slug: 'bacoor' })
     assert.ok(dock.some((i) => i.label === 'Carwash Board' && i.to === '/operations/queue'))
@@ -103,43 +102,21 @@ describe('command category IA', () => {
     assert.match(page, /kinds=\{\['service', 'package'\]\}/)
   })
 
-  it('Command sidebar groups Floor Insight, then Configuration, with Audit under Operations Insight', () => {
+  it('Command sidebar retains only the 6 primary navigation modules under Floor Insight', () => {
     const sa = getOperationsNav({ role: 'BossMich' })
     const groups = groupOperationsNav(sa)
     const ids = groups.map((g) => g.id)
-    assert.deepEqual(ids, ['insight', 'hr', 'customers', 'config', 'ops-insight'])
+    assert.deepEqual(ids, ['insight'])
     assert.equal(groups[0].label, 'Floor Insight')
     assert.deepEqual(groups[0].items.map((item) => item.label), [
       'Floor Insight',
       'Carwash Queue',
-      'Detailing Schedule',
-      'Team Planner',
-      'Point of Sales',
-      'Catalog & Inventory',
+      'Detailing',
+      'Team P',
+      'POS',
       'Financials',
     ])
-    assert.deepEqual(
-      groups.find((g) => g.id === 'hr').items.map((item) => item.label),
-      ['Payslips', 'Employees'],
-    )
-    assert.deepEqual(
-      groups.find((g) => g.id === 'config').items.map((item) => item.label),
-      [
-        'Branches',
-        'Content',
-        'Settings',
-      ],
-    )
-    assert.deepEqual(
-      groups.find((g) => g.id === 'customers').items.map((item) => item.label),
-      ['Customers', 'Rewards'],
-    )
-    assert.deepEqual(
-      groups.find((g) => g.id === 'ops-insight').items.map((item) => item.label),
-      ['History', 'Notifications', 'System & Data'],
-    )
     assert.ok(!sa.some((i) => i.label === 'Console' || i.label === 'KPI' || i.label === 'Reviews' || i.label === 'Month KPI'))
-    assert.ok(sa.some((i) => i.to === '/operations/rewards' && i.label === 'Rewards'))
     assert.ok(!sa.some((i) => i.to === '/operations/payroll' || i.to === '/operations/kpi' || i.to === '/operations/reviews'))
     const layout = readFileSync(join(root, 'src/layouts/OperationsLayout.jsx'), 'utf8')
     const css = readFileSync(join(root, 'src/styles.css'), 'utf8')

@@ -34,10 +34,10 @@ describe('TL queue status transitions (principal scenarios)', () => {
     assert.equal(canTransitionQueueStatus('for_payment', 'completed'), false)
   })
 
-  it('allows restart from redo → in_progress only', () => {
+  it('allows restart from redo → in_progress and return to final_checking', () => {
     assert.equal(canTransitionQueueStatus('redo', 'in_progress'), true)
-    assert.equal(canTransitionQueueStatus('redo', 'final_checking'), false)
-    assert.deepEqual(QUEUE_STATUS_TRANSITIONS.redo, ['in_progress'])
+    assert.equal(canTransitionQueueStatus('redo', 'final_checking'), true)
+    assert.deepEqual(QUEUE_STATUS_TRANSITIONS.redo, ['in_progress', 'final_checking', 'cancelled'])
   })
 
   it('TL waiting: Start + Cancel', () => {
@@ -121,8 +121,8 @@ describe('TL queue status transitions (principal scenarios)', () => {
   })
 
   it('final check label stays on floor for TL', () => {
-    assert.equal(finalCheckActionLabel(false), 'Final check')
-    assert.equal(finalCheckActionLabel(true), 'Final check')
+    assert.equal(finalCheckActionLabel(false), 'Final Checking')
+    assert.equal(finalCheckActionLabel(true), 'Final Checking')
   })
 
   it('updateTicketStatus writes final_checking and uses cancelQueueTicket', () => {

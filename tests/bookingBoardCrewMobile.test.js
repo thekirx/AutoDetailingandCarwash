@@ -16,11 +16,11 @@ import {
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 
 describe('crew assign + booking board mobile', () => {
-  it('requires crew except packages; present/late are assignable', () => {
+  it('requires crew for all services and packages; present/late are assignable', () => {
     assert.equal(crewRequiredForPayCategory('wash'), true)
     assert.equal(crewRequiredForPayCategory('detailing'), true)
-    assert.equal(crewRequiredForPayCategory('package'), false)
-    assert.equal(crewRequiredForPayCategory('ppf'), false)
+    assert.equal(crewRequiredForPayCategory('package'), true)
+    assert.equal(crewRequiredForPayCategory('ppf'), true)
     assert.equal(isAssignableAttendanceStatus('present'), true)
     assert.equal(isAssignableAttendanceStatus('late'), true)
     assert.equal(isAssignableAttendanceStatus('absent'), false)

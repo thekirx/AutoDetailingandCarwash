@@ -10,7 +10,6 @@ import {
   canEditAttendanceSettings,
   canOverrideAttendance,
   canUseAttendanceClock,
-  getOperationsNav,
   getTeamLeadDock,
   redirectForRole,
 } from '../src/auth/permissions.js'
@@ -46,7 +45,7 @@ describe('Attendance system RBAC + page', () => {
   })
 
   it('nav/dock expose Attendance; crew assign requires present/late', () => {
-    assert.ok(getOperationsNav({ role: ROLES.STAFF }).some((i) => i.to === '/operations/attendance'))
+    assert.equal(allowRoute({ role: ROLES.STAFF }, 'attendance'), true)
     assert.ok(getTeamLeadDock({ role: ROLES.TEAM_LEAD }).some((i) => i.to === '/operations/attendance'))
     assert.equal(isAssignableAttendanceStatus('present'), true)
     assert.equal(isAssignableAttendanceStatus('late'), true)

@@ -24,7 +24,7 @@ describe('Branch Admin simplified shell', () => {
     assert.equal(redirectForRole(ROLES.SUPER_ADMIN), '/operations/dashboard')
   })
 
-  it('Command nav: Floor, attendance, POS, Inventory restock, reviews, planner, history, audit', () => {
+  it('Command nav: Carwash Queue, Detailing, Team P, POS, Financials', () => {
     assert.equal(allowRoute(p, 'inventory'), true)
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
@@ -34,13 +34,6 @@ describe('Branch Admin simplified shell', () => {
         '/operations/planning',
         '/operations/pos',
         '/operations/finance',
-        '/operations/inventory',
-        '/operations/employees',
-        '/operations/crm',
-        '/operations/my-advances',
-        '/operations/payslips',
-        '/operations/history',
-        '/operations/system',
       ],
     )
     assert.equal(getOperationsNav(p).some((i) => i.label === 'Floor Board'), false)
@@ -56,7 +49,7 @@ describe('Branch Admin simplified shell', () => {
     const navPaths = nav.map((i) => i.to)
     assert.equal(navPaths.includes('/operations/dashboard'), false)
     assert.ok(navPaths.includes('/operations/queue'))
-    assert.ok(navPaths.includes('/operations/employees'))
+    assert.ok(navPaths.includes('/operations/planning'))
     assert.ok(navPaths.includes('/operations/pos'))
   })
 

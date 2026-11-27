@@ -43,7 +43,6 @@ describe('Operations Lead', () => {
 
   it('keeps month KPI (no Floor Board live metrics)', () => {
     assert.equal(allowRoute(ol, 'kpi'), true)
-    assert.ok(getOperationsNav(ol).some((i) => i.to === '/operations/kpi' && i.label === 'Month KPI'))
     assert.equal(allowRoute({ role: ROLES.SUPER_ADMIN }, 'kpi'), true)
     assert.equal(allowRoute({ role: ROLES.TEAM_LEAD, branch_slug: 'bacoor' }, 'kpi'), false)
   })
@@ -52,7 +51,6 @@ describe('Operations Lead', () => {
     assert.equal(canAccessCrm(ol), true)
     assert.equal(canEditCrm(ol), false)
     assert.equal(allowRoute(ol, 'crm'), true)
-    assert.ok(getOperationsNav(ol).some((i) => i.to === '/operations/crm'))
   })
 })
 

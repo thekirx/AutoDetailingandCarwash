@@ -43,6 +43,7 @@ import {
   markTicketRedo,
   sendTicketToPayment,
   updateTicketPrice,
+  updateTicketService,
   updateTicketStatus,
   updateTicketVehicleType,
 } from '../queue/queueApi'
@@ -180,6 +181,9 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
   const [services, setServices] = useState([])
   const [addServiceId, setAddServiceId] = useState('')
   const [addServicePrice, setAddServicePrice] = useState('')
+  const [modifyLineId, setModifyLineId] = useState('')
+  const [modifyServiceId, setModifyServiceId] = useState('')
+  const [modifyServicePrice, setModifyServicePrice] = useState('')
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState('')
   const [loadError, setLoadError] = useState('')
@@ -209,6 +213,8 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
       if (data.ticket) {
         const lines = await fetchVisitLines(data.ticket).catch(() => [])
         setVisitLines(lines)
+        setModifyLineId((prev) => prev || lines[0]?.booking_id || data.ticket.booking_id || '')
+        setModifyServiceId(data.ticket.service_id || lines[0]?.service_id || '')
         const { data: promo, error: promoErr } = await supabase
           .from('bookings')
           .select('promo_voucher_id, promo_discount_minor, promo_vouchers(code, title)')
@@ -361,15 +367,25 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
   const runRedo = () => {
     setDialogConfig({
       mode: 'prompt',
-      title: 'Mark redo',
+      title: 'Mark Redo',
       description: 'Redo reason (visible to owner in audit).',
       inputLabel: 'Redo reason',
       placeholder: 'Why does this ticket need redo?',
       defaultValue: ticket.redo_reason || '',
-      confirmLabel: 'Mark redo',
+      confirmLabel: 'Mark Redo',
       action: 'redo',
-      onConfirm: (reason) => markTicketRedo(ticket, reason),
+      onConfirm: (reason) => markTicketRedo(ticket, reason || 'Failed QA'),
     })
+  }
+  const runModifyService = async () => {
+    if (!modifyServiceId) throw new Error('Pick a replacement service.')
+    const override = modifyServicePrice.trim() ? parsePesoInputToMinor(modifyServicePrice) : null
+    await updateTicketService(ticket, modifyServiceId, {
+      lineBookingId: modifyLineId || ticket.booking_id,
+      priceMinor: override,
+      servicesCatalog: services,
+    })
+    setModifyServicePrice('')
   }
   const runAddService = async () => {
     const service = services.find((item) => item.id === addServiceId)
@@ -542,30 +558,36 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
           <div className={variant === 'modal' ? 'queue-ticket-actions' : 'order-2'}>
             <Panel title="2 · Status actions" icon={ArrowRight} className={variant === 'modal' ? 'shadow-none' : ''}>
               <div className={variant === 'modal' ? 'queue-action-stack' : 'grid gap-2.5'}>
-                <ActionButton
-                  disabled={Boolean(saving) || !actions.canStart}
-                  loading={saving === 'start'}
-                  onClick={() => runAction('start', runStart)}
-                >
-                  {startBlockedByCrew ? 'Select crew above, then Start' : 'Start Service'}
-                </ActionButton>
-                {startBlockedByCrew ? (
-                  <p className="text-xs text-amber-800 dark:text-amber-100">
-                    Tick at least one present crew member in Assign crew, then Start.
-                  </p>
+                {['waiting', 'confirmed', 'redo'].includes(ticket.status) ? (
+                  <>
+                    <ActionButton
+                      disabled={Boolean(saving) || !actions.canStart || startBlockedByCrew}
+                      loading={saving === 'start'}
+                      onClick={() => runAction('start', runStart)}
+                    >
+                      {startBlockedByCrew ? 'Select crew above, then Start' : 'Start Service'}
+                    </ActionButton>
+                    {startBlockedByCrew ? (
+                      <p className="text-xs text-amber-800 dark:text-amber-100">
+                        Tick at least one present crew member in Assign crew, then Start.
+                      </p>
+                    ) : null}
+                  </>
                 ) : null}
                 <div className={variant === 'modal' ? 'queue-action-secondary' : 'contents'}>
-                  <ActionButton
-                    tone="secondary"
-                    disabled={Boolean(saving) || !actions.canFinalCheck}
-                    loading={saving === 'check'}
-                    onClick={() => runAction('check', () => updateTicketStatus(ticket, 'final_checking'))}
-                  >
-                    {finalCheckActionLabel(canOpenPos)}
-                  </ActionButton>
-                  {canPushToPayment ? (
+                  {['in_progress', 'redo'].includes(ticket.status) ? (
                     <ActionButton
-                      tone="secondary"
+                      tone={ticket.status === 'in_progress' ? 'primary' : 'secondary'}
+                      disabled={Boolean(saving) || !actions.canFinalCheck}
+                      loading={saving === 'check'}
+                      onClick={() => runAction('check', () => updateTicketStatus(ticket, 'final_checking'))}
+                    >
+                      {finalCheckActionLabel(canOpenPos)}
+                    </ActionButton>
+                  ) : null}
+                  {canPushToPayment && ticket.status === 'final_checking' ? (
+                    <ActionButton
+                      tone="primary"
                       disabled={Boolean(saving) || !actions.canSendToPayment}
                       loading={saving === 'payment'}
                       onClick={() => runAction('payment', () => sendTicketToPayment(ticket.booking_id))}
@@ -574,39 +596,15 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
                       {sendToPaymentActionLabel()}
                     </ActionButton>
                   ) : null}
-                  {showRedoBtn ? (
-                    <ActionButton
-                      tone="secondary"
-                      disabled={Boolean(saving) || !actions.canMarkRedo}
-                      loading={saving === 'redo'}
-                      onClick={runRedo}
-                    >
-                      <ShieldAlert size={17} aria-hidden />
-                      Mark redo
-                    </ActionButton>
-                  ) : null}
-                  {showFailedQa && actions.canMarkFailedQa ? (
+                  {(showRedoBtn || showFailedQa) && (actions.canMarkRedo || actions.canMarkFailedQa) ? (
                     <ActionButton
                       tone="secondary"
                       disabled={Boolean(saving)}
-                      loading={saving === 'failqa'}
-                      onClick={() =>
-                        setDialogConfig({
-                          mode: 'prompt',
-                          title: 'Mark Failed QA',
-                          description: 'Failed QA reason (visible in audit).',
-                          inputLabel: 'Failed QA reason',
-                          placeholder: 'Describe what failed quality check',
-                          defaultValue: '',
-                          confirmLabel: 'Mark Failed QA',
-                          confirmVariant: 'destructive',
-                          action: 'failqa',
-                          onConfirm: (reason) => markTicketRedo(ticket, reason || 'Failed QA'),
-                        })
-                      }
+                      loading={saving === 'redo'}
+                      onClick={runRedo}
                     >
                       <Undo2 size={17} aria-hidden />
-                      Failed QA
+                      Mark Redo
                     </ActionButton>
                   ) : null}
                 </div>
@@ -758,6 +756,68 @@ export default function QueueTicketEditor({ bookingId, variant = 'page', onUpdat
               <span className="text-base font-semibold tabular-nums text-foreground">{formatMoney(visitTotalMinor)}</span>
             </div>
           </div>
+          {showEditActions && canEditServicePrice && !['completed', 'cancelled'].includes(ticket.status) ? (
+            <div className="mt-4 grid gap-3 rounded-2xl border border-border bg-muted/20 p-3 sm:grid-cols-[1fr_140px_auto] sm:items-end">
+              {visitLines.length > 1 ? (
+                <label className="sm:col-span-3 text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
+                  Line to modify
+                  <select
+                    aria-label="Line to modify"
+                    value={modifyLineId}
+                    onChange={(event) => {
+                      const nextId = event.target.value
+                      setModifyLineId(nextId)
+                      const found = visitLines.find((l) => l.booking_id === nextId)
+                      if (found?.service_id) setModifyServiceId(found.service_id)
+                    }}
+                    className="mt-2 min-h-12 w-full rounded-xl border border-border bg-background px-3 py-3 text-base text-foreground outline-none focus:border-primary/60"
+                  >
+                    {visitLines.map((line) => (
+                      <option key={line.booking_id} value={line.booking_id}>
+                        {line.service_name || 'Service'} ({formatMoney(line.final_price_minor ?? line.base_price_minor ?? 0)})
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
+              <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
+                Modify assigned service
+                <select
+                  aria-label="Modify assigned service"
+                  value={modifyServiceId}
+                  onChange={(event) => setModifyServiceId(event.target.value)}
+                  className="mt-2 min-h-12 w-full rounded-xl border border-border bg-background px-3 py-3 text-base text-foreground outline-none focus:border-primary/60"
+                >
+                  <option value="">Select replacement service…</option>
+                  {bayServices.map((service) => (
+                    <option key={service.id} value={service.id}>
+                      {service.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">
+                Price (optional)
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={modifyServicePrice}
+                  onChange={(event) => setModifyServicePrice(event.target.value)}
+                  placeholder="Auto by size"
+                  className="mt-2 min-h-12 w-full rounded-xl border border-border bg-background px-3 py-3 text-base text-foreground outline-none focus:border-primary/60"
+                />
+              </label>
+              <ActionButton
+                tone="secondary"
+                loading={saving === 'modify-service'}
+                disabled={Boolean(saving) || !modifyServiceId}
+                onClick={() => runAction('modify-service', runModifyService)}
+              >
+                Change service
+              </ActionButton>
+            </div>
+          ) : null}
           {canAddService ? (
             <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_140px_auto] sm:items-end">
               <label className="text-xs font-bold tracking-[0.14em] text-muted-foreground uppercase">

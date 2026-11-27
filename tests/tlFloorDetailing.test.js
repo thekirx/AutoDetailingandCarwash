@@ -25,8 +25,8 @@ describe('TL floor + detailing catalog', () => {
       assert.equal(serviceKindFromPayCategory('detailing'), 'detailing')
       assert.equal(crewRequiredForPayCategory('detailing'), true, slug)
     }
-    assert.equal(crewRequiredForPayCategory('package'), false)
-    assert.equal(crewRequiredForPayCategory('ppf'), false)
+    assert.equal(crewRequiredForPayCategory('package'), true)
+    assert.equal(crewRequiredForPayCategory('ppf'), true)
   })
 
   it('filters form catalog to preferred detailing rows in slug order', () => {

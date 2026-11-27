@@ -9,7 +9,7 @@ import {
   phonesMatch,
   platesMatch,
 } from '../src/lib/customerHistory.js'
-import { canAccessHistory, getOperationsNav, getSalesDock, ROLES } from '../src/auth/permissions.js'
+import { allowRoute, canAccessHistory, getSalesDock, ROLES } from '../src/auth/permissions.js'
 
 describe('customer history search helpers', () => {
   it('normalizes plate and phone', () => {
@@ -93,10 +93,10 @@ describe('history RBAC + nav', () => {
     assert.equal(canAccessHistory({ role: ROLES.STAFF }), false)
   })
 
-  it('puts History on Sales / Marketing / Branch Admin nav', () => {
-    assert.ok(getOperationsNav({ role: ROLES.SALES }).some((i) => i.to === '/operations/history'))
-    assert.ok(getOperationsNav({ role: ROLES.MARKETING }).some((i) => i.to === '/operations/history'))
-    assert.ok(getOperationsNav({ role: ROLES.ADMIN }).some((i) => i.to === '/operations/history'))
+  it('allows History route for Sales / Marketing / Branch Admin and puts History on Sales dock', () => {
+    assert.equal(allowRoute({ role: ROLES.SALES }, 'history'), true)
+    assert.equal(allowRoute({ role: ROLES.MARKETING }, 'history'), true)
+    assert.equal(allowRoute({ role: ROLES.ADMIN }, 'history'), true)
     assert.ok(getSalesDock({ role: ROLES.SALES }).some((i) => i.to === '/operations/history'))
   })
 })

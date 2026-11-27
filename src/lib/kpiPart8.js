@@ -10,9 +10,10 @@ export function bookingCycleMinutes(booking) {
   return (end - start) / 60_000
 }
 
-/** Waiting bay time: waiting_at → in_progress_at (minutes). */
+/** Waiting bay time: (waiting_at || created_at) → in_progress_at (minutes). */
 export function bookingWaitMinutes(booking) {
-  const start = booking?.waiting_at ? new Date(booking.waiting_at).getTime() : NaN
+  const startRaw = booking?.waiting_at || booking?.created_at
+  const start = startRaw ? new Date(startRaw).getTime() : NaN
   const end = booking?.in_progress_at ? new Date(booking.in_progress_at).getTime() : NaN
   if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return null
   return (end - start) / 60_000

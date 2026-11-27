@@ -16,7 +16,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { getAccessTokenFresh } from '../lib/authToken'
 import { canPushFinalCheckToPayment, canViewRedoLane, canMarkFailedQa } from '../auth/permissions'
 import DaylightQueueCard from '../components/ops/DaylightQueueCard'
-import { formatDaylightDuration, groupDaylightQueue, queueSummary, longestWaitingMinutes } from '../queue/daylightPresentation'
+import { averageWaitingMinutes, formatDaylightDuration, groupDaylightQueue, queueSummary, longestWaitingMinutes } from '../queue/daylightPresentation'
 import {
   filterTicketsByFamily,
   QUEUE_FAMILY_WASH,
@@ -40,7 +40,7 @@ import {
   STATUS_LABELS,
   ticketElapsedMinutes,
 } from '../queue/queueLogic'
-import { fetchTeamLeadDayBoard, formatMoney, sendTicketToPayment, markTicketRedo } from '../queue/queueApi'
+import { fetchTeamLeadDayBoard, formatMoney, sendTicketToPayment, markTicketRedo, updateTicketStatus } from '../queue/queueApi'
 import QueueTicketEditModal from '../components/QueueTicketEditModal'
 import ReasonConfirmDialog from '../components/ops/ReasonConfirmDialog'
 
@@ -162,8 +162,8 @@ export default function TeamLeadQueuePage() {
     const todayKey = today
     if (datePreset === 'today') {
       rows = rows.filter((t) => {
-        if (['waiting', 'in_progress', 'final_checking'].includes(t.status)) {
-          // Open lanes stay until POS completes — isTicketOnTodayFloor upstream.
+        if (['waiting', 'in_progress', 'final_checking', 'redo'].includes(t.status)) {
+          // Open lanes (including Failed QA / redo) stay until resolved or POS completes.
           return true
         }
         return t.queue_date === todayKey || String(t.created_at || '').slice(0, 10) === todayKey
@@ -197,6 +197,7 @@ export default function TeamLeadQueuePage() {
   const canPushToPayment = canPushFinalCheckToPayment(profile)
   const groups = useMemo(() => groupDaylightQueue(listTickets, canPushToPayment), [listTickets, canPushToPayment])
   const longestWait = longestWaitingMinutes(boardTickets)
+  const averageWait = averageWaitingMinutes([...boardTickets, ...dayGrouped])
 
   // Same mutations and reason prompt as the existing ticket editor; no new API or data query.
   const runCardAction = async (ticket, action, callback) => {
@@ -382,7 +383,11 @@ export default function TeamLeadQueuePage() {
         </details>
 
       ) : null}
-      <p className="daylight-longest-wait">Longest wait <strong>{formatDaylightDuration(longestWait)}</strong></p>
+      <p className="daylight-longest-wait">
+        Average Waiting Time <strong>{formatDaylightDuration(averageWait)}</strong>
+        {' · '}
+        Longest wait <strong>{formatDaylightDuration(longestWait)}</strong>
+      </p>
       {error || cardError ? <p className="qmgr-error" role="alert">{error || cardError}</p> : null}
       <div className="qmgr-list" aria-live="polite">
         {loading && !listTickets.length ? (
@@ -399,10 +404,12 @@ export default function TeamLeadQueuePage() {
             const finalCheck = ticket.status === 'final_checking'
             return <DaylightQueueCard key={ticket.booking_id} ticket={ticket} yourMove={group.key === 'your_move'} next={ticket.booking_id === nextFifoId}
               canStart={actions.canStart && ticket.status === 'waiting'}
+              canFinalCheck={actions.canFinalCheck && ['in_progress', 'redo'].includes(ticket.status)}
               canSendToPay={finalCheck && actions.canSendToPayment && canPushToPayment}
-              canRedo={finalCheck && actions.canMarkRedo}
+              canRedo={(finalCheck || ticket.status === 'in_progress') && actions.canMarkRedo}
               saving={savingCard?.id === ticket.booking_id ? savingCard.action : null}
               onOpen={() => setEditBookingId(ticket.booking_id)}
+              onFinalCheck={() => runCardAction(ticket, 'check', () => updateTicketStatus(ticket, 'final_checking'))}
               onSendToPay={() => runCardAction(ticket, 'payment', () => sendTicketToPayment(ticket.booking_id))}
               onRedo={() => runRedo(ticket)} />
           })
@@ -421,13 +428,13 @@ export default function TeamLeadQueuePage() {
         onOpenChange={(open) => {
           if (!open) setRedoTarget(null)
         }}
-        title="Mark redo"
+        title="Mark Redo"
         description="Redo reason (visible to owner in audit)."
         mode="prompt"
         inputLabel="Redo reason"
         placeholder="Why does this ticket need redo?"
         defaultValue={redoTarget?.redo_reason || ''}
-        confirmLabel="Mark redo"
+        confirmLabel="Mark Redo"
         busy={Boolean(redoTarget && savingCard?.id === redoTarget.booking_id && savingCard?.action === 'redo')}
         onConfirm={(reason) => {
           if (!redoTarget) return

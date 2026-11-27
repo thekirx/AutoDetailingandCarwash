@@ -11,7 +11,6 @@ import {
   canSendBroadcast,
   canAccessNotifications,
   getBranchScopeList,
-  getOperationsNav,
 } from '../src/auth/permissions.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -125,9 +124,7 @@ describe('dedicated Notifications sidebar page', () => {
     assert.match(jsx, /\/operations\/notifications\?tab=templates/)
   })
 
-  it('SA/ASA/Marketing nav includes Notifications; App routes the hub', async () => {
-    const navSa = getOperationsNav({ role: 'BossMich' })
-    assert.ok(navSa.some((i) => i.to === '/operations/notifications' && i.label === 'Notifications'))
+  it('SA/ASA/Marketing can access Notifications; App routes the hub', async () => {
     assert.equal(canAccessNotifications({ role: 'BossMich' }), true)
     assert.equal(canAccessNotifications({ role: ROLES.MARKETING }), true)
     assert.equal(canAccessNotifications({ role: ROLES.SALES }), false)

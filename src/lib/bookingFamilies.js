@@ -21,7 +21,15 @@ export function bookingFamilyOf(service = {}) {
   const hay = `${service.slug || ''} ${service.name || ''}`.toLowerCase()
   if (/\bppf\b|paint-protection-film|paint protection film/.test(hay) || hay.includes('ppf')) return 'ppf'
   if (hay.includes('tint')) return 'tint'
-  return 'ceramic'
+  if (
+    hay.includes('ceramic') ||
+    hay.includes('coating') ||
+    hay.includes('paint-maintenance') ||
+    hay.includes('paint maintenance')
+  ) {
+    return 'ceramic'
+  }
+  return null
 }
 
 export function isMaintenanceService(service = {}) {

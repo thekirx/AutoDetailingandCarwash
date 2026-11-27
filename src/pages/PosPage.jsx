@@ -1,9 +1,9 @@
 import PointsShopPickup from '@/components/merch/PickupHandover'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Navigate, useSearchParams } from 'react-router-dom'
-import { Cake, CarFront, ClipboardList, Gift, History, Link2, Lock, MapPin, Minus, Plus, Search, Settings2, ShoppingBag, ShoppingCart, Trash2, Volume2, VolumeX, Wallet, X } from 'lucide-react'
+import { Cake, CarFront, ClipboardList, Gift, History, Link2, Lock, MapPin, Minus, Pencil, Plus, Search, Settings2, ShoppingBag, ShoppingCart, Trash2, Undo2, Volume2, VolumeX, Wallet, X } from 'lucide-react'
 import { useAuth } from '@/auth/AuthProvider'
-import { canAccessPos, canDiscountPosSale, canSeeAllBranches, canWriteFinance, canWritePosSettings, getBranchScopeList, isAdmin, isBranchAdmin, isInvestor } from '@/auth/permissions'
+import { canAccessPos, canDiscountPosSale, canModifyBookingServicePrice, canOverrideQueueStatus, canSeeAllBranches, canWriteFinance, canWritePosSettings, getBranchScopeList, isAdmin, isBranchAdmin, isInvestor } from '@/auth/permissions'
 import { listBranches, getLoyaltyProgramSettings } from '@/lib/adminApi'
 import { writeAudit } from '@/lib/audit'
 import { createCoalescedReload } from '@/lib/coalesceReload'
@@ -14,7 +14,7 @@ import { productSizeRows } from '@/lib/productSizes'
 import { filterPosBayCatalog, filterPosDetailingCatalog, serviceKindFromPayCategory } from '@/lib/serviceKinds'
 import { supabase } from '@/lib/supabase'
 import { filterBranchesForProfile, pickDefaultBranchSlug } from '@/queue/queueLogic'
-import { formatMoney, searchPosCustomer } from '@/queue/queueApi'
+import { formatMoney, searchPosCustomer, updateTicketService } from '@/queue/queueApi'
 import OpsPageShell from '@/components/ops/OpsPageShell'
 import OpsTabList from '@/components/ops/OpsTabBar'
 import ConfirmDialog from '@/components/ops/ConfirmDialog'
@@ -104,6 +104,8 @@ function PosCounterPage() {
   const assignedBranch = pickDefaultBranchSlug(profile, [])
   const canProvisionCustomer = isAdmin(profile)
   const canDiscount = canDiscountPosSale(profile)
+  const canModifyTicket = canModifyBookingServicePrice(profile)
+  const canReturnToQueue = canOverrideQueueStatus(profile)
 
   const [services, setServices] = useState([])
   const [products, setProducts] = useState([])
@@ -163,6 +165,11 @@ function PosCounterPage() {
   const [todayStats, setTodayStats] = useState(null)
   const [handoffs, setHandoffs] = useState([])
   const [activeHandoff, setActiveHandoff] = useState(null)
+  const [modifyHandoffOpen, setModifyHandoffOpen] = useState(false)
+  const [modifyServiceId, setModifyServiceId] = useState('')
+  const [modifyPriceText, setModifyPriceText] = useState('')
+  const [modifyingTicket, setModifyingTicket] = useState(false)
+  const [returningToQueue, setReturningToQueue] = useState(false)
   const [clearConfirmOpen, setClearConfirmOpen] = useState(false)
   const [pendingHandoff, setPendingHandoff] = useState(null)
   const [announcerOn, setAnnouncerOn] = useState(readAnnouncerOn)
@@ -188,8 +195,19 @@ function PosCounterPage() {
   )
 
   const branchLabel = useMemo(
-    () => branches.find((b) => b.slug === branch)?.name || branch || '—',
-    [branches, branch],
+    () =>
+      branch === 'all'
+        ? canSeeAllBranches(profile)
+          ? 'All branches'
+          : 'All my branches'
+        : branches.find((b) => b.slug === branch)?.name || branch || '—',
+    [branches, branch, profile],
+  )
+
+  const concreteBranch = branch === 'all' ? (activeHandoff?.branch || branches[0]?.slug || 'bacoor') : branch
+  const concreteBranchLabel = useMemo(
+    () => branches.find((b) => b.slug === concreteBranch)?.name || concreteBranch || '—',
+    [branches, concreteBranch],
   )
 
   const todaySummary = useMemo(() => summarizeTodayPos({ todayStats, handoffs }), [todayStats, handoffs])
@@ -212,6 +230,22 @@ function PosCounterPage() {
     }
     setCatalogReady(false)
     const today = getLocalCalendarDate()
+    const isAllBranches = branch === 'all'
+    const scopedSlugs = Array.isArray(scopeList) && scopeList.length ? scopeList : null
+    let handoffQuery = supabase
+      .from('pos_handoffs')
+      .select('id, booking_id, branch, status, amount_minor, created_at, bookings(id, customer_id, customer_name, customer_phone, customer_email, vehicle_plate, vehicle_make, vehicle_model, service_id, final_price_minor, price_minor, vehicle_type, status, queue_number, visit_group_id, promo_voucher_id, promo_discount_minor, services(id, name, slug, pay_category, price_minor, included_service_ids))')
+      .eq('status', 'pending')
+      .order('created_at', { ascending: true })
+    if (!isAllBranches) {
+      handoffQuery = handoffQuery.eq('branch', branch)
+    } else if (!canSeeAllBranches(profile) && scopedSlugs) {
+      handoffQuery = handoffQuery.in('branch', scopedSlugs)
+    }
+    const statsQuery = isAllBranches
+      ? supabase.from('daily_sales_summary').select('*').eq('sale_date', today)
+      : supabase.from('daily_sales_summary').select('*').eq('sale_date', today).eq('branch', branch).maybeSingle()
+
     const [svc, prod, stats, handoffRes, compRes, posSettingsRes] = await Promise.all([
       supabase
         .from('services')
@@ -223,13 +257,8 @@ function PosCounterPage() {
         .select('id, name, price_minor, category, stock_qty, sku, tags, usage_kind, size_options, stock_category, show_in_pos')
         .eq('is_active', true)
         .eq('is_archived', false),
-      supabase.from('daily_sales_summary').select('*').eq('sale_date', today).eq('branch', branch).maybeSingle(),
-      supabase
-        .from('pos_handoffs')
-        .select('id, booking_id, branch, status, amount_minor, created_at, bookings(id, customer_id, customer_name, customer_phone, customer_email, vehicle_plate, vehicle_make, vehicle_model, service_id, final_price_minor, price_minor, vehicle_type, status, queue_number, visit_group_id)')
-        .eq('status', 'pending')
-        .eq('branch', branch)
-        .order('created_at', { ascending: true }),
+      statsQuery,
+      handoffQuery,
       supabase
         .from('compensation_settings')
         .select(
@@ -258,11 +287,12 @@ function PosCounterPage() {
     )
     const productRows = (prod.data || []).filter((p) => productShowsOnPos(p) && (branchAdmin ? productIsPosSellable(p) : true))
     let stockMap = {}
-    if (branch && productRows.length) {
+    const effectiveStockBranch = branch === 'all' ? 'bacoor' : branch
+    if (effectiveStockBranch && productRows.length) {
       const { data: branchStock, error: stockErr } = await supabase
         .from('product_branch_stock')
         .select('product_id, qty')
-        .eq('branch_slug', branch)
+        .eq('branch_slug', effectiveStockBranch)
       if (stockErr) toast.error(stockErr.message)
       else {
         for (const row of branchStock || []) stockMap[row.product_id] = Number(row.qty) || 0
@@ -277,7 +307,19 @@ function PosCounterPage() {
           stock_qty: stockMap[p.id],
         })),
     )
-    setTodayStats(stats.data)
+    if (Array.isArray(stats.data)) {
+      const aggregated = stats.data.reduce(
+        (acc, row) => ({
+          total_sales_minor: acc.total_sales_minor + (Number(row.total_sales_minor) || 0),
+          paid_count: acc.paid_count + (Number(row.paid_count) || 0),
+          total_expenses_minor: acc.total_expenses_minor + (Number(row.total_expenses_minor) || 0),
+        }),
+        { total_sales_minor: 0, paid_count: 0, total_expenses_minor: 0 },
+      )
+      setTodayStats(aggregated)
+    } else {
+      setTodayStats(stats.data)
+    }
     setHandoffs(handoffRes.data || [])
     if (!handoffRes.error) {
       const rows = handoffRes.data || []
@@ -289,7 +331,7 @@ function PosCounterPage() {
     }
 
     setCatalogReady(true)
-  }, [branch, branchAdmin])
+  }, [branch, branchAdmin, profile, scopeList])
 
   useEffect(() => {
     listBranches()
@@ -298,13 +340,15 @@ function PosCounterPage() {
         const options = canSeeAllBranches(profile) ? rows : scoped
         setBranches(options)
         setBranch((current) => {
+          if (current === 'all' && canPickPosBranch) return 'all'
           if (current && options.some((b) => b.slug === current)) return current
           if (branchLocked && assignedBranch) return assignedBranch
+          if (canSeeAllBranches(profile)) return 'all'
           return assignedBranch || options[0]?.slug || ''
         })
       })
       .catch((err) => toast.error(err.message))
-  }, [assignedBranch, branchLocked, profile])
+  }, [assignedBranch, branchLocked, canPickPosBranch, profile])
 
   useEffect(() => {
     if (!branchLocked) return
@@ -384,11 +428,20 @@ function PosCounterPage() {
   useEffect(() => {
     if (!branch) return
     load()
-    const channel = supabase
-      .channel(`pos-${branch}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'sales', filter: `branch=eq.${branch}` }, scheduleReload)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_handoffs', filter: `branch=eq.${branch}` }, scheduleReload)
-      .subscribe()
+    const channel =
+      branch === 'all'
+        ? supabase
+            .channel(`pos-${branch}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'sales' }, scheduleReload)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_handoffs' }, scheduleReload)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings' }, scheduleReload)
+            .subscribe()
+        : supabase
+            .channel(`pos-${branch}`)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'sales', filter: `branch=eq.${branch}` }, scheduleReload)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'pos_handoffs', filter: `branch=eq.${branch}` }, scheduleReload)
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'bookings', filter: `branch=eq.${branch}` }, scheduleReload)
+            .subscribe()
     return () => {
       scheduleReload.cancel()
       supabase.removeChannel(channel)
@@ -1047,7 +1100,7 @@ function PosCounterPage() {
       resolveServicePriceMinor(svc, booking.vehicle_type || handoffVehicleSize) ??
       0
     setActiveHandoff(row)
-    if (!branchLocked) setBranch(row.branch || branch)
+    if (!branchLocked && branch !== 'all') setBranch(row.branch || branch)
     const cid = booking.customer_id || ''
     const needsContact = ticketNeedsCustomer(booking)
     setCustomerId(cid)
@@ -1076,10 +1129,13 @@ function PosCounterPage() {
     if (booking.visit_group_id) {
       const { data } = await supabase
         .from('bookings')
-        .select('id, service_id, final_price_minor, price_minor, vehicle_plate, customer_id, customer_name, vehicle_type, status')
+        .select('id, service_id, final_price_minor, price_minor, vehicle_plate, customer_id, customer_name, vehicle_type, status, services(id, name, slug, pay_category, price_minor, included_service_ids)')
         .eq('visit_group_id', booking.visit_group_id)
       siblings = (data || []).filter((row) => !['completed', 'cancelled'].includes(String(row.status || '')))
     }
+    setModifyHandoffOpen(false)
+    setModifyServiceId(booking.service_id || '')
+    setModifyPriceText(String(((row.amount_minor ?? booking.final_price_minor ?? 0) / 100).toFixed(2)))
     const lines = buildVisitHandoffCartLines({
       handoff: { ...row, amount_minor: amount },
       siblings,
@@ -1137,8 +1193,76 @@ function PosCounterPage() {
     refreshLoyaltyReady(hit.id)
   }
 
+  async function handleModifyHandoffService() {
+    if (!activeHandoff?.booking_id || !modifyServiceId) {
+      toast.error('Select a service first.')
+      return
+    }
+    setModifyingTicket(true)
+    try {
+      const booking = activeHandoff.bookings || {}
+      const customPriceMinor = modifyPriceText.trim() ? parsePesosToMinor(modifyPriceText) : null
+      const updated = await updateTicketService(
+        {
+          booking_id: activeHandoff.booking_id,
+          vehicle_type: booking.vehicle_type || handoffVehicleSize || 'medium',
+          branch: activeHandoff.branch || branch,
+          queue_number: booking.queue_number,
+        },
+        modifyServiceId,
+        {
+          lineBookingId: activeHandoff.booking_id,
+          priceMinor: customPriceMinor,
+          servicesCatalog: services,
+        },
+      )
+      const svc = services.find((s) => s.id === modifyServiceId)
+      const nextHandoff = {
+        ...activeHandoff,
+        amount_minor: updated.final_price_minor,
+        bookings: {
+          ...booking,
+          service_id: modifyServiceId,
+          final_price_minor: updated.final_price_minor,
+          price_minor: updated.final_price_minor,
+          services: svc || booking.services,
+        },
+      }
+      setModifyHandoffOpen(false)
+      await applyHandoffRow(nextHandoff, nextHandoff.bookings)
+      await load()
+      toast.success(`Updated ticket service to ${svc?.name || 'selected service'}`)
+    } catch (err) {
+      toast.error(err.message || 'Could not modify ticket service')
+    } finally {
+      setModifyingTicket(false)
+    }
+  }
+
+  async function handleReturnToQueue(targetStatus = 'in_progress') {
+    if (!activeHandoff?.booking_id) return
+    setReturningToQueue(true)
+    try {
+      const { error } = await supabase.rpc('admin_override_queue_status', {
+        input_booking_id: activeHandoff.booking_id,
+        input_next_status: targetStatus,
+        input_reason: 'Returned from POS to queue for service correction',
+      })
+      if (error) throw error
+      const label = formatQueueTicket(activeHandoff.bookings)
+      detachHandoff()
+      await load()
+      toast.success(`${label} returned to Carwash Queue for correction.`)
+    } catch (err) {
+      toast.error(err.message || 'Could not return ticket to queue.')
+    } finally {
+      setReturningToQueue(false)
+    }
+  }
+
   async function checkout() {
-    if (!cart.length || !branch) return
+    const saleBranch = activeHandoff?.branch || (branch !== 'all' ? branch : branches[0]?.slug || 'bacoor')
+    if (!cart.length || !saleBranch) return
     if (!cashCovered) {
       toast.error(splitOn ? (splitCheck?.error || 'Cash and GCash must add up to the ticket.') : 'Enter cash received that covers the order total.')
       return
@@ -1279,7 +1403,7 @@ function PosCounterPage() {
     if (activeCompKeys.length) noteParts.push(`comp:${activeCompKeys.join(',')}`)
     const { data, error } = await supabase.rpc('complete_pos_sale', {
       payload: buildPosSalePayload({
-        branch,
+        branch: saleBranch,
         customerId: resolvedCustomerId,
         paymentMethod: tenderMethod,
         cashMinor: splitCheck?.cashMinor,
@@ -1403,7 +1527,7 @@ function PosCounterPage() {
       const drafts = buildCeramicCompensationExpenses({
         saleId,
         date: getLocalCalendarDate(),
-        branch,
+        branch: saleBranch,
         salesMinor: detailingMinor,
         rules: compRules,
         toggles: compToggles,
@@ -1423,7 +1547,7 @@ function PosCounterPage() {
     if (!handoff) {
       notifyPosStaff({
         event: 'sale',
-        branch,
+        branch: saleBranch,
         amount_minor: data?.total_minor || cartTotal,
         entity_id: saleId || '',
       })
@@ -1578,10 +1702,6 @@ function PosCounterPage() {
         ) : null}
       </>
     ) : null
-  const savingsNote = [
-    cartSummary.discountMinor ? `${formatMoney(cartSummary.discountMinor)} discount` : null,
-    cartSummary.memberMinor ? `${formatMoney(cartSummary.memberMinor)} member savings` : null,
-  ].filter(Boolean)
 
   const orderPanelBody = (
     <>
@@ -1631,10 +1751,92 @@ function PosCounterPage() {
                 </Button>
               </div>
               <ul className="divide-y divide-border px-3">{ticketLines.map(renderOrderLine)}</ul>
-              <p className="flex items-center gap-1.5 border-t border-border px-3 py-2 text-[11px] text-muted-foreground">
-                <Lock className="size-3 shrink-0" aria-hidden />
-                Set by the Team Lead. Ask them to change the job or price.
-              </p>
+              <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border px-3 py-2">
+                <p className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                  <Lock className="size-3 shrink-0" aria-hidden />
+                  {canModifyTicket ? 'Modify service/price or return to queue for Team Lead correction.' : 'Set by the Team Lead.'}
+                </p>
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {canModifyTicket ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="min-h-8 gap-1 px-2.5 text-xs"
+                      onClick={() => setModifyHandoffOpen((v) => !v)}
+                    >
+                      <Pencil className="size-3" aria-hidden />
+                      Modify
+                    </Button>
+                  ) : null}
+                  {canReturnToQueue ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="min-h-8 gap-1 px-2.5 text-xs"
+                      disabled={returningToQueue || saving}
+                      onClick={() => handleReturnToQueue('in_progress')}
+                    >
+                      <Undo2 className="size-3" aria-hidden />
+                      {returningToQueue ? 'Returning…' : 'Return to Queue'}
+                    </Button>
+                  ) : null}
+                </div>
+              </div>
+              {canModifyTicket && modifyHandoffOpen ? (
+                <div className="space-y-2.5 border-t border-border bg-muted/30 p-3">
+                  <label className="block text-xs font-semibold text-foreground">
+                    Assigned service
+                    <select
+                      aria-label="Modify ticket service"
+                      value={modifyServiceId}
+                      onChange={(e) => {
+                        const nextId = e.target.value
+                        setModifyServiceId(nextId)
+                        const svc = services.find((s) => s.id === nextId)
+                        if (svc) {
+                          const sized = resolveServicePriceMinor(svc, ticketBooking?.vehicle_type || handoffVehicleSize || 'medium')
+                          setModifyPriceText(((sized || svc.price_minor || 0) / 100).toFixed(2))
+                        }
+                      }}
+                      className="mt-1 min-h-10 w-full rounded-lg border border-border bg-background px-2.5 text-sm text-foreground"
+                    >
+                      <option value="">Select service…</option>
+                      {services.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="block text-xs font-semibold text-foreground">
+                    Price (₱)
+                    <Input
+                      aria-label="Modify ticket price"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={modifyPriceText}
+                      onChange={(e) => setModifyPriceText(e.target.value)}
+                      className="mt-1 min-h-10"
+                    />
+                  </label>
+                  <div className="flex justify-end gap-2">
+                    <Button type="button" variant="ghost" size="sm" onClick={() => setModifyHandoffOpen(false)}>
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={modifyingTicket || !modifyServiceId}
+                      onClick={handleModifyHandoffService}
+                    >
+                      {modifyingTicket ? 'Saving…' : 'Save changes'}
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
             </section>
           ) : null}
 
@@ -1844,27 +2046,76 @@ function PosCounterPage() {
                 aria-label="Voucher code"
               />
             </label>
-            <dl className="space-y-1.5 rounded-xl bg-muted/40 px-4 py-3 text-sm">
+            <dl aria-label="Itemized breakdown" className="space-y-1.5 rounded-xl bg-muted/40 px-4 py-3 text-sm">
+              <div className="pb-1 text-[10px] font-bold tracking-[0.16em] text-muted-foreground uppercase">
+                Itemized Breakdown
+              </div>
+              {cart.map((line) => {
+                const qty = Math.max(1, Number(line.quantity) || 1)
+                const listMinor = Math.max(0, Math.floor(Number(line.list_price_minor ?? line.unit_price_minor) || 0))
+                const free = line.is_loyalty_award || line.is_birthday_award || line.is_membership_included
+                const lineSubtotal = free ? 0 : listMinor * qty
+                const kindTag = line.from_handoff
+                  ? 'Queue Service'
+                  : normalizePosLineItemType(line.item_type) === 'product'
+                    ? 'Product'
+                    : 'Service'
+                return (
+                  <div key={`breakdown-${line.key}`} className="flex items-baseline justify-between gap-3 text-xs">
+                    <dt className="min-w-0 flex-1 text-foreground">
+                      <span className="font-medium">{line.name}</span>
+                      <span className="ml-1.5 text-muted-foreground">
+                        ({kindTag} · {qty} × {formatMoney(listMinor)})
+                      </span>
+                    </dt>
+                    <dd className="shrink-0 font-medium tabular-nums">
+                      {free ? 'FREE' : formatMoney(lineSubtotal)}
+                    </dd>
+                  </div>
+                )
+              })}
+              <div className="mt-1 flex items-baseline justify-between gap-3 border-t border-border/60 pt-1.5">
+                <dt className="text-muted-foreground">Subtotal</dt>
+                <dd className="font-medium tabular-nums">
+                  {formatMoney(cartSummary.totalMinor + cartSummary.discountMinor + cartSummary.memberMinor)}
+                </dd>
+              </div>
               {cartSummary.ticketCount ? (
-                <div className="flex items-baseline justify-between gap-3">
-                  <dt className="text-muted-foreground">Queue ticket</dt>
-                  <dd className="font-medium tabular-nums">{formatMoney(cartSummary.ticketMinor)}</dd>
+                <div className="flex items-baseline justify-between gap-3 text-xs">
+                  <dt className="text-muted-foreground">Queue ticket ({cartSummary.ticketCount})</dt>
+                  <dd className="tabular-nums">{formatMoney(cartSummary.ticketMinor)}</dd>
                 </div>
               ) : null}
               {cartSummary.addOnCount ? (
-                <div className="flex items-baseline justify-between gap-3">
+                <div className="flex items-baseline justify-between gap-3 text-xs">
                   <dt className="text-muted-foreground">
-                    {activeHandoff ? 'Add-ons' : 'Items'} · {cartSummary.addOnCount}
+                    {activeHandoff ? 'Add-ons' : 'Items'} ({cartSummary.addOnCount})
                   </dt>
-                  <dd className="font-medium tabular-nums">{formatMoney(cartSummary.addOnMinor)}</dd>
+                  <dd className="tabular-nums">{formatMoney(cartSummary.addOnMinor)}</dd>
                 </div>
               ) : null}
-              {savingsNote.length ? (
-                <div className="pt-0.5">
-                  <dt className="sr-only">Savings</dt>
-                  <dd className="text-xs text-emerald-700 dark:text-emerald-400">Includes {savingsNote.join(' and ')}</dd>
+              {cartSummary.discountMinor > 0 ? (
+                <div className="flex items-baseline justify-between gap-3 text-emerald-700 dark:text-emerald-400">
+                  <dt>Discount{discountReason ? ` (${discountReason})` : ''}</dt>
+                  <dd className="font-medium tabular-nums">−{formatMoney(cartSummary.discountMinor)}</dd>
                 </div>
               ) : null}
+              {cartSummary.memberMinor > 0 ? (
+                <div className="flex items-baseline justify-between gap-3 text-emerald-700 dark:text-emerald-400">
+                  <dt>Membership discount</dt>
+                  <dd className="font-medium tabular-nums">−{formatMoney(cartSummary.memberMinor)}</dd>
+                </div>
+              ) : null}
+              {ticketBooking?.promo_discount_minor > 0 ? (
+                <div className="flex items-baseline justify-between gap-3 text-emerald-700 dark:text-emerald-400">
+                  <dt>Promo voucher savings</dt>
+                  <dd className="font-medium tabular-nums">−{formatMoney(ticketBooking.promo_discount_minor)}</dd>
+                </div>
+              ) : null}
+              <div className="flex items-baseline justify-between gap-3 border-t border-border pt-1.5 font-semibold">
+                <dt>Total Due</dt>
+                <dd className="tabular-nums">{formatMoney(cartTotal)}</dd>
+              </div>
             </dl>
             </>
           ) : null}
@@ -2102,6 +2353,11 @@ function PosCounterPage() {
                   <SelectValue placeholder="Branch" />
                 </SelectTrigger>
                 <SelectContent>
+                  {canPickPosBranch ? (
+                    <SelectItem value="all">
+                      {canSeeAllBranches(profile) ? 'All branches' : 'All my branches'}
+                    </SelectItem>
+                  ) : null}
                   {branches.map((b) => (
                     <SelectItem key={b.slug} value={b.slug}>
                       {b.name}
@@ -2229,19 +2485,19 @@ function PosCounterPage() {
         </TabsContent>
         {canSheet ? (
           <TabsContent value="sheet" className="mt-0 outline-none">
-            {shellTab === 'sheet' && branch ? <DailySheetPanel branch={branch} branchLabel={branchLabel} profile={profile} initialDate={searchParams.get('date')} /> : null}
+            {shellTab === 'sheet' && concreteBranch ? <DailySheetPanel branch={concreteBranch} branchLabel={concreteBranchLabel} profile={profile} initialDate={searchParams.get('date')} /> : null}
           </TabsContent>
         ) : null}
         {canSheet ? (
           <TabsContent value="history" className="mt-0 outline-none">
-            {shellTab === 'history' && branch ? <PosSheetHistory branch={branch} branchLabel={branchLabel} onOpenSheet={(date) => setShellTab('sheet', { date })} /> : null}
+            {shellTab === 'history' && concreteBranch ? <PosSheetHistory branch={concreteBranch} branchLabel={concreteBranchLabel} onOpenSheet={(date) => setShellTab('sheet', { date })} /> : null}
           </TabsContent>
         ) : null}
         <TabsContent value="dashboard" className="mt-0 outline-none">
-          {shellTab === 'dashboard' && branch ? (
+          {shellTab === 'dashboard' && concreteBranch ? (
             <PosTodayPanel
-              branch={branch}
-              branchLabel={branchLabel}
+              branch={concreteBranch}
+              branchLabel={concreteBranchLabel}
               waitingCount={pendingSummary.count}
               waitingMinor={pendingSummary.totalMinor}
               refreshKey={todayStats?.paid_count}

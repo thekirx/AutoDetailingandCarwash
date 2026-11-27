@@ -57,7 +57,7 @@ export const STATUS_LABELS = {
   final_checking: 'Final Checking',
   for_releasing: 'For Releasing',
   for_payment: 'For Payment',
-  redo: 'Redo',
+  redo: 'Failed QA',
   completed: 'Completed',
   cancelled: 'Cancelled',
   pending: 'Pending',
@@ -71,7 +71,7 @@ export const STATUS_SHORT_LABELS = {
   final_checking: 'Final check',
   for_releasing: 'Releasing',
   for_payment: 'Payment',
-  redo: 'Redo',
+  redo: 'Failed QA',
   completed: 'Done',
   cancelled: 'Cancelled',
   pending: 'Pending',
@@ -235,7 +235,7 @@ export const QUEUE_STATUS_TRANSITIONS = {
   // Retired lane: legacy rows can only close out (or go to POS via sendTicketToPayment).
   for_releasing: ['completed', 'cancelled'],
   for_payment: [],
-  redo: ['in_progress'],
+  redo: ['in_progress', 'final_checking', 'cancelled'],
   completed: [],
   cancelled: [],
 }
@@ -418,10 +418,10 @@ export function getQueueTicketActionFlags(
   const edit = Boolean(canManageQueue)
   return {
     canStart: edit && (s === 'waiting' || (seeRedo && s === 'redo')),
-    canFinalCheck: edit && s === 'in_progress',
+    canFinalCheck: edit && (s === 'in_progress' || (seeRedo && s === 'redo')),
     /** Team Lead only: a car that passed final check goes on to payment (POS). */
     canSendToPayment: edit && Boolean(canPushToPayment) && s === 'final_checking',
-    canMarkRedo: edit && seeRedo && REDO_FROM_STATUSES.includes(s),
+    canMarkRedo: edit && (seeRedo || Boolean(canFailQa)) && REDO_FROM_STATUSES.includes(s),
     /** TL + SA + ASA: send wash/pkg back from final_checking via redo path. */
     canMarkFailedQa: edit && Boolean(canFailQa) && s === 'final_checking',
     canCancel: edit && canCancelQueueStatus(s),
@@ -433,9 +433,10 @@ export function isAssignableAttendanceStatus(status) {
   return status === 'present' || status === 'late'
 }
 
-/** Legacy: packages skip mandatory crew; services/detailing require it. */
+/** Prevent vehicles from entering In Progress without an assigned crew (including packages). */
 export function crewRequiredForPayCategory(payCategory) {
-  return serviceKindFromPayCategory(payCategory) !== 'package'
+  const kind = serviceKindFromPayCategory(payCategory)
+  return Boolean(kind)
 }
 
 /** One primary next step for mobile booking cards (avoids six outline buttons). */

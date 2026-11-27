@@ -25,104 +25,60 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const read = (rel) => readFileSync(join(root, rel), 'utf8')
 
 describe('sidebar consolidation, dropdown accordions, and hub RBAC', () => {
-  it('consolidates Catalog & Inventory (including Vehicle List) for SA/ASA and removes Config duplicates', () => {
+  it('retains only the 6 primary navigation modules in sidebar while preserving Catalog & Inventory via Smart Search', () => {
     const bossNav = getOperationsNav({ role: ROLES.SUPER_ADMIN })
-    const catalog = bossNav.find((item) => item.to === '/operations/inventory')
-    assert.ok(catalog)
-    assert.equal(catalog.label, 'Catalog & Inventory')
     assert.deepEqual(
-      catalog.children.map((c) => c.to),
-      [
-        '/operations/inventory?tab=services&scope=bay',
-        '/operations/inventory?tab=services&scope=detailing',
-        '/operations/inventory?tab=merch',
-        '/operations/inventory?tab=cars',
-        '/operations/inventory?tab=recon',
-      ],
+      bossNav.map((i) => i.label),
+      ['Floor Insight', 'Carwash Queue', 'Detailing', 'Team P', 'POS', 'Financials'],
     )
-    assert.ok(!bossNav.some((item) => item.group === 'config' && item.to.includes('tab=bay')))
-    assert.ok(!bossNav.some((item) => item.group === 'config' && item.to.includes('tab=detailing')))
-    assert.ok(!bossNav.some((item) => item.group === 'config' && item.to === '/operations/cars'))
+    const bossResults = buildSmartSearchDestinations({ role: ROLES.SUPER_ADMIN })
+    assert.ok(bossResults.some((d) => d.to === '/operations/inventory'))
+    assert.ok(bossResults.some((d) => d.to === '/operations/inventory?tab=services&scope=bay'))
+    assert.ok(bossResults.some((d) => d.to === '/operations/inventory?tab=services&scope=detailing'))
+    assert.ok(bossResults.some((d) => d.to === '/operations/inventory?tab=merch'))
+    assert.ok(bossResults.some((d) => d.to === '/operations/inventory?tab=cars'))
+    assert.ok(bossResults.some((d) => d.to === '/operations/inventory?tab=recon'))
   })
 
-  it('gives expandable hub accordions for Employees, Customers, and Rewards with strict RBAC filtering', () => {
-    const bossNav = getOperationsNav({ role: ROLES.SUPER_ADMIN })
-    const emp = bossNav.find((i) => i.to === '/operations/employees')
-    const crm = bossNav.find((i) => i.to === '/operations/crm')
-    const rew = bossNav.find((i) => i.to === '/operations/rewards')
+  it('preserves RBAC-filtered Smart Search destinations for Employees, Customers, and Rewards', () => {
+    const bossResults = buildSmartSearchDestinations({ role: ROLES.SUPER_ADMIN })
+    assert.ok(bossResults.some((d) => d.to === '/operations/employees'))
+    assert.ok(bossResults.some((d) => d.to === '/operations/employees?tab=register'))
+    assert.ok(bossResults.some((d) => d.to === '/operations/employees?tab=employees'))
+    assert.ok(bossResults.some((d) => d.to === '/operations/employees?tab=access'))
+    assert.ok(bossResults.some((d) => d.to === '/operations/crm'))
+    assert.ok(bossResults.some((d) => d.to === '/operations/crm?tab=transfer'))
+    assert.ok(bossResults.some((d) => d.to === '/operations/crm?tab=inquiries'))
+    assert.ok(bossResults.some((d) => d.to === '/operations/crm?tab=sms'))
+    assert.ok(bossResults.some((d) => d.to === '/operations/rewards'))
+    assert.ok(bossResults.some((d) => d.to === '/operations/rewards?tab=vouchers'))
+    assert.ok(bossResults.some((d) => d.to === '/operations/rewards?tab=points-shop'))
+    assert.ok(bossResults.some((d) => d.to === '/operations/rewards?tab=referrals'))
 
-    assert.deepEqual(
-      emp.children.map((c) => c.to),
-      [
-        '/operations/employees',
-        '/operations/employees?tab=register',
-        '/operations/employees?tab=employees',
-        '/operations/employees?tab=access',
-        '/operations/employees?tab=settings',
-      ],
-    )
-    assert.deepEqual(
-      crm.children.map((c) => c.to),
-      [
-        '/operations/crm',
-        '/operations/crm?tab=transfer',
-        '/operations/crm?tab=inquiries',
-        '/operations/crm?tab=sms',
-      ],
-    )
-    assert.deepEqual(
-      rew.children.map((c) => c.to),
-      [
-        '/operations/rewards',
-        '/operations/rewards?tab=vouchers',
-        '/operations/rewards?tab=points-shop',
-        '/operations/rewards?tab=referrals',
-      ],
-    )
-
-    const baNav = getOperationsNav({ role: ROLES.ADMIN, branch_slug: 'bacoor' })
-    const baEmp = baNav.find((i) => i.to === '/operations/employees')
-    const baCrm = baNav.find((i) => i.to === '/operations/crm')
-    assert.deepEqual(
-      baEmp.children.map((c) => c.to),
-      [
-        '/operations/employees',
-        '/operations/employees?tab=attendance',
-        '/operations/employees?tab=register',
-      ],
-    )
-    assert.deepEqual(
-      baCrm.children.map((c) => c.to),
-      ['/operations/crm', '/operations/crm?tab=transfer', '/operations/crm?tab=sms'],
-    )
-
-    const investorRew = getOperationsNav({ role: ROLES.INVESTOR }).find((i) => i.to === '/operations/rewards?tab=vouchers')
-    assert.ok(investorRew)
-    assert.ok(!investorRew.children, 'Investor single-tab Rewards link remains flat')
+    const baResults = buildSmartSearchDestinations({ role: ROLES.ADMIN, branch_slug: 'bacoor' })
+    assert.ok(baResults.some((d) => d.to === '/operations/employees'))
+    assert.ok(baResults.some((d) => d.to === '/operations/crm'))
+    assert.ok(!baResults.some((d) => d.to === '/operations/employees?tab=access'))
+    assert.ok(!baResults.some((d) => d.to === '/operations/crm?tab=inquiries'))
   })
 
   it('aligns Operations Lead to System & Data (Audit log only)', () => {
     const opsLead = { role: ROLES.OPERATIONS_LEAD }
     const opsNav = getOperationsNav(opsLead)
-    assert.ok(opsNav.some((i) => i.to === '/operations/system' && i.label === 'System & Data'))
-    assert.ok(!opsNav.some((i) => i.to === '/operations/audit'))
+    assert.deepEqual(
+      opsNav.map((i) => i.label),
+      ['Carwash Queue', 'Detailing', 'Team P', 'POS', 'Financials'],
+    )
     assert.equal(allowRoute(opsLead, 'system'), true)
     assert.equal(allowRoute(opsLead, 'data-center'), false)
   })
 
-  it('gives Branch Admin scoped Catalog & Inventory children (Restock Merch + Sunday Recon)', () => {
+  it('gives Branch Admin scoped Catalog & Inventory destinations (Restock Merch + Sunday Recon)', () => {
     const ba = { role: ROLES.ADMIN, branch_slug: 'bacoor' }
-    const baNav = getOperationsNav(ba)
-    const catalog = baNav.find((item) => item.to === '/operations/inventory')
-    assert.ok(catalog)
-    assert.equal(catalog.label, 'Catalog & Inventory')
-    assert.deepEqual(
-      catalog.children.map((c) => [c.label, c.to]),
-      [
-        ['Restock Merch', '/operations/inventory?tab=restock'],
-        ['Sunday Recon', '/operations/inventory?tab=recon'],
-      ],
-    )
+    const baResults = buildSmartSearchDestinations(ba)
+    assert.ok(baResults.some((d) => d.to === '/operations/inventory?tab=restock'))
+    assert.ok(baResults.some((d) => d.to === '/operations/inventory?tab=recon'))
+    assert.ok(!baResults.some((d) => d.to === '/operations/inventory?tab=services&scope=bay'))
   })
 
   it('folds Monthly salaries and Approvals under Financials accordion with strict RBAC filtering', () => {

@@ -28,7 +28,6 @@ import {
   canAccessInventory,
   canManageServices,
   canRestockInventory,
-  getOperationsNav,
 } from '../src/auth/permissions.js'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
@@ -155,7 +154,6 @@ describe('inventory permissions + routes', () => {
     assert.equal(canManageServices(ba), false)
     assert.equal(allowRoute(ba, 'inventory'), true)
     assert.ok(BRANCH_ADMIN_ROUTE_KEYS.includes('inventory'))
-    assert.ok(getOperationsNav(ba).some((i) => i.to === '/operations/inventory'))
     assert.equal(canManageServices(sa), true)
     assert.equal(canAccessInventory(sa), true)
   })

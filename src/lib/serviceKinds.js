@@ -139,31 +139,56 @@ export function filterPosDetailingCatalog(services) {
   })
 }
 
-/** Prefer floor detailing SKUs (Ceramic / Paint Maint / Tint / PPF); when curated extra detailing rows exist, include all detailing rows. */
+/** Prefer floor detailing SKUs (Ceramic / Paint Maint / Tint / PPF); when curated extra detailing rows exist, include all detailing rows.
+ *  Also include Polish / 1 Step / 3 Steps Detailing and deduplicate by normalized name so no duplicate coating options appear.
+ */
 export function filterFloorDetailingServices(services) {
   const rows = services || []
   const detailingRows = filterServicesByKind(rows, 'detailing')
   const preferred = new Set(FLOOR_DETAILING_SERVICE_SLUGS)
+  const polishSlugs = new Set(['polish', '1-step-detailing', '3-steps-detailing'])
+  const polishRows = rows.filter((svc) => polishSlugs.has(String(svc.slug || '').toLowerCase()))
   const hasCuratedExtras = detailingRows.some((svc) => !preferred.has(String(svc.slug || '').toLowerCase()))
-  if (hasCuratedExtras) return detailingRows
-  const named = rows.filter((svc) => preferred.has(String(svc.slug || '').toLowerCase()))
-  if (named.length) {
-    return [...named].sort((a, b) => {
-      const ai = FLOOR_DETAILING_SERVICE_SLUGS.indexOf(String(a.slug || '').toLowerCase())
-      const bi = FLOOR_DETAILING_SERVICE_SLUGS.indexOf(String(b.slug || '').toLowerCase())
-      return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi)
-    })
+
+  let base = []
+  if (hasCuratedExtras) {
+    base = [...detailingRows, ...polishRows]
+  } else {
+    const named = rows.filter((svc) => preferred.has(String(svc.slug || '').toLowerCase()))
+    if (named.length) {
+      base = [
+        ...[...named].sort((a, b) => {
+          const ai = FLOOR_DETAILING_SERVICE_SLUGS.indexOf(String(a.slug || '').toLowerCase())
+          const bi = FLOOR_DETAILING_SERVICE_SLUGS.indexOf(String(b.slug || '').toLowerCase())
+          return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi)
+        }),
+        ...polishRows,
+      ]
+    } else {
+      base = [...detailingRows, ...polishRows]
+    }
   }
-  return detailingRows
+
+  const seenNames = new Set()
+  const deduped = []
+  for (const svc of base) {
+    if (!svc) continue
+    const key = String(svc.name || svc.slug || svc.id || '').trim().toLowerCase()
+    if (!key || seenNames.has(key)) continue
+    seenNames.add(key)
+    deduped.push(svc)
+  }
+  return deduped
 }
 
 /**
- * Bookings board is multi-day detailing only (ceramic, paint maint, tint, PPF film).
- * Wash / same-day packages (including legacy pay_category=ppf package rows) stay on Queue / POS bay.
+ * Bookings board is multi-day detailing (ceramic, paint maint, tint, PPF film, plus Polish / 1 Step / 3 Steps detailing when booked on Detailing Board).
+ * Wash / same-day packages stay on Queue / POS bay.
  */
 export function isBookingBoardService(service = {}) {
   const slug = String(service?.slug || '').toLowerCase()
   if (FLOOR_DETAILING_SERVICE_SLUGS.includes(slug)) return true
+  if (['polish', '1-step-detailing', '3-steps-detailing'].includes(slug)) return true
   return String(service?.pay_category || '').toLowerCase() === 'detailing'
 }
 

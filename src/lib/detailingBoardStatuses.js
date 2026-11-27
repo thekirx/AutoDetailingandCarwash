@@ -24,7 +24,7 @@ export const BOOKING_STATUS_TRANSITIONS = {
   in_progress: ['final_checking', 'redo', 'cancelled'],
   final_checking: ['completed', 'cancelled'],
   for_releasing: ['completed', 'cancelled'],
-  redo: ['in_progress', 'cancelled'],
+  redo: ['in_progress', 'final_checking', 'cancelled'],
   completed: [],
   cancelled: [],
   no_show: [],

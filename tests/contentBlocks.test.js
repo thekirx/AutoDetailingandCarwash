@@ -13,7 +13,7 @@ import {
   slugifyContentTitle,
 } from '../src/lib/contentBlocks.js'
 import { mergeBlogPostsWithGuides } from '../src/lib/seoLocalGuides.js'
-import { allowRoute, canManageSiteContent, getOperationsNav, ROLES } from '../src/auth/permissions.js'
+import { allowRoute, canManageSiteContent, ROLES } from '../src/auth/permissions.js'
 
 describe('contentBlocks', () => {
   it('normalizes cta form buttons and video embeds', () => {
@@ -121,8 +121,6 @@ describe('site content permissions', () => {
     assert.equal(allowRoute({ role: ROLES.SUPER_ADMIN }, 'content'), true)
     assert.equal(allowRoute({ role: ROLES.MARKETING }, 'content'), true)
     assert.equal(allowRoute({ role: ROLES.ADMIN }, 'content'), false)
-    assert.ok(getOperationsNav({ role: ROLES.SUPER_ADMIN }).some((i) => i.to === '/operations/content'))
-    assert.ok(getOperationsNav({ role: ROLES.MARKETING }).some((i) => i.to === '/operations/content'))
   })
 })
 

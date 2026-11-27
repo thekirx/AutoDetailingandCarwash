@@ -3,7 +3,7 @@ export const DAYLIGHT_STAGES = [
   { key: 'waiting', label: 'Waiting', color: 'var(--stage-waiting)' },
   { key: 'in_progress', label: 'Washing', color: 'var(--stage-washing)' },
   { key: 'final_checking', label: 'Final check', color: 'var(--stage-check)' },
-  { key: 'redo', label: 'Redo', color: 'var(--bad)' },
+  { key: 'redo', label: 'Failed QA', color: 'var(--bad)' },
   { key: 'for_payment', label: 'To pay', color: 'var(--stage-payment)' },
   { key: 'completed', label: 'Done', color: 'var(--ok)', collapsed: true },
   { key: 'cancelled', label: 'Cancelled', color: 'var(--ink-3)', collapsed: true },
@@ -64,4 +64,23 @@ export function longestWaitingMinutes(tickets, now = Date.now()) {
     longest = longest == null ? minutes : Math.max(longest, minutes)
   }
   return longest
+}
+export function averageWaitingMinutes(tickets, now = Date.now()) {
+  const values = []
+  for (const ticket of tickets || []) {
+    const startRaw = ticket.waiting_at || ticket.created_at
+    if (!startRaw) continue
+    const start = new Date(startRaw).getTime()
+    if (!Number.isFinite(start)) continue
+    if (ticket.in_progress_at) {
+      const end = new Date(ticket.in_progress_at).getTime()
+      if (Number.isFinite(end) && end >= start) {
+        values.push(Math.round((end - start) / 60000))
+      }
+    } else if (ticket.status === 'waiting' && start <= now) {
+      values.push(Math.round((now - start) / 60000))
+    }
+  }
+  if (!values.length) return null
+  return Math.round(values.reduce((sum, n) => sum + n, 0) / values.length)
 }

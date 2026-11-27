@@ -568,7 +568,7 @@ function CommandNavList({ items }) {
 
   return groups.map((group) => (
     <SidebarGroup key={group.id} className="command-nav-group">
-      <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+      {groups.length > 1 ? <SidebarGroupLabel>{group.label}</SidebarGroupLabel> : null}
       <SidebarGroupContent>
         <SidebarMenu className="gap-1">
           {group.items.map(({ label: itemLabel, to, icon, children }) => {

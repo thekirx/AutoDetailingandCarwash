@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
-import { validateCustomerNote, CUSTOMER_NOTE_TYPES, isRegularGuest } from '@/lib/customerNotes'
+import { validateCustomerNote, isRegularGuest } from '@/lib/customerNotes'
 import { attachNoteAuthors, formatNoteAuthorDate } from '@/lib/customerNoteDisplay'
 import { normalizePlate } from '@/lib/customerAuth'
 import { toast } from 'sonner'
@@ -20,7 +20,6 @@ export default function CustomerNotesPanel({
 }) {
   const [notes, setNotes] = useState([])
   const [body, setBody] = useState('')
-  const [noteType, setNoteType] = useState('general')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
@@ -64,9 +63,9 @@ export default function CustomerNotesPanel({
 
   async function addNote(e) {
     e?.preventDefault?.()
-    const check = validateCustomerNote({ body, noteType, plate })
+    const check = validateCustomerNote({ body, noteType: 'general', plate })
     if (!check.ok) {
-      setError(check.errors.body || check.errors.note_type || 'Invalid note')
+      setError(check.errors.body || 'Invalid note')
       return
     }
     if (!customerId && !check.plate_normalized) {
@@ -107,24 +106,23 @@ export default function CustomerNotesPanel({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-2">
-        <p className="text-sm font-medium">Guest notes</p>
+        <p className="text-sm font-medium">Notes</p>
         {isRegularGuest(notes) ? <Badge variant="secondary">Regular</Badge> : null}
       </div>
       {notes.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{canWrite ? 'No notes yet. Add likes, dislikes, or preferences.' : 'No guest notes yet.'}</p>
+        <p className="text-sm text-muted-foreground">{canWrite ? 'No notes yet.' : 'No notes yet.'}</p>
       ) : (
         <ul className="space-y-2">
           {notes.map((n) => (
             <li key={n.id} className="rounded-lg border border-border px-3 py-2 text-sm">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-xs uppercase tracking-wide text-muted-foreground">{n.note_type}</span>
+              <div className="flex items-start justify-between gap-2">
+                <p className="min-w-0 flex-1">{n.body}</p>
                 {n.branch_slug || n.author_branch ? (
-                  <Badge variant="outline" className="h-4 py-0 font-mono text-[10px] uppercase">
+                  <Badge variant="outline" className="h-4 shrink-0 py-0 font-mono text-[10px] uppercase">
                     {n.branch_slug || n.author_branch}
                   </Badge>
                 ) : null}
               </div>
-              <p className="mt-1">{n.body}</p>
               <p className="mt-1 text-xs text-muted-foreground" data-testid="note-author-date">
                 {formatNoteAuthorDate({
                   authorName: n.author_name,
@@ -146,20 +144,9 @@ export default function CustomerNotesPanel({
             rows={2}
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            placeholder="Prefers soft towels, allergic to citrus, etc."
+            placeholder="Write a note about this customer or vehicle…"
           />
           <div className="flex flex-wrap gap-2">
-            <select
-              className="min-h-11 rounded-md border border-input bg-background px-3 text-sm"
-              value={noteType}
-              onChange={(e) => setNoteType(e.target.value)}
-            >
-              {CUSTOMER_NOTE_TYPES.map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
-              ))}
-            </select>
             <Button type="submit" className="min-h-11" disabled={busy}>
               {busy ? 'Saving…' : 'Save note'}
             </Button>

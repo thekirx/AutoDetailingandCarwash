@@ -120,7 +120,7 @@ describe('queue logic', () => {
   it('shows Services Failed QA to owners and branch floor observers', () => {
     assert.equal(canViewRedoLane({ role: 'BossMich' }), true)
     assert.equal(canViewRedoLane({ role: 'assistant_super_admin' }), true)
-    assert.equal(canViewRedoLane({ role: 'admin' }), false)
+    assert.equal(canViewRedoLane({ role: 'admin' }), true)
     assert.equal(canViewRedoLane({ role: 'team_lead' }), true)
     assert.equal(canViewRedoLane({ role: 'staff' }), true)
     assert.equal(canViewRedoLane(null), false)
@@ -129,7 +129,7 @@ describe('queue logic', () => {
     assert.deepEqual(getOpsBoardStatuses({ role: 'assistant_super_admin' }), [...ACTIVE_QUEUE_STATUSES, 'for_payment', 'redo'])
     assert.deepEqual(getOpsBoardStatuses({ role: 'team_lead' }), [...ACTIVE_QUEUE_STATUSES, 'redo'])
     assert.deepEqual(getOpsBoardStatuses({ role: 'staff' }), [...ACTIVE_QUEUE_STATUSES, 'redo'])
-    assert.deepEqual(getOpsBoardStatuses({ role: 'admin' }), [...ACTIVE_QUEUE_STATUSES, 'for_payment'])
+    assert.deepEqual(getOpsBoardStatuses({ role: 'admin' }), [...ACTIVE_QUEUE_STATUSES, 'for_payment', 'redo'])
     assert.ok(!ACTIVE_QUEUE_STATUSES.includes('redo'))
     assert.ok(OPS_BOARD_STATUSES.includes('redo'))
   })

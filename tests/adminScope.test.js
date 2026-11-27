@@ -43,7 +43,7 @@ describe('Admin capability matrix', () => {
     assert.equal(canManageVehicleCatalog(p), false)
     assert.equal(canEditQueueOperations(p), false)
     assert.equal(canEditPlanning(p), true)
-    assert.equal(canViewRedoLane(p), false)
+    assert.equal(canViewRedoLane(p), true)
     assert.equal(canEditAttendanceRoles(p), false)
     assert.equal(canWriteFinance(p), true)
     assert.equal(allowRoute(p, 'queue-new'), false)
@@ -51,7 +51,7 @@ describe('Admin capability matrix', () => {
     assert.equal(allowRoute(p, 'bookings'), true)
     assert.equal(canEditBookings(p), false)
     assert.equal(canAdvanceBookingStatus(p), false)
-    assert.equal(canOverrideQueueStatus(p), false)
+    assert.equal(canOverrideQueueStatus(p), true)
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
       [
@@ -60,13 +60,6 @@ describe('Admin capability matrix', () => {
         '/operations/planning',
         '/operations/pos',
         '/operations/finance',
-        '/operations/inventory',
-        '/operations/employees',
-        '/operations/crm',
-        '/operations/my-advances',
-        '/operations/payslips',
-        '/operations/history',
-        '/operations/system',
       ],
     )
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/cars'))

@@ -534,6 +534,7 @@ export function canAccessBookingBoard(profile) {
   if (profile?.role === ROLES.MARKETING) return true
   if (profile?.role === ROLES.DETAILER) return true
   if (profile?.role === ROLES.TEAM_LEAD) return true
+  if (isOperationsLead(profile)) return true
   if (isBranchAdmin(profile)) return true
   if (isSuperAdmin(profile)) return true
   if (isInvestor(profile)) return true
@@ -571,7 +572,16 @@ export function canCheckInFormBooking(profile) {
 
 /** Service / price changes: Sales + Super Admin only (TL/Admin status-only). */
 export function canModifyBookingServicePrice(profile) {
-  return canEditBookings(profile)
+  if (!profile) return false
+  if (isSuperAdmin(profile)) return true
+  if (isAssistantSuperAdmin(profile)) {
+    return (
+      hasGrant(profile, 'bookings') ||
+      hasGrant(profile, 'queue_all') ||
+      hasGrant(profile, 'pos')
+    )
+  }
+  return [ROLES.OPERATIONS_LEAD, ROLES.TEAM_LEAD, ROLES.ADMIN].includes(profile.role)
 }
 
 export function canViewPlanning(profile) {
@@ -711,7 +721,7 @@ export function allowedBookingViews(profile, views) {
 
 /** Failed-QA visibility follows the Floor Board observer scope; correction actions remain separately gated. */
 export function canViewRedoLane(profile) {
-  if (has(profile, [ROLES.TEAM_LEAD, ROLES.STAFF])) return true
+  if (has(profile, [ROLES.TEAM_LEAD, ROLES.STAFF, ROLES.ADMIN])) return true
   if (isSuperAdmin(profile)) return true
   if (isOperationsLead(profile)) return true
   return isAssistantSuperAdmin(profile) && hasGrant(profile, 'queue_all')
@@ -735,11 +745,12 @@ export function canSeeForPaymentLane(profile) {
   return isAdmin(profile) || isOperationsLead(profile) || isInvestor(profile)
 }
 
-/** Super Admin / ASA(queue_all) / Operations Lead may pull tickets back. Branch Admin is view-only. */
+/** Super Admin / ASA(queue_all|pos) / Operations Lead / Branch Admin / Team Lead may pull tickets back. */
 export function canOverrideQueueStatus(profile) {
   if (isSuperAdmin(profile)) return true
-  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'queue_all')
-  return isOperationsLead(profile)
+  if (isAssistantSuperAdmin(profile)) return hasGrant(profile, 'queue_all') || hasGrant(profile, 'pos')
+  if (isOperationsLead(profile)) return true
+  return has(profile, [ROLES.ADMIN, ROLES.TEAM_LEAD])
 }
 
 export function canViewAssignedTasks(profile) {
@@ -860,211 +871,95 @@ export function groupOperationsNav(items = []) {
   return groups
 }
 
-/** Nav items for the shared ops shell — filtered by role + grants. */
+/** Nav items for the shared ops shell — filtered by role + grants.
+ *  Retains only the 6 primary navigation modules:
+ *  Floor Insight, Carwash Queue, Detailing, Team P, POS, and Financials.
+ */
 export function getOperationsNav(profile) {
+  if (!profile?.role) return []
+
   if (isInvestor(profile)) {
     return [
       nav('Carwash Queue', '/operations/queue', 'ClipboardList', 'insight'),
-      nav('Detailing Schedule', '/operations/bookings', 'Kanban', 'insight'),
-      nav('Point of Sales', '/operations/pos', 'ShoppingCart', 'insight'),
-      nav('Rewards', '/operations/rewards?tab=vouchers', 'Gift', 'insight'),
+      nav('Detailing', '/operations/bookings', 'Kanban', 'insight'),
+      nav('POS', '/operations/pos', 'ShoppingCart', 'insight'),
       nav('Financials', '/operations/finance', 'Wallet', 'insight'),
     ]
   }
 
   if (profile?.role === ROLES.VIDEO_EDITOR) {
     return [
-      nav('Calendar', '/operations/planning?tab=calendar', 'Columns3', 'work'),
-      nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'work'),
-      nav('Payslips', '/operations/payslips', 'Banknote', 'hr'),
+      nav('Team P', '/operations/planning?tab=calendar', 'Columns3', 'insight'),
     ]
   }
 
   if (profile?.role === ROLES.DETAILER) {
     return [
-      nav('Detailing Schedule', '/operations/bookings', 'Kanban', 'insight'),
-      nav('Attendance', '/operations/attendance', 'Clock', 'hr'),
-      nav('My advances', '/operations/my-advances', 'Wallet', 'hr'),
-      nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'hr'),
+      nav('Detailing', '/operations/bookings', 'Kanban', 'insight'),
     ]
   }
 
   if (profile?.role === ROLES.MARKETING) {
     return [
       nav('Carwash Queue', '/operations/queue', 'ClipboardList', 'insight'),
-      nav('Detailing Schedule', '/operations/bookings', 'Kanban', 'insight'),
-      nav('Team Planner', '/operations/planning', 'Columns3', 'insight'),
-      nav('Customers', '/operations/crm', 'Contact', 'customers'),
-      nav('Content', '/operations/content', 'Newspaper', 'config'),
-      nav('Payslips', '/operations/payslips', 'Banknote', 'hr'),
-      nav('Notifications', '/operations/notifications', 'Bell', 'ops-insight'),
-      nav('History', '/operations/history', 'History', 'ops-insight'),
+      nav('Detailing', '/operations/bookings', 'Kanban', 'insight'),
+      nav('Team P', '/operations/planning', 'Columns3', 'insight'),
     ]
   }
 
   if (profile?.role === ROLES.SALES) {
     return [
       nav('Carwash Queue', '/operations/queue', 'ClipboardList', 'insight'),
-      nav('Detailing Schedule', '/operations/bookings', 'Kanban', 'insight'),
-      nav('Team Planner', '/operations/planning', 'Columns3', 'insight'),
-      nav('Customers', '/operations/crm', 'Contact', 'customers'),
-      nav('Payslips', '/operations/payslips', 'Banknote', 'hr'),
-      nav('History', '/operations/history', 'History', 'ops-insight'),
+      nav('Detailing', '/operations/bookings', 'Kanban', 'insight'),
+      nav('Team P', '/operations/planning', 'Columns3', 'insight'),
     ]
   }
 
-function buildEmployeesNavChildren(profile) {
-  const canClock = canUseAttendanceClock(profile)
-  const canRegister =
-    canOverrideAttendance(profile) ||
-    profile?.role === ROLES.TEAM_LEAD ||
-    isSuperAdmin(profile) ||
-    isAssistantSuperAdmin(profile)
-  const canPeople = allowRoute(profile, 'people') && canManagePeople(profile)
-  const showSettings = canEditAttendanceSettings(profile) || canEditAttendanceRoles(profile)
-  const kids = []
-  let firstAssigned = false
-  const addTab = (label, tab) => {
-    const to = firstAssigned ? `/operations/employees?tab=${tab}` : '/operations/employees'
-    firstAssigned = true
-    kids.push(nav(label, to))
-  }
-  if (canClock) addTab('Time clock', 'clock')
-  if (canRegister) {
-    addTab('Attendance', 'attendance')
-    addTab('Register', 'register')
-  }
-  if (canPeople) {
-    addTab('Employee list', 'employees')
-    addTab('RBAC & roles', 'access')
-  }
-  if (showSettings) addTab('Settings', 'settings')
-  return kids.length > 1 ? kids : undefined
-}
-
-function buildCustomersNavChildren(profile) {
-  const kids = [nav('Directory', '/operations/crm')]
-  if (canTransferVehicle(profile)) kids.push(nav('Transfer car', '/operations/crm?tab=transfer'))
-  if (canAccessInquiries(profile)) kids.push(nav('Inquiries', '/operations/crm?tab=inquiries'))
-  if (canEditCrm(profile) && canSendCustomerSms(profile)) kids.push(nav('SMS', '/operations/crm?tab=sms'))
-  return kids.length > 1 ? kids : undefined
-}
-
-function buildRewardsNavChildren(profile) {
-  const kids = []
-  if (canAccessMemberships(profile)) kids.push(nav('Memberships', '/operations/rewards'))
-  if (canViewVouchers(profile)) {
-    kids.push(nav('Vouchers', kids.length ? '/operations/rewards?tab=vouchers' : '/operations/rewards'))
-  }
-  if (canManageMerchShop(profile)) {
-    kids.push(nav('Points shop', kids.length ? '/operations/rewards?tab=points-shop' : '/operations/rewards'))
-  }
-  if (isSuperAdmin(profile) || canManageServices(profile)) {
-    kids.push(nav('Referrals', kids.length ? '/operations/rewards?tab=referrals' : '/operations/rewards'))
-  }
-  return kids.length > 1 ? kids : undefined
-}
-
-  // Branch Admin: no Floor Board. Queue + detailing are read-only. POS + finance + HR are full.
+  // Branch Admin: Carwash Queue, Detailing, Team P, POS, Financials
   if (isBranchAdmin(profile)) {
     return [
       nav('Carwash Queue', '/operations/queue', 'ClipboardList', 'insight'),
-      nav('Detailing Schedule', '/operations/bookings', 'Kanban', 'insight'),
-      nav('Team Planner', '/operations/planning', 'Columns3', 'insight'),
-      nav('Point of Sales', '/operations/pos', 'ShoppingCart', 'insight'),
+      nav('Detailing', '/operations/bookings', 'Kanban', 'insight'),
+      nav('Team P', '/operations/planning', 'Columns3', 'insight'),
+      nav('POS', '/operations/pos', 'ShoppingCart', 'insight'),
       nav('Financials', '/operations/finance', 'Wallet', 'insight'),
-      nav('Catalog & Inventory', '/operations/inventory', 'Package', 'insight', [
-        nav('Restock Merch', '/operations/inventory?tab=restock'),
-        nav('Sunday Recon', '/operations/inventory?tab=recon'),
-      ]),
-      nav('Employees', '/operations/employees', 'Users', 'hr', buildEmployeesNavChildren(profile)),
-      nav('Customers', '/operations/crm', 'Contact', 'customers', buildCustomersNavChildren(profile)),
-      nav('My advances', '/operations/my-advances', 'Wallet', 'hr'),
-      nav('Payslips', '/operations/payslips', 'Banknote', 'hr'),
-      nav('History', '/operations/history', 'History', 'ops-insight'),
-      nav('System & Data', '/operations/system', 'ShieldCheck', 'ops-insight'),
     ]
   }
 
-  // Operations Lead: network-wide BA∪TL ops, no personal clock.
+  // Operations Lead: Carwash Queue, Detailing, Team P, POS, Financials
   if (isOperationsLead(profile)) {
     return [
       nav('Carwash Queue', '/operations/queue', 'ClipboardList', 'insight'),
-      nav('Team Planner', '/operations/planning', 'Columns3', 'insight'),
-      nav('Point of Sales', '/operations/pos', 'ShoppingCart', 'insight'),
+      nav('Detailing', '/operations/bookings', 'Kanban', 'insight'),
+      nav('Team P', '/operations/planning', 'Columns3', 'insight'),
+      nav('POS', '/operations/pos', 'ShoppingCart', 'insight'),
       nav('Financials', '/operations/finance', 'Wallet', 'insight'),
-      nav('Customers', '/operations/crm', 'Contact', 'customers', buildCustomersNavChildren(profile)),
-      nav('My advances', '/operations/my-advances', 'Wallet', 'hr'),
-      nav('Payslips', '/operations/payslips', 'Banknote', 'hr'),
-      nav('Month KPI', '/operations/kpi', 'Gauge', 'ops-insight'),
-      nav('History', '/operations/history', 'History', 'ops-insight'),
-      nav('System & Data', '/operations/system', 'ShieldCheck', 'ops-insight'),
     ]
   }
 
   // Crew can observe their branch floor without gaining queue editing rights.
   if (profile?.role === ROLES.STAFF) {
     return [
-      nav('Attendance', '/operations/attendance', 'Clock', 'hr'),
-      nav('My advances', '/operations/my-advances', 'Wallet', 'hr'),
       nav('Floor Insight', '/operations/dashboard', 'Gauge', 'insight'),
-      nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'hr'),
-      nav('Team Planner', '/operations/planning', 'Columns3', 'insight'),
+      nav('Team P', '/operations/planning', 'Columns3', 'insight'),
     ]
   }
 
   const items = []
-  const floorBoardLabel =
-    isSuperAdmin(profile) || isAssistantSuperAdmin(profile)
-      ? 'Floor Insight'
-      : isAdmin(profile)
-        ? 'Queue View'
-        : 'Dashboard'
-
   if (canAccessFloorBoard(profile)) {
-    items.push(nav(floorBoardLabel, '/operations/dashboard', 'Gauge', 'insight'))
+    items.push(nav('Floor Insight', '/operations/dashboard', 'Gauge', 'insight'))
   }
   if (canAccessQueuePage(profile)) {
     items.push(nav('Carwash Queue', '/operations/queue', 'ClipboardList', 'insight'))
   }
   if (canAccessBookingBoard(profile)) {
-    items.push(nav('Detailing Schedule', '/operations/bookings', 'Kanban', 'insight'))
+    items.push(nav('Detailing', '/operations/bookings', 'Kanban', 'insight'))
   }
   if (canViewPlanning(profile)) {
-    items.push(nav('Team Planner', '/operations/planning', 'Columns3', 'insight'))
+    items.push(nav('Team P', '/operations/planning', 'Columns3', 'insight'))
   }
   if (canAccessPos(profile)) {
-    items.push(nav('Point of Sales', '/operations/pos', 'ShoppingCart', 'insight'))
-  }
-  if (canAccessInventory(profile)) {
-    const catalogChildren = []
-    if (canManageServices(profile)) {
-      catalogChildren.push(
-        nav('Services & Packages', '/operations/inventory?tab=services&scope=bay'),
-        nav('Detailing Packages', '/operations/inventory?tab=services&scope=detailing'),
-        nav('Merch & Sellables', '/operations/inventory?tab=merch'),
-      )
-      if (canManageVehicleCatalog(profile)) {
-        catalogChildren.push(nav('Vehicle List', '/operations/inventory?tab=cars'))
-      }
-      if (canRestockInventory(profile)) {
-        catalogChildren.push(nav('Sunday Recon', '/operations/inventory?tab=recon'))
-      }
-    } else if (canRestockInventory(profile)) {
-      catalogChildren.push(
-        nav('Restock Merch', '/operations/inventory?tab=restock'),
-        nav('Sunday Recon', '/operations/inventory?tab=recon'),
-      )
-    }
-    items.push(
-      nav(
-        'Catalog & Inventory',
-        '/operations/inventory',
-        'Package',
-        'insight',
-        catalogChildren.length > 1 ? catalogChildren : undefined,
-      ),
-    )
+    items.push(nav('POS', '/operations/pos', 'ShoppingCart', 'insight'))
   }
   if (canOpenFinanceHub(profile)) {
     const financeChildren = []
@@ -1089,51 +984,6 @@ function buildRewardsNavChildren(profile) {
         financeChildren.length > 1 ? financeChildren : undefined,
       ),
     )
-  }
-  if (canAccessMyPayslips(profile) && profile?.role !== ROLES.STAFF) {
-    items.push(nav('Payslips', '/operations/payslips', 'Banknote', 'hr'))
-  }
-
-  if (canManagePeople(profile) || canViewQueueOperations(profile) || (canAccessAttendance(profile) && profile?.role !== ROLES.STAFF)) {
-    items.push(nav('Employees', '/operations/employees', 'Users', 'hr', buildEmployeesNavChildren(profile)))
-  }
-  if (canAccessMyAdvances(profile) && profile?.role !== ROLES.STAFF && !isSuperAdmin(profile)) {
-    items.push(nav('My advances', '/operations/my-advances', 'Wallet', 'hr'))
-  }
-  if (canViewAssignedTasks(profile) && profile?.role !== ROLES.STAFF && !isSuperAdmin(profile)) {
-    items.push(nav('My Tasks', '/operations/my-tasks', 'ListChecks', 'hr'))
-  }
-
-  if (canAccessCrm(profile)) {
-    items.push(nav('Customers', '/operations/crm', 'Contact', 'customers', buildCustomersNavChildren(profile)))
-  } else if (canAccessInquiries(profile)) {
-    items.push(nav('Inquiries', '/operations/inquiries', 'Inbox', 'customers'))
-  }
-  if (canAccessRewardsHub(profile)) {
-    items.push(nav('Rewards', '/operations/rewards', 'Gift', 'customers', buildRewardsNavChildren(profile)))
-  }
-
-  if (canManageBranches(profile)) {
-    items.push(nav('Branches', '/operations/branches', 'Building2', 'config'))
-  }
-  if (canTransferVehicle(profile) && !canAccessCrm(profile)) {
-    items.push(nav('Transfer car', '/operations/vehicle-transfer', 'ArrowLeftRight', 'config'))
-  }
-  if (canManageSiteContent(profile)) {
-    items.push(nav('Content', '/operations/content', 'Newspaper', 'config'))
-  }
-  if (canAccessSettings(profile)) {
-    items.push(nav('Settings', '/operations/settings', 'Settings', 'config'))
-  }
-
-  if (canAccessHistory(profile)) {
-    items.push(nav('History', '/operations/history', 'History', 'ops-insight'))
-  }
-  if (canAccessNotifications(profile)) {
-    items.push(nav('Notifications', '/operations/notifications', 'Bell', 'ops-insight'))
-  }
-  if (canAccessAudit(profile) || canAccessDataCenter(profile)) {
-    items.push(nav('System & Data', '/operations/system', 'ShieldCheck', 'ops-insight'))
   }
   return items
 }

@@ -7,7 +7,6 @@ import {
   allowRoute,
   canAccessRewardsHub,
   getOperationsNav,
-  groupOperationsNav,
 } from '../src/auth/permissions.js'
 import { buildSmartSearchDestinations } from '../src/lib/smartSearchCatalog.js'
 
@@ -30,23 +29,13 @@ describe('Unified Rewards hub consolidation', () => {
     assert.equal(allowRoute({ role: ROLES.ADMIN, branch_slug: 'bacoor' }, 'rewards'), false)
   })
 
-  it('keeps sidebar clean under Customers group (Customers + Rewards only, no redundant standalone Vouchers/Memberships/Merch links)', () => {
+  it('keeps sidebar clean (6 core modules only, no redundant standalone Vouchers/Memberships/Merch links)', () => {
     const saNav = getOperationsNav({ role: ROLES.SUPER_ADMIN })
-    const saGroups = groupOperationsNav(saNav)
-    const custGroup = saGroups.find((g) => g.id === 'customers')
-    assert.deepEqual(
-      custGroup.items.map((i) => ({ label: i.label, to: i.to })),
-      [
-        { label: 'Customers', to: '/operations/crm' },
-        { label: 'Rewards', to: '/operations/rewards' },
-      ],
-    )
     assert.equal(saNav.some((i) => i.to === '/operations/vouchers'), false)
     assert.equal(saNav.some((i) => i.to === '/operations/memberships'), false)
     assert.equal(saNav.some((i) => i.to === '/operations/merch-shop'), false)
 
     const invNav = getOperationsNav({ role: ROLES.INVESTOR })
-    assert.equal(invNav.some((i) => i.to === '/operations/rewards?tab=vouchers' && i.label === 'Rewards'), true)
     assert.equal(invNav.some((i) => i.to === '/operations/vouchers'), false)
   })
 
