@@ -56,6 +56,8 @@ const GUARDED = [
 
 /** Post-2026-10-10 migrations that do not narrow live RLS (schema/RPC/feature work). */
 const EXEMPTED = [
+  '20261128211000_fix_admin_override_queue_events.sql',
+  '20261128205500_fix_require_present_crew_trigger.sql',
   '20261128203000_ops_lead_for_payment_resync.sql',
   '20261117120000_client_rewards_points_merch.sql',
   '20261017100000_pos_announce_clips_bucket.sql',

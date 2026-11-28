@@ -41,7 +41,8 @@ const ok = (name, pass, detail = '') => {
 }
 
 async function cleanupQaData() {
-  const { data: bks } = await admin.from('bookings').select('id, vehicle_id').eq('vehicle_plate', QA_PLATE)
+  const { data: bks, error: selErr } = await admin.from('bookings').select('id, vehicle_id').eq('vehicle_plate', QA_PLATE).eq('is_archived', false)
+  if (selErr) console.error('Cleanup select error:', selErr)
   const bIds = (bks || []).map((b) => b.id)
   if (bIds.length) {
     await admin.from('queue_events').delete().in('booking_id', bIds)
@@ -49,7 +50,7 @@ async function cleanupQaData() {
     await admin.from('pos_handoffs').delete().in('booking_id', bIds)
     await admin.from('transactions').delete().in('booking_id', bIds)
     await admin.from('audit_logs').delete().in('entity_id', bIds)
-    await admin.from('bookings').delete().in('id', bIds)
+    await admin.from('bookings').update({ status: 'cancelled', is_archived: true }).in('id', bIds)
   }
   await admin.from('customer_notes').delete().eq('plate_normalized', QA_PLATE)
   await admin.from('vehicles').delete().eq('normalized_plate_number', QA_PLATE)
@@ -65,7 +66,18 @@ async function dismissPopups(page) {
   await sleep(300)
 }
 
-async function demoSignIn(page, chipLabel) {
+async function waitForBookingStatus(id, expected, timeoutMs = 10000) {
+  const start = Date.now()
+  while (Date.now() - start < timeoutMs) {
+    const { data } = await admin.from('bookings').select('id, status, assigned_staff_id, final_price_minor').eq('id', id)
+    if (data?.[0]?.status === expected) return data[0]
+    await sleep(350)
+  }
+  const { data } = await admin.from('bookings').select('id, status, assigned_staff_id, final_price_minor').eq('id', id)
+  return data?.[0] || null
+}
+
+async function demoSignIn(page, chipEmailOrLabel) {
   await page.goto(`${BASE}/operations/login?qa=${QA_KEY}`, { waitUntil: 'domcontentloaded', timeout: 45000 })
   await page.evaluate(() => {
     localStorage.clear()
@@ -74,15 +86,15 @@ async function demoSignIn(page, chipLabel) {
   await page.goto(`${BASE}/operations/login?qa=${QA_KEY}`, { waitUntil: 'domcontentloaded', timeout: 45000 })
   await page.waitForSelector('.hakum-demo-chip', { timeout: 20000 })
   await dismissPopups(page)
-  const clicked = await page.evaluate((targetLabel) => {
-    const chip = [...document.querySelectorAll('.hakum-demo-chip')].find((c) => c.innerText.includes(targetLabel))
+  const clicked = await page.evaluate((target) => {
+    const chip = [...document.querySelectorAll('.hakum-demo-chip')].find((c) => c.innerText.toLowerCase().includes(target.toLowerCase()))
     if (chip) {
       chip.click()
       return true
     }
     return false
-  }, chipLabel)
-  if (!clicked) throw new Error(`Demo chip "${chipLabel}" not found`)
+  }, chipEmailOrLabel)
+  if (!clicked) throw new Error(`Demo chip "${chipEmailOrLabel}" not found`)
   await page.waitForFunction(() => !location.pathname.startsWith('/operations/login'), { timeout: 45000 })
   await sleep(1500)
   await dismissPopups(page)
@@ -107,21 +119,23 @@ async function clickButtonByText(page, regex, scopeSelector = 'body') {
 }
 
 async function ensureBacoorCrewPresent() {
-  const { data: staff } = await admin.from('staff_profiles').select('id, full_name').eq('role', 'staff').eq('branch_slug', 'bacoor').eq('is_active', true).limit(3)
+  const { data: staff } = await admin.from('staff_profiles').select('id, full_name').eq('role', 'staff').eq('branch_slug', 'bacoor').eq('is_active', true).order('full_name')
   if (!staff?.length) return null
   const manilaToday = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Manila' }).format(new Date())
-  const { data: existing } = await admin.from('staff_attendance').select('staff_id, status').eq('attendance_date', manilaToday).in('staff_id', staff.map((s) => s.id))
-  if ((existing || []).some((e) => ['present', 'late'].includes(e.status))) return staff.find((s) => existing.some((e) => e.staff_id === s.id && ['present', 'late'].includes(e.status)))
-  // Seed attendance for QA crew assignment only for today if none clocked in yet
-  const target = staff[0]
+  const { data: existing } = await admin.from('staff_attendance').select('id, staff_id, status').eq('attendance_date', manilaToday).in('staff_id', staff.map((s) => s.id))
+  const { data: busyRows } = await admin.from('busy_staff_view').select('staff_id').in('staff_id', staff.map((s) => s.id))
+  const busySet = new Set((busyRows || []).map((r) => r.staff_id))
+  const alreadyPresentIdle = staff.find((s) => !busySet.has(s.id) && (existing || []).some((e) => e.staff_id === s.id && ['present', 'late'].includes(e.status)))
+  if (alreadyPresentIdle) return { staff: alreadyPresentIdle, seededDate: null }
+  const idleTarget = staff.find((s) => !busySet.has(s.id)) || staff[0]
   await admin.from('staff_attendance').upsert({
-    staff_id: target.id,
+    staff_id: idleTarget.id,
     branch_slug: 'bacoor',
     attendance_date: manilaToday,
     status: 'present',
     checked_in_at: new Date().toISOString(),
   }, { onConflict: 'staff_id,attendance_date' })
-  return target
+  return { staff: idleTarget, seededDate: manilaToday }
 }
 
 let seededAttendanceStaff = null
@@ -136,7 +150,7 @@ try {
   seededAttendanceStaff = await ensureBacoorCrewPresent()
 
   // ── 1. TEAM LEAD: Create QA ticket -> Crew Block -> Assign -> In Progress -> Notes -> Final Check
-  await demoSignIn(page, 'Team Lead')
+  await demoSignIn(page, 'teamlead@hakumautocare.com')
   await page.goto(`${BASE}/operations/queue/new`, { waitUntil: 'domcontentloaded', timeout: 45000 })
   await page.waitForSelector('input[placeholder*="ABC"]', { timeout: 20000 })
   await dismissPopups(page)
@@ -165,85 +179,95 @@ try {
   await sleep(2500)
   await dismissPopups(page)
 
-  const { data: createdRows } = await admin.from('bookings').select('id, status, service_id, final_price_minor, vehicle_type').eq('vehicle_plate', QA_PLATE)
+  const { data: createdRows } = await admin
+    .from('bookings')
+    .select('id, status, service_id, final_price_minor, vehicle_type')
+    .eq('vehicle_plate', QA_PLATE)
+    .eq('is_archived', false)
+    .order('created_at', { ascending: false })
   const qaBookingId = createdRows?.[0]?.id
   ok('Live DB confirms QA ticket created in waiting status', createdRows?.length === 1 && createdRows[0].status === 'waiting', `id=${qaBookingId}`)
 
-  // Open QATEST9 modal if not already auto-opened
-  const modalAlreadyOpen = await page.evaluate((plate) => [...document.querySelectorAll('[role="dialog"]')].some((d) => d.innerText.includes(plate)), QA_PLATE)
-  if (!modalAlreadyOpen) {
-    await page.evaluate((plate) => {
-      const card = [...document.querySelectorAll('article, div')].find((el) => el.innerText.includes(plate) && el.querySelector('button'))
-      const openBtn = card ? [...card.querySelectorAll('button')].find((b) => /Open/i.test(b.innerText)) : null
-      if (openBtn) openBtn.click()
-    }, QA_PLATE)
-    await sleep(1500)
-  }
+  // Open the created ticket page directly (same QueueTicketEditor component) and wait for editor hydration
+  await page.goto(`${BASE}/operations/queue/${qaBookingId}`, { waitUntil: 'domcontentloaded', timeout: 45000 })
+  await page.waitForSelector('#guest-note-body', { timeout: 25000 }).catch(async (err) => {
+    const snap = await page.evaluate(() => ({ url: location.href, text: document.body.innerText.slice(0, 600) }))
+    throw new Error(`${err.message} | url=${snap.url} | text=${snap.text.replace(/\s+/g, ' ')}`)
+  })
+  await dismissPopups(page)
+  const activeScope = 'main'
 
   // Verify Start Service is blocked without assigned crew
-  const startBlockedState = await page.evaluate(() => {
-    const dlg = [...document.querySelectorAll('[role="dialog"]')].filter((d) => !/Necessary only|Accept all/i.test(d.innerText)).pop()
-    const btns = dlg ? [...dlg.querySelectorAll('button')] : []
+  const startBlockedState = await page.evaluate((sel) => {
+    const root = document.querySelector(sel) || document.body
+    const btns = [...root.querySelectorAll('button')]
     const blockedBtn = btns.find((b) => /Select crew above, then Start/i.test(b.innerText))
     return { found: Boolean(blockedBtn), disabled: Boolean(blockedBtn?.disabled) }
-  })
+  }, activeScope)
   ok('Queue enforces crew assignment before Start Service (button disabled)', startBlockedState.found && startBlockedState.disabled)
 
   // Assign present crew member and click Save crew
-  const crewChecked = await page.evaluate(() => {
-    const dlg = [...document.querySelectorAll('[role="dialog"]')].filter((d) => !/Necessary only|Accept all/i.test(d.innerText)).pop()
-    if (!dlg) return false
-    const labels = [...dlg.querySelectorAll('label')].filter((l) => l.querySelector('input[type="checkbox"]') && !l.querySelector('input[type="checkbox"]').disabled)
+  const crewChecked = await page.evaluate((sel) => {
+    const root = document.querySelector(sel) || document.body
+    const labels = [...root.querySelectorAll('label')].filter((l) => l.querySelector('input[type="checkbox"]') && !l.querySelector('input[type="checkbox"]').disabled)
     if (!labels.length) return false
     labels[0].click()
     return true
-  })
+  }, activeScope)
   ok('TL ticks present crew member', crewChecked)
   await sleep(300)
-  await clickButtonByText(page, /^Save crew$/i, 'dialog')
-  await sleep(2500)
+  await clickButtonByText(page, /^Save crew$/i, activeScope)
+  const afterCrewRow = await waitForBookingStatus(qaBookingId, 'in_progress')
+  ok('Live DB confirms ticket enters in_progress after crew assignment', afterCrewRow?.status === 'in_progress' && Boolean(afterCrewRow?.assigned_staff_id), afterCrewRow?.status)
 
-  const { data: afterCrewRows } = await admin.from('bookings').select('status, assigned_staff_id').eq('id', qaBookingId)
-  ok('Live DB confirms ticket enters in_progress after crew assignment', afterCrewRows?.[0]?.status === 'in_progress' && Boolean(afterCrewRows?.[0]?.assigned_staff_id), afterCrewRows?.[0]?.status)
+  // Wait for React editor state to re-render after in_progress mutation before asserting buttons
+  await page.waitForFunction(
+    (sel) => {
+      const root = document.querySelector(sel) || document.body
+      return [...root.querySelectorAll('button')].some((b) => /^Final Checking$/i.test(b.innerText.trim()))
+    },
+    { timeout: 12000 },
+    activeScope,
+  ).catch(() => {})
 
   // Verify Start Service is hidden under in_progress while Final Checking is shown
-  const inProgressBtns = await page.evaluate(() => {
-    const dlg = [...document.querySelectorAll('[role="dialog"]')].filter((d) => !/Necessary only|Accept all/i.test(d.innerText)).pop()
-    const btns = dlg ? [...dlg.querySelectorAll('button')].map((b) => b.innerText.trim()) : []
+  const inProgressBtns = await page.evaluate((sel) => {
+    const root = document.querySelector(sel) || document.body
+    const btns = [...root.querySelectorAll('button')].map((b) => b.innerText.trim())
     return {
       hasStartService: btns.some((t) => /Start Service|Select crew above/i.test(t)),
       hasFinalChecking: btns.some((t) => /^Final Checking$/i.test(t)),
     }
-  })
+  }, activeScope)
   ok('In Progress ticket hides Start Service and shows Final Checking', !inProgressBtns.hasStartService && inProgressBtns.hasFinalChecking)
 
   // Test simple Notes save (no category dropdown)
   await page.type('#guest-note-body', 'Live QA simple note verification')
-  await clickButtonByText(page, /^Save note$/i, 'dialog')
-  await sleep(1500)
+  await clickButtonByText(page, /^Save note$/i, activeScope)
+  await sleep(1800)
   const { data: noteRows } = await admin.from('customer_notes').select('body, note_type').eq('plate_normalized', QA_PLATE)
   ok('Live DB saves simple note with note_type=general', noteRows?.length === 1 && noteRows[0].note_type === 'general')
 
-  // Move In Progress -> Final Checking
-  await clickButtonByText(page, /^Final Checking$/i, 'dialog')
-  await sleep(2000)
-  const { data: fcRows } = await admin.from('bookings').select('status').eq('id', qaBookingId)
-  ok('Live DB transitions ticket to final_checking', fcRows?.[0]?.status === 'final_checking')
+  // Move In Progress -> Final Checking (ensure no button still disabled from prior Save note)
+  await page.waitForFunction(
+    (sel) => {
+      const root = document.querySelector(sel) || document.body
+      return [...root.querySelectorAll('button')].some((b) => /^Final Checking$/i.test(b.innerText.trim()) && !b.disabled)
+    },
+    { timeout: 12000 },
+    activeScope,
+  ).catch(() => {})
+  const clickedFc1 = await clickButtonByText(page, /^Final Checking$/i, activeScope)
+  const fcRow = await waitForBookingStatus(qaBookingId, 'final_checking', 18000)
+  ok('Live DB transitions ticket to final_checking', Boolean(clickedFc1) && fcRow?.status === 'final_checking', `clicked=${clickedFc1}, status=${fcRow?.status}`)
 
-  // ── 2. SUPER ADMIN (BossMich): Mark Redo -> Failed QA lane -> Return to Final Checking -> Send to payment
-  await demoSignIn(page, 'Super Admin')
-  await page.goto(`${BASE}/operations/queue`, { waitUntil: 'domcontentloaded', timeout: 45000 })
-  await sleep(3000)
+  // ── 2. SUPER ADMIN (BossMich): Mark Redo -> Failed QA lane -> Return to Final Checking
+  await demoSignIn(page, 'bossmich@hakumautocare.com')
+  await page.goto(`${BASE}/operations/queue/${qaBookingId}`, { waitUntil: 'domcontentloaded', timeout: 45000 })
+  await page.waitForSelector('#guest-note-body', { timeout: 25000 })
   await dismissPopups(page)
 
-  await page.evaluate((plate) => {
-    const card = [...document.querySelectorAll('article, div')].find((el) => el.innerText.includes(plate) && el.querySelector('button') && el.innerText.length < 400)
-    const openBtn = card ? [...card.querySelectorAll('button')].find((b) => /Open/i.test(b.innerText)) : null
-    if (openBtn) openBtn.click()
-  }, QA_PLATE)
-  await sleep(1500)
-
-  const clickedMarkRedo = await clickButtonByText(page, /^Mark Redo$/i, 'dialog')
+  const clickedMarkRedo = await clickButtonByText(page, /^Mark Redo$/i, 'main')
   ok('SA clicks "Mark Redo" action button on Final Check ticket', Boolean(clickedMarkRedo))
   await sleep(600)
   await page.evaluate(() => {
@@ -256,37 +280,37 @@ try {
   })
   await sleep(300)
   await clickButtonByText(page, /Confirm|Mark redo|Submit/i, 'dialog')
-  await sleep(2500)
+  const redoRow = await waitForBookingStatus(qaBookingId, 'redo', 15000)
 
-  const { data: redoRows } = await admin.from('bookings').select('status, redo_reason').eq('id', qaBookingId)
+  await page.goto(`${BASE}/operations/queue`, { waitUntil: 'domcontentloaded', timeout: 45000 })
+  await page.waitForFunction((plate) => /FAILED QA/i.test(document.body.innerText) && document.body.innerText.includes(plate), { timeout: 20000 }, QA_PLATE).catch(() => {})
   const failedQaVisible = await page.evaluate((plate) => {
     const bodyText = document.body.innerText
     return /FAILED QA/i.test(bodyText) && bodyText.includes(plate)
   }, QA_PLATE)
-  ok('Live DB sets status=redo and vehicle appears in Failed QA section', redoRows?.[0]?.status === 'redo' && failedQaVisible)
+  ok('Live DB sets status=redo and vehicle appears in Failed QA section', redoRow?.status === 'redo' && failedQaVisible, `status=${redoRow?.status}, failedQa=${failedQaVisible}`)
 
-  // Re-open from Failed QA lane -> return to Final Checking
-  await page.evaluate((plate) => {
-    const card = [...document.querySelectorAll('article, div')].find((el) => el.innerText.includes(plate) && el.querySelector('button') && el.innerText.length < 400)
-    const openBtn = card ? [...card.querySelectorAll('button')].find((b) => /Open/i.test(b.innerText)) : null
-    if (openBtn) openBtn.click()
-  }, QA_PLATE)
-  await sleep(1500)
-  const returnedToFc = await clickButtonByText(page, /^Final Checking$/i, 'dialog')
-  await sleep(2000)
-  const { data: backToFcRows } = await admin.from('bookings').select('status').eq('id', qaBookingId)
-  ok('Redo vehicle returns directly to Final Checking after correction', Boolean(returnedToFc) && backToFcRows?.[0]?.status === 'final_checking')
+  // Re-open redo vehicle -> return to Final Checking
+  await page.goto(`${BASE}/operations/queue/${qaBookingId}`, { waitUntil: 'domcontentloaded', timeout: 45000 })
+  await page.waitForSelector('#guest-note-body', { timeout: 25000 })
+  await dismissPopups(page)
+  const returnedToFc = await clickButtonByText(page, /^Final Checking$/i, 'main')
+  const backToFcRow = await waitForBookingStatus(qaBookingId, 'final_checking', 15000)
+  ok('Redo vehicle returns directly to Final Checking after correction', Boolean(returnedToFc) && backToFcRow?.status === 'final_checking', backToFcRow?.status)
 
-  // Send to payment
-  const sentToPay = await clickButtonByText(page, /Send to payment/i, 'dialog')
-  await sleep(2500)
-  const { data: payRows } = await admin.from('bookings').select('status').eq('id', qaBookingId)
+  // Team Lead clicks Send to payment
+  await demoSignIn(page, 'teamlead@hakumautocare.com')
+  await page.goto(`${BASE}/operations/queue/${qaBookingId}`, { waitUntil: 'domcontentloaded', timeout: 45000 })
+  await page.waitForSelector('#guest-note-body', { timeout: 25000 })
+  await dismissPopups(page)
+  const sentToPay = await clickButtonByText(page, /Send to payment/i, 'main')
+  const payRow = await waitForBookingStatus(qaBookingId, 'for_payment')
   const { data: handoffs1 } = await admin.from('pos_handoffs').select('id, status, amount_minor').eq('booking_id', qaBookingId)
   const { data: tx1 } = await admin.from('transactions').select('id, status, amount_minor').eq('booking_id', qaBookingId)
-  ok('Live DB creates 1 pending pos_handoff & 1 pending_payment transaction on Send to payment', Boolean(sentToPay) && payRows?.[0]?.status === 'for_payment' && handoffs1?.length === 1 && handoffs1[0].status === 'pending' && tx1?.length === 1 && tx1[0].status === 'pending_payment')
+  ok('Live DB creates 1 pending pos_handoff & 1 pending_payment transaction on Send to payment', Boolean(sentToPay) && payRow?.status === 'for_payment' && handoffs1?.length === 1 && handoffs1[0].status === 'pending' && tx1?.length === 1 && tx1[0].status === 'pending_payment')
 
   // ── 3. BRANCH ADMIN: POS Itemized Breakdown + Modify (re-syncs DB) + Return to Queue
-  await demoSignIn(page, 'Branch Admin')
+  await demoSignIn(page, 'admin@hakumautocare.com')
   await page.goto(`${BASE}/operations/pos`, { waitUntil: 'domcontentloaded', timeout: 45000 })
   await sleep(3000)
   await dismissPopups(page)
@@ -332,28 +356,22 @@ try {
   )
 
   // Click Return to Queue
-  await clickButtonByText(page, /^Return to Queue$/i)
-  await sleep(2500)
-  const { data: bkReturned } = await admin.from('bookings').select('status').eq('id', qaBookingId)
+  const clickedReturn = await clickButtonByText(page, /^Return to Queue$/i)
+  const bkReturned = await waitForBookingStatus(qaBookingId, 'in_progress', 15000)
+  await sleep(800)
   const { data: hReturned } = await admin.from('pos_handoffs').select('status').eq('booking_id', qaBookingId)
   const { data: tReturned } = await admin.from('transactions').select('status').eq('booking_id', qaBookingId)
   ok(
     'Return to Queue returns booking to in_progress and cancels pending handoff + tx cleanly',
-    bkReturned?.[0]?.status === 'in_progress' && hReturned?.[0]?.status === 'cancelled' && tReturned?.[0]?.status === 'cancelled',
+    Boolean(clickedReturn) && bkReturned?.status === 'in_progress' && hReturned?.[0]?.status === 'cancelled' && tReturned?.[0]?.status === 'cancelled',
+    `clicked=${clickedReturn}, bk=${bkReturned?.status}, handoff=${hReturned?.[0]?.status}, tx=${tReturned?.[0]?.status}`,
   )
 
   // ── 4. TEAM LEAD: Change service in Queue -> Final Checking -> Send to payment (0 duplicate transactions!)
-  await demoSignIn(page, 'Team Lead')
-  await page.goto(`${BASE}/operations/queue`, { waitUntil: 'domcontentloaded', timeout: 45000 })
-  await sleep(3000)
+  await demoSignIn(page, 'teamlead@hakumautocare.com')
+  await page.goto(`${BASE}/operations/queue/${qaBookingId}`, { waitUntil: 'domcontentloaded', timeout: 45000 })
+  await page.waitForSelector('#guest-note-body', { timeout: 25000 })
   await dismissPopups(page)
-
-  await page.evaluate((plate) => {
-    const card = [...document.querySelectorAll('article, div')].find((el) => el.innerText.includes(plate) && el.querySelector('button') && el.innerText.length < 400)
-    const openBtn = card ? [...card.querySelectorAll('button')].find((b) => /Open/i.test(b.innerText)) : null
-    if (openBtn) openBtn.click()
-  }, QA_PLATE)
-  await sleep(1500)
 
   const pickedTlSvc = await page.evaluate(() => {
     const sel = document.querySelector('select[aria-label="Modify assigned service"]')
@@ -366,29 +384,22 @@ try {
     return true
   })
   await sleep(300)
-  await clickButtonByText(page, /^Change service$/i, 'dialog')
-  await sleep(2000)
-
-  // Final Checking -> Send to payment (Note: Team Lead doesn't push payment, SA/BA pushes payment or let's check!)
-  await clickButtonByText(page, /^Final Checking$/i, 'dialog')
-  await sleep(2000)
-
-  // Switch to Branch Admin or SA to click Send to payment OR check TL permission
-  const canTlSendPay = await clickButtonByText(page, /Send to payment/i, 'dialog')
-  if (!canTlSendPay) {
-    await demoSignIn(page, 'Super Admin')
-    await page.goto(`${BASE}/operations/queue`, { waitUntil: 'domcontentloaded', timeout: 45000 })
-    await sleep(3000)
-    await dismissPopups(page)
-    await page.evaluate((plate) => {
-      const card = [...document.querySelectorAll('article, div')].find((el) => el.innerText.includes(plate) && el.querySelector('button') && el.innerText.length < 400)
-      const openBtn = card ? [...card.querySelectorAll('button')].find((b) => /Open/i.test(b.innerText)) : null
-      if (openBtn) openBtn.click()
-    }, QA_PLATE)
-    await sleep(1500)
-    await clickButtonByText(page, /Send to payment/i, 'dialog')
-  }
+  await clickButtonByText(page, /^Change service$/i, 'main')
   await sleep(2500)
+
+  // Final Checking -> Send to payment (Team Lead owns Final Checking -> POS handoff)
+  await clickButtonByText(page, /^Final Checking$/i, 'main')
+  await waitForBookingStatus(qaBookingId, 'final_checking', 15000)
+  await page.waitForFunction(
+    () => {
+      const root = document.querySelector('main') || document.body
+      return [...root.querySelectorAll('button')].some((b) => /Send to payment/i.test(b.innerText) && !b.disabled)
+    },
+    { timeout: 12000 },
+  ).catch(() => {})
+  await clickButtonByText(page, /Send to payment/i, 'main')
+  await waitForBookingStatus(qaBookingId, 'for_payment', 15000)
+  await sleep(1000)
 
   const { data: finalBk } = await admin.from('bookings').select('status, final_price_minor, services(name)').eq('id', qaBookingId)
   const { data: finalHandoffs } = await admin.from('pos_handoffs').select('id, status, amount_minor').eq('booking_id', qaBookingId)
@@ -410,8 +421,12 @@ try {
   ok('Zero uncaught page errors during full live mutation E2E', pageErrors.length === 0, pageErrors.join(' | '))
 } finally {
   await cleanupQaData().catch((e) => console.error('Cleanup error:', e))
-  if (seededAttendanceStaff) {
-    // leave attendance untouched or clean only if needed
+  if (seededAttendanceStaff?.seededDate && seededAttendanceStaff?.staff?.id) {
+    try {
+      await admin.from('staff_attendance').delete().eq('staff_id', seededAttendanceStaff.staff.id).eq('attendance_date', seededAttendanceStaff.seededDate)
+    } catch {
+      /* ignore cleanup */
+    }
   }
   await browser.close()
 }
