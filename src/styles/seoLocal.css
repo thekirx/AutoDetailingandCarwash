@@ -395,12 +395,12 @@
 .bredesign .bd-smart-loc .smart-loc-input {
   width: 100%;
   min-height: 44px;
-  padding: 8px 34px 8px 38px;
+  padding: 8px 36px 8px 38px;
   border-radius: 10px;
   border: 1px solid var(--bd-rule);
   background: var(--bd-navy-2);
   color: var(--bd-paper);
-  font-size: 0.95rem;
+  font-size: 1rem;
 }
 
 .bredesign .bd-smart-loc .smart-loc-input::placeholder {
@@ -549,9 +549,54 @@
   color: #fca5a5;
 }
 
-@media (max-width: 560px) {
+@media (max-width: 639px) {
+  .bredesign .bd-near-head {
+    align-items: stretch;
+  }
+
+  .bredesign .bd-near-head-actions {
+    width: 100%;
+  }
+
+  .bredesign .bd-near-head-actions .bd-btn {
+    flex: 1 1 160px;
+    justify-content: center;
+    min-height: 44px;
+  }
+
+  .bredesign .bd-near-picker-panel {
+    padding: 12px;
+  }
+
   .bredesign .bd-smart-loc .smart-loc-input-row {
     flex-direction: column;
+  }
+
+  .bredesign .bd-smart-loc .smart-loc-pills {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .bredesign .bd-smart-loc .smart-loc-pills::-webkit-scrollbar {
+    display: none;
+  }
+
+  .bredesign .bd-smart-loc .smart-loc-pill {
+    flex: 0 0 auto;
+    min-height: 40px;
+    padding: 0 14px;
+    white-space: nowrap;
+  }
+
+  .bredesign .bd-smart-loc .smart-loc-map {
+    height: clamp(170px, 30dvh, 240px) !important;
+  }
+
+  .bredesign .bd-near-actions .bd-btn {
+    min-height: 42px;
   }
 }
 

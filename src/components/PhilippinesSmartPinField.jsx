@@ -145,9 +145,19 @@ export default function PhilippinesSmartPinField({
     mapRef.current = map
     markerRef.current = marker
     branchLayerRef.current = branchLayer
-    window.setTimeout(() => map.invalidateSize(), 120)
+    const resizeTimer = window.setTimeout(() => map.invalidateSize(), 120)
+    const onResize = () => map.invalidateSize()
+    window.addEventListener('resize', onResize)
+    let ro = null
+    if (typeof ResizeObserver === 'function' && mapEl.current) {
+      ro = new ResizeObserver(() => map.invalidateSize())
+      ro.observe(mapEl.current)
+    }
 
     return () => {
+      window.clearTimeout(resizeTimer)
+      window.removeEventListener('resize', onResize)
+      ro?.disconnect()
       map.remove()
       mapRef.current = null
       markerRef.current = null

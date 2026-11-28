@@ -3276,12 +3276,12 @@ form.capp-section > .capp-sect > h2::before {
 .capp-smart-loc .smart-loc-input {
   width: 100%;
   min-height: 44px;
-  padding: 0.55rem 2.25rem 0.55rem 2.45rem;
+  padding: 0.55rem 2.5rem 0.55rem 2.45rem;
   border-radius: 0.75rem;
   border: 1px solid var(--capp-line-strong);
   background: var(--capp-surface);
   color: var(--capp-ink);
-  font-size: 0.95rem;
+  font-size: 1rem;
   line-height: 1.3;
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
@@ -3404,8 +3404,9 @@ form.capp-section > .capp-sect > h2::before {
 
 .capp-smart-loc .smart-loc-pills {
   display: flex;
-  gap: 0.4rem;
+  gap: 0.45rem;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   padding-bottom: 2px;
   scrollbar-width: none;
 }
@@ -3416,13 +3417,13 @@ form.capp-section > .capp-sect > h2::before {
 
 .capp-smart-loc .smart-loc-pill {
   flex: 0 0 auto;
-  min-height: 32px;
-  padding: 0 0.75rem;
+  min-height: 36px;
+  padding: 0 0.85rem;
   border-radius: 999px;
   border: 1px solid var(--capp-line-strong);
   background: var(--capp-surface);
   color: var(--capp-ink);
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   font-weight: 600;
   white-space: nowrap;
   cursor: pointer;
@@ -3511,9 +3512,9 @@ form.capp-section > .capp-sect > h2::before {
 
 .capp-queue-loc-btn {
   flex: none;
-  min-height: 36px;
-  padding: 0 0.75rem;
-  font-size: 0.74rem;
+  min-height: 44px;
+  padding: 0 0.85rem;
+  font-size: 0.78rem;
   white-space: nowrap;
 }
 
@@ -3527,14 +3528,58 @@ form.capp-section > .capp-sect > h2::before {
 }
 
 .capp-book-loc-btn {
-  min-height: 34px;
-  padding: 0 0.75rem;
-  font-size: 0.74rem;
+  min-height: 44px;
+  padding: 0 0.9rem;
+  font-size: 0.78rem;
   white-space: nowrap;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 639px) {
   .capp-smart-loc .smart-loc-input-row {
     flex-direction: column;
+  }
+
+  .capp-smart-loc .smart-loc-pill {
+    min-height: 40px;
+  }
+
+  .capp-smart-loc .smart-loc-map {
+    height: clamp(132px, 21dvh, 200px) !important;
+  }
+
+  .capp-smart-loc .smart-loc-dropdown {
+    max-height: min(210px, 34dvh);
+  }
+}
+
+@media (max-width: 520px) {
+  .capp-branch-card-top {
+    flex-wrap: wrap;
+  }
+
+  .capp-queue-loc-btn {
+    width: 100%;
+    justify-content: center;
+    margin-top: 0.15rem;
+  }
+
+  .capp-book-loc-btn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .capp .capp-hero-side {
+    max-width: 54%;
+  }
+
+  .capp-weather-loc-btn {
+    min-height: 32px;
+    padding: 0.22rem 0.56rem;
+  }
+
+  .capp-weather-loc-text {
+    max-width: 15ch;
   }
 }
