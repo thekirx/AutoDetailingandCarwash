@@ -39,7 +39,18 @@ describe('RBAC Part 1 matrix', () => {
         '/operations/bookings',
         '/operations/planning',
         '/operations/pos',
+        '/operations/inventory',
         '/operations/finance',
+        '/operations/payslips',
+        '/operations/employees',
+        '/operations/crm',
+        '/operations/rewards',
+        '/operations/branches',
+        '/operations/content',
+        '/operations/settings',
+        '/operations/history',
+        '/operations/notifications',
+        '/operations/system',
       ],
     )
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/my-pay' || i.to === '/operations/payroll'))
@@ -113,6 +124,13 @@ describe('RBAC Part 1 matrix', () => {
         '/operations/planning',
         '/operations/pos',
         '/operations/finance',
+        '/operations/inventory',
+        '/operations/employees',
+        '/operations/crm',
+        '/operations/my-advances',
+        '/operations/payslips',
+        '/operations/history',
+        '/operations/system',
       ],
     )
     assert.ok(!getOperationsNav(p).some((i) => i.to === '/operations/reports'))
@@ -126,7 +144,7 @@ describe('RBAC Part 1 matrix', () => {
     assert.ok(!getOperationsNav(staff).some((i) => String(i.to).includes('tab=forms')))
     assert.deepEqual(
       getOperationsNav({ role: ROLES.VIDEO_EDITOR }).map((i) => i.to),
-      ['/operations/planning?tab=calendar'],
+      ['/operations/planning?tab=calendar', '/operations/my-tasks', '/operations/payslips'],
     )
   })
 
@@ -141,6 +159,11 @@ describe('RBAC Part 1 matrix', () => {
         '/operations/queue',
         '/operations/bookings',
         '/operations/planning',
+        '/operations/crm',
+        '/operations/content',
+        '/operations/payslips',
+        '/operations/notifications',
+        '/operations/history',
       ],
     )
   })

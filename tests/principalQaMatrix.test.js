@@ -136,7 +136,7 @@ describe('Negative allowRoute denials', () => {
     assert.deepEqual(allowedKeys(p).sort(), ['bookings', 'finance', 'pos', 'queue', 'reports'])
     assert.deepEqual(
       getOperationsNav(p).map((i) => i.to),
-      ['/operations/queue', '/operations/bookings', '/operations/pos', '/operations/finance'],
+      ['/operations/queue', '/operations/bookings', '/operations/pos', '/operations/rewards?tab=vouchers', '/operations/finance'],
     )
     assert.equal(allowRoute(p, 'reports'), true)
     assert.equal(allowRoute(p, 'dashboard'), false)

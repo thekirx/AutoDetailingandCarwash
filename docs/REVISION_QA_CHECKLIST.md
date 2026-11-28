@@ -61,7 +61,7 @@ Follow only the specified revisions. Preserve existing working functionality. Ve
 | `npm run build` | pass (PWA SW + 60 prerendered SEO shells) |
 | `BASE_URL=https://hakumauto.vercel.app node scripts/e2e-nav-walk.mjs` (all 11 roles) | **54 / 54 pass**, `0` backend 4xx findings |
 | `BASE_URL=https://hakumauto.vercel.app node scripts/e2e-revision-qa.mjs` | **14 / 14 pass**, `0` uncaught page errors |
-| All-roles sidebar/dock audit (`src/auth/permissions.js`) | Fixed `getDetailerMore` dead `Payslips` link (day crew stays on Daily Sheet); all 11 roles verified against `allowRoute` |
+| All-roles sidebar/dock audit (`src/auth/permissions.js`) | Restored full sidebar (`Catalog & Inventory` incl. `Vehicle List` cars list, `Payslips`, `Employees`, `Customers`, `Rewards`, `Branches`, `Content`, `Settings`, `History`, `Notifications`, `System & Data`) alongside the 6 primary modules; fixed `getDetailerMore` dead `Payslips` link |
 | Live DB: 4 `for_payment` visits have 4 pending `pos_handoffs` | verified; queue Payment lane = POS Waiting to pay |
 
 Migration: `supabase/migrations/20261127200000_revision_qa_checklist_fixes.sql` is applied to production. It adds targeted policies only. There is no blanket RLS and no `FOR ALL` on customers, transactions or expenses.

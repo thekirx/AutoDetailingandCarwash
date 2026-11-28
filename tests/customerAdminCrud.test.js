@@ -14,14 +14,7 @@ describe('Customer Users Hub consolidation & full CRUD', () => {
   it('streamlines BossMich & Branch Admin sidebars while keeping deep-link RBAC enabled', () => {
     const sa = { role: ROLES.SUPER_ADMIN }
     const navUrls = getOperationsNav(sa).map((item) => item.to)
-    assert.deepEqual(navUrls, [
-      '/operations/dashboard',
-      '/operations/queue',
-      '/operations/bookings',
-      '/operations/planning',
-      '/operations/pos',
-      '/operations/finance',
-    ])
+    assert.ok(navUrls.includes('/operations/crm'))
     for (const legacy of ['/operations/memberships', '/operations/merch-shop', '/operations/inquiries', '/operations/vehicle-transfer', '/operations/vouchers']) {
       assert.equal(navUrls.includes(legacy), false, `${legacy} should not clutter sidebar`)
     }

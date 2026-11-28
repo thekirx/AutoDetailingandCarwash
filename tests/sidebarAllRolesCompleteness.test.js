@@ -53,7 +53,23 @@ const ALLOWED_COMMAND_LABELS = new Set([
   'Detailing',
   'Team P',
   'POS',
+  'Catalog & Inventory',
   'Financials',
+  'Payslips',
+  'Employees',
+  'My advances',
+  'My Tasks',
+  'Customers',
+  'Inquiries',
+  'Rewards',
+  'Branches',
+  'Transfer car',
+  'Content',
+  'Settings',
+  'Month KPI',
+  'History',
+  'Notifications',
+  'System & Data',
 ])
 
 function floorItemsFor(profile) {

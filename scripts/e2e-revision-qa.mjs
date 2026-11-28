@@ -58,7 +58,8 @@ try {
   const nav = await page.evaluate(() =>
     [...new Set([...document.querySelectorAll('.command-rail a[href^="/operations"]')].filter((a) => !a.href.includes('?')).map((a) => a.innerText.trim()).filter(Boolean))],
   )
-  check('1 sidebar shows exactly 6 modules', nav.join('|') === 'Floor Insight|Carwash Queue|Detailing|Team P|POS|Financials|Overview & Books' || nav.slice(0, 6).join('|') === 'Floor Insight|Carwash Queue|Detailing|Team P|POS|Financials', nav.join('|'))
+  const expected = ['Floor Insight', 'Carwash Queue', 'Detailing', 'Team P', 'POS', 'Catalog & Inventory', 'Financials', 'Employees', 'Customers', 'Rewards', 'Branches', 'Content', 'Settings', 'History', 'Notifications', 'System & Data']
+  check('1 sidebar includes all 6 primary modules + Catalog/Vehicle List & operational pages', expected.every((lbl) => nav.includes(lbl)), nav.join('|'))
   await page.screenshot({ path: join(outDir, 'boss-dashboard.png') })
 
   await open(page, '/operations/queue')
