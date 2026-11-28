@@ -1109,7 +1109,7 @@ export function getDetailerDock(profile) {
 
 export function getDetailerMore(profile) {
   if (profile && profile?.role !== ROLES.DETAILER) return []
-  return [{ label: 'Payslips', to: '/operations/payslips', icon: 'Banknote' }]
+  return canAccessMyPayslips(profile) ? [{ label: 'Payslips', to: '/operations/payslips', icon: 'Banknote' }] : []
 }
 
 export function redirectForRole(role) {

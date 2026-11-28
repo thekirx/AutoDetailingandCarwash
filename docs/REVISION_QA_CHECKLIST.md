@@ -51,16 +51,17 @@ Follow only the specified revisions. Preserve existing working functionality. Ve
 
 ---
 
-## Verification Evidence (2026-11-27)
+## Verification Evidence (2026-11-28 — Local + Live Vercel `https://hakumauto.vercel.app`)
 
 | Check | Result |
 |---|---|
 | `npm run lint` | 0 errors |
-| `npm run check` / `npm run audit:api-auth` | pass |
-| `npm test` | 2825 / 2825 pass |
-| `npm run build` | pass |
-| `node scripts/e2e-nav-walk.mjs` (boss, admin, opslead, tl) | 23 / 23, 0 backend 4xx |
-| `node scripts/e2e-revision-qa.mjs` (Puppeteer, live Supabase) | 14 / 14, evidence in `e2e-evidence/revision-qa/` |
+| `npm run check` / `npm run audit:api-auth` | pass (43 handlers scanned, 0 leaks) |
+| `npm test` | **2,836 / 2,836 pass** (629 suites, including `sidebarAllRolesCompleteness.test.js`) |
+| `npm run build` | pass (PWA SW + 60 prerendered SEO shells) |
+| `BASE_URL=https://hakumauto.vercel.app node scripts/e2e-nav-walk.mjs` (all 11 roles) | **54 / 54 pass**, `0` backend 4xx findings |
+| `BASE_URL=https://hakumauto.vercel.app node scripts/e2e-revision-qa.mjs` | **14 / 14 pass**, `0` uncaught page errors |
+| All-roles sidebar/dock audit (`src/auth/permissions.js`) | Fixed `getDetailerMore` dead `Payslips` link (day crew stays on Daily Sheet); all 11 roles verified against `allowRoute` |
 | Live DB: 4 `for_payment` visits have 4 pending `pos_handoffs` | verified; queue Payment lane = POS Waiting to pay |
 
 Migration: `supabase/migrations/20261127200000_revision_qa_checklist_fixes.sql` is applied to production. It adds targeted policies only. There is no blanket RLS and no `FOR ALL` on customers, transactions or expenses.

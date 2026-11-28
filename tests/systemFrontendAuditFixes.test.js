@@ -34,10 +34,10 @@ test('Routing & Shell Boundaries: /operations/* and /account/* 404s + OpsErrorBo
   assert.match(pubLayout, /'\/shop'/, 'PublicLayout BREDESIGN_ROUTES must include /shop')
 })
 
-test('FloorAppShell More menus expose Payslips and Attendance for Sales, Marketing, Detailer, Video Editor', () => {
+test('FloorAppShell More menus expose Payslips and Attendance for eligible roles', () => {
   assert.ok(getSalesMore().some((i) => i.to === '/operations/payslips'))
   assert.ok(getMarketingMore({ role: 'marketing' }).some((i) => i.to === '/operations/payslips'))
-  assert.ok(getDetailerMore().some((i) => i.to === '/operations/payslips'))
+  assert.equal(getDetailerMore({ role: 'detailer' }).some((i) => i.to === '/operations/payslips'), false)
   assert.ok(getVideoEditorMore().some((i) => i.to === '/operations/attendance'))
   assert.ok(getVideoEditorMore().some((i) => i.to === '/operations/payslips'))
 })

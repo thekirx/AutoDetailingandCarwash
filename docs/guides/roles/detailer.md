@@ -6,7 +6,9 @@
 
 ## Dock
 
-Detailing Board · Attendance · Tasks · Advances · More: Payslips
+Detailing Board · Attendance · Tasks · Advances
+
+Paid on the branch Daily Sheet (no semi-monthly office Payslips).
 
 ## Daily flow
 
