@@ -64,6 +64,7 @@ export default [
       'scripts/e2e-ui-money.mjs',
       'scripts/e2e-ui-p0.mjs',
       'scripts/e2e-revision-qa.mjs',
+      'scripts/e2e-live-mutations.mjs',
       'scripts/e2e-ui-forms.mjs',
       'scripts/e2e-role-qa.mjs',
       'scripts/e2e-role-qa-wave.mjs',

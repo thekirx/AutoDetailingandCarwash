@@ -1205,6 +1205,7 @@ function PosCounterPage() {
       const updated = await updateTicketService(
         {
           booking_id: activeHandoff.booking_id,
+          status: booking.status || 'for_payment',
           vehicle_type: booking.vehicle_type || handoffVehicleSize || 'medium',
           branch: activeHandoff.branch || branch,
           queue_number: booking.queue_number,

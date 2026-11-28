@@ -1590,6 +1590,16 @@ export async function updateTicketService(
     throw formatQueueActionError(error)
   }
 
+  if (ticket?.status === 'for_payment') {
+    const { error: syncError } = await supabase.rpc('send_queue_ticket_to_payment', {
+      input_booking_id: targetBookingId,
+    })
+    if (syncError) {
+      console.error('Unable to re-sync POS handoff after service modification', syncError)
+      throw formatQueueActionError(syncError)
+    }
+  }
+
   await writeAudit({
     action: 'update',
     entityType: 'booking',
