@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase'
 import { CUSTOMER_BOOK_PATH, CUSTOMER_CARS_PATH, CUSTOMER_MORE_PATH, CUSTOMER_SETTINGS_PATH, customerVisitPath } from '@/lib/customerAccountNav'
 import { DAY_MS, activityInRange, isoDay } from '@/lib/customerActivity'
 import { branchLabel, fetchPortal, greeting, portalAction } from '@/lib/customerPortalClient'
+import { usePublicBranches } from '@/lib/branches'
 import { useCustomerBranch } from '@/lib/useCustomerBranch'
 import { buildThumbReview } from '@/lib/serviceReviews'
 import { COMPLAINT_CATEGORIES, thumbDownComplaintPayload } from '@/lib/opsForms'
@@ -109,8 +110,10 @@ export default function CustomerAccountPage() {
   const [reviewNow, setReviewNow] = useState(() => Date.now())
   const [locationSheetOpen, setLocationSheetOpen] = useState(false)
 
+  const { branches: publicBranches } = usePublicBranches({ mode: 'bookable' })
+  const branchCandidates = data?.branches?.length ? data.branches : publicBranches
   const { branches, selectedBranch, nearestBranch, nearestDistanceKm, pin, locating, locateNearest, updatePin } = useCustomerBranch(
-    data?.branches || EMPTY_LIST,
+    branchCandidates,
   )
   const bookings = data?.bookings || EMPTY_LIST
   const history = data?.history || EMPTY_LIST
