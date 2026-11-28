@@ -39,11 +39,13 @@ export function loadCustomerPin() {
     if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null
     const label = typeof parsed?.label === 'string' ? parsed.label.trim() : ''
     const address = typeof parsed?.address === 'string' ? parsed.address.trim() : ''
+    const source = parsed?.source === 'manual' || parsed?.source === 'gps' ? parsed.source : ''
     return {
       lat,
       lng,
       ...(label ? { label } : {}),
       ...(address ? { address } : {}),
+      ...(source ? { source } : {}),
     }
   } catch {
     return null
@@ -57,11 +59,13 @@ export function saveCustomerPin(pin) {
   if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null
   const label = typeof pin?.label === 'string' ? pin.label.trim() : ''
   const address = typeof pin?.address === 'string' ? pin.address.trim() : ''
+  const source = pin?.source === 'manual' || pin?.source === 'gps' ? pin.source : ''
   const next = {
     lat,
     lng,
     ...(label ? { label } : {}),
     ...(address ? { address } : {}),
+    ...(source ? { source } : {}),
   }
   localStorage.setItem(CUSTOMER_PIN_KEY, JSON.stringify(next))
   return next

@@ -117,6 +117,7 @@ export default function PhilippinesSmartPinField({
           lng: nextLng,
           label: details.shortLabel,
           address: details.fullAddress,
+          source: 'manual',
         })
       } catch {
         onChangeRef.current?.({
@@ -124,6 +125,7 @@ export default function PhilippinesSmartPinField({
           lng: nextLng,
           label: `${nextLat.toFixed(4)}, ${nextLng.toFixed(4)}`,
           address: `${nextLat.toFixed(4)}, ${nextLng.toFixed(4)}`,
+          source: 'manual',
         })
       } finally {
         setResolvingPin(false)
@@ -227,6 +229,7 @@ export default function PhilippinesSmartPinField({
         lng: pos.lng,
         label: details.shortLabel,
         address: details.fullAddress,
+        source: 'gps',
       })
       setQuery('')
       setDropdownOpen(false)
@@ -248,6 +251,7 @@ export default function PhilippinesSmartPinField({
       lng: hit.lng,
       label: hit.label,
       address: hit.fullAddress || hit.address || hit.label,
+      source: 'manual',
     })
   }
 

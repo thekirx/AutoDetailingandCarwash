@@ -75,14 +75,17 @@ describe('customer pin human-readable location text persistence', () => {
       lng: 121.0244,
       label: 'Makati CBD, Makati',
       address: 'Ayala Avenue, Makati, Metro Manila',
+      source: 'manual',
     })
     assert.deepEqual(rich, {
       lat: 14.5547,
       lng: 121.0244,
       label: 'Makati CBD, Makati',
       address: 'Ayala Avenue, Makati, Metro Manila',
+      source: 'manual',
     })
     assert.equal(formatCustomerLocationLabel(loadCustomerPin()), 'Makati CBD, Makati')
+    assert.equal(loadCustomerPin()?.source, 'manual')
     store.delete(CUSTOMER_PIN_KEY)
     assert.equal(formatCustomerLocationLabel(null), '')
   })

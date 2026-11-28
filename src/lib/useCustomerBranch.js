@@ -42,10 +42,12 @@ export function useCustomerBranch(rawBranches = [], { wanted = '' } = {}) {
   }, [])
 
   // Silently refresh coordinates when browser geolocation is already granted
-  // so local weather and location text reflect the user's current place without prompting.
+  // ONLY if the user has not manually pinned/searched a specific PH place.
   useEffect(() => {
     let cancelled = false
     if (typeof navigator === 'undefined' || !navigator.permissions?.query) return undefined
+    const initial = loadCustomerPin()
+    if (initial?.source === 'manual') return undefined
     navigator.permissions
       .query({ name: 'geolocation' })
       .then((status) => {
@@ -55,6 +57,7 @@ export function useCustomerBranch(rawBranches = [], { wanted = '' } = {}) {
       .then(async (coords) => {
         if (cancelled || !coords) return
         const existing = loadCustomerPin()
+        if (existing?.source === 'manual') return
         let label = existing?.label || ''
         let address = existing?.address || ''
         const moved =
@@ -70,7 +73,7 @@ export function useCustomerBranch(rawBranches = [], { wanted = '' } = {}) {
             address = details.fullAddress
           }
         }
-        const saved = saveCustomerPin({ ...coords, label, address })
+        const saved = saveCustomerPin({ ...coords, label, address, source: 'gps' })
         if (saved) {
           setPinState(saved)
           notifySync()
@@ -97,7 +100,7 @@ export function useCustomerBranch(rawBranches = [], { wanted = '' } = {}) {
 
   const updatePin = useCallback(
     (nextPin, { autoSelectNearest = true } = {}) => {
-      const saved = saveCustomerPin(nextPin)
+      const saved = saveCustomerPin({ ...nextPin, source: nextPin?.source || 'manual' })
       if (!saved) {
         setLocationError('That pin is not a valid location.')
         return null
@@ -124,7 +127,7 @@ export function useCustomerBranch(rawBranches = [], { wanted = '' } = {}) {
       setLocationError('')
       try {
         const coords = await readBrowserLocation()
-        const initialSaved = saveCustomerPin(coords)
+        const initialSaved = saveCustomerPin({ ...coords, source: 'gps' })
         if (!initialSaved) throw new Error('Unable to save your location.')
         setPinState(initialSaved)
         let nearest = null
@@ -145,6 +148,7 @@ export function useCustomerBranch(rawBranches = [], { wanted = '' } = {}) {
             ...coords,
             label: details.shortLabel,
             address: details.fullAddress,
+            source: 'gps',
           }) || initialSaved
           setPinState(finalPin)
           notifySync()
