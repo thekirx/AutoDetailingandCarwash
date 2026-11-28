@@ -342,3 +342,216 @@
   }
 }
 
+.bredesign .bd-near-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.bredesign .bd-near-picker-panel {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--bd-rule);
+  background: var(--bd-navy);
+}
+
+.bredesign .bd-smart-loc {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bredesign .bd-smart-loc .smart-loc-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--bd-paper);
+}
+
+.bredesign .bd-smart-loc .smart-loc-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.bredesign .bd-smart-loc .smart-loc-input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.bredesign .bd-smart-loc .smart-loc-icon {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  color: var(--bd-ink-2);
+  pointer-events: none;
+}
+
+.bredesign .bd-smart-loc .smart-loc-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 34px 8px 38px;
+  border-radius: 10px;
+  border: 1px solid var(--bd-rule);
+  background: var(--bd-navy-2);
+  color: var(--bd-paper);
+  font-size: 0.95rem;
+}
+
+.bredesign .bd-smart-loc .smart-loc-input::placeholder {
+  color: var(--bd-ink-2);
+  opacity: 0.75;
+}
+
+.bredesign .bd-smart-loc .smart-loc-input:focus {
+  outline: none;
+  border-color: var(--bd-blue);
+  box-shadow: 0 0 0 3px var(--bd-blue-soft);
+}
+
+.bredesign .bd-smart-loc .smart-loc-spin,
+.bredesign .bd-smart-loc .smart-loc-clear {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  background: transparent;
+  color: var(--bd-ink-2);
+  cursor: pointer;
+}
+
+.bredesign .bd-smart-loc .smart-loc-dropdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 1200;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  max-height: 220px;
+  overflow-y: auto;
+  border-radius: 12px;
+  border: 1px solid var(--bd-rule);
+  background: var(--bd-navy-2);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.45);
+}
+
+.bredesign .bd-smart-loc .smart-loc-hit {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--bd-paper);
+  text-align: left;
+  cursor: pointer;
+}
+
+.bredesign .bd-smart-loc .smart-loc-hit:hover {
+  background: var(--bd-blue-soft);
+}
+
+.bredesign .bd-smart-loc .smart-loc-hit-pin {
+  margin-top: 2px;
+  color: var(--bd-accent);
+  flex-shrink: 0;
+}
+
+.bredesign .bd-smart-loc .smart-loc-hit-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.bredesign .bd-smart-loc .smart-loc-hit-text strong {
+  font-size: 0.88rem;
+}
+
+.bredesign .bd-smart-loc .smart-loc-hit-text small {
+  font-size: 0.75rem;
+  color: var(--bd-ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bredesign .bd-smart-loc .smart-loc-gps-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 10px;
+  border: 1px solid var(--bd-rule);
+  background: var(--bd-navy-2);
+  color: var(--bd-paper);
+  font-size: 0.85rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.bredesign .bd-smart-loc .smart-loc-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.bredesign .bd-smart-loc .smart-loc-pill {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 1px solid var(--bd-rule);
+  background: var(--bd-navy-2);
+  color: var(--bd-ink-2);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.bredesign .bd-smart-loc .smart-loc-pill.is-active {
+  background: var(--bd-blue);
+  border-color: var(--bd-blue);
+  color: var(--bd-paper);
+}
+
+.bredesign .bd-smart-loc .smart-loc-map {
+  width: 100%;
+  border-radius: 12px;
+  border: 1px solid var(--bd-rule);
+  overflow: hidden;
+}
+
+.bredesign .bd-smart-loc .smart-loc-map-hint {
+  margin: 6px 0 0;
+  font-size: 0.78rem;
+  color: var(--bd-ink-2);
+}
+
+.bredesign .bd-smart-loc .smart-loc-error {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #fca5a5;
+}
+
+@media (max-width: 560px) {
+  .bredesign .bd-smart-loc .smart-loc-input-row {
+    flex-direction: column;
+  }
+}
+

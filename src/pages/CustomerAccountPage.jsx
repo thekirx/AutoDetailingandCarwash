@@ -17,6 +17,7 @@ import NotificationBell from '@/components/NotificationBell'
 import PushToggle from '@/components/PushToggle'
 import ActiveVisitCard from '@/components/customer/ActiveVisitCard'
 import BranchWeather from '@/components/customer/BranchWeather'
+import CustomerLocationSheet from '@/components/customer/CustomerLocationSheet'
 import { BirthdayGreetingSheet, BirthdayHomeCard } from '@/components/customer/BirthdayGreeting'
 import { ProfileProgressCard } from '@/components/customer/ProfileProgress'
 import { Badge, Pills, Row, Skeleton } from '@/components/customer/CustomerUi'
@@ -106,8 +107,9 @@ export default function CustomerAccountPage() {
   const [ratingSaving, setRatingSaving] = useState(false)
   const [ratingDone, setRatingDone] = useState(false)
   const [reviewNow, setReviewNow] = useState(() => Date.now())
+  const [locationSheetOpen, setLocationSheetOpen] = useState(false)
 
-  const { branches, selectedBranch, pin, locating, locateNearest } = useCustomerBranch(
+  const { branches, selectedBranch, nearestBranch, nearestDistanceKm, pin, locating, locateNearest, updatePin } = useCustomerBranch(
     data?.branches || EMPTY_LIST,
   )
   const bookings = data?.bookings || EMPTY_LIST
@@ -277,7 +279,10 @@ export default function CustomerAccountPage() {
               <BranchWeather
                 userCoords={pin}
                 branch={weatherBranch}
+                nearestBranch={nearestBranch}
+                nearestDistanceKm={nearestDistanceKm}
                 onLocate={() => locateNearest({ autoSelectNearest: true }).catch(() => {})}
+                onOpenPicker={() => setLocationSheetOpen(true)}
                 locating={locating}
                 className="capp-weather--side"
               />
@@ -294,7 +299,10 @@ export default function CustomerAccountPage() {
                 <BranchWeather
                   userCoords={pin}
                   branch={weatherBranch}
+                  nearestBranch={nearestBranch}
+                  nearestDistanceKm={nearestDistanceKm}
                   onLocate={() => locateNearest({ autoSelectNearest: true }).catch(() => {})}
+                  onOpenPicker={() => setLocationSheetOpen(true)}
                   locating={locating}
                   className="capp-weather--desk"
                 />
@@ -679,6 +687,14 @@ export default function CustomerAccountPage() {
           </div>
         ) : null}
       </section>
+
+      <CustomerLocationSheet
+        open={locationSheetOpen}
+        onClose={() => setLocationSheetOpen(false)}
+        pin={pin}
+        branches={branches}
+        onApply={(nextPin) => updatePin(nextPin, { autoSelectNearest: true })}
+      />
     </CustomerAppFrame>
   )
 }

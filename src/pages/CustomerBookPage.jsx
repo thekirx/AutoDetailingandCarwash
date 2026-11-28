@@ -36,6 +36,7 @@ import CustomerAppFrame from '@/components/CustomerAppFrame'
 import VehicleMakeModelFields from '@/components/VehicleMakeModelFields'
 import { Skeleton } from '@/components/customer/CustomerUi'
 import BookingCalendar from '@/components/customer/BookingCalendar'
+import CustomerLocationSheet from '@/components/customer/CustomerLocationSheet'
 import Sheet from '@/components/customer/Sheet'
 import ceramicPhoto from '@/assets/services/ceramic.webp'
 import maintenancePhoto from '@/assets/services/detailing.webp'
@@ -123,9 +124,10 @@ export default function CustomerBookPage() {
   const [otherCar, setOtherCar] = useState(false)
   const [familyKey, setFamilyKey] = useState('')
   const [coated, setCoated] = useState('')
+  const [locationSheetOpen, setLocationSheetOpen] = useState(false)
   const openedFromLink = useRef(false)
 
-  const { branches, nearestSlug, pin, selectBranch } = useCustomerBranch(portal?.branches || [], { wanted: params.get('branch') || '' })
+  const { branches, nearestSlug, pin, locationLabel, selectBranch, updatePin } = useCustomerBranch(portal?.branches || [], { wanted: params.get('branch') || '' })
   const vehicles = portal?.vehicles || []
   // Coming-soon branches show in the branch step with a tag; they can't be picked yet.
   const { branches: visibleBranches } = usePublicBranches({ mode: 'visible' })
@@ -757,7 +759,18 @@ export default function CustomerBookPage() {
 
             {stepId === 'details' ? (
               <>
-                <p className="capp-flow-sub">Where will you bring your car?</p>
+                <div className="capp-book-loc-strip">
+                  <p className="capp-flow-sub" style={{ margin: 0 }}>
+                    {locationLabel ? `From ${locationLabel}` : 'Where will you bring your car?'}
+                  </p>
+                  <button
+                    type="button"
+                    className="capp-btn capp-btn-ghost capp-book-loc-btn"
+                    onClick={() => setLocationSheetOpen(true)}
+                  >
+                    {locationLabel ? 'Change location' : 'Use my location'}
+                  </button>
+                </div>
                 <div className="capp-opts" role="radiogroup" aria-label="Branch">
                   {branches.map((b) => {
                     const km = pin ? branchDistanceKm(pin, b) : null
@@ -991,6 +1004,17 @@ export default function CustomerBookPage() {
           </form>
         )}
       </Sheet>
+
+      <CustomerLocationSheet
+        open={locationSheetOpen}
+        onClose={() => setLocationSheetOpen(false)}
+        pin={pin}
+        branches={branches}
+        onApply={(nextPin) => {
+          const res = updatePin(nextPin, { autoSelectNearest: true })
+          if (res?.nearest?.slug) set('branch', res.nearest.slug)
+        }}
+      />
     </CustomerAppFrame>
   )
 }

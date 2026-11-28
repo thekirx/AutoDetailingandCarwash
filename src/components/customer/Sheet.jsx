@@ -17,6 +17,8 @@ export default function Sheet({ open, onClose, title, label, full = false, child
   const start = useRef(null)
   const panel = useRef(null)
   const returnFocus = useRef(null)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
   useEffect(() => {
     if (open) {
@@ -33,7 +35,7 @@ export default function Sheet({ open, onClose, title, label, full = false, child
   useEffect(() => {
     if (!open) return undefined
     const onKey = (e) => {
-      if (e.key === 'Escape') onClose?.()
+      if (e.key === 'Escape') onCloseRef.current?.()
     }
     document.addEventListener('keydown', onKey)
     const html = document.documentElement
@@ -45,7 +47,7 @@ export default function Sheet({ open, onClose, title, label, full = false, child
       window.clearTimeout(focusId)
       returnFocus.current?.focus?.({ preventScroll: true })
     }
-  }, [open, onClose])
+  }, [open])
 
   if (!mounted || typeof document === 'undefined') return null
 

@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { Check, ChevronDown, Clock, MapPin } from 'lucide-react'
 import CustomerAppFrame from '@/components/CustomerAppFrame'
 import { QueueStats, Row, Skeleton } from '@/components/customer/CustomerUi'
+import CustomerLocationSheet from '@/components/customer/CustomerLocationSheet'
 import Sheet from '@/components/customer/Sheet'
 import { usePublicBranches } from '@/lib/branches'
 import { branchDistanceKm } from '@/lib/branchGeo'
@@ -29,9 +30,21 @@ export default function CustomerQueuePage() {
   const openBranches = useMemo(() => allBranches.filter((b) => !b.coming_soon), [allBranches])
   const soonBranches = useMemo(() => allBranches.filter((b) => b.coming_soon), [allBranches])
   const { countsBySlug, loading, error, updatedAt, reload } = usePublicQueueCounts()
-  const { branches, selectedBranch: selectedSlug, nearestSlug, nearestDistanceKm, pin, locating, locationError, selectBranch, locateNearest } =
-    useCustomerBranch(openBranches, { wanted })
+  const {
+    branches,
+    selectedBranch: selectedSlug,
+    nearestSlug,
+    nearestDistanceKm,
+    pin,
+    locationLabel,
+    locating,
+    locationError,
+    selectBranch,
+    updatePin,
+    locateNearest,
+  } = useCustomerBranch(openBranches, { wanted })
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [locationSheetOpen, setLocationSheetOpen] = useState(false)
   const [soonSlug, setSoonSlug] = useState('')
 
   // A link to a coming-soon branch (?branch=imus) opens on its "opens soon" state.
@@ -96,13 +109,26 @@ export default function CustomerQueuePage() {
             <strong>{shown ? branchShortName(shown.name) : locating ? 'Finding your branch…' : 'Branch'}</strong>
             <em>
               {isClosest && nearestDistanceKm != null
-                ? `About ${formatDistanceKm(nearestDistanceKm)} away · from your location`
-                : [shownKm != null ? `${formatDistanceKm(shownKm)} away` : '', shown?.address].filter(Boolean).join(' · ') ||
+                ? `About ${formatDistanceKm(nearestDistanceKm)} away · ${locationLabel ? `from ${locationLabel}` : 'from your location'}`
+                : [
+                    shownKm != null ? `${formatDistanceKm(shownKm)} away` : '',
+                    locationLabel && shownKm != null ? `from ${locationLabel}` : '',
+                    shown?.address,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ') ||
                   locationError ||
                   'Pick the branch you are going to.'}
             </em>
             {soonBranch ? <span className="capp-soon-tag capp-soon-tag--block">Coming soon</span> : null}
           </div>
+          <button
+            type="button"
+            className="capp-btn capp-btn-ghost capp-queue-loc-btn"
+            onClick={() => setLocationSheetOpen(true)}
+          >
+            {locationLabel ? 'Edit pin' : 'Use my location'}
+          </button>
         </div>
       </div>
 
@@ -179,6 +205,20 @@ export default function CustomerQueuePage() {
           })}
         </div>
       </Sheet>
+
+      <CustomerLocationSheet
+        open={locationSheetOpen}
+        onClose={() => setLocationSheetOpen(false)}
+        pin={pin}
+        branches={branches}
+        onApply={(nextPin) => {
+          const res = updatePin(nextPin, { autoSelectNearest: true })
+          if (res?.nearest?.slug) {
+            setSoonSlug('')
+            setParams({ branch: res.nearest.slug }, { replace: true })
+          }
+        }}
+      />
     </CustomerAppFrame>
   )
 }

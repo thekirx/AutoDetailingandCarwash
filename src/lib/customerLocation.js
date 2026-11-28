@@ -11,6 +11,22 @@ export function formatDistanceKm(km) {
   return `${n.toFixed(n < 10 ? 1 : 0)} km`
 }
 
+export function formatCustomerLocationLabel(pin) {
+  if (!pin) return ''
+  const label = String(pin.label || '').trim()
+  if (label) return label
+  const addr = String(pin.address || '').trim()
+  if (addr) {
+    return addr
+      .split(',')
+      .map((s) => s.trim())
+      .filter((s) => s && !/^philippines$/i.test(s) && !/^\d{4}$/.test(s))
+      .slice(0, 2)
+      .join(', ')
+  }
+  return ''
+}
+
 export function loadCustomerPin() {
   try {
     if (typeof localStorage === 'undefined') return null
@@ -21,7 +37,14 @@ export function loadCustomerPin() {
     const lng = Number(parsed?.lng)
     if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
     if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null
-    return { lat, lng }
+    const label = typeof parsed?.label === 'string' ? parsed.label.trim() : ''
+    const address = typeof parsed?.address === 'string' ? parsed.address.trim() : ''
+    return {
+      lat,
+      lng,
+      ...(label ? { label } : {}),
+      ...(address ? { address } : {}),
+    }
   } catch {
     return null
   }
@@ -32,7 +55,14 @@ export function saveCustomerPin(pin) {
   const lng = Number(pin?.lng)
   if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null
   if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null
-  const next = { lat, lng }
+  const label = typeof pin?.label === 'string' ? pin.label.trim() : ''
+  const address = typeof pin?.address === 'string' ? pin.address.trim() : ''
+  const next = {
+    lat,
+    lng,
+    ...(label ? { label } : {}),
+    ...(address ? { address } : {}),
+  }
   localStorage.setItem(CUSTOMER_PIN_KEY, JSON.stringify(next))
   return next
 }

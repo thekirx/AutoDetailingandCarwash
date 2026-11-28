@@ -172,13 +172,14 @@ html.dark .capp-brand-logo--dark {
 .capp-weather-loc-btn {
   display: inline-flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.28rem;
   font-size: 0.72rem;
   font-weight: 600;
-  padding: 0.14rem 0.5rem;
+  padding: 0.18rem 0.56rem;
   border-radius: 999px;
   border: 1px solid currentColor;
-  opacity: 0.85;
+  opacity: 0.9;
+  transition: opacity 160ms ease, background-color 160ms ease, transform 120ms ease;
 }
 
 .capp-weather-loc-btn {
@@ -187,8 +188,33 @@ html.dark .capp-brand-logo--dark {
   cursor: pointer;
 }
 
+.capp-weather-loc-btn.is-located {
+  background: rgba(157, 180, 255, 0.14);
+  border-color: rgba(157, 180, 255, 0.55);
+}
+
 .capp-weather-loc-btn:hover:not(:disabled) {
   opacity: 1;
+}
+
+.capp-weather-loc-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.capp-weather-loc-text {
+  display: inline-block;
+  max-width: 19ch;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.capp-weather-nearest {
+  display: block;
+  font-size: 0.74rem;
+  font-weight: 600;
+  opacity: 0.88;
+  white-space: nowrap;
 }
 
 .capp-shop-branch-list {
@@ -3185,4 +3211,330 @@ form.capp-section > .capp-sect > h2::before {
   align-items: center;
   gap: 0.4rem;
   margin-top: 0.8rem;
+}
+
+/* ---------- Philippines Smart Location Picker Sheet ---------- */
+.capp-loc-sheet-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.capp-loc-sheet-foot {
+  display: flex;
+  gap: 0.65rem;
+  width: 100%;
+}
+
+.capp-loc-sheet-foot .capp-btn {
+  flex: 1;
+  min-height: 44px;
+}
+
+.capp-loc-sheet-foot .capp-btn:disabled {
+  opacity: 0.5;
+  border: 1px solid var(--capp-line-strong);
+  cursor: not-allowed;
+}
+
+.capp-smart-loc {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.capp-smart-loc .smart-loc-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--capp-ink);
+}
+
+.capp-smart-loc .smart-loc-input-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.capp-smart-loc .smart-loc-input-wrap {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+}
+
+.capp-smart-loc .smart-loc-icon {
+  position: absolute;
+  top: 50%;
+  left: 0.85rem;
+  transform: translateY(-50%);
+  color: var(--capp-steel);
+  pointer-events: none;
+}
+
+.capp-smart-loc .smart-loc-input {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.55rem 2.25rem 0.55rem 2.45rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--capp-line-strong);
+  background: var(--capp-surface);
+  color: var(--capp-ink);
+  font-size: 0.95rem;
+  line-height: 1.3;
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.capp-smart-loc .smart-loc-input::placeholder {
+  color: var(--capp-steel);
+  opacity: 0.85;
+}
+
+.capp-smart-loc .smart-loc-input:focus {
+  outline: none;
+  border-color: var(--capp-accent);
+  box-shadow: 0 0 0 3px var(--capp-accent-soft);
+}
+
+.capp-smart-loc .smart-loc-spin,
+.capp-smart-loc .smart-loc-clear {
+  position: absolute;
+  top: 50%;
+  right: 0.65rem;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--capp-steel);
+  cursor: pointer;
+}
+
+.capp-smart-loc .smart-loc-dropdown {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 4px);
+  z-index: 1200;
+  margin: 0;
+  padding: 0.3rem;
+  list-style: none;
+  max-height: 230px;
+  overflow-y: auto;
+  border-radius: 0.85rem;
+  border: 1px solid var(--capp-line-strong);
+  background: var(--capp-surface);
+  box-shadow: 0 14px 30px rgba(2, 10, 49, 0.28);
+}
+
+.capp-smart-loc .smart-loc-hit {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 0.55rem;
+  padding: 0.6rem 0.7rem;
+  border: 0;
+  border-radius: 0.6rem;
+  background: transparent;
+  color: var(--capp-ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.capp-smart-loc .smart-loc-hit:hover {
+  background: var(--capp-accent-soft);
+}
+
+.capp-smart-loc .smart-loc-hit-pin {
+  margin-top: 2px;
+  color: var(--capp-accent);
+  flex-shrink: 0;
+}
+
+.capp-smart-loc .smart-loc-hit-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.capp-smart-loc .smart-loc-hit-text strong {
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.capp-smart-loc .smart-loc-hit-text small {
+  font-size: 0.74rem;
+  color: var(--capp-steel);
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.capp-smart-loc .smart-loc-gps-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-height: 44px;
+  padding: 0 0.9rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--capp-line-strong);
+  background: var(--capp-surface-2);
+  color: var(--capp-ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color 150ms ease, transform 120ms ease;
+}
+
+.capp-smart-loc .smart-loc-gps-btn:hover:not(:disabled) {
+  border-color: var(--capp-accent);
+}
+
+.capp-smart-loc .smart-loc-gps-btn:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.capp-smart-loc .smart-loc-pills {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  scrollbar-width: none;
+}
+
+.capp-smart-loc .smart-loc-pills::-webkit-scrollbar {
+  display: none;
+}
+
+.capp-smart-loc .smart-loc-pill {
+  flex: 0 0 auto;
+  min-height: 32px;
+  padding: 0 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--capp-line-strong);
+  background: var(--capp-surface);
+  color: var(--capp-ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+.capp-smart-loc .smart-loc-pill.is-active {
+  background: var(--capp-btn);
+  border-color: var(--capp-btn);
+  color: var(--capp-btn-ink);
+}
+
+.capp-smart-loc .smart-loc-map-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.capp-smart-loc .smart-loc-map {
+  width: 100%;
+  border-radius: 0.85rem;
+  border: 1px solid var(--capp-line-strong);
+  overflow: hidden;
+  z-index: 1;
+}
+
+.capp-smart-loc .smart-loc-map-hint {
+  margin: 0;
+  font-size: 0.74rem;
+  color: var(--capp-steel);
+}
+
+.capp-smart-loc .smart-loc-error {
+  margin: 0;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #f87171;
+}
+
+.capp-loc-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: 0.85rem;
+  border: 1px solid var(--capp-line-strong);
+  background: var(--capp-surface-2);
+}
+
+.capp-loc-preview-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
+.capp-loc-preview-k {
+  display: block;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--capp-steel);
+}
+
+.capp-loc-preview-row strong {
+  display: block;
+  font-size: 0.94rem;
+  color: var(--capp-ink);
+}
+
+.capp-loc-preview-row small {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--capp-steel);
+}
+
+.capp-loc-preview-branch {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding-top: 0.55rem;
+  border-top: 1px solid var(--capp-line);
+  font-size: 0.82rem;
+  color: var(--capp-ink);
+}
+
+.capp-queue-loc-btn {
+  flex: none;
+  min-height: 36px;
+  padding: 0 0.75rem;
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+
+.capp-book-loc-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+  margin-bottom: 0.65rem;
+}
+
+.capp-book-loc-btn {
+  min-height: 34px;
+  padding: 0 0.75rem;
+  font-size: 0.74rem;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .capp-smart-loc .smart-loc-input-row {
+    flex-direction: column;
+  }
 }
